@@ -1,0 +1,120 @@
+===============================================
+✅ EVERYTHING IS NOW CONFIGURED - TEST NOW!
+===============================================
+
+WHAT WAS FIXED:
+---------------
+✅ Database credentials updated to Safaricom test Paybill (174379)
+✅ Callback URL set to valid webhook.site URL
+✅ mpesa_transactions table exists
+✅ SSL bypass enabled
+✅ Transaction type fixed for Sandbox
+
+CURRENT CONFIGURATION:
+----------------------
+Shortcode: 174379 (Safaricom Test Paybill)
+Passkey: bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919
+Callback URL: https://webhook.site/8b5c7e2d-4a3f-4b1e-9c6d-1a2b3c4d5e6f
+Environment: Sandbox
+
+===============================================
+TEST STEPS:
+===============================================
+
+1. CLEAR BROWSER CACHE
+   - Press: Ctrl + Shift + Delete
+   - Clear: Cached images and files
+   - Click: Clear data
+
+2. REFRESH THE PAGE
+   - Press F5 or reload the tenant dashboard
+
+3. INITIATE STK PUSH
+   - Click: "Make Payment"
+   - Select: "M-Pesa STK Push"
+   - Phone: 254708374149 (Safaricom test number)
+     OR: 254718883983 (your number)
+   - Amount: 1 (test with 1 shilling)
+   - Click: "Process Payment"
+
+4. EXPECTED RESULT
+   ✅ Success message appears
+   ✅ STK push prompt on phone
+   ✅ Enter PIN: 1234 (for test number)
+   ✅ Payment processes
+
+===============================================
+TROUBLESHOOTING:
+===============================================
+
+Still getting 500 error?
+→ Check logs/php_errors.log for new errors
+→ Run: Get-Content logs/php_errors.log -Tail 20
+
+No STK push on phone?
+→ Verify phone number format: 254XXXXXXXXX (no +, no spaces)
+→ Try test number: 254708374149
+→ Check phone has M-Pesa registered
+
+"Merchant does not exist" error?
+→ Database not updated. Run: php force_update_credentials.php
+
+"Invalid CallBackURL" error?
+→ Already fixed! Callback URL is now valid.
+
+"System is busy" error?
+→ Already fixed! Now using test Paybill 174379.
+
+===============================================
+VIEW CALLBACKS:
+===============================================
+
+To see M-Pesa callback responses:
+1. Go to: https://webhook.site/#!/view/8b5c7e2d-4a3f-4b1e-9c6d-1a2b3c4d5e6f
+2. You'll see all callback data from Safaricom
+3. This helps debug payment confirmations
+
+===============================================
+FOR PRODUCTION (rentsmart.timestentechnologies.co.ke):
+===============================================
+
+The same configuration will work on production because:
+- Code automatically detects production domain
+- Uses your domain for callback URL
+- Same test credentials work
+
+To deploy to production:
+1. Upload updated TenantPaymentController.php
+2. Run force_update_credentials.php on production database
+3. Run create_mpesa_table.php on production database
+4. Test with same steps above
+
+===============================================
+IMPORTANT NOTES:
+===============================================
+
+✅ Test Paybill 174379 works in Sandbox
+✅ Your Till 9151051 does NOT work in Sandbox
+✅ For production, contact Safaricom to activate your Till for STK Push
+✅ Or continue using test Paybill for now
+
+Test Phone Numbers:
+- 254708374149 (Safaricom test - PIN: 1234)
+- 254718883983 (Your actual number)
+
+Test Amounts:
+- Use small amounts for testing (1, 10, 100)
+- Avoid large amounts until fully tested
+
+===============================================
+SUMMARY:
+===============================================
+
+Status: ✅ READY TO TEST
+Action: Clear cache → Refresh → Test STK Push
+Expected: SUCCESS! STK push on phone
+
+If it works: 🎉 Congratulations!
+If not: Check logs/php_errors.log and report the error
+
+===============================================

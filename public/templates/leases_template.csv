@@ -1,0 +1,11 @@
+property_name,unit_number,tenant_email,start_date,end_date,rent_amount,security_deposit,payment_day,status,notes
+"Sunset Apartments","A102","john.kamau@email.com","2024-01-15","2025-01-14","25000","50000","1","active","12-month lease"
+"Palm Court Residences","B204","mary.wanjiru@email.com","2024-02-01","2025-01-31","40000","80000","1","active","12-month lease"
+"City Center Plaza","C301","david.ochieng@email.com","2024-03-10","2025-03-09","28000","56000","1","active","12-month lease"
+"Riverside Towers","T402","grace.akinyi@email.com","2023-11-20","2024-11-19","22000","44000","1","active","12-month lease"
+"Green Valley Villas","V2","peter.mwangi@email.com","2024-01-05","2025-01-04","65000","130000","1","active","12-month lease"
+"Hilltop Mansions","M1","sarah.njeri@email.com","2023-12-15","2024-12-14","85000","170000","1","active","12-month lease"
+"Garden Estate Homes","G8","james.otieno@email.com","2024-02-20","2025-02-19","45000","90000","1","active","12-month lease"
+"Lakeview Apartments","L103","lucy.wambui@email.com","2024-03-01","2025-02-28","38000","76000","1","active","12-month lease"
+"Parkside Residences","P205","michael.kipchoge@email.com","2023-10-10","2024-10-09","22000","44000","1","expiring","Lease ending soon"
+"Coastal Breeze Villas","CB4","anne.chebet@email.com","2024-01-25","2025-01-24","75000","150000","1","active","12-month lease"

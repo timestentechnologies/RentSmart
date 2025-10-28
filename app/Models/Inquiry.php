@@ -1,0 +1,51 @@
+<?php
+
+namespace App\Models;
+
+class Inquiry extends Model
+{
+    protected $table = 'inquiries';
+
+    public function __construct()
+    {
+        parent::__construct();
+        $this->table = 'inquiries';
+    }
+
+    public function create(array $data)
+    {
+        $sql = "INSERT INTO {$this->table} (unit_id, property_id, name, contact, preferred_date, message)
+                VALUES (:unit_id, :property_id, :name, :contact, :preferred_date, :message)";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([
+            'unit_id' => $data['unit_id'],
+            'property_id' => $data['property_id'],
+            'name' => $data['name'],
+            'contact' => $data['contact'],
+            'preferred_date' => $data['preferred_date'] ?? null,
+            'message' => $data['message'] ?? null,
+        ]);
+        return $this->db->lastInsertId();
+    }
+
+    public function allVisibleForUser($userId, $role)
+    {
+        // Admin sees all, landlord/manager sees their properties' inquiries
+        $params = [];
+        $sql = "SELECT i.*, u.unit_number, p.name as property_name
+                FROM {$this->table} i
+                JOIN units u ON u.id = i.unit_id
+                JOIN properties p ON p.id = i.property_id";
+        if ($role !== 'admin') {
+            $sql .= " WHERE (p.owner_id = ? OR p.manager_id = ?)";
+            $params[] = $userId;
+            $params[] = $userId;
+        }
+        $sql .= " ORDER BY i.created_at DESC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+    }
+}
+?>
+

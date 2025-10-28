@@ -1,0 +1,11 @@
+tenant_email,amount,payment_date,payment_type,payment_method,reference_number,status,notes
+"john.kamau@email.com","25000","2024-10-01","rent","M-Pesa","QR12345678","completed","October rent payment"
+"mary.wanjiru@email.com","40000","2024-10-02","rent","Bank Transfer","BT98765432","completed","Full month rent"
+"david.ochieng@email.com","28000","2024-10-03","rent","Cash","CASH001","completed","Paid in cash at office"
+"grace.akinyi@email.com","22000","2024-10-04","rent","M-Pesa","QR23456789","completed","Monthly rent via M-Pesa"
+"peter.mwangi@email.com","65000","2024-10-05","rent","Bank Transfer","BT87654321","completed","October payment"
+"sarah.njeri@email.com","85000","2024-10-06","rent","Cheque","CHQ123456","completed","Cheque payment"
+"james.otieno@email.com","45000","2024-10-07","rent","M-Pesa","QR34567890","completed","Mobile money payment"
+"lucy.wambui@email.com","38000","2024-10-08","rent","Bank Transfer","BT76543210","completed","Direct bank deposit"
+"michael.kipchoge@email.com","22000","2024-10-09","rent","Cash","CASH002","completed","Cash payment received"
+"anne.chebet@email.com","75000","2024-10-10","rent","M-Pesa","QR45678901","completed","October rent via M-Pesa"

@@ -1,0 +1,11 @@
+property_name,unit_number,utility_type,reading_date,previous_reading,current_reading,units_consumed,rate_per_unit,total_amount,status,notes
+"Sunset Apartments","A101","Electricity","2024-10-01","1250","1450","200","15","3000","unpaid","October electricity bill"
+"Sunset Apartments","A102","Water","2024-10-01","850","920","70","50","3500","paid","Water consumption for October"
+"Green Valley Villas","V1","Electricity","2024-10-02","2100","2380","280","15","4200","unpaid","High usage this month"
+"Riverside Towers","T501","Water","2024-10-02","450","510","60","50","3000","paid","Normal water usage"
+"Palm Court Residences","B204","Electricity","2024-10-03","1800","2050","250","15","3750","paid","October electricity"
+"Hilltop Mansions","M3","Water","2024-10-03","1200","1310","110","50","5500","unpaid","Above average usage"
+"Garden Estate Homes","G12","Electricity","2024-10-04","1500","1720","220","15","3300","paid","Regular monthly bill"
+"City Center Plaza","C301","Water","2024-10-04","680","745","65","50","3250","unpaid","October water bill"
+"Lakeview Apartments","L205","Electricity","2024-10-05","1350","1580","230","15","3450","paid","Electricity for October"
+"Parkside Residences","P108","Water","2024-10-05","520","590","70","50","3500","unpaid","Water bill pending"

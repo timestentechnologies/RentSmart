@@ -1,0 +1,11 @@
+property_name,unit_number,type,size,rent_amount,status
+"Sunset Apartments","A101","2bhk","850","35000","vacant"
+"Sunset Apartments","A102","1bhk","650","25000","occupied"
+"Green Valley Villas","V1","3bhk","1200","65000","vacant"
+"Riverside Towers","T501","studio","450","18000","vacant"
+"Palm Court Residences","B204","2bhk","900","40000","occupied"
+"Hilltop Mansions","M3","3bhk","1500","85000","vacant"
+"Garden Estate Homes","G12","2bhk","1000","45000","vacant"
+"City Center Plaza","C301","1bhk","550","28000","occupied"
+"Lakeview Apartments","L205","2bhk","800","38000","vacant"
+"Parkside Residences","P108","studio","500","22000","vacant"

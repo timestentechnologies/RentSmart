@@ -1,0 +1,351 @@
+<?php
+ob_start();
+?>
+<div class="container-fluid px-4">
+    <div class="card page-header mb-4">
+        <div class="card-body">
+            <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
+                <div>
+                    <h1 class="h3 mb-0">
+                        <i class="bi bi-calendar-check text-primary me-2"></i>Subscription Management
+                    </h1>
+                    <p class="text-muted mb-0 mt-1">Manage user subscriptions and plans</p>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+
+    <!-- Flash messages are now handled by main layout with SweetAlert2 -->
+
+    <!-- Stats Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-md-4">
+            <div class="stat-card">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="card-title">Active Subscriptions</h6>
+                        <h2 class="mt-3 mb-2">
+                            <?= count(array_filter($subscriptions, function($sub) {
+                                return $sub['status'] === 'active';
+                            })) ?>
+                        </h2>
+                        <p class="mb-0 text-muted">Currently active users</p>
+                    </div>
+                    <div class="stats-icon">
+                        <i class="bi bi-check-circle fs-1 text-success opacity-25"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="stat-card">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="card-title">Trial Users</h6>
+                        <h2 class="mt-3 mb-2">
+                            <?= count(array_filter($subscriptions, function($sub) {
+                                return $sub['status'] === 'trialing';
+                            })) ?>
+                        </h2>
+                        <p class="mb-0 text-muted">Users in trial period</p>
+                    </div>
+                    <div class="stats-icon">
+                        <i class="bi bi-hourglass-split fs-1 text-info opacity-25"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="stat-card">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="card-title">Expiring Soon</h6>
+                        <h2 class="mt-3 mb-2">
+                            <?= count(array_filter($subscriptions, function($sub) {
+                                return strtotime($sub['current_period_ends_at']) <= strtotime('+7 days');
+                            })) ?>
+                        </h2>
+                        <p class="mb-0 text-muted">Next 7 days</p>
+                    </div>
+                    <div class="stats-icon">
+                        <i class="bi bi-clock-history fs-1 text-warning opacity-25"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Subscription Plans -->
+    <div class="card mb-4">
+        <div class="card-header bg-light py-3">
+            <h5 class="mb-0">Subscription Plans</h5>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="text-muted">PLAN NAME</th>
+                        <th class="text-muted">PRICE</th>
+                        <th class="text-muted">DESCRIPTION</th>
+                        <th class="text-muted">FEATURES</th>
+                        <th class="text-muted">ACTIONS</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($plans as $plan): ?>
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-circle me-2">
+                                        <i class="bi bi-award fs-4"></i>
+                                    </div>
+                                    <?= htmlspecialchars($plan['name']) ?>
+                                </div>
+                            </td>
+                            <td>Ksh<?= number_format($plan['price'], 2) ?></td>
+                            <td><?= htmlspecialchars($plan['description']) ?></td>
+                            <td>
+                                <ul class="list-unstyled mb-0">
+                                    <?php foreach (explode("\n", $plan['features']) as $feature): ?>
+                                        <li><i class="bi bi-check-circle-fill text-success me-2"></i><?= htmlspecialchars($feature) ?></li>
+                                    <?php endforeach; ?>
+                                </ul>
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary" onclick="editPlan(<?= $plan['id'] ?>)">
+                                    <i class="bi bi-pencil"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Active Subscriptions -->
+    <div class="card">
+        <div class="card-header bg-light py-3">
+            <h5 class="mb-0">Active Subscriptions</h5>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="bg-light">
+                    <tr>
+                        <th class="text-muted">USER</th>
+                        <th class="text-muted">PLAN</th>
+                        <th class="text-muted">STATUS</th>
+                        <th class="text-muted">START DATE</th>
+                        <th class="text-muted">END DATE</th>
+                        <th class="text-muted">ACTIONS</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($subscriptions as $sub): ?>
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="avatar-circle me-2">
+                                        <i class="bi bi-person-circle fs-4"></i>
+                                    </div>
+                                    <?= htmlspecialchars($sub['user_name']) ?>
+                                </div>
+                            </td>
+                            <td><?= htmlspecialchars($sub['plan_type']) ?></td>
+                            <td>
+                                <span class="badge bg-<?= $sub['status'] === 'active' ? 'success' : ($sub['status'] === 'trialing' ? 'info' : 'warning') ?>">
+                                    <?= ucfirst($sub['status']) ?>
+                                </span>
+                            </td>
+                            <td><?= date('M j, Y', strtotime($sub['current_period_starts_at'])) ?></td>
+                            <td><?= date('M j, Y', strtotime($sub['current_period_ends_at'])) ?></td>
+                            <td>
+                                <div class="btn-group">
+                                    <button class="btn btn-sm btn-outline-primary" onclick="viewSubscription(<?= $sub['id'] ?>)">
+                                        <i class="bi bi-eye"></i>
+                                    </button>
+                                    <button class="btn btn-sm btn-outline-warning" onclick="extendSubscription(<?= $sub['id'] ?>)">
+                                        <i class="bi bi-calendar-plus"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Plan Modal -->
+<div class="modal fade" id="editPlanModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Plan</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editPlanForm" action="<?= BASE_URL ?>/admin/subscriptions/update-plan" method="POST">
+                <?= csrf_field() ?>
+                <input type="hidden" name="plan_id" id="editPlanId">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Plan Name</label>
+                        <input type="text" class="form-control" name="name" id="editPlanName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Price</label>
+                        <input type="number" class="form-control" name="price" id="editPlanPrice" step="0.01" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Description</label>
+                        <textarea class="form-control" name="description" id="editPlanDescription" rows="3" required></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Features (one per line)</label>
+                        <textarea class="form-control" name="features" id="editPlanFeatures" rows="5" required></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- View Subscription Modal -->
+<div class="modal fade" id="viewSubscriptionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Subscription Details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="subscriptionDetails">
+                <!-- Subscription details will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Extend Subscription Modal -->
+<div class="modal fade" id="extendSubscriptionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Extend Subscription</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="extendSubscriptionForm">
+                    <input type="hidden" id="extendSubscriptionId">
+                    <div class="mb-3">
+                        <label for="extendDays" class="form-label">Number of days to extend</label>
+                        <input type="number" class="form-control" id="extendDays" name="days" value="30" min="1" required>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Extend</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Extend Success Modal -->
+<div class="modal fade" id="extendSuccessModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Subscription Extended</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p id="extendSuccessMessage"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" data-bs-dismiss="modal">OK</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function editPlan(planId) {
+    // Fetch plan details and populate modal
+    fetch(`<?= BASE_URL ?>/admin/subscriptions/get-plan/${planId}`)
+        .then(response => response.json())
+        .then(plan => {
+            document.getElementById('editPlanId').value = plan.id;
+            document.getElementById('editPlanName').value = plan.name;
+            document.getElementById('editPlanPrice').value = plan.price;
+            document.getElementById('editPlanDescription').value = plan.description;
+            document.getElementById('editPlanFeatures').value = plan.features;
+            
+            new bootstrap.Modal(document.getElementById('editPlanModal')).show();
+        });
+}
+
+function viewSubscription(subId) {
+    fetch(`<?= BASE_URL ?>/admin/subscriptions/get-subscription/${subId}`)
+        .then(response => response.json())
+        .then(subscription => {
+            let html = '<table class="table table-bordered">';
+            for (const key in subscription) {
+                if (subscription.hasOwnProperty(key)) {
+                    html += `<tr><th>${key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</th><td>${subscription[key]}</td></tr>`;
+                }
+            }
+            html += '</table>';
+            document.getElementById('subscriptionDetails').innerHTML = html;
+            new bootstrap.Modal(document.getElementById('viewSubscriptionModal')).show();
+        });
+}
+
+let currentExtendId = null;
+function extendSubscription(subId) {
+    currentExtendId = subId;
+    document.getElementById('extendSubscriptionId').value = subId;
+    document.getElementById('extendDays').value = 30;
+    new bootstrap.Modal(document.getElementById('extendSubscriptionModal')).show();
+}
+
+document.getElementById('extendSubscriptionForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const subId = document.getElementById('extendSubscriptionId').value;
+    const days = document.getElementById('extendDays').value;
+    fetch(`<?= BASE_URL ?>/admin/subscriptions/extend/${subId}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-TOKEN': '<?= csrf_token() ?>'
+        },
+        body: JSON.stringify({ days: days })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const msg = `Subscription successfully extended. New expiry date: <strong>${data.new_expiry}</strong>`;
+            document.getElementById('extendSuccessMessage').innerHTML = msg;
+            const successModal = new bootstrap.Modal(document.getElementById('extendSuccessModal'));
+            successModal.show();
+            // Attach reload handler to OK button
+            document.querySelector('#extendSuccessModal .btn-primary').onclick = function() {
+                // Hide all modals
+                document.querySelectorAll('.modal.show').forEach(m => bootstrap.Modal.getInstance(m)?.hide());
+                location.reload();
+            };
+        } else {
+            alert('Failed to extend subscription: ' + (data.message || 'Unknown error'));
+        }
+    });
+});
+</script>
+<?php
+$content = ob_get_clean();
+require_once __DIR__ . '/../layouts/main.php';
+?> 

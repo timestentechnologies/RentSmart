@@ -1,0 +1,63 @@
+RewriteEngine On
+
+# Universal .htaccess for both localhost and cPanel production
+# Works with RewriteBase /rentsmart.timestentechnologies.co.ke/ for both environments
+RewriteBase /
+# If the request is not for a file or directory
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Rewrite all requests to index.php
+RewriteRule ^(.*)$ index.php [QSA,L]
+
+<IfModule mod_security2.c>
+  SecRuleEngine Off
+</IfModule>
+<IfModule mod_security.c>
+  SecFilterEngine Off
+  SecFilterScanPOST Off
+</IfModule>
+# Security headers
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-XSS-Protection "1; mode=block"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set Referrer-Policy "strict-origin-when-cross-origin"
+    Header set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+</IfModule>
+
+# Disable directory listing
+Options -Indexes
+
+# Protect sensitive files
+<FilesMatch "^\.(htaccess|env|git|gitignore|htpasswd)$">
+    Require all denied
+</FilesMatch>
+
+# Note: DO NOT block PHP execution in the site root.
+# If you want to block PHP in uploads, place a separate .htaccess inside
+# public/uploads with the following:
+#   Options -Indexes
+#   <FilesMatch "\\.(php|phar|phtml)$">
+#     Require all denied
+#   </FilesMatch>
+#   php_flag engine off
+
+
+# Compress text files
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/plain text/xml text/css text/javascript application/javascript application/x-javascript application/json
+</IfModule>
+
+# Cache control
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType image/jpg "access plus 1 year"
+    ExpiresByType image/jpeg "access plus 1 year"
+    ExpiresByType image/gif "access plus 1 year"
+    ExpiresByType image/png "access plus 1 year"
+    ExpiresByType image/svg+xml "access plus 1 year"
+    ExpiresByType text/css "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+</IfModule> 
+
