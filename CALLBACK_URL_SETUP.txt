@@ -1,0 +1,58 @@
+CALLBACK URL SETUP FOR LOCALHOST TESTING
+=========================================
+
+PROBLEM:
+Safaricom M-Pesa API requires a publicly accessible callback URL.
+Localhost URLs (http://localhost/...) are rejected with error:
+"Bad Request - Invalid CallBackURL"
+
+SOLUTIONS:
+
+Option 1: Use webhook.site (Easiest for Testing)
+-------------------------------------------------
+1. Go to: https://webhook.site/
+2. You'll get a unique URL like: https://webhook.site/abc123-def456-...
+3. Copy that URL
+4. Update line 507 in TenantPaymentController.php:
+   $callbackUrl = 'https://webhook.site/YOUR-UNIQUE-ID';
+5. Test STK Push - callbacks will appear on webhook.site
+
+Option 2: Use ngrok (Better for Development)
+---------------------------------------------
+1. Download ngrok: https://ngrok.com/download
+2. Extract and run: ngrok http 80
+3. You'll get a URL like: https://abc123.ngrok.io
+4. Update line 507 in TenantPaymentController.php:
+   $callbackUrl = 'https://abc123.ngrok.io/rentsmart.timestentechnologies.co.ke/tenant/payment/stk-callback';
+5. Access your site via: https://abc123.ngrok.io/rentsmart.timestentechnologies.co.ke/
+6. Test STK Push - callbacks will reach your local server
+
+Option 3: Use Your Production Domain
+-------------------------------------
+If you have a live domain (e.g., rentsmart.timestentechnologies.co.ke):
+1. Deploy your code to production
+2. The callback will automatically use your domain
+3. No changes needed - it will work automatically
+
+CURRENT SETUP:
+--------------
+The code is set to use: https://webhook.site/unique-id-here
+You need to replace 'unique-id-here' with your actual webhook.site ID
+
+QUICK FIX:
+----------
+1. Go to https://webhook.site/
+2. Copy your unique URL (e.g., https://webhook.site/abc123-def456-ghi789)
+3. Open: app/Controllers/TenantPaymentController.php
+4. Find line 507
+5. Replace:
+   $callbackUrl = 'https://webhook.site/unique-id-here';
+   With:
+   $callbackUrl = 'https://webhook.site/abc123-def456-ghi789';
+6. Save and test again
+
+IMPORTANT:
+----------
+- Callback URL MUST be HTTPS (not HTTP)
+- Callback URL MUST be publicly accessible
+- For production, remove the localhost check and use your real domain

@@ -1,0 +1,157 @@
+<?php
+
+namespace App\Controllers;
+
+use App\Database\Connection;
+
+class HomeController
+{
+    private $db;
+
+    public function __construct()
+    {
+        $this->db = Connection::getInstance()->getConnection();
+    }
+
+    public function index()
+    {
+        try {
+            // If user is logged in, redirect to dashboard
+            if (isset($_SESSION['user_id'])) {
+                header('Location: ' . BASE_URL . '/dashboard');
+                exit;
+            }
+            
+            // Fetch subscription plans
+            $stmt = $this->db->prepare("SELECT * FROM subscription_plans ORDER BY price ASC");
+            $stmt->execute();
+            $plans = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+            // Parse features string into array for each plan and ensure unique display
+            $seenPlans = [];
+            $filteredPlans = [];
+            foreach ($plans as $plan) {
+                if (!in_array($plan['name'], $seenPlans)) {
+                    $plan['features_array'] = explode("\r\n", $plan['features']);
+                    $filteredPlans[] = $plan;
+                    $seenPlans[] = $plan['name'];
+                }
+            }
+            $plans = $filteredPlans;
+
+            // Fetch site settings
+            require_once __DIR__ . '/../Models/Setting.php';
+            $settingsModel = new \App\Models\Setting();
+            $settings = $settingsModel->getAllAsAssoc();
+
+            $siteName = $settings['site_name'] ?? 'RentSmart';
+            $favicon = $settings['site_favicon'] ?? '';
+
+            // Pass settings, siteName, favicon to the view
+            require 'views/home.php';
+        } catch (\Exception $e) {
+            error_log($e->getMessage());
+            if (getenv('APP_ENV') === 'development') {
+                throw $e;
+            }
+            require 'views/errors/500.php';
+        }
+    }
+
+    public function privacy()
+    {
+        try {
+            require 'views/privacy-policy.php';
+        } catch (\Exception $e) {
+            error_log($e->getMessage());
+            if (getenv('APP_ENV') === 'development') {
+                throw $e;
+            }
+            require 'views/errors/500.php';
+        }
+    }
+
+    public function terms()
+    {
+        try {
+            require 'views/terms.php';
+        } catch (\Exception $e) {
+            error_log($e->getMessage());
+            if (getenv('APP_ENV') === 'development') {
+                throw $e;
+            }
+            require 'views/errors/500.php';
+        }
+    }
+
+    public function vacantUnits()
+    {
+        try {
+            // Public page listing vacant units
+            require_once __DIR__ . '/../Models/Unit.php';
+            require_once __DIR__ . '/../Models/Property.php';
+
+            $unitModel = new \App\Models\Unit();
+            $propertyModel = new \App\Models\Property();
+
+            // Get vacant units (public - no role filters)
+            $units = $unitModel->getVacantUnitsPublic();
+
+            // Attach property address and one image for display
+            $enhancedUnits = [];
+            foreach ($units as $unit) {
+                $property = $propertyModel->find($unit['property_id']);
+                
+                // Try to get unit images first
+                $unitModel->id = $unit['id'];
+                $unitImages = method_exists($unitModel, 'getImages') ? $unitModel->getImages() : [];
+                
+                // Then try property images
+                $propertyModel->id = $unit['property_id'];
+                $propertyImages = $propertyModel->getImages();
+                
+                // Priority: Unit image > Property image > Generated icon
+                if (!empty($unitImages)) {
+                    $coverImage = $unitImages[0]['url'];
+                } elseif (!empty($propertyImages)) {
+                    $coverImage = $propertyImages[0]['url'];
+                } else {
+                    // Generate icon based on unit type
+                    $coverImage = 'https://ui-avatars.com/api/?name=' . urlencode($unit['property_name'] . ' ' . $unit['unit_number']) . '&size=400&background=4F46E5&color=fff&bold=true';
+                }
+
+                $enhancedUnits[] = [
+                    'id' => (int)$unit['id'],
+                    'unit_number' => $unit['unit_number'],
+                    'rent_amount' => $unit['rent_amount'],
+                    'type' => $unit['type'],
+                    'property_name' => $unit['property_name'],
+                    'address' => $property['address'] ?? '',
+                    'city' => $property['city'] ?? '',
+                    'state' => $property['state'] ?? '',
+                    'zip_code' => $property['zip_code'] ?? '',
+                    'image' => $coverImage,
+                ];
+            }
+
+            // Settings for header/favicon
+            require_once __DIR__ . '/../Models/Setting.php';
+            $settingsModel = new \App\Models\Setting();
+            $settings = $settingsModel->getAllAsAssoc();
+            $siteName = $settings['site_name'] ?? 'RentSmart';
+            $favicon = $settings['site_favicon'] ?? '';
+            $siteLogo = isset($settings['site_logo']) && $settings['site_logo']
+                ? BASE_URL . '/public/assets/images/' . $settings['site_logo']
+                : BASE_URL . '/public/assets/images/logo.png';
+
+            $vacantUnits = $enhancedUnits;
+            require 'views/vacant_units.php';
+        } catch (\Exception $e) {
+            error_log($e->getMessage());
+            if (getenv('APP_ENV') === 'development') {
+                throw $e;
+            }
+            require 'views/errors/500.php';
+        }
+    }
+}

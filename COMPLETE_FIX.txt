@@ -1,0 +1,210 @@
+===============================================
+COMPLETE FIX FOR STK PUSH - STEP BY STEP
+===============================================
+
+CURRENT ERROR:
+"errorCode": "500.003.02"
+"errorMessage": "System is busy. Please try again in few minutes."
+
+ROOT CAUSE:
+Your Till number (9151051) is NOT configured for STK Push in Safaricom Sandbox.
+This is a Safaricom API limitation, not a code issue.
+
+===============================================
+SOLUTION: Use Safaricom Test Credentials
+===============================================
+
+STEP 1: Create mpesa_transactions Table
+----------------------------------------
+Run this in phpMyAdmin or MySQL:
+
+CREATE TABLE IF NOT EXISTS `mpesa_transactions` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `payment_id` int(11) DEFAULT NULL,
+  `merchant_request_id` varchar(100) DEFAULT NULL,
+  `checkout_request_id` varchar(100) DEFAULT NULL,
+  `phone_number` varchar(20) DEFAULT NULL,
+  `amount` decimal(10,2) DEFAULT NULL,
+  `status` enum('pending','completed','failed','cancelled') DEFAULT 'pending',
+  `mpesa_receipt_number` varchar(50) DEFAULT NULL,
+  `transaction_date` datetime DEFAULT NULL,
+  `result_code` varchar(10) DEFAULT NULL,
+  `result_desc` text DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP,
+  `updated_at` timestamp NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `payment_id` (`payment_id`),
+  KEY `checkout_request_id` (`checkout_request_id`),
+  KEY `merchant_request_id` (`merchant_request_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+STEP 2: Update to Safaricom Test Credentials
+---------------------------------------------
+Run this SQL (use_test_credentials.sql):
+
+UPDATE settings 
+SET setting_value = '174379' 
+WHERE setting_key = 'mpesa_shortcode';
+
+UPDATE settings 
+SET setting_value = 'bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919' 
+WHERE setting_key = 'mpesa_passkey';
+
+UPDATE payment_methods 
+SET details = JSON_OBJECT(
+    'consumer_key', (SELECT setting_value FROM settings WHERE setting_key = 'mpesa_consumer_key'),
+    'consumer_secret', (SELECT setting_value FROM settings WHERE setting_key = 'mpesa_consumer_secret'),
+    'shortcode', '174379',
+    'passkey', 'bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919'
+),
+updated_at = NOW()
+WHERE type = 'mpesa_stk';
+
+
+STEP 3: Setup Callback URL
+---------------------------
+Option A - webhook.site (Easiest):
+1. Go to: https://webhook.site/
+2. Copy your unique URL (e.g., https://webhook.site/abc123-def456)
+3. Edit: app/Controllers/TenantPaymentController.php line 507
+4. Change:
+   $callbackUrl = 'https://webhook.site/unique-id-here';
+   To:
+   $callbackUrl = 'https://webhook.site/abc123-def456'; // Your actual URL
+
+Option B - ngrok (Better):
+1. Download: https://ngrok.com/download
+2. Run: ngrok http 80
+3. Copy HTTPS URL (e.g., https://abc123.ngrok.io)
+4. Edit line 507:
+   $callbackUrl = 'https://abc123.ngrok.io/rentsmart.timestentechnologies.co.ke/tenant/payment/stk-callback';
+
+
+STEP 4: Test Phone Number
+--------------------------
+Use Safaricom test phone number: 254708374149
+Or your actual Safaricom number: 254718883983
+
+
+STEP 5: Test STK Push
+----------------------
+1. Clear browser cache (Ctrl+Shift+Delete)
+2. Refresh tenant dashboard
+3. Click "Make Payment"
+4. Select "M-Pesa STK Push"
+5. Enter phone: 254708374149 (or 254718883983)
+6. Enter amount: 1 (test with 1 shilling)
+7. Click "Process Payment"
+8. Should see success message!
+9. Check phone for STK push prompt
+
+
+===============================================
+FOR PRODUCTION (rentsmart.timestentechnologies.co.ke)
+===============================================
+
+OPTION 1: Use Same Test Credentials (Recommended for now)
+----------------------------------------------------------
+1. Run the same SQL on production database
+2. The callback URL will automatically use your domain
+3. Test with small amounts first
+
+OPTION 2: Use Your Real Till Number (After Safaricom Activation)
+-----------------------------------------------------------------
+1. Contact Safaricom: apisupport@safaricom.co.ke
+2. Request STK Push activation for Till 9151051
+3. Get production credentials
+4. Update both databases with production credentials
+5. Change API URLs from sandbox to production:
+   - Line 513: https://api.safaricom.co.ke/mpesa/stkpush/v1/processrequest
+   - Line 588: https://api.safaricom.co.ke/oauth/v1/generate
+
+
+===============================================
+VERIFICATION QUERIES
+===============================================
+
+-- Check settings
+SELECT setting_key, 
+       CASE WHEN setting_key LIKE '%secret%' OR setting_key LIKE '%passkey%' 
+            THEN CONCAT('***', RIGHT(setting_value, 4))
+            ELSE setting_value 
+       END as value
+FROM settings 
+WHERE setting_key LIKE 'mpesa_%';
+
+-- Check payment methods
+SELECT id, name, 
+       JSON_EXTRACT(details, '$.shortcode') as shortcode,
+       JSON_EXTRACT(details, '$.passkey') as passkey_set,
+       is_active
+FROM payment_methods 
+WHERE type = 'mpesa_stk';
+
+-- Check mpesa_transactions table exists
+SHOW TABLES LIKE 'mpesa_transactions';
+
+
+===============================================
+EXPECTED RESULTS AFTER FIX
+===============================================
+
+✅ Settings table: Shortcode = 174379, Passkey = SET
+✅ Payment_methods table: Shortcode = 174379, Passkey = SET
+✅ mpesa_transactions table: EXISTS
+✅ Callback URL: Valid HTTPS URL
+✅ Test STK Push: SUCCESS
+✅ Phone receives: STK Push prompt
+✅ Enter PIN: Payment processes
+✅ Database: Transaction saved
+
+
+===============================================
+TROUBLESHOOTING
+===============================================
+
+Error: "Invalid CallBackURL"
+→ Update callback URL in line 507 with webhook.site or ngrok
+
+Error: "System is busy"
+→ You're still using Till 9151051. Run use_test_credentials.sql
+
+Error: "Table 'mpesa_transactions' doesn't exist"
+→ Run check_mpesa_table.sql to create the table
+
+Error: 500 Internal Server Error
+→ Check logs/php_errors.log for specific error
+
+No STK push on phone
+→ Verify phone number format: 254XXXXXXXXX
+→ Check phone has M-Pesa registered
+→ Try test number: 254708374149
+
+
+===============================================
+FILES TO RUN (IN ORDER)
+===============================================
+
+1. check_mpesa_table.sql        - Create mpesa_transactions table
+2. use_test_credentials.sql     - Switch to Safaricom test credentials
+3. Update line 507 in TenantPaymentController.php - Set callback URL
+4. Test STK Push                - Should work now!
+
+
+===============================================
+SUMMARY
+===============================================
+
+Problem: Till 9151051 not configured for STK Push in Sandbox
+Solution: Use Safaricom test Paybill 174379
+Action: Run SQL scripts + Update callback URL
+Result: STK Push will work!
+
+Test Credentials:
+- Shortcode: 174379
+- Passkey: bfb279f9aa9bdbcf158e97dd71a467cd2e0c893059b10f78e6b72ada1ed2c919
+- Test Phone: 254708374149
+- Test Amount: 1 (1 shilling)
+
+===============================================

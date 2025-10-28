@@ -1,0 +1,545 @@
+<?php
+ob_start();
+?>
+<div class="container-fluid pt-4">
+    <!-- Page Header -->
+    <div class="card page-header">
+        <div class="card-body">
+            <h1 class="h3 mb-0">Renew Your Subscription</h1>
+            <p class="text-muted">Choose a plan that best fits your needs</p>
+        </div>
+    </div>
+
+    <?php if (isset($_SESSION['flash_message'])): ?>
+        <div class="alert alert-<?= $_SESSION['flash_type'] ?? 'info' ?> alert-dismissible fade show mt-4">
+            <?= $_SESSION['flash_message'] ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        <?php unset($_SESSION['flash_message'], $_SESSION['flash_type']); ?>
+    <?php endif; ?>
+
+    <?php if ($subscription): ?>
+        <div class="card mt-4 bg-info bg-opacity-25">
+            <div class="card-body">
+                <h5 class="card-title">Current Subscription Status</h5>
+                <p class="mb-0">
+                    Plan: <strong><?= $subscription['plan_type'] ?></strong><br>
+                    Status: <strong><?= ucfirst($subscription['status']) ?></strong><br>
+                    <?php if ($subscription['status'] === 'trialing'): ?>
+                        Trial Ends: <strong><?= date('F j, Y', strtotime($subscription['trial_ends_at'])) ?></strong>
+                    <?php else: ?>
+                        Current Period Ends: <strong><?= date('F j, Y', strtotime($subscription['current_period_ends_at'])) ?></strong>
+                    <?php endif; ?>
+                </p>
+            </div>
+        </div>
+    <?php endif; ?>
+
+    <div class="row mt-4">
+        <?php foreach ($plans as $plan): ?>
+            <div class="col-md-4 mb-4">
+                <div class="card h-100 plan-card" onclick="selectPlan(this, '<?= $plan['id'] ?>', '<?= htmlspecialchars($plan['name']) ?>', '<?= $plan['price'] ?>')">
+                    <div class="card-body">
+                        <input type="radio" name="plan_id" value="<?= $plan['id'] ?>" class="plan-radio" required>
+                        <h5 class="card-title"><?= $plan['name'] ?></h5>
+                        <h3 class="text-primary">Ksh<?= number_format($plan['price'], 2) ?>/month</h3>
+                        <p class="text-muted"><?= $plan['description'] ?></p>
+                        <ul class="list-unstyled">
+                            <?php foreach (explode("\n", $plan['features']) as $feature): ?>
+                                <li><i class="bi bi-check-circle text-success me-2"></i><?= $feature ?></li>
+                            <?php endforeach; ?>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        <?php endforeach; ?>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12 text-center">
+            <form action="<?= BASE_URL ?>/subscription/renew" method="POST" id="renewForm">
+                <?= csrf_field() ?>
+                <input type="hidden" name="payment_method" id="paymentMethod" value="">
+                <input type="hidden" name="selected_plan_id" id="selectedPlanId" value="">
+                <button type="submit" class="btn btn-primary btn-lg">
+                    <i class="bi bi-arrow-repeat me-2"></i>Renew Subscription
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Payment Modal -->
+<div class="modal fade" id="paymentModal" tabindex="-1" aria-labelledby="paymentModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="paymentModalLabel">Complete Payment</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-4">
+                    <h6>Selected Plan: <span id="selectedPlanName"></span></h6>
+                    <h6>Amount: Ksh<span id="selectedPlanPrice"></span>Month</h6>
+                </div>
+
+                <!-- Payment Method Selection -->
+                <div class="mb-4">
+                    <h6>Select Payment Method</h6>
+                    <div class="form-check mb-2">
+                        <input class="form-check-input" type="radio" name="paymentMethodRadio" id="mpesaRadio" value="mpesa" checked>
+                        <label class="form-check-label" for="mpesaRadio">
+                            M-Pesa
+                        </label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="radio" name="paymentMethodRadio" id="cardRadio" value="card">
+                        <label class="form-check-label" for="cardRadio">
+                            Credit/Debit Card
+                        </label>
+                    </div>
+                </div>
+
+                <!-- M-Pesa Form -->
+                <div id="mpesaForm">
+                    <div class="mb-3">
+                        <label class="form-label">M-Pesa Payment Method</label>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="mpesaMethodRadio" id="mpesaStkRadio" value="stk" checked>
+                            <label class="form-check-label" for="mpesaStkRadio">
+                                STK Push (Automatic)
+                            </label>
+                            <small class="d-block text-muted">Receive payment prompt on your phone</small>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="mpesaMethodRadio" id="mpesaManualRadio" value="manual">
+                            <label class="form-check-label" for="mpesaManualRadio">
+                                Pay Bill (Manual)
+                            </label>
+                            <small class="d-block text-muted">Pay manually through M-Pesa menu</small>
+                        </div>
+                    </div>
+
+                    <!-- STK Push Form -->
+                    <div id="stkPushForm">
+                        <div class="mb-3">
+                            <label for="phoneNumber" class="form-label">M-Pesa Phone Number</label>
+                            <input type="tel" class="form-control" id="phoneNumber" placeholder="254700000000" required>
+                            <small class="text-muted">Enter your M-Pesa registered phone number starting with 254</small>
+                        </div>
+                    </div>
+
+                    <!-- Manual Payment Form -->
+                    <div id="manualMpesaForm">
+                        <div class="card bg-info bg-opacity-25">
+                            <div class="card-body">
+                                <h6 class="card-title mb-3">How to Pay via M-Pesa:</h6>
+                                <ol class="mb-0">
+                                    <li>Go to M-Pesa menu</li>
+                                    <li>Select Pay Bill</li>
+                                    <li>Enter Business No: <strong>400200</strong></li>
+                                    <li>Enter Account No: <strong>01101379956001</strong></li>
+                                    <li>Enter Amount: Ksh<strong id="mpesaAmount"></strong></li>
+                                    <li>Enter your M-Pesa PIN</li>
+                                    <li>Save the M-Pesa message with transaction code</li>
+                                </ol>
+                            </div>
+                        </div>
+                        <div class="mb-3 mt-3">
+                            <label for="mpesaPhone" class="form-label">Phone Number Used</label>
+                            <input type="tel" class="form-control" id="mpesaPhone" placeholder="254700000000">
+                            <small class="text-muted">Enter the phone number you used to make the payment</small>
+                        </div>
+                        <div class="mb-3">
+                            <label for="mpesaCode" class="form-label">M-Pesa Transaction Code</label>
+                            <input type="text" class="form-control" id="mpesaCode" placeholder="QWE1234567">
+                            <small class="text-muted">Enter the M-Pesa transaction code received via SMS</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Card Payment Form -->
+                <div id="cardForm" style="display: none;">
+                    <div class="mb-3">
+                        <label for="cardNumber" class="form-label">Card Number</label>
+                        <input type="text" class="form-control" id="cardNumber" placeholder="1234 5678 9012 3456">
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="expiryDate" class="form-label">Expiry Date</label>
+                            <input type="text" class="form-control" id="expiryDate" placeholder="MM/YY">
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="cvv" class="form-label">CVV</label>
+                            <input type="text" class="form-control" id="cvv" placeholder="123">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="processPaymentBtn">
+                    <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                    Process Payment
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.plan-card {
+    border: 2px solid #dee2e6;
+    border-radius: 1rem;
+    transition: all 0.3s;
+    cursor: pointer;
+    position: relative;
+}
+
+.plan-card:hover {
+    border-color: #0061f2;
+    transform: translateY(-5px);
+}
+
+.plan-card.selected {
+    border-color: #0061f2;
+    background-color: #f8f9ff;
+}
+
+.plan-radio {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    margin: 0;
+}
+
+/* Payment Form Styles */
+#mpesaForm, #cardForm {
+    transition: display 0.3s ease-in-out;
+}
+
+#stkPushForm, #manualMpesaForm {
+    transition: display 0.3s ease-in-out;
+}
+
+#manualMpesaForm {
+    margin-top: 1rem;
+}
+
+#manualMpesaForm .alert {
+    margin-bottom: 1.5rem;
+}
+
+#manualMpesaForm .form-control {
+    margin-bottom: 0.5rem;
+}
+</style>
+
+<script>
+// Initialize Bootstrap components
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize Bootstrap components
+    var modals = [].slice.call(document.querySelectorAll('.modal'))
+    modals.map(function (modal) {
+        return new bootstrap.Modal(modal);
+    });
+
+    // Set initial state for M-Pesa forms
+    const initialMpesaMethod = document.querySelector('input[name="mpesaMethodRadio"]:checked').value;
+    toggleMpesaForms(initialMpesaMethod);
+
+    // Toggle M-Pesa payment forms
+    document.querySelectorAll('input[name="mpesaMethodRadio"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            console.log('M-Pesa method changed to:', this.value);
+            toggleMpesaForms(this.value);
+        });
+    });
+
+    // Toggle payment method forms
+    document.querySelectorAll('input[name="paymentMethodRadio"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            console.log('Payment method changed to:', this.value);
+            const mpesaForm = document.getElementById('mpesaForm');
+            const cardForm = document.getElementById('cardForm');
+            
+            mpesaForm.style.display = this.value === 'mpesa' ? 'block' : 'none';
+            cardForm.style.display = this.value === 'card' ? 'block' : 'none';
+            
+            // If switching to M-Pesa, ensure the correct M-Pesa form is shown
+            if (this.value === 'mpesa') {
+                const selectedMpesaMethod = document.querySelector('input[name="mpesaMethodRadio"]:checked').value;
+                console.log('Selected M-Pesa method:', selectedMpesaMethod);
+                toggleMpesaForms(selectedMpesaMethod);
+            }
+            
+            document.getElementById('paymentMethod').value = this.value;
+        });
+    });
+});
+
+// Function to toggle M-Pesa form visibility
+function toggleMpesaForms(method) {
+    console.log('Toggling M-Pesa forms for method:', method);
+    const stkForm = document.getElementById('stkPushForm');
+    const manualForm = document.getElementById('manualMpesaForm');
+    
+    if (!stkForm || !manualForm) {
+        console.error('Could not find M-Pesa forms:', { stkForm, manualForm });
+        return;
+    }
+    
+    stkForm.style.display = method === 'stk' ? 'block' : 'none';
+    manualForm.style.display = method === 'manual' ? 'block' : 'none';
+    
+    console.log('Form visibility:', {
+        stk: stkForm.style.display,
+        manual: manualForm.style.display
+    });
+    
+    // Update amount in manual payment instructions
+    if (method === 'manual' && selectedPlanDetails) {
+        const amountElement = document.getElementById('mpesaAmount');
+        if (amountElement) {
+            amountElement.textContent = selectedPlanDetails.price;
+            console.log('Updated manual amount to:', selectedPlanDetails.price);
+        } else {
+            console.error('Could not find mpesaAmount element');
+        }
+    }
+}
+
+let selectedPlanDetails = null;
+
+function selectPlan(element, planId, planName, planPrice) {
+    // Remove selected class from all plans
+    document.querySelectorAll('.plan-card').forEach(card => {
+        card.classList.remove('selected');
+        card.querySelector('.plan-radio').checked = false;
+    });
+    
+    // Add selected class to clicked plan
+    element.classList.add('selected');
+    
+    // Check the radio button
+    element.querySelector('.plan-radio').checked = true;
+
+    // Store selected plan details
+    selectedPlanDetails = {
+        id: planId,
+        name: planName,
+        price: planPrice
+    };
+
+    // Update hidden input
+    document.getElementById('selectedPlanId').value = planId;
+}
+
+// Toggle payment forms
+document.querySelectorAll('input[name="paymentMethodRadio"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        document.getElementById('mpesaForm').style.display = this.value === 'mpesa' ? 'block' : 'none';
+        document.getElementById('cardForm').style.display = this.value === 'card' ? 'block' : 'none';
+        document.getElementById('paymentMethod').value = this.value;
+    });
+});
+
+document.getElementById('renewForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const selectedPlanId = document.getElementById('selectedPlanId').value;
+    if (!selectedPlanId) {
+        alert('Please select a subscription plan');
+        return;
+    }
+
+    // Update modal with selected plan details
+    document.getElementById('selectedPlanName').textContent = selectedPlanDetails.name;
+    document.getElementById('selectedPlanPrice').textContent = selectedPlanDetails.price;
+
+    // Show payment modal
+    const paymentModal = new bootstrap.Modal(document.getElementById('paymentModal'));
+    paymentModal.show();
+});
+
+// Handle payment processing
+document.getElementById('processPaymentBtn').addEventListener('click', async function() {
+    const button = this;
+    const spinner = button.querySelector('.spinner-border');
+    const paymentMethod = document.querySelector('input[name="paymentMethodRadio"]:checked').value;
+    
+    // Validate form based on payment method
+    if (paymentMethod === 'mpesa') {
+        const mpesaMethod = document.querySelector('input[name="mpesaMethodRadio"]:checked').value;
+        
+        if (mpesaMethod === 'stk') {
+            const phoneNumber = document.getElementById('phoneNumber').value;
+            if (!phoneNumber || !/^254\d{9}$/.test(phoneNumber)) {
+                alert('Please enter a valid M-Pesa phone number starting with 254');
+                return;
+            }
+        } else {
+            const mpesaPhone = document.getElementById('mpesaPhone').value;
+            const mpesaCode = document.getElementById('mpesaCode').value;
+            if (!mpesaPhone || !/^254\d{9}$/.test(mpesaPhone)) {
+                alert('Please enter a valid phone number used for payment');
+                return;
+            }
+            if (!mpesaCode || !/^[A-Z0-9]{10}$/.test(mpesaCode)) {
+                alert('Please enter a valid M-Pesa transaction code');
+                return;
+            }
+        }
+    } else {
+        const cardForm = document.getElementById('cardForm');
+        if (!cardForm.checkValidity()) {
+            cardForm.reportValidity();
+            return;
+        }
+    }
+
+    try {
+        // Show loading state
+        button.disabled = true;
+        spinner.classList.remove('d-none');
+
+        // Add payment method to form
+        document.getElementById('paymentMethod').value = paymentMethod;
+
+        if (paymentMethod === 'mpesa') {
+            const mpesaMethod = document.querySelector('input[name="mpesaMethodRadio"]:checked').value;
+            
+            if (mpesaMethod === 'stk') {
+                // Initiate STK Push
+                const response = await fetch(window.BASE_URL + '/subscription/initiate-stk', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('input[name="csrf_token"]').value
+                    },
+                    body: JSON.stringify({
+                        phone_number: document.getElementById('phoneNumber').value,
+                        plan_id: selectedPlanDetails.id,
+                        amount: selectedPlanDetails.price
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    alert('Please check your phone for the M-Pesa payment prompt');
+                    // Close modal and submit form
+                    bootstrap.Modal.getInstance(document.getElementById('paymentModal')).hide();
+                    document.getElementById('renewForm').submit();
+                } else {
+                    throw new Error(result.message || 'Failed to initiate M-Pesa payment');
+                }
+            } else {
+                // Handle manual M-Pesa payment
+                const response = await fetch(window.BASE_URL + '/subscription/verify-mpesa', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': document.querySelector('input[name="csrf_token"]').value
+                    },
+                    body: JSON.stringify({
+                        phone_number: document.getElementById('mpesaPhone').value,
+                        transaction_code: document.getElementById('mpesaCode').value,
+                        plan_id: selectedPlanDetails.id,
+                        amount: selectedPlanDetails.price,
+                        is_manual: true
+                    })
+                });
+
+                const result = await response.json();
+                
+                if (result.success) {
+                    Swal.fire({
+                        title: 'Payment Received',
+                        text: 'Payment received! Your subscription has been activated for 31 days.',
+                        icon: 'success',
+                        confirmButtonText: 'OK'
+                    }).then(() => {
+                        // Close modal and submit form
+                        bootstrap.Modal.getInstance(document.getElementById('paymentModal')).hide();
+                        window.location.href = window.BASE_URL + '/dashboard';
+                    });
+                } else {
+                    throw new Error(result.message || 'Failed to verify M-Pesa payment');
+                }
+            }
+        } else {
+            // For card payments, just submit the form for now
+            document.getElementById('renewForm').submit();
+        }
+    } catch (error) {
+        alert(error.message || 'Payment processing failed. Please try again.');
+    } finally {
+        // Reset loading state
+        button.disabled = false;
+        spinner.classList.add('d-none');
+    }
+});
+
+// When payment modal is shown, update amount and ensure correct form visibility
+document.getElementById('paymentModal').addEventListener('show.bs.modal', function(event) {
+    console.log('Payment modal is being shown');
+    
+    // Update amount in manual payment instructions
+    if (selectedPlanDetails) {
+        console.log('Selected plan details:', selectedPlanDetails);
+        document.getElementById('mpesaAmount').textContent = selectedPlanDetails.price;
+    }
+    
+    // Ensure correct payment method form is shown
+    const selectedPaymentMethod = document.querySelector('input[name="paymentMethodRadio"]:checked').value;
+    console.log('Initial payment method:', selectedPaymentMethod);
+    
+    const mpesaForm = document.getElementById('mpesaForm');
+    const cardForm = document.getElementById('cardForm');
+    
+    mpesaForm.style.display = selectedPaymentMethod === 'mpesa' ? 'block' : 'none';
+    cardForm.style.display = selectedPaymentMethod === 'card' ? 'block' : 'none';
+    
+    // If M-Pesa is selected, ensure correct M-Pesa form is shown
+    if (selectedPaymentMethod === 'mpesa') {
+        const selectedMpesaMethod = document.querySelector('input[name="mpesaMethodRadio"]:checked').value;
+        console.log('Initial M-Pesa method:', selectedMpesaMethod);
+        toggleMpesaForms(selectedMpesaMethod);
+    }
+});
+
+// Format card inputs
+document.getElementById('cardNumber').addEventListener('input', function(e) {
+    let value = e.target.value.replace(/\D/g, '');
+    value = value.replace(/(\d{4})/g, '$1 ').trim();
+    e.target.value = value.substring(0, 19);
+});
+
+document.getElementById('expiryDate').addEventListener('input', function(e) {
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.length >= 2) {
+        value = value.substring(0, 2) + '/' + value.substring(2);
+    }
+    e.target.value = value.substring(0, 5);
+});
+
+document.getElementById('cvv').addEventListener('input', function(e) {
+    let value = e.target.value.replace(/\D/g, '');
+    e.target.value = value.substring(0, 3);
+});
+
+// Format phone number
+document.getElementById('phoneNumber').addEventListener('input', function(e) {
+    let value = e.target.value.replace(/\D/g, '');
+    if (!value.startsWith('254')) {
+        value = '254' + value;
+    }
+    e.target.value = value.substring(0, 12);
+});
+</script>
+
+<?php
+$content = ob_get_clean();
+require __DIR__ . '/../layouts/main.php';
+?> 

@@ -1,0 +1,11 @@
+first_name,last_name,email,phone,id_number,move_in_date,property_name,unit_number
+"John","Kamau","john.kamau@email.com","+254712345678","12345678","2024-01-15","Sunset Apartments","A102"
+"Mary","Wanjiru","mary.wanjiru@email.com","+254723456789","23456789","2024-02-01","Palm Court Residences","B204"
+"David","Ochieng","david.ochieng@email.com","+254734567890","34567890","2024-03-10","City Center Plaza","C301"
+"Grace","Akinyi","grace.akinyi@email.com","+254745678901","45678901","2023-11-20","Riverside Towers","T402"
+"Peter","Mwangi","peter.mwangi@email.com","+254756789012","56789012","2024-01-05","Green Valley Villas","V2"
+"Sarah","Njeri","sarah.njeri@email.com","+254767890123","67890123","2023-12-15","Hilltop Mansions","M1"
+"James","Otieno","james.otieno@email.com","+254778901234","78901234","2024-02-20","Garden Estate Homes","G8"
+"Lucy","Wambui","lucy.wambui@email.com","+254789012345","89012345","2024-03-01","Lakeview Apartments","L103"
+"Michael","Kipchoge","michael.kipchoge@email.com","+254790123456","90123456","2023-10-10","Parkside Residences","P205"
+"Anne","Chebet","anne.chebet@email.com","+254701234567","01234567","2024-01-25","Coastal Breeze Villas","CB4"
