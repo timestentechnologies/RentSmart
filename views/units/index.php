@@ -528,7 +528,7 @@ function handleUnitSubmit(event) {
             const modal = bootstrap.Modal.getInstance(document.getElementById('addUnitModal'));
             modal.hide();
             showAlert('success', 'Unit added successfully');
-            setTimeout(() => window.location.reload(), 1000);
+            window.location.reload();
         } else {
             throw new Error(data.message || 'Error adding unit');
         }
@@ -762,7 +762,7 @@ function handleUnitEdit(event) {
             const modal = bootstrap.Modal.getInstance(document.getElementById('editUnitModal'));
             modal.hide();
             showAlert('success', 'Unit updated successfully');
-            setTimeout(() => window.location.reload(), 1000);
+            window.location.reload();
         } else {
             throw new Error(data.message || 'Error updating unit');
         }

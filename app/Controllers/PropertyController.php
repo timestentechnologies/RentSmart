@@ -97,8 +97,8 @@ class PropertyController
 
     public function create()
     {
-        // Only admin, landlord and manager can create properties
-        if (!$this->user->isAdmin() && !$this->user->isLandlord() && !$this->user->isManager()) {
+        // Only admin, landlord, agent and manager can create properties
+        if (!$this->user->isAdmin() && !$this->user->isLandlord() && !$this->user->isAgent() && !$this->user->isManager()) {
             $_SESSION['flash_message'] = 'Access denied';
             $_SESSION['flash_type'] = 'danger';
             return redirect('/properties');
@@ -112,8 +112,8 @@ class PropertyController
     public function store()
     {
         try {
-            // Only admin, landlord and manager can create properties
-            if (!$this->user->isAdmin() && !$this->user->isLandlord() && !$this->user->isManager()) {
+            // Only admin, landlord, agent and manager can create properties
+            if (!$this->user->isAdmin() && !$this->user->isLandlord() && !$this->user->isAgent() && !$this->user->isManager()) {
                 throw new Exception('Access denied');
             }
 
@@ -134,11 +134,13 @@ class PropertyController
                 'total_area' => filter_input(INPUT_POST, 'total_area', FILTER_VALIDATE_FLOAT)
             ];
 
-            // Set owner_id or manager_id based on role
+            // Set owner_id, manager_id, or agent_id based on role
             if ($this->user->isLandlord()) {
                 $data['owner_id'] = $_SESSION['user_id'];
             } elseif ($this->user->isManager()) {
                 $data['manager_id'] = $_SESSION['user_id'];
+            } elseif ($this->user->isAgent()) {
+                $data['agent_id'] = $_SESSION['user_id'];
             }
 
             // Validate required fields
@@ -442,10 +444,11 @@ class PropertyController
                 throw new Exception('Property not found or access denied');
             }
 
-            // Only admin, owner, or manager can delete
+            // Only admin, owner, manager, or agent can delete
             if (!$this->user->isAdmin() && 
                 $property['owner_id'] != $_SESSION['user_id'] && 
-                $property['manager_id'] != $_SESSION['user_id']) {
+                $property['manager_id'] != $_SESSION['user_id'] &&
+                $property['agent_id'] != $_SESSION['user_id']) {
                 throw new Exception('Access denied');
             }
 
@@ -504,14 +507,15 @@ class PropertyController
     public function get($id)
     {
         try {
-            $property = $this->property->find($id);
+            // Verify access
+            $property = $this->property->getById($id, $_SESSION['user_id']);
             
             if (!$property) {
-                throw new Exception('Property not found');
+                throw new Exception('Property not found or access denied');
             }
 
             // Get units for this property
-            $units = $this->unit->where('property_id', $property['id']);
+            $units = $this->unit->where('property_id', $property['id'], $_SESSION['user_id']);
             $occupied = array_filter($units, function($unit) {
                 return $unit['status'] === 'occupied';
             });
@@ -710,6 +714,7 @@ class PropertyController
                     // Create new property
                     if ($this->user->isLandlord()) $payload['owner_id'] = $userId;
                     if ($this->user->isManager()) $payload['manager_id'] = $userId;
+                    if ($this->user->isAgent()) $payload['agent_id'] = $userId;
                     $id = $this->property->create($payload);
                     if ($id) $created++;
                 }
