@@ -79,11 +79,10 @@ class User extends Model
             $stmt->execute([$this->userData['id']]);
             return $stmt->fetchAll(\PDO::FETCH_ASSOC);
         } elseif ($this->isAgent()) {
-            // Agent can see properties where their manager is assigned
+            // Agent can see properties where they are assigned as agent
             $stmt = $this->db->prepare("
                 SELECT p.* FROM properties p
-                INNER JOIN users u ON p.manager_id = u.id
-                WHERE u.id = (SELECT manager_id FROM users WHERE id = ?)
+                WHERE p.agent_id = ?
             ");
             $stmt->execute([$this->userData['id']]);
             return $stmt->fetchAll(\PDO::FETCH_ASSOC);

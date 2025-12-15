@@ -172,7 +172,7 @@ class Property extends Model
                 $params[] = $userId;
             }
             if ($user->isAgent()) {
-                $sql .= " OR p.manager_id = (SELECT manager_id FROM users WHERE id = ?)";
+                $sql .= " OR p.agent_id = ?";
                 $params[] = $userId;
             }
             $sql .= ")";
@@ -219,7 +219,7 @@ class Property extends Model
                 $params[] = $userId;
             }
             if ($user->isAgent()) {
-                $sql .= " OR p.manager_id = (SELECT manager_id FROM users WHERE id = ?)";
+                $sql .= " OR p.agent_id = ?";
                 $params[] = $userId;
             }
             $sql .= ")";
@@ -285,7 +285,7 @@ class Property extends Model
                     $params[] = $userId;
                 }
                 if ($user->isAgent()) {
-                    $sql .= " OR p.manager_id = (SELECT manager_id FROM users WHERE id = ?)";
+                    $sql .= " OR p.agent_id = ?";
                     $params[] = $userId;
                 }
                 $sql .= ")";
@@ -335,7 +335,7 @@ class Property extends Model
                 $params[] = $userId;
             }
             if ($user->isAgent()) {
-                $sql .= " OR p.manager_id = (SELECT manager_id FROM users WHERE id = ?)";
+                $sql .= " OR p.agent_id = ?";
                 $params[] = $userId;
             }
             $sql .= ")";
@@ -410,7 +410,7 @@ class Property extends Model
                 $params[] = $userId;
             }
             if ($user->isAgent()) {
-                $sql .= " OR p.manager_id = (SELECT manager_id FROM users WHERE id = ?)";
+                $sql .= " OR p.agent_id = ?";
                 $params[] = $userId;
             }
             $sql .= ")";

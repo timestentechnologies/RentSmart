@@ -132,7 +132,7 @@ function submitFormAjax(form, successCallback = null) {
 }
 
 // Alert Helper with SweetAlert2
-function showAlert(type, message, autoHide = true) {
+function showAlert(type, message, autoHide = true, callback = null) {
     // Map type to SweetAlert2 icon
     const iconMap = {
         'success': 'success',
@@ -151,11 +151,18 @@ function showAlert(type, message, autoHide = true) {
         toast: true,
         position: 'top-end',
         showConfirmButton: false,
-        timer: autoHide ? 5000 : undefined,
+        timer: autoHide ? 2000 : undefined,
         timerProgressBar: true,
         didOpen: (toast) => {
             toast.addEventListener('mouseenter', Swal.stopTimer);
             toast.addEventListener('mouseleave', Swal.resumeTimer);
+        },
+        willClose: () => {
+            // Execute callback when toast is closing
+            if (callback) {
+                console.log('Executing SweetAlert callback');
+                callback();
+            }
         }
     });
 }
@@ -322,19 +329,6 @@ function handlePwaInstallClick() {
     }
 }
 
-// Handle install button click
-function handlePwaInstallClick() {
-    if (!deferredInstallPrompt) return;
-    deferredInstallPrompt.prompt();
-    deferredInstallPrompt.userChoice.then((choiceResult) => {
-        const pwaBanner = document.getElementById('pwaInstallBanner');
-        if (pwaBanner) {
-            pwaBanner.classList.add('d-none');
-        }
-        deferredInstallPrompt = null;
-    });
-}
-
 // Hide banner when dismissed
 function dismissPwaBanner() {
     const pwaBanner = document.getElementById('pwaInstallBanner');
@@ -472,14 +466,13 @@ function handleUnitEdit(event) {
         }
         
         // Show success message and close modal
-        showAlert('success', 'Unit updated successfully');
-        const modal = bootstrap.Modal.getInstance(document.getElementById('editUnitModal'));
-        if (modal) {
-            modal.hide();
-        }
-        
-        // Reload the page after a short delay
-        setTimeout(() => window.location.reload(), 1000);
+        showAlert('success', 'Unit updated successfully', true, () => {
+            const modal = bootstrap.Modal.getInstance(document.getElementById('editUnitModal'));
+            if (modal) {
+                modal.hide();
+            }
+            window.location.reload();
+        });
     })
     .catch(error => {
         console.error('Error:', error);
@@ -661,8 +654,9 @@ if (typeof window.deleteProperty === 'undefined') {
                 throw new Error(data.message || 'Failed to delete property');
             }
 
-            showAlert('success', 'Property deleted successfully');
-            setTimeout(() => window.location.reload(), 1000);
+            showAlert('success', 'Property deleted successfully', true, () => {
+                window.location.reload();
+            });
 
         } catch (error) {
             console.error('Error:', error);
@@ -708,13 +702,14 @@ function handleUnitSubmit(event) {
         if (data.success) {
             // Hide modal
             const modal = bootstrap.Modal.getInstance(document.getElementById('addUnitModal'));
-            modal.hide();
+            if (modal) {
+                modal.hide();
+            }
             
-            // Show success message and reload page
-            showAlert('success', data.message);
-            setTimeout(() => {
+            // Show success message and reload after toast
+            showAlert('success', data.message, true, () => {
                 window.location.reload();
-            }, 1000);
+            });
         } else {
             showAlert('error', data.message || 'An error occurred');
         }
@@ -727,6 +722,63 @@ function handleUnitSubmit(event) {
         if (submitButton) {
             submitButton.disabled = false;
             submitButton.innerHTML = 'Add Unit';
+        }
+    });
+
+    return false;
+}
+
+// Handle Property Submit
+function handlePropertySubmit(event) {
+    event.preventDefault();
+    const form = event.target;
+    
+    // Validate form
+    if (!validateForm(form)) {
+        return false;
+    }
+
+    // Submit form via AJAX
+    const formData = new FormData(form);
+    const submitButton = form.querySelector('[type="submit"]');
+    
+    if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Adding Property...';
+    }
+
+    fetch(form.action, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Hide modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('addPropertyModal'));
+            if (modal) {
+                modal.hide();
+            }
+            
+            // Show success message and reload after toast
+            showAlert('success', data.message, true, () => {
+                window.location.reload();
+            });
+        } else {
+            showAlert('error', data.message || 'An error occurred while adding the property');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showAlert('error', 'An error occurred while processing your request');
+    })
+    .finally(() => {
+        if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.innerHTML = 'Add Property';
         }
     });
 
@@ -794,10 +846,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     throw new Error(data.message || 'Failed to update property');
                 }
 
-                showAlert('success', 'Property updated successfully');
-                const modal = bootstrap.Modal.getInstance(document.getElementById('editPropertyModal'));
-                modal.hide();
-                setTimeout(() => window.location.reload(), 1000);
+                showAlert('success', 'Property updated successfully', true, () => {
+                    const modal = bootstrap.Modal.getInstance(document.getElementById('editPropertyModal'));
+                    if (modal) {
+                        modal.hide();
+                    }
+                    window.location.reload();
+                });
 
             } catch (error) {
                 console.error('Error:', error);

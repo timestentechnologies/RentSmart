@@ -732,23 +732,7 @@ ob_start();
     </div>
 </div>
 
-<!-- Delete Property Success Modal -->
-<div class="modal fade" id="deletePropertySuccessModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Property Deleted</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <p>Property was successfully deleted.</p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-primary" id="closeDeletePropertySuccessBtn" data-bs-dismiss="modal">OK</button>
-            </div>
-        </div>
-    </div>
-</div>
+<!-- Success modals handled by SweetAlert in app.js -->
 
 <!-- Page Specific JavaScript -->
 <script type="text/javascript">
@@ -962,110 +946,12 @@ const editProperty = async (id) => {
     } catch (error) {
         console.error('Error:', error);
         showAlert('error', error.message || 'Error loading property details');
-    }
-};
-
-// Handle edit form submission
-const handleEditPropertySubmit = async (event) => {
-    event.preventDefault();
-    const form = event.target;
-    const submitButton = form.querySelector('[type="submit"]');
-    const formData = new FormData(form);
-    
-    try {
-        // Disable submit button and show loading state
-        if (submitButton) {
-            submitButton.disabled = true;
-            submitButton.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Processing...';
-        }
-
-        const response = await fetch(form.action, {
-            method: 'POST',
-            body: formData,
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        });
-
-        const data = await response.json();
-
-        if (!data.success) {
-            throw new Error(data.message || 'An error occurred');
-        }
-
-        showAlert('success', data.message);
-        const modal = bootstrap.Modal.getInstance(document.getElementById('editPropertyModal'));
-        modal.hide();
-        
-        // Reload the page after a short delay
-        setTimeout(() => window.location.reload(), 1000);
-    } catch (error) {
-        showAlert('error', error.message);
-    } finally {
-        if (submitButton) {
-            submitButton.disabled = false;
-            submitButton.innerHTML = 'Save Changes';
-        }
-    }
-};
-
-// Initialize tooltips and event listeners
-document.addEventListener('DOMContentLoaded', () => {
-    // Initialize tooltips
-    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    tooltipTriggerList.map(tooltipTriggerEl => new bootstrap.Tooltip(tooltipTriggerEl));
 
     // DataTable is already initialized by app.js for all .datatable tables
     // No need to initialize it again here
 
-    // Add event listeners for property actions
-    document.querySelectorAll('#propertiesTable [data-bs-toggle="tooltip"]').forEach(button => {
-        const row = button.closest('tr');
-        if (row && row.dataset.id) {
-            if (button.classList.contains('btn-outline-primary')) {
-                button.onclick = () => viewProperty(row.dataset.id);
-            } else if (button.classList.contains('btn-outline-warning')) {
-                button.onclick = () => editProperty(row.dataset.id);
-            }
-        }
-    });
-
-    // Add event listener for edit form submission
-    const editForm = document.getElementById('editPropertyForm');
-    if (editForm) {
-        editForm.addEventListener('submit', handleEditPropertySubmit);
-    }
 });
 
-function deleteProperty(propertyId) {
-    propertyIdToDelete = propertyId;
-    new bootstrap.Modal(document.getElementById('deletePropertyModal')).show();
-}
-
-document.getElementById('confirmDeletePropertyBtn').onclick = function() {
-    fetch(`${BASE_URL}/properties/delete/${propertyIdToDelete}`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-CSRF-TOKEN': '<?= csrf_token() ?>'
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            const successModal = new bootstrap.Modal(document.getElementById('deletePropertySuccessModal'));
-            successModal.show();
-            document.getElementById('closeDeletePropertySuccessBtn').onclick = function() {
-                document.querySelectorAll('.modal.show').forEach(m => bootstrap.Modal.getInstance(m)?.hide());
-                location.reload();
-            };
-        } else {
-        alert('Failed to delete property: ' + data.message);
-    }
-});
-};
-
-// File upload preview functions
 function previewImages(input, previewId) {
     const preview = document.getElementById(previewId);
     preview.innerHTML = '';
@@ -1288,6 +1174,50 @@ async function deletePropertyFile(fileId, fileType) {
     } catch (error) {
         console.error('Error deleting file:', error);
         showAlert('error', 'Error deleting file');
+    }
+}
+
+// Unit field management functions
+let unitFieldCounter = 1;
+
+function addUnitField() {
+    const container = document.getElementById('unitsContainer');
+    const newUnitField = document.createElement('div');
+    newUnitField.className = 'unit-entry mb-2';
+    newUnitField.innerHTML = `
+        <div class="input-group mb-2">
+            <span class="input-group-text">Unit #</span>
+            <input type="text" class="form-control" name="units[${unitFieldCounter}][number]" placeholder="Number" required>
+        </div>
+        <div class="input-group mb-2">
+            <span class="input-group-text">Type</span>
+            <select class="form-select" name="units[${unitFieldCounter}][type]" required>
+                <option value="">Select Type</option>
+                <option value="studio">Studio</option>
+                <option value="1bhk">1 BHK</option>
+                <option value="2bhk">2 BHK</option>
+                <option value="3bhk">3 BHK</option>
+                <option value="other">Other</option>
+            </select>
+            <span class="input-group-text">Size (sq ft)</span>
+            <input type="number" step="0.01" class="form-control" name="units[${unitFieldCounter}][size]" placeholder="Size">
+        </div>
+        <div class="input-group">
+            <span class="input-group-text">Rent Ksh</span>
+            <input type="number" step="0.01" class="form-control" name="units[${unitFieldCounter}][rent]" placeholder="Monthly Rent" required>
+            <button type="button" class="btn btn-outline-danger" onclick="removeUnitField(this)">
+                <i class="bi bi-trash"></i>
+            </button>
+        </div>
+    `;
+    container.appendChild(newUnitField);
+    unitFieldCounter++;
+}
+
+function removeUnitField(button) {
+    const unitEntry = button.closest('.unit-entry');
+    if (unitEntry) {
+        unitEntry.remove();
     }
 }
 
