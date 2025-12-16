@@ -201,13 +201,15 @@ class AuthController
             header('Location: ' . BASE_URL . '/dashboard');
             exit;
         } catch (Exception $e) {
-            error_log($e->getMessage());
+            error_log("Registration error: " . $e->getMessage());
+            error_log("Error trace: " . $e->getTraceAsString());
+            
             if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
                 header('Content-Type: application/json');
-                echo json_encode(['success' => false, 'message' => 'An error occurred during registration']);
+                echo json_encode(['success' => false, 'message' => 'Registration error: ' . $e->getMessage()]);
                 exit;
             }
-            $_SESSION['flash_message'] = 'An error occurred during registration';
+            $_SESSION['flash_message'] = 'Registration error: ' . $e->getMessage();
             $_SESSION['flash_type'] = 'danger';
             header('Location: ' . BASE_URL . '/register');
             exit;

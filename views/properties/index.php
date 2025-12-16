@@ -946,11 +946,9 @@ const editProperty = async (id) => {
     } catch (error) {
         console.error('Error:', error);
         showAlert('error', error.message || 'Error loading property details');
-
-    // DataTable is already initialized by app.js for all .datatable tables
-    // No need to initialize it again here
-
-});
+        removeLoadingAlerts();
+    }
+};
 
 function previewImages(input, previewId) {
     const preview = document.getElementById(previewId);

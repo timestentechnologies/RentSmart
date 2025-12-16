@@ -4,8 +4,8 @@
 $config = [
     'host' => 'localhost',
     'database' => 'opulentl_rentsmart',
-    'username' => 'root',
-    'password' => '',
+    'username' => 'opulentl_timesten',
+    'password' => 'Moonlight#911',
     'charset' => 'utf8mb4',
     'options' => [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,

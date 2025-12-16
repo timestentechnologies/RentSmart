@@ -36,7 +36,8 @@ class PropertyController
             }
             $_SESSION['flash_message'] = 'Please login to continue';
             $_SESSION['flash_type'] = 'danger';
-            redirect('/home');
+            header('Location: ' . BASE_URL . '/home');
+            exit;
         }
         
         // Load user data
@@ -101,7 +102,8 @@ class PropertyController
         if (!$this->user->isAdmin() && !$this->user->isLandlord() && !$this->user->isAgent() && !$this->user->isManager()) {
             $_SESSION['flash_message'] = 'Access denied';
             $_SESSION['flash_type'] = 'danger';
-            return redirect('/properties');
+            header('Location: ' . BASE_URL . '/properties');
+            exit;
         }
 
         echo view('properties/create', [
@@ -213,11 +215,6 @@ class PropertyController
                     }
                 }
 
-                // Update property with file references
-                if (empty($uploadErrors)) {
-                    $fileUploadHelper->updateEntityFiles('property', $propertyId);
-                }
-
                 // Handle units if provided
                 if (!empty($_POST['units'])) {
                     foreach ($_POST['units'] as $unit) {
@@ -226,8 +223,8 @@ class PropertyController
                                 'property_id' => $propertyId,
                                 'unit_number' => $unit['number'],
                                 'type' => $unit['type'] ?? 'other',
-                                'size' => !empty($unit['size']) ? $unit['size'] : null,
-                                'rent_amount' => $unit['rent'],
+                                'size' => !empty($unit['size']) ? (float)$unit['size'] : null,
+                                'rent_amount' => (float)$unit['rent'],
                                 'status' => 'vacant'
                             ];
                             
@@ -237,9 +234,6 @@ class PropertyController
                         }
                     }
                 }
-
-                // Commit transaction
-                $db->commit();
 
                 $message = 'Property added successfully';
                 if (!empty($uploadErrors)) {
@@ -277,7 +271,7 @@ class PropertyController
         // For non-AJAX requests
         $_SESSION['flash_message'] = $response['message'];
         $_SESSION['flash_type'] = $response['success'] ? 'success' : 'danger';
-        return redirect('/properties');
+        header('Location: ' . BASE_URL . '/properties'); exit;
     }
 
     public function edit($id)
@@ -288,7 +282,7 @@ class PropertyController
             if (!$property) {
                 $_SESSION['flash_message'] = 'Property not found or access denied';
                 $_SESSION['flash_type'] = 'danger';
-                return redirect('/properties');
+                header('Location: ' . BASE_URL . '/properties'); exit;
             }
 
             echo view('properties/edit', [
@@ -299,7 +293,7 @@ class PropertyController
             error_log("Error in PropertyController::edit: " . $e->getMessage());
             $_SESSION['flash_message'] = 'Error loading property';
             $_SESSION['flash_type'] = 'danger';
-            return redirect('/properties');
+            header('Location: ' . BASE_URL . '/properties'); exit;
         }
     }
 
@@ -431,7 +425,7 @@ class PropertyController
 
         $_SESSION['flash_message'] = $response['message'];
         $_SESSION['flash_type'] = $response['success'] ? 'success' : 'danger';
-        return redirect('/properties');
+        header('Location: ' . BASE_URL . '/properties'); exit;
     }
 
     public function delete($id)
@@ -484,7 +478,7 @@ class PropertyController
             if (!$property) {
                 $_SESSION['flash_message'] = 'Property not found or access denied';
                 $_SESSION['flash_type'] = 'danger';
-                return redirect('/properties');
+                header('Location: ' . BASE_URL . '/properties'); exit;
             }
 
             $units = $this->unit->where('property_id', $id);
@@ -500,7 +494,7 @@ class PropertyController
             error_log("Error in PropertyController::show: " . $e->getMessage());
             $_SESSION['flash_message'] = 'Error loading property details';
             $_SESSION['flash_type'] = 'danger';
-            return redirect('/properties');
+            header('Location: ' . BASE_URL . '/properties'); exit;
         }
     }
 
@@ -733,7 +727,7 @@ class PropertyController
         header('Cache-Control: no-cache, no-store, must-revalidate');
         header('Pragma: no-cache');
         header('Expires: 0');
-        redirect('/properties?t=' . time());
+        header('Location: ' . BASE_URL . '/properties?t=' . time()); exit;
     }
 
     public function storeUnit()
