@@ -509,29 +509,21 @@ if (typeof window.viewProperty === 'undefined') {
             const property = payload && payload.property ? payload.property : payload;
             
             // Update modal fields
-            document.getElementById('viewPropertyName').textContent = property.name;
-            document.getElementById('viewPropertyAddress').textContent = property.address;
-            document.getElementById('viewPropertyCity').textContent = property.city;
-            document.getElementById('viewPropertyState').textContent = property.state;
-            document.getElementById('viewPropertyZip').textContent = property.zip_code;
-            document.getElementById('viewPropertyType').textContent = property.property_type;
-            document.getElementById('viewPropertyYear').textContent = property.year_built || 'N/A';
-            document.getElementById('viewPropertyArea').textContent = property.total_area ? `${property.total_area} sq ft` : 'N/A';
-            document.getElementById('viewPropertyDescription').textContent = property.description || 'No description available';
+            document.getElementById('view_name').textContent = property.name;
+            document.getElementById('view_address').textContent = property.address;
+            document.getElementById('view_city').textContent = property.city;
+            document.getElementById('view_state').textContent = property.state;
+            document.getElementById('view_zip_code').textContent = property.zip_code;
+            document.getElementById('view_property_type').textContent = property.property_type;
+            document.getElementById('view_year_built').textContent = property.year_built || 'N/A';
+            document.getElementById('view_total_area').textContent = property.total_area ? `${property.total_area} sq ft` : 'N/A';
             
             // Update statistics
-            document.getElementById('viewPropertyTotalUnits').textContent = property.total_units || '0';
-            document.getElementById('viewPropertyOccupiedUnits').textContent = property.occupied_units || '0';
-            document.getElementById('viewPropertyVacantUnits').textContent = 
-                (property.total_units - property.occupied_units) || '0';
-            document.getElementById('viewPropertyMonthlyRevenue').textContent = 
-                formatCurrency(property.monthly_revenue || 0);
-            
-            // Calculate and update occupancy rate
-            const occupancyRate = property.total_units > 0 
-                ? ((property.occupied_units / property.total_units) * 100).toFixed(1)
-                : '0.0';
-            document.getElementById('viewPropertyOccupancyRate').textContent = `${occupancyRate}%`;
+            document.getElementById('view_total_units').textContent = property.units_count || '0';
+            document.getElementById('view_occupancy_rate').textContent = `${Math.round(property.occupancy_rate || 0)}%`;
+            document.getElementById('view_monthly_income').textContent = formatCurrency(property.monthly_income || 0);
+            document.getElementById('view_vacant_units').textContent = 
+                property.units_count ? (property.units_count - Math.round(property.units_count * ((property.occupancy_rate || 0) / 100))) : 0;
             
             // Show the modal
             const viewModal = new bootstrap.Modal(document.getElementById('viewPropertyModal'));

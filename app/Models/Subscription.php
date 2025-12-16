@@ -20,7 +20,7 @@ class Subscription extends Model
         }
 
         $now = new DateTime();
-        $trialEndsAt = (new DateTime())->modify('+60 days');
+        $trialEndsAt = (new DateTime())->modify('+7 days');
 
         $data = [
             'user_id' => $userId,

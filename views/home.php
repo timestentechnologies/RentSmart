@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= htmlspecialchars($siteName) ?> | #1 Property Management System in Kenya | Rental & Real Estate Software</title>
-    <meta name="description" content="Transform your property management with <?= htmlspecialchars($siteName) ?> - Kenya's leading rental management software. Manage properties, tenants, rent collection, maintenance, utilities & more. 60-day free trial. Perfect for landlords, property managers & real estate agents.">
+    <meta name="description" content="Transform your property management with <?= htmlspecialchars($siteName) ?> - Kenya's leading rental management software. Manage properties, tenants, rent collection, maintenance, utilities & more. 7-day free trial. Perfect for landlords, property managers & real estate agents.">
     <meta name="keywords" content="property management system Kenya, rental management software, property management software Kenya, real estate management system, landlord software Kenya, tenant management system, rental property software, property manager app, online rent collection Kenya, real estate software Kenya, property accounting software, maintenance management system, utility billing software, lease management system, property portfolio management, residential property management, commercial property management, apartment management software, rental tracking system, property management app Kenya, <?= htmlspecialchars($siteName) ?>">
     <meta name="author" content="<?= htmlspecialchars($siteName) ?>">
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
@@ -15,7 +15,7 @@
     <meta property="og:locale" content="en_KE">
     <meta property="og:type" content="website">
     <meta property="og:title" content="<?= htmlspecialchars($siteName) ?> | Best Property & Rental Management Software in Kenya">
-    <meta property="og:description" content="Streamline your property and rental operations with Kenya's most trusted management software. Manage properties, tenants, rent payments, maintenance & utilities in one platform. Start your 60-day free trial today!">
+    <meta property="og:description" content="Streamline your property and rental operations with Kenya's most trusted management software. Manage properties, tenants, rent payments, maintenance & utilities in one platform. Start your 7-day free trial today!">
     <meta property="og:image" content="<?= BASE_URL ?>/public/assets/images/social_preview.png">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
@@ -25,7 +25,7 @@
     <!-- Twitter Cards -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="<?= htmlspecialchars($siteName) ?> | Property & Rental Management Software Kenya">
-    <meta name="twitter:description" content="Manage properties, units, tenants, rent collection, maintenance & utilities with <?= htmlspecialchars($siteName) ?>. Trusted by landlords and real estate professionals across Kenya. 60-day free trial!">
+    <meta name="twitter:description" content="Manage properties, units, tenants, rent collection, maintenance & utilities with <?= htmlspecialchars($siteName) ?>. Trusted by landlords and real estate professionals across Kenya. 7-day free trial!">
     <meta name="twitter:image" content="<?= BASE_URL ?>/public/assets/images/social_preview.png">
     <meta name="twitter:site" content="@RentSmartKE">
     
@@ -45,7 +45,7 @@
             "priceCurrency": "KES",
             "priceValidUntil": "<?= date('Y-12-31') ?>",
             "availability": "https://schema.org/InStock",
-            "description": "60-day free trial"
+            "description": "7-day free trial"
         },
         "aggregateRating": {
             "@type": "AggregateRating",
@@ -130,7 +130,7 @@
                 "name": "How long is the free trial period?",
                 "acceptedAnswer": {
                     "@type": "Answer",
-                    "text": "RentSmart offers a generous 60-day free trial with full access to all features. No credit card required to start. You can explore all property management features, add properties and tenants, collect rent, and generate reports during the trial period."
+                    "text": "RentSmart offers a generous 7-day free trial with full access to all features. No credit card required to start. You can explore all property management features, add properties and tenants, collect rent, and generate reports during the trial period."
                 }
             },
             {
@@ -591,7 +591,7 @@
                     </li>
                     <li class="nav-item">
                         <a class="btn btn-gradient ms-2" href="#" data-bs-toggle="modal" data-bs-target="#registerModal">
-                            Get Started - 60 Days Free
+                            Get Started - 7 Days Free
                         </a>
                     </li>
                 </ul>
@@ -608,7 +608,7 @@
                     <p class="lead">Streamline your property management with RentSmart. The all-in-one solution for landlords and property managers.</p>
                     <div class="d-flex gap-2">
                         <a href="#" class="btn btn-accent btn-lg" data-bs-toggle="modal" data-bs-target="#registerModal">
-                            <i class="bi bi-rocket-takeoff me-2"></i>Start 60-Day Free Trial
+                            <i class="bi bi-rocket-takeoff me-2"></i>Start 7-Day Free Trial
                         </a>
                         <a href="#features" class="btn btn-outline-accent btn-lg">Learn More</a>
                     </div>
@@ -837,7 +837,7 @@
         <div class="container">
             <div class="text-center mb-5">
                 <h2 class="display-5 fw-bold">Affordable Property Management Software Pricing</h2>
-                <p class="lead text-muted">Flexible pricing plans for landlords and property managers of all sizes. Start with a 60-day free trial - no credit card required</p>
+                <p class="lead text-muted">Flexible pricing plans for landlords and property managers of all sizes. Start with a 7-day free trial - no credit card required</p>
             </div>
             <div class="row g-4">
                 <?php 
@@ -865,7 +865,7 @@
                             <a href="#" class="btn <?= $plan['name'] === 'Professional' ? 'btn-gradient' : 'btn-outline-primary' ?> w-100">Contact Sales</a>
                         <?php else: ?>
                             <a href="#" data-bs-toggle="modal" data-bs-target="#registerModal" class="btn <?= $plan['name'] === 'Professional' ? 'btn-gradient' : 'btn-outline-primary' ?> w-100">
-                                Start 60-Day Free Trial
+                                Start 7-Day Free Trial
                             </a>
                         <?php endif; ?>
                     </div>
@@ -962,7 +962,7 @@
                             </h3>
                             <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
                                 <div class="accordion-body">
-                                    RentSmart offers a generous 60-day free trial with full access to all features. No credit card required to start. You can explore all property management features, add properties and tenants, collect rent, and generate reports during the trial period. After 60 days, you can choose a plan that fits your needs.
+                                    RentSmart offers a generous 7-day free trial with full access to all features. No credit card required to start. You can explore all property management features, add properties and tenants, collect rent, and generate reports during the trial period. After 7-day, you can choose a plan that fits your needs.
                                 </div>
                             </div>
                         </div>
@@ -1062,7 +1062,7 @@
             <h2 class="display-5 fw-bold mb-4">Transform Your Property Management Today</h2>
             <p class="lead mb-4">Join hundreds of landlords and property managers in Kenya who are simplifying their rental business with RentSmart. Start your free trial now!</p>
             <a class="btn btn-gradient btn-lg" href="#" data-bs-toggle="modal" data-bs-target="#registerModal">
-                <i class="bi bi-rocket-takeoff me-2"></i>Start Your 60-Day Free Trial
+                <i class="bi bi-rocket-takeoff me-2"></i>Start Your 7-Day Free Trial
             </a>
             
             <p class="mt-3 text-muted">No credit card required</p>
@@ -1155,8 +1155,8 @@
                         <?= csrf_field() ?>
                         
                         <div class="form-floating mb-3">
-                            <input type="email" class="form-control" id="loginEmail" name="email" placeholder="name@example.com" required>
-                            <label for="loginEmail">Email address</label>
+                            <input type="text" class="form-control" id="loginEmail" name="email" placeholder="Email or Phone Number" required>
+                            <label for="loginEmail">Email or Phone Number</label>
                         </div>
 
                         <div class="form-floating mb-3">
@@ -1201,7 +1201,7 @@
                         <img src="<?= asset('images/site_logo_1751627446.png') ?>" alt="RentSmart Logo" class="logo" style="width: 200px;">
                         <h1 class="h3 mb-3 fw-normal">Create Your Account</h1>
                         <div class="badge bg-success">
-                            <i class="bi bi-clock"></i> Includes 60-day free trial
+                            <i class="bi bi-clock"></i> Includes 7-day free trial
                         </div>
                     </div>
 
@@ -1218,6 +1218,16 @@
                         <div class="form-floating mb-3">
                             <input type="email" class="form-control" id="registerEmail" name="email" placeholder="name@example.com" required>
                             <label for="registerEmail">Email address</label>
+                        </div>
+
+                        <div class="form-floating mb-3">
+                            <input type="tel" class="form-control" id="registerPhone" name="phone" placeholder="Phone Number" required>
+                            <label for="registerPhone">Phone Number</label>
+                        </div>
+
+                        <div class="form-floating mb-3">
+                            <input type="text" class="form-control" id="registerAddress" name="address" placeholder="Address" required>
+                            <label for="registerAddress">Address</label>
                         </div>
 
                         <div class="form-floating mb-3">
@@ -1242,7 +1252,7 @@
                         <input type="hidden" name="plan_id" value="1">
 
                         <button class="w-100 btn btn-lg btn-primary mb-3" type="submit">
-                            <i class="bi bi-person-plus me-2"></i>Create Account - Start 60-Day Trial
+                            <i class="bi bi-person-plus me-2"></i>Create Account - Start 7-Day Trial
                         </button>
 
                         <div class="text-center">
