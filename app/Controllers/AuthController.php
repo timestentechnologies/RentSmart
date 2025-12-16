@@ -39,10 +39,12 @@ class AuthController
 
             $name = filter_input(INPUT_POST, 'name', FILTER_SANITIZE_STRING);
             $email = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL);
+            $phone = filter_input(INPUT_POST, 'phone', FILTER_SANITIZE_STRING);
+            $address = filter_input(INPUT_POST, 'address', FILTER_SANITIZE_STRING);
             $password = $_POST['password'] ?? '';
             $role = filter_input(INPUT_POST, 'role', FILTER_SANITIZE_STRING);
 
-            if (!$name || !$email || !$password || !$role) {
+            if (!$name || !$email || !$phone || !$address || !$password || !$role) {
                 if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
                     header('Content-Type: application/json');
                     echo json_encode(['success' => false, 'message' => 'All fields are required']);
@@ -80,15 +82,34 @@ class AuthController
                 exit;
             }
 
-            // Create user
-            $userId = $this->user->createUser([
+            // Prepare user data
+            $userData = [
                 'name' => $name,
                 'email' => $email,
+                'phone' => $phone,
+                'address' => $address,
                 'password' => $password,
                 'role' => $role,
                 'is_subscribed' => true,
                 'trial_ends_at' => (new DateTime())->modify('+7 days')->format('Y-m-d H:i:s')
-            ]);
+            ];
+            
+            // Set manager_id for agent role
+            if ($role === 'agent') {
+                // Assign agent to themselves as manager for now
+                // This can be modified later to assign to a specific manager
+                $userData['manager_id'] = null; // Will be updated after user creation
+            }
+            
+            // Create user
+            $userId = $this->user->createUser($userData);
+
+            // Update manager_id for agent role
+            if ($role === 'agent') {
+                $this->user->update($userId, [
+                    'manager_id' => $userId
+                ]);
+            }
 
             // Create subscription with Basic plan (id=1)
             $this->subscription->createSubscription($userId, 1);
@@ -209,22 +230,35 @@ class AuthController
                 exit;
             }
 
-            $email = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL);
+            $emailOrPhone = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_STRING);
             $password = $_POST['password'] ?? '';
 
-            if (!$email || !$password) {
+            if (!$emailOrPhone || !$password) {
                 if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
                     header('Content-Type: application/json');
-                    echo json_encode(['success' => false, 'message' => 'Email and password are required']);
+                    echo json_encode(['success' => false, 'message' => 'Email/phone and password are required']);
                     exit;
                 }
-                $_SESSION['flash_message'] = 'Email and password are required';
+                $_SESSION['flash_message'] = 'Email/phone and password are required';
                 $_SESSION['flash_type'] = 'danger';
                 header('Location: ' . BASE_URL . '/');
                 exit;
             }
 
-            $user = $this->user->findByEmail($email);
+            // Check if input is email or phone, then find user
+            $user = null;
+            if (filter_var($emailOrPhone, FILTER_VALIDATE_EMAIL)) {
+                // It's an email
+                $user = $this->user->findByEmail($emailOrPhone);
+            } else {
+                // It's a phone number - check if user model has phone lookup method
+                if (method_exists($this->user, 'findByPhone')) {
+                    $user = $this->user->findByPhone($emailOrPhone);
+                } else {
+                    // Fallback: try to find by email if phone lookup not available
+                    $user = $this->user->findByEmail($emailOrPhone);
+                }
+            }
 
             if (!$user || !password_verify($password, $user['password'])) {
                 if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
