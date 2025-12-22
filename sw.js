@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rentsmart-cache-v2';
+const CACHE_NAME = 'rentsmart-cache-v3';
 const BASE = (self.registration && self.registration.scope ? self.registration.scope : '/').replace(/\/$/, '');
 const ASSETS = [
   BASE + '/',
@@ -30,12 +30,46 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const request = event.request;
   if (request.method !== 'GET') return;
+
+  let url;
+  try {
+    url = new URL(request.url);
+  } catch (e) {
+    return;
+  }
+
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return;
+  if (url.origin !== self.location.origin) return;
+
+  const isDocumentRequest = request.mode === 'navigate' || request.destination === 'document';
+  if (isDocumentRequest) {
+    event.respondWith(
+      fetch(new Request(request, { cache: 'no-store' }))
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.ok) {
+            const copy = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, copy)).catch(() => {});
+          }
+          return networkResponse;
+        })
+        .catch(() => caches.match(request).then((cached) => cached || caches.match(BASE + '/')))
+    );
+    return;
+  }
+
+  const isStaticAsset = ['style', 'script', 'image', 'font', 'manifest'].includes(request.destination);
+  if (!isStaticAsset) {
+    return;
+  }
+
   event.respondWith(
     caches.match(request).then((cached) => {
       const fetchPromise = fetch(request)
         .then((networkResponse) => {
-          const copy = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
+          if (networkResponse && networkResponse.ok) {
+            const copy = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, copy)).catch(() => {});
+          }
           return networkResponse;
         })
         .catch(() => cached);
@@ -43,5 +77,3 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
-
-

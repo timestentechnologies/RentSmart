@@ -113,6 +113,9 @@ class PropertyController
 
     public function store()
     {
+        $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && 
+                 strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest';
+
         try {
             // Only admin, landlord, agent and manager can create properties
             if (!$this->user->isAdmin() && !$this->user->isLandlord() && !$this->user->isAgent() && !$this->user->isManager()) {
@@ -125,15 +128,15 @@ class PropertyController
 
             // Validate and sanitize input (PHP 8+ safe)
             $data = [
-                'name' => (string)filter_input(INPUT_POST, 'name'),
-                'address' => (string)filter_input(INPUT_POST, 'address'),
-                'city' => (string)filter_input(INPUT_POST, 'city'),
-                'state' => (string)filter_input(INPUT_POST, 'state'),
-                'zip_code' => (string)filter_input(INPUT_POST, 'zip_code'),
-                'property_type' => (string)filter_input(INPUT_POST, 'property_type'),
-                'description' => (string)filter_input(INPUT_POST, 'description'),
-                'year_built' => filter_input(INPUT_POST, 'year_built', FILTER_VALIDATE_INT),
-                'total_area' => filter_input(INPUT_POST, 'total_area', FILTER_VALIDATE_FLOAT)
+                'name' => filter_var($_POST['name'] ?? '', FILTER_SANITIZE_STRING),
+                'address' => filter_var($_POST['address'] ?? '', FILTER_SANITIZE_STRING),
+                'city' => filter_var($_POST['city'] ?? '', FILTER_SANITIZE_STRING),
+                'state' => filter_var($_POST['state'] ?? '', FILTER_SANITIZE_STRING),
+                'zip_code' => filter_var($_POST['zip_code'] ?? '', FILTER_SANITIZE_STRING),
+                'property_type' => filter_var($_POST['property_type'] ?? '', FILTER_SANITIZE_STRING),
+                'description' => filter_var($_POST['description'] ?? '', FILTER_SANITIZE_STRING),
+                'year_built' => filter_var($_POST['year_built'] ?? '', FILTER_VALIDATE_INT),
+                'total_area' => filter_var($_POST['total_area'] ?? '', FILTER_VALIDATE_FLOAT)
             ];
 
             // Set owner_id, manager_id, or agent_id based on role
@@ -217,7 +220,7 @@ class PropertyController
 
                 // Handle units if provided
                 if (!empty($_POST['units'])) {
-                    foreach ($_POST['units'] as $unit) {
+                    foreach ($_POST['units'] as $index => $unit) {
                         if (!empty($unit['number']) && !empty($unit['rent'])) {
                             $unitData = [
                                 'property_id' => $propertyId,
@@ -228,35 +231,35 @@ class PropertyController
                                 'status' => 'vacant'
                             ];
                             
-                            if (!$this->unit->create($unitData)) {
+                            $unitId = $this->unit->create($unitData);
+                            if (!$unitId) {
                                 throw new Exception('Failed to create unit: ' . $unit['number']);
                             }
                         }
                     }
                 }
 
-                $message = 'Property added successfully';
-                if (!empty($uploadErrors)) {
-                    $message .= ' with some file upload issues: ' . implode(', ', $uploadErrors);
-                }
+            $message = 'Property added successfully';
+            if (!empty($uploadErrors)) {
+                $message .= ' with some file upload issues: ' . implode(', ', $uploadErrors);
+            }
 
-                $response = [
-                    'success' => true,
-                    'message' => $message,
-                    'property_id' => $propertyId,
-                    'upload_errors' => $uploadErrors
-                ];
-            } catch (Exception $e) {
-                // Rollback transaction on error
-                $db->rollBack();
-                throw $e;
+            $response = [
+                'success' => true,
+                'message' => $message,
+                'property_id' => $propertyId,
+                'upload_errors' => $uploadErrors
+            ];
+
+            if ($db->inTransaction()) {
+                $db->commit();
             }
         } catch (Exception $e) {
-            error_log("Error in PropertyController::store: " . $e->getMessage());
-            $response = [
-                'success' => false,
-                'message' => $e->getMessage()
-            ];
+            // Rollback transaction on error
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
+            throw $e;
         }
 
         if ($isAjax) {
@@ -272,6 +275,29 @@ class PropertyController
         $_SESSION['flash_message'] = $response['message'];
         $_SESSION['flash_type'] = $response['success'] ? 'success' : 'danger';
         header('Location: ' . BASE_URL . '/properties'); exit;
+    } catch (Exception $e) {
+        if (isset($db) && $db->inTransaction()) {
+            $db->rollBack();
+        }
+
+        $response = [
+            'success' => false,
+            'message' => $e->getMessage()
+        ];
+
+        if ($isAjax) {
+            header('Content-Type: application/json');
+            if (!headers_sent()) {
+                http_response_code(200);
+            }
+            echo json_encode($response);
+            exit;
+        }
+
+        $_SESSION['flash_message'] = $response['message'];
+        $_SESSION['flash_type'] = 'danger';
+        header('Location: ' . BASE_URL . '/properties'); exit;
+    }
     }
 
     public function edit($id)
