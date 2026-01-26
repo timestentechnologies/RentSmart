@@ -86,6 +86,7 @@ ob_start();
                     <tr>
                         <th class="text-muted">NAME</th>
                         <th class="text-muted">EMAIL</th>
+                        <th class="text-muted">PHONE</th>
                         <th class="text-muted">ROLE</th>
                         <th class="text-muted">STATUS</th>
                         <th class="text-muted">LAST LOGIN</th>
@@ -104,6 +105,7 @@ ob_start();
                                 </div>
                             </td>
                             <td><?= htmlspecialchars($user['email']) ?></td>
+                             <td><?= htmlspecialchars($user['phone']) ?></td>
                             <td>
                                 <span class="badge bg-<?= $user['role'] === 'admin' ? 'danger' : ($user['role'] === 'manager' ? 'success' : 'info') ?>">
                                     <?= ucfirst($user['role']) ?>

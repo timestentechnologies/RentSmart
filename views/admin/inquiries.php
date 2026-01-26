@@ -26,6 +26,8 @@ ob_start();
                             <th>Name</th>
                             <th>Contact</th>
                             <th>Preferred Date</th>
+                            <th>Message</th>
+                            <th>Created At</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -37,6 +39,8 @@ ob_start();
                                 <td><?= htmlspecialchars($inq['name'] ?? '') ?></td>
                                 <td><?= htmlspecialchars($inq['contact'] ?? '') ?></td>
                                 <td><?= htmlspecialchars($inq['preferred_date'] ?? '') ?></td>
+                                <td><?= htmlspecialchars($inq['message'] ?? '') ?></td>
+                                <td><?= htmlspecialchars($inq['created_at'] ?? '') ?></td>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
