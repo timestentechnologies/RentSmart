@@ -38,7 +38,7 @@ class Lease extends Model
                 $params[] = $userId;
             }
             if ($user->isAgent()) {
-                $sql .= " OR p.manager_id = (SELECT manager_id FROM users WHERE id = ?)";
+                $sql .= " OR p.agent_id = ?";
                 $params[] = $userId;
             }
             $sql .= ")";
@@ -60,7 +60,8 @@ class Lease extends Model
                 t.name as tenant_name,
                 t.phone as tenant_phone,
                 u.unit_number,
-                p.name as property_name
+                p.name as property_name,
+                p.id as property_id
                 FROM leases l
                 JOIN tenants t ON l.tenant_id = t.id
                 JOIN units u ON l.unit_id = u.id
@@ -81,7 +82,7 @@ class Lease extends Model
                 $params[] = $userId;
             }
             if ($user->isAgent()) {
-                $sql .= " OR p.manager_id = (SELECT manager_id FROM users WHERE id = ?)";
+                $sql .= " OR p.agent_id = ?";
                 $params[] = $userId;
             }
             $sql .= ")";

@@ -5,6 +5,7 @@ namespace App\Controllers;
 use App\Models\User;
 use App\Models\Subscription;
 use App\Models\Setting;
+use App\Models\PasswordReset;
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception as MailException;
 use Exception;
@@ -57,7 +58,7 @@ class AuthController
             }
 
             // Validate role
-            if (!in_array($role, ['landlord', 'agent'])) {
+            if (!in_array($role, ['landlord', 'agent', 'manager'])) {
                 if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
                     header('Content-Type: application/json');
                     echo json_encode(['success' => false, 'message' => 'Invalid role selected']);
@@ -324,6 +325,193 @@ class AuthController
             $_SESSION['flash_message'] = 'An error occurred during login';
             $_SESSION['flash_type'] = 'danger';
             header('Location: ' . BASE_URL . '/');
+            exit;
+        }
+    }
+
+    public function showForgotPassword()
+    {
+        try {
+            echo view('auth/forgot_password', [
+                'title' => 'Forgot Password'
+            ]);
+        } catch (Exception $e) {
+            error_log($e->getMessage());
+            if (getenv('APP_ENV') === 'development') {
+                throw $e;
+            }
+            require 'views/errors/500.php';
+        }
+    }
+
+    public function sendResetLink()
+    {
+        try {
+            if (!verify_csrf_token()) {
+                $_SESSION['flash_message'] = 'Invalid security token';
+                $_SESSION['flash_type'] = 'danger';
+                header('Location: ' . BASE_URL . '/forgot-password');
+                exit;
+            }
+
+            $email = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL);
+            if (!$email) {
+                $_SESSION['flash_message'] = 'Please enter a valid email address';
+                $_SESSION['flash_type'] = 'danger';
+                header('Location: ' . BASE_URL . '/forgot-password');
+                exit;
+            }
+
+            $user = $this->user->findByEmail($email);
+            $passwordReset = new PasswordReset();
+            if ($user) {
+                $token = $passwordReset->createToken($email, 60);
+
+                $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+                $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+                $resetUrl = $scheme . '://' . $host . BASE_URL . '/reset-password/' . $token;
+
+                $settingModel = new Setting();
+                $settings = $settingModel->getAllAsAssoc();
+                $logoUrl = isset($settings['site_logo']) && $settings['site_logo'] ? ($scheme . '://' . $host . BASE_URL . '/public/assets/images/' . $settings['site_logo']) : '';
+                $footer = '<div style="margin-top:30px;font-size:12px;color:#888;text-align:center;">Powered by <a href="https://timestentechnologies.co.ke" target="_blank" style="color:#888;text-decoration:none;">Timesten Technologies</a></div>';
+
+                $mail = new PHPMailer(true);
+                try {
+                    $mail->isSMTP();
+                    $mail->Host = $settings['smtp_host'] ?? '';
+                    $mail->Port = (int)($settings['smtp_port'] ?? 587);
+                    $mail->SMTPAuth = true;
+                    $mail->Username = $settings['smtp_user'] ?? '';
+                    $mail->Password = $settings['smtp_pass'] ?? '';
+                    $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+                    $mail->setFrom($settings['smtp_user'] ?? '', $settings['site_name'] ?? 'RentSmart');
+                    $mail->addReplyTo($settings['smtp_user'] ?? '', $settings['site_name'] ?? 'RentSmart');
+                    $mail->isHTML(true);
+                    $mail->clearAddresses();
+                    $mail->addAddress($email);
+                    $mail->Subject = 'Password Reset Request';
+                    $mail->Body =
+                        '<div style="max-width:520px;margin:auto;border:1px solid #eee;padding:24px;font-family:sans-serif;">'
+                        . ($logoUrl ? '<div style="text-align:center;margin-bottom:24px;"><img src="' . $logoUrl . '" alt="Logo" style="max-width:180px;max-height:80px;"></div>' : '')
+                        . '<p style="font-size:16px;">We received a request to reset your password.</p>'
+                        . '<p>Click the button below to reset your password. This link will expire in 60 minutes.</p>'
+                        . '<p style="text-align:center;margin:24px 0;"><a href="' . htmlspecialchars($resetUrl) . '" style="background:#0061f2;color:#fff;padding:12px 18px;border-radius:6px;text-decoration:none;display:inline-block;">Reset Password</a></p>'
+                        . '<p>If you did not request a password reset, you can safely ignore this email.</p>'
+                        . $footer
+                        . '</div>';
+                    try {
+                        $mail->send();
+                        error_log('Password reset email sent to ' . $email);
+                    } catch (MailException $me) {
+                        error_log('Password reset email error: ' . $me->getMessage());
+                    }
+                } catch (MailException $e) {
+                    error_log('Mailer setup error: ' . $e->getMessage());
+                }
+            }
+
+            $_SESSION['flash_message'] = 'If that email exists in our system, we have emailed a password reset link.';
+            $_SESSION['flash_type'] = 'success';
+            header('Location: ' . BASE_URL . '/forgot-password');
+            exit;
+        } catch (Exception $e) {
+            error_log($e->getMessage());
+            $_SESSION['flash_message'] = 'An error occurred. Please try again.';
+            $_SESSION['flash_type'] = 'danger';
+            header('Location: ' . BASE_URL . '/forgot-password');
+            exit;
+        }
+    }
+
+    public function showResetForm($token)
+    {
+        try {
+            $passwordReset = new PasswordReset();
+            $record = $passwordReset->findByToken($token);
+            if (!$record) {
+                $_SESSION['flash_message'] = 'This reset link is invalid or has expired. Please request a new one.';
+                $_SESSION['flash_type'] = 'danger';
+                header('Location: ' . BASE_URL . '/forgot-password');
+                exit;
+            }
+            echo view('auth/reset_password', [
+                'title' => 'Reset Password',
+                'token' => $token,
+                'email' => $record['email']
+            ]);
+        } catch (Exception $e) {
+            error_log($e->getMessage());
+            if (getenv('APP_ENV') === 'development') {
+                throw $e;
+            }
+            require 'views/errors/500.php';
+        }
+    }
+
+    public function resetPassword()
+    {
+        try {
+            if (!verify_csrf_token()) {
+                $_SESSION['flash_message'] = 'Invalid security token';
+                $_SESSION['flash_type'] = 'danger';
+                header('Location: ' . BASE_URL . '/forgot-password');
+                exit;
+            }
+
+            $token = $_POST['token'] ?? '';
+            $password = $_POST['password'] ?? '';
+            $passwordConfirm = $_POST['password_confirmation'] ?? '';
+
+            if (!$token || !$password || !$passwordConfirm) {
+                $_SESSION['flash_message'] = 'Please fill in all required fields';
+                $_SESSION['flash_type'] = 'danger';
+                header('Location: ' . BASE_URL . '/forgot-password');
+                exit;
+            }
+            if ($password !== $passwordConfirm) {
+                $_SESSION['flash_message'] = 'Passwords do not match';
+                $_SESSION['flash_type'] = 'danger';
+                header('Location: ' . BASE_URL . '/reset-password/' . urlencode($token));
+                exit;
+            }
+            if (strlen($password) < 6) {
+                $_SESSION['flash_message'] = 'Password must be at least 6 characters';
+                $_SESSION['flash_type'] = 'danger';
+                header('Location: ' . BASE_URL . '/reset-password/' . urlencode($token));
+                exit;
+            }
+
+            $passwordReset = new PasswordReset();
+            $record = $passwordReset->findByToken($token);
+            if (!$record) {
+                $_SESSION['flash_message'] = 'This reset link is invalid or has expired. Please request a new one.';
+                $_SESSION['flash_type'] = 'danger';
+                header('Location: ' . BASE_URL . '/forgot-password');
+                exit;
+            }
+
+            $user = $this->user->findByEmail($record['email']);
+            if (!$user) {
+                $passwordReset->deleteByToken($token);
+                $_SESSION['flash_message'] = 'Account not found for this reset request.';
+                $_SESSION['flash_type'] = 'danger';
+                header('Location: ' . BASE_URL . '/forgot-password');
+                exit;
+            }
+
+            $this->user->updatePassword($user['id'], $password);
+            $passwordReset->deleteByToken($token);
+
+            $_SESSION['flash_message'] = 'Your password has been reset. Please log in.';
+            $_SESSION['flash_type'] = 'success';
+            header('Location: ' . BASE_URL . '/');
+            exit;
+        } catch (Exception $e) {
+            error_log($e->getMessage());
+            $_SESSION['flash_message'] = 'An error occurred while resetting your password.';
+            $_SESSION['flash_type'] = 'danger';
+            header('Location: ' . BASE_URL . '/forgot-password');
             exit;
         }
     }

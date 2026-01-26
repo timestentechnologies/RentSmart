@@ -5,6 +5,32 @@ namespace App\Models;
 class Property extends Model
 {
     protected $table = 'properties';
+    
+    public function __construct()
+    {
+        parent::__construct();
+        $this->table = 'properties';
+        $this->ensureCaretakerColumns();
+    }
+
+    private function ensureCaretakerColumns()
+    {
+        try {
+            // caretaker_name
+            $stmt = $this->db->query("SHOW COLUMNS FROM {$this->table} LIKE 'caretaker_name'");
+            if ($stmt->rowCount() === 0) {
+                $this->db->exec("ALTER TABLE {$this->table} ADD COLUMN caretaker_name VARCHAR(255) NULL AFTER description");
+            }
+
+            // caretaker_contact
+            $stmt = $this->db->query("SHOW COLUMNS FROM {$this->table} LIKE 'caretaker_contact'");
+            if ($stmt->rowCount() === 0) {
+                $this->db->exec("ALTER TABLE {$this->table} ADD COLUMN caretaker_contact VARCHAR(255) NULL AFTER caretaker_name");
+            }
+        } catch (\Exception $e) {
+            error_log("Property::ensureCaretakerColumns error: " . $e->getMessage());
+        }
+    }
 
     public function units()
     {

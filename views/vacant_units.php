@@ -25,6 +25,23 @@
         .card-unit img { height:200px; object-fit:cover; width:100%; }
         .badge-rent { background:rgba(107,62,153,.1); color:#6B3E99; }
         .unit-meta i { color:#6B3E99; }
+        /* Ensure carousel arrows are always visible on images */
+        .card-unit .carousel-control-prev,
+        .card-unit .carousel-control-next { 
+            opacity: 1; 
+            width: 12%;
+            z-index: 3;
+        }
+        .card-unit .carousel-control-prev-icon,
+        .card-unit .carousel-control-next-icon {
+            width: 2.5rem;
+            height: 2.5rem;
+            border-radius: 50%;
+            background-color: rgba(0,0,0,0.45);
+            background-size: 60% 60%;
+            filter: invert(1);
+            box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+        }
     </style>
     <?php if (!defined('BASE_URL')) { define('BASE_URL', ''); } ?>
 </head>
@@ -96,25 +113,57 @@
             <?php else: ?>
                 <div class="row g-4">
                     <?php foreach ($vacantUnits as $unit): ?>
+                        <?php
+                            $addressBits = array_filter([
+                                $unit['address'] ?? '',
+                                $unit['city'] ?? '',
+                                $unit['state'] ?? '',
+                                $unit['zip_code'] ?? ''
+                            ]);
+                            $addressStr = implode(', ', $addressBits);
+                            $images = isset($unit['images']) && is_array($unit['images']) ? $unit['images'] : [ $unit['image'] ?? '' ];
+                            $carouselId = 'unitCarousel_' . (int)$unit['id'];
+                        ?>
                         <div class="col-md-4 unit-card" data-location="<?= htmlspecialchars(strtolower($addressStr)) ?>" data-type="<?= htmlspecialchars(strtolower($unit['type'])) ?>" data-rent="<?= (float)$unit['rent_amount'] ?>" data-name="<?= htmlspecialchars(strtolower($unit['property_name'].' '.$unit['unit_number'])) ?>">
                             <div class="card card-unit">
-                                <img src="<?= htmlspecialchars($unit['image']) ?>" alt="<?= htmlspecialchars($unit['property_name']) ?>">
+                                <?php if (count($images) > 1): ?>
+                                    <div id="<?= htmlspecialchars($carouselId) ?>" class="carousel slide" data-bs-ride="false">
+                                        <div class="carousel-inner">
+                                            <?php foreach ($images as $idx => $imgUrl): ?>
+                                                <div class="carousel-item <?= $idx === 0 ? 'active' : '' ?>">
+                                                    <img src="<?= htmlspecialchars($imgUrl) ?>" class="d-block w-100" alt="<?= htmlspecialchars($unit['property_name']) ?>">
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                        <button class="carousel-control-prev" type="button" data-bs-target="#<?= htmlspecialchars($carouselId) ?>" data-bs-slide="prev">
+                                            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                            <span class="visually-hidden">Previous</span>
+                                        </button>
+                                        <button class="carousel-control-next" type="button" data-bs-target="#<?= htmlspecialchars($carouselId) ?>" data-bs-slide="next">
+                                            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                            <span class="visually-hidden">Next</span>
+                                        </button>
+                                    </div>
+                                <?php else: ?>
+                                    <img src="<?= htmlspecialchars($images[0]) ?>" alt="<?= htmlspecialchars($unit['property_name']) ?>">
+                                <?php endif; ?>
                                 <div class="card-body">
                                     <div class="d-flex justify-content-between align-items-center mb-2">
                                         <h5 class="card-title mb-0"><?= htmlspecialchars($unit['property_name']) ?></h5>
                                         <span class="badge badge-rent">Ksh <?= number_format((float)$unit['rent_amount'], 2) ?></span>
                                     </div>
                                     <p class="mb-1 unit-meta"><i class="bi bi-hash me-1"></i><strong>Unit:</strong> <?= htmlspecialchars($unit['unit_number']) ?> (<?= htmlspecialchars(ucfirst($unit['type'])) ?>)</p>
-                                    <?php
-                                        $addressBits = array_filter([
-                                            $unit['address'] ?? '',
-                                            $unit['city'] ?? '',
-                                            $unit['state'] ?? '',
-                                            $unit['zip_code'] ?? ''
-                                        ]);
-                                        $addressStr = implode(', ', $addressBits);
-                                    ?>
                                     <p class="text-muted mb-3"><i class="bi bi-geo-alt-fill me-1"></i><?= htmlspecialchars($addressStr) ?></p>
+                                    <?php if (!empty($unit['caretaker_name']) || !empty($unit['caretaker_contact'])): ?>
+                                        <p class="mb-3 unit-meta">
+                                            <i class="bi bi-person-badge me-1"></i>
+                                            <strong>Caretaker:</strong>
+                                            <?= htmlspecialchars($unit['caretaker_name'] ?: 'N/A') ?>
+                                            <?php if (!empty($unit['caretaker_contact'])): ?>
+                                                — <?= htmlspecialchars($unit['caretaker_contact']) ?>
+                                            <?php endif; ?>
+                                        </p>
+                                    <?php endif; ?>
                                     <button class="btn btn-outline-primary w-100" onclick="openInquiryModal(<?= (int)$unit['id'] ?>, '<?= htmlspecialchars(addslashes($unit['property_name'])) ?>', '<?= htmlspecialchars(addslashes($unit['unit_number'])) ?>')">Contact to Apply</button>
                                 </div>
                             </div>

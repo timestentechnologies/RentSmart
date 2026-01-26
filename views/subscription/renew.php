@@ -17,7 +17,7 @@ ob_start();
         </div>
         <?php unset($_SESSION['flash_message'], $_SESSION['flash_type']); ?>
     <?php endif; ?>
-
+    
     <?php if ($subscription): ?>
         <div class="card mt-4 bg-info bg-opacity-25">
             <div class="card-body">
@@ -31,9 +31,91 @@ ob_start();
                         Current Period Ends: <strong><?= date('F j, Y', strtotime($subscription['current_period_ends_at'])) ?></strong>
                     <?php endif; ?>
                 </p>
+                <?php if ($subscription['status'] === 'trialing' || ((isset($subscription['price']) ? (float)$subscription['price'] : 0) == 0)): ?>
+                    <a href="<?= BASE_URL ?>/subscription/invoice/current" class="btn btn-sm btn-outline-primary mt-2">
+                        <i class="bi bi-file-earmark-pdf me-1"></i> Download Trial/Free Invoice
+                    </a>
+                <?php endif; ?>
             </div>
         </div>
     <?php endif; ?>
+
+    <!-- Invoices & Payments (moved to top) -->
+    <div class="card mt-4">
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="card-title mb-0">Your Subscription Invoices</h5>
+                <small class="text-muted">Managers, Agents, and Landlords can download their invoices here</small>
+            </div>
+            <?php 
+                $onTrialOrFree = !empty($subscription) && ($subscription['status'] === 'trialing' || ((isset($subscription['price']) ? (float)$subscription['price'] : 0) == 0));
+            ?>
+            <?php if (!empty($payments) || $onTrialOrFree): ?>
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Date</th>
+                                <th>Plan</th>
+                                <th>Amount</th>
+                                <th>Method</th>
+                                <th>Status</th>
+                                <th>Invoice</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if ($onTrialOrFree): ?>
+                                <tr>
+                                    <td><?= htmlspecialchars('TRIAL-' . date('Ymd')) ?></td>
+                                    <td><?= date('M d, Y H:i') ?></td>
+                                    <td><?= htmlspecialchars($subscription['plan_type'] ?? 'Free Trial') ?></td>
+                                    <td>Ksh<?= number_format(0, 2) ?></td>
+                                    <td>Trial</td>
+                                    <td><span class="badge bg-info text-dark">Trial</span></td>
+                                    <td>
+                                        <a class="btn btn-sm btn-outline-primary" href="<?= BASE_URL ?>/subscription/invoice/current">
+                                            <i class="bi bi-file-earmark-pdf me-1"></i> Download
+                                        </a>
+                                    </td>
+                                </tr>
+                            <?php endif; ?>
+                            <?php foreach ($payments as $p): ?>
+                                <tr>
+                                    <td><?= (int)$p['id'] ?></td>
+                                    <td><?= isset($p['created_at']) ? date('M d, Y H:i', strtotime($p['created_at'])) : '' ?></td>
+                                    <td><?= htmlspecialchars($p['plan_type'] ?? '-') ?></td>
+                                    <td>Ksh<?= number_format((float)($p['amount'] ?? 0), 2) ?></td>
+                                    <td><?= htmlspecialchars(ucfirst($p['payment_method'] ?? '-')) ?></td>
+                                    <td>
+                                        <?php $status = strtolower($p['status'] ?? 'pending'); ?>
+                                        <span class="badge bg-<?= $status === 'completed' || $status === 'paid' ? 'success' : ($status === 'pending' ? 'warning text-dark' : 'danger') ?>">
+                                            <?= ucfirst($p['status'] ?? 'pending') ?>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <a class="btn btn-sm btn-outline-primary" href="<?= BASE_URL ?>/subscription/invoice/<?= (int)$p['id'] ?>">
+                                            <i class="bi bi-file-earmark-pdf me-1"></i> Download
+                                        </a>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php else: ?>
+                <p class="text-muted mb-0">
+                    No subscription payments found yet.
+                    <?php if (!empty($subscription) && ($subscription['status'] === 'trialing' || ((isset($subscription['price']) ? (float)$subscription['price'] : 0) == 0))): ?>
+                        You are currently on a trial/free plan. 
+                        <a href="<?= BASE_URL ?>/subscription/invoice/current" class="link-primary">Download Trial/Free Invoice</a>.
+                    <?php endif; ?>
+                </p>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <!-- Current Subscription Status moved to top -->
 
     <div class="row mt-4">
         <?php foreach ($plans as $plan): ?>
@@ -67,6 +149,8 @@ ob_start();
             </form>
         </div>
     </div>
+
+    <!-- Invoices section moved above -->
 </div>
 
 <!-- Payment Modal -->

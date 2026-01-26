@@ -38,7 +38,7 @@ class Payment extends Model
                 $params[] = $userId;
             }
             if ($user->isAgent()) {
-                $sql .= " OR pr.manager_id = (SELECT manager_id FROM users WHERE id = ?)";
+                $sql .= " OR pr.agent_id = ?";
                 $params[] = $userId;
             }
             $sql .= ")";
@@ -71,7 +71,7 @@ class Payment extends Model
                 $params[] = $userId;
             }
             if ($user->isAgent()) {
-                $sql .= " OR pr.manager_id = (SELECT manager_id FROM users WHERE id = ?)";
+                $sql .= " OR pr.agent_id = ?";
                 $params[] = $userId;
             }
             $sql .= ")";
@@ -93,8 +93,13 @@ class Payment extends Model
                 $manager = $userModel->find($payment['property_manager_id']);
                 $managerName = $manager['name'] ?? null;
             }
+            if (!empty($payment['property_agent_id'])) {
+                $agent = $userModel->find($payment['property_agent_id']);
+                $agentName = $agent['name'] ?? null;
+            }
             $payment['property_owner_name'] = $ownerName;
             $payment['property_manager_name'] = $managerName;
+            $payment['property_agent_name'] = $agentName;
         }
         return $payment;
     }
@@ -128,7 +133,7 @@ class Payment extends Model
                 $params[] = $userId;
             }
             if ($user->isAgent()) {
-                $sql .= " OR pr.manager_id = (SELECT manager_id FROM users WHERE id = ?)";
+                $sql .= " OR pr.agent_id = ?";
                 $params[] = $userId;
             }
             $sql .= ")";
@@ -172,7 +177,7 @@ class Payment extends Model
                 $params[] = $userId;
             }
             if ($user->isAgent()) {
-                $sql .= " OR pr.manager_id = (SELECT manager_id FROM users WHERE id = ?)";
+                $sql .= " OR pr.agent_id = ?";
                 $params[] = $userId;
             }
             $sql .= ")";
@@ -222,7 +227,7 @@ class Payment extends Model
                 $params[] = $userId;
             }
             if ($user->isAgent()) {
-                $sql .= " OR pr.manager_id = (SELECT manager_id FROM users WHERE id = ?)";
+                $sql .= " OR pr.agent_id = ?";
                 $params[] = $userId;
             }
             $sql .= ")";
@@ -261,7 +266,7 @@ class Payment extends Model
                 $params[] = $userId;
             }
             if ($user->isAgent()) {
-                $sql .= " OR pr.manager_id = (SELECT manager_id FROM users WHERE id = ?)";
+                $sql .= " OR pr.agent_id = ?";
                 $params[] = $userId;
             }
             $sql .= ")";
@@ -295,7 +300,7 @@ class Payment extends Model
                 $params[] = $userId;
             }
             if ($user->isAgent()) {
-                $sql .= " OR l.unit_id IN (SELECT id FROM units WHERE property_id IN (SELECT id FROM properties WHERE manager_id = (SELECT manager_id FROM users WHERE id = ?)))";
+                $sql .= " OR l.unit_id IN (SELECT id FROM units WHERE property_id IN (SELECT id FROM properties WHERE agent_id = ?))";
                 $params[] = $userId;
             }
             // Tenant: only their own payments
@@ -381,7 +386,7 @@ class Payment extends Model
                     $params[] = $userId;
                 }
                 if ($userData['role'] === 'agent') {
-                    $conditions[] = "pr.manager_id = (SELECT manager_id FROM users WHERE id = ?)";
+                    $conditions[] = "pr.agent_id = ?";
                     $params[] = $userId;
                 }
                 
@@ -490,7 +495,7 @@ class Payment extends Model
                 $params[] = $userId;
             }
             if ($user->isAgent()) {
-                $roleFilter[] = "pr.manager_id = (SELECT manager_id FROM users WHERE id = ?)";
+                $roleFilter[] = "pr.agent_id = ?";
                 $params[] = $userId;
             }
             if (isset($userData['role']) && $userData['role'] === 'tenant') {
@@ -534,7 +539,7 @@ class Payment extends Model
                 $params[] = $userId;
             }
             if ($user->isAgent()) {
-                $roleFilter[] = "l.unit_id IN (SELECT id FROM units WHERE property_id IN (SELECT id FROM properties WHERE manager_id = (SELECT manager_id FROM users WHERE id = ?)))";
+                $roleFilter[] = "l.unit_id IN (SELECT id FROM units WHERE property_id IN (SELECT id FROM properties WHERE agent_id = ?))";
                 $params[] = $userId;
             }
             if (isset($userData['role']) && $userData['role'] === 'tenant') {
@@ -772,7 +777,7 @@ class Payment extends Model
             $params[] = $userId;
         }
         if ($user->isAgent()) {
-            $sql .= " OR pr.manager_id = (SELECT manager_id FROM users WHERE id = ?)";
+            $sql .= " OR pr.agent_id = ?";
             $params[] = $userId;
         }
         
