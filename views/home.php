@@ -1174,7 +1174,7 @@
                         </button>
 
                         <div class="text-center mb-3">
-                            <a href="<?= asset('forgot-password') ?>" class="text-muted text-decoration-none">Forgot your password?</a>
+                            <a href="<?= BASE_URL ?>/forgot-password" class="text-muted text-decoration-none">Forgot your password?</a>
                         </div>
 
                         <div class="text-center">
@@ -1244,6 +1244,7 @@
                             <select class="form-select" id="registerRole" name="role" required>
                                 <option value="">Select Role</option>
                                 <option value="landlord">Landlord</option>
+                                <option value="manager">Manager</option>
                                 <option value="agent">Agent</option>
                             </select>
                             <label for="registerRole">Your Role</label>

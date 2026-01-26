@@ -241,15 +241,16 @@ class TenantsController
                         'tenant_id' => $tenantId
                     ];
                     $this->unit->update($unitId, $unitData);
-                    // Create lease
+                    // Create lease (security deposit equals rent)
                     $leaseModel = new \App\Models\Lease();
+                    $effectiveRent = $rentAmount ?: ($currentUnit['rent_amount'] ?? 0);
                     $leaseData = [
                         'unit_id' => $unitId,
                         'tenant_id' => $tenantId,
                         'start_date' => date('Y-m-d'),
                         'end_date' => date('Y-m-d', strtotime('+1 year')),
-                        'rent_amount' => $rentAmount ?: 0,
-                        'security_deposit' => 0,
+                        'rent_amount' => $effectiveRent,
+                        'security_deposit' => $effectiveRent,
                         'status' => 'active',
                         'payment_day' => 1,
                         'notes' => '',
@@ -495,14 +496,16 @@ class TenantsController
                             ]);
                         }
                     } else {
-                        // Create new lease
+                        // Create new lease (security deposit equals rent)
+                        $currentUnit = $this->unit->getById($unitId, $_SESSION['user_id']);
+                        $effectiveRent = $rentAmount ?: ($currentUnit['rent_amount'] ?? 0);
                         $leaseData = [
                             'unit_id' => $unitId,
                             'tenant_id' => $id,
                             'start_date' => date('Y-m-d'),
                             'end_date' => date('Y-m-d', strtotime('+1 year')),
-                            'rent_amount' => $rentAmount ?: 0,
-                            'security_deposit' => 0,
+                            'rent_amount' => $effectiveRent,
+                            'security_deposit' => $effectiveRent,
                             'status' => 'active',
                             'payment_day' => 1,
                             'notes' => '',

@@ -136,7 +136,9 @@ class PropertyController
                 'property_type' => filter_var($_POST['property_type'] ?? '', FILTER_SANITIZE_STRING),
                 'description' => filter_var($_POST['description'] ?? '', FILTER_SANITIZE_STRING),
                 'year_built' => filter_var($_POST['year_built'] ?? '', FILTER_VALIDATE_INT),
-                'total_area' => filter_var($_POST['total_area'] ?? '', FILTER_VALIDATE_FLOAT)
+                'total_area' => filter_var($_POST['total_area'] ?? '', FILTER_VALIDATE_FLOAT),
+                'caretaker_name' => filter_var($_POST['caretaker_name'] ?? '', FILTER_SANITIZE_STRING),
+                'caretaker_contact' => filter_var($_POST['caretaker_contact'] ?? '', FILTER_SANITIZE_STRING)
             ];
 
             // Set owner_id, manager_id, or agent_id based on role
@@ -347,7 +349,9 @@ class PropertyController
                 'property_type' => (string)filter_input(INPUT_POST, 'property_type'),
                 'description' => (string)filter_input(INPUT_POST, 'description'),
                 'year_built' => filter_input(INPUT_POST, 'year_built', FILTER_VALIDATE_INT),
-                'total_area' => filter_input(INPUT_POST, 'total_area', FILTER_VALIDATE_FLOAT)
+                'total_area' => filter_input(INPUT_POST, 'total_area', FILTER_VALIDATE_FLOAT),
+                'caretaker_name' => (string)filter_input(INPUT_POST, 'caretaker_name'),
+                'caretaker_contact' => (string)filter_input(INPUT_POST, 'caretaker_contact')
             ];
 
             // Validate required fields

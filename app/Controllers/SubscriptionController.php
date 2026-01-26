@@ -4,6 +4,8 @@ namespace App\Controllers;
 
 use App\Models\Subscription;
 use App\Models\User;
+use App\Models\Payment;
+use App\Models\Setting;
 use Exception;
 use DateTime;
 
@@ -11,11 +13,84 @@ class SubscriptionController
 {
     private $subscription;
     private $user;
+    private $payment;
 
     public function __construct()
     {
         $this->subscription = new Subscription();
         $this->user = new User();
+        $this->payment = new Payment();
+    }
+
+    public function invoiceCurrent()
+    {
+        try {
+            if (!isset($_SESSION['user_id'])) {
+                redirect('/home');
+            }
+
+            $userId = $_SESSION['user_id'];
+            $subscription = $this->subscription->getUserSubscription($userId);
+            if (!$subscription) {
+                http_response_code(404);
+                echo 'No subscription found';
+                return;
+            }
+
+            // Build a pseudo payment payload for trial/free invoice
+            $payment = [
+                'id' => 'TRIAL-' . date('Ymd'),
+                'amount' => 0,
+                'payment_method' => 'trial',
+                'transaction_reference' => null,
+                'status' => 'trial',
+                'created_at' => date('Y-m-d H:i:s')
+            ];
+
+            // Ensure subscription has plan_name/plan_price fields for template
+            if (!isset($subscription['plan_name'])) {
+                $subscription['plan_name'] = $subscription['plan_type'] ?? 'Free Trial';
+            }
+            if (!isset($subscription['plan_price'])) {
+                $subscription['plan_price'] = 0;
+            }
+
+            // Load settings and user for branding and billing details
+            $settingModel = new Setting();
+            $settings = $settingModel->getAllAsAssoc();
+            $user = $this->user->find($userId);
+
+            $logoDataUri = null;
+            if (!empty($settings['site_logo'])) {
+                $logoPath = __DIR__ . '/../../public/assets/images/' . $settings['site_logo'];
+                if (file_exists($logoPath)) {
+                    $imageData = file_get_contents($logoPath);
+                    $logoDataUri = 'data:image/png;base64,' . base64_encode($imageData);
+                }
+            }
+            $siteName = $settings['site_name'] ?? 'RentSmart';
+
+            require_once __DIR__ . '/../../vendor/dompdf/dompdf/src/Dompdf.php';
+
+            ob_start();
+            include __DIR__ . '/../../views/subscription/invoice_pdf.php';
+            $html = ob_get_clean();
+
+            $dompdf = new \Dompdf\Dompdf();
+            $dompdf->loadHtml($html);
+            $dompdf->setPaper('A4', 'portrait');
+            $dompdf->render();
+
+            $filename = 'subscription_invoice_trial_' . date('Ymd') . '.pdf';
+            header('Content-Type: application/pdf');
+            header('Content-Disposition: attachment; filename="' . $filename . '"');
+            echo $dompdf->output();
+            exit;
+        } catch (Exception $e) {
+            error_log('Subscription current invoice error: ' . $e->getMessage());
+            http_response_code(500);
+            echo 'Failed to generate current period invoice';
+        }
     }
 
     public function showRenew()
@@ -28,11 +103,13 @@ class SubscriptionController
             $userId = $_SESSION['user_id'];
             $subscription = $this->subscription->getUserSubscription($userId);
             $plans = $this->subscription->getAllPlans();
+            $payments = $this->payment->getUserPayments($userId);
 
             echo view('subscription/renew', [
                 'title' => 'Renew Subscription - RentSmart',
                 'subscription' => $subscription,
-                'plans' => $plans
+                'plans' => $plans,
+                'payments' => $payments
             ]);
         } catch (Exception $e) {
             error_log($e->getMessage());
@@ -42,6 +119,85 @@ class SubscriptionController
             echo view('errors/500', [
                 'title' => '500 Internal Server Error'
             ]);
+        }
+    }
+
+    public function invoice($paymentId)
+    {
+        try {
+            if (!isset($_SESSION['user_id'])) {
+                redirect('/home');
+            }
+
+            $userId = $_SESSION['user_id'];
+            $payment = $this->payment->findById($paymentId);
+            if (!$payment || (int)$payment['user_id'] !== (int)$userId) {
+                http_response_code(404);
+                echo 'Invoice not found';
+                return;
+            }
+
+            $db = $this->subscription->getDb();
+            $stmt = $db->prepare("SELECT s.*, sp.name AS plan_name, sp.price AS plan_price, sp.duration 
+                                   FROM subscriptions s 
+                                   LEFT JOIN subscription_plans sp ON s.plan_id = sp.id 
+                                   WHERE s.id = ? AND s.user_id = ?");
+            $stmt->execute([$payment['subscription_id'], $userId]);
+            $subscription = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+            // Fallback: some legacy records may store plan_id in subscription_id
+            if (!$subscription) {
+                $fallbackPlanStmt = $db->prepare("SELECT name AS plan_name, price AS plan_price, duration FROM subscription_plans WHERE id = ?");
+                $fallbackPlanStmt->execute([$payment['subscription_id']]);
+                $plan = $fallbackPlanStmt->fetch(\PDO::FETCH_ASSOC);
+                if ($plan) {
+                    $subscription = [
+                        'plan_name' => $plan['plan_name'],
+                        'plan_price' => $plan['plan_price'],
+                        'duration' => $plan['duration'],
+                        'current_period_starts_at' => null,
+                        'current_period_ends_at' => null,
+                        'plan_type' => $plan['plan_name']
+                    ];
+                }
+            }
+
+            // Current user details for invoice
+            $user = $this->user->find($userId);
+
+            $settingModel = new Setting();
+            $settings = $settingModel->getAllAsAssoc();
+
+            $logoDataUri = null;
+            if (!empty($settings['site_logo'])) {
+                $logoPath = __DIR__ . '/../../public/assets/images/' . $settings['site_logo'];
+                if (file_exists($logoPath)) {
+                    $imageData = file_get_contents($logoPath);
+                    $logoDataUri = 'data:image/png;base64,' . base64_encode($imageData);
+                }
+            }
+            $siteName = $settings['site_name'] ?? 'RentSmart';
+
+            require_once __DIR__ . '/../../vendor/dompdf/dompdf/src/Dompdf.php';
+
+            ob_start();
+            include __DIR__ . '/../../views/subscription/invoice_pdf.php';
+            $html = ob_get_clean();
+
+            $dompdf = new \Dompdf\Dompdf();
+            $dompdf->loadHtml($html);
+            $dompdf->setPaper('A4', 'portrait');
+            $dompdf->render();
+
+            $filename = 'subscription_invoice_' . $payment['id'] . '.pdf';
+            header('Content-Type: application/pdf');
+            header('Content-Disposition: attachment; filename="' . $filename . '"');
+            echo $dompdf->output();
+            exit;
+        } catch (Exception $e) {
+            error_log('Subscription invoice error: ' . $e->getMessage());
+            http_response_code(500);
+            echo 'Failed to generate invoice';
         }
     }
 

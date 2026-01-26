@@ -1045,7 +1045,17 @@ ob_clean();
                         <i class="bi bi-tools me-2"></i> Maintenance
                     </a>
                 </li>
-
+                <li class="nav-item">
+                    <a href="<?= BASE_URL ?>/admin/inquiries" class="nav-link <?= strpos($current_uri, 'admin/inquiries') === 0 ? 'active' : '' ?>">
+                        <i class="bi bi-envelope-open me-2"></i> Inquiries
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="<?= BASE_URL ?>/reports" class="nav-link <?= strpos($current_uri, 'reports') === 0 ? 'active' : '' ?>">
+                        <i class="bi bi-graph-up me-2"></i> Reports
+                    </a>
+                </li>
+                
                 <!-- FINANCIAL Section -->
                 <li class="nav-item mt-3">
                     <small class="nav-header text-uppercase px-3">FINANCIAL</small>
@@ -1064,6 +1074,14 @@ ob_clean();
                     <a href="<?= BASE_URL ?>/mpesa-verification" class="nav-link <?= strpos($current_uri, 'mpesa-verification') === 0 ? 'active' : '' ?>">
                         <i class="bi bi-shield-check me-2"></i> M-Pesa Verification
                     </a>
+                </li>
+                <li class="nav-item">
+                    <a href="<?= BASE_URL ?>/subscription/renew" class="nav-link <?= strpos($current_uri, 'subscription') !== false ? 'active' : '' ?>">
+                        <i class="bi bi-credit-card-2-back me-2"></i> Billing
+                    </a>
+                </li>
+                <li class="nav-item mt-3">
+                    <small class="nav-header text-uppercase px-3">OTHERS</small>
                 </li>
                 <li class="nav-item">
                     <a href="<?= BASE_URL ?>/vacant-units" class="nav-link" target="_blank">
@@ -1113,21 +1131,8 @@ ob_clean();
                         </ul>
                     </div>
                 </li>
-                <li class="nav-item">
-                    <a href="<?= BASE_URL ?>/reports" class="nav-link <?= strpos($current_uri, 'reports') === 0 ? 'active' : '' ?>">
-                        <i class="bi bi-graph-up me-2"></i> Reports
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="<?= BASE_URL ?>/admin/inquiries" class="nav-link <?= strpos($current_uri, 'admin/inquiries') === 0 ? 'active' : '' ?>">
-                        <i class="bi bi-envelope-open me-2"></i> Inquiries
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="<?= BASE_URL ?>/subscription/renew" class="nav-link <?= strpos($current_uri, 'subscription') !== false ? 'active' : '' ?>">
-                        <i class="bi bi-credit-card-2-back me-2"></i> Subscription
-                    </a>
-                </li>
+                
+                
 
                 <?php if ($_SESSION['user_role'] === 'admin'): ?>
                 <!-- ADMINISTRATION Section -->

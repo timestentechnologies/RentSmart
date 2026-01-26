@@ -134,12 +134,22 @@ $routes = [
         'GET' => ['controller' => 'AuthController', 'action' => 'showRegister'],
         'POST' => ['controller' => 'AuthController', 'action' => 'register'],
     ],
+    'forgot-password' => [
+        'GET' => ['controller' => 'AuthController', 'action' => 'showForgotPassword'],
+        'POST' => ['controller' => 'AuthController', 'action' => 'sendResetLink'],
+    ],
+    'reset-password/([A-Za-z0-9]+)' => ['controller' => 'AuthController', 'action' => 'showResetForm'],
+    'reset-password' => [
+        'POST' => ['controller' => 'AuthController', 'action' => 'resetPassword'],
+    ],
     'logout' => ['controller' => 'AuthController', 'action' => 'logout'],
     'subscription/renew' => [
         'GET' => ['controller' => 'SubscriptionController', 'action' => 'showRenew'],
         'POST' => ['controller' => 'SubscriptionController', 'action' => 'renew'],
     ],
     'subscription/status' => ['controller' => 'SubscriptionController', 'action' => 'status'],
+    'subscription/invoice/(\d+)' => ['controller' => 'SubscriptionController', 'action' => 'invoice'],
+    'subscription/invoice/current' => ['controller' => 'SubscriptionController', 'action' => 'invoiceCurrent'],
     
     // Admin routes
     'admin/users' => ['controller' => 'AdminController', 'action' => 'users'],
@@ -414,6 +424,8 @@ $protectedRoutes = [
     'utilities/import',
     'subscription/status',
     'subscription/renew',
+    'subscription/invoice/(\d+)',
+    'subscription/invoice/current',
     
     // Maintenance routes
     'maintenance',

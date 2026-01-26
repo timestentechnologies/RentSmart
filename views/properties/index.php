@@ -287,6 +287,16 @@ ob_start();
                                 <label for="description" class="form-label">Property Description</label>
                                 <textarea class="form-control" id="description" name="description" rows="3"></textarea>
                             </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label for="caretaker_name" class="form-label">Caretaker Name</label>
+                                    <input type="text" class="form-control" id="caretaker_name" name="caretaker_name" placeholder="e.g. John Doe">
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="caretaker_contact" class="form-label">Caretaker Contact</label>
+                                    <input type="text" class="form-control" id="caretaker_contact" name="caretaker_contact" placeholder="Phone or Email">
+                                </div>
+                            </div>
                             <div class="row">
                                 <div class="col-md-6">
                                     <div class="mb-3">
@@ -387,6 +397,14 @@ ob_start();
                             <div class="mb-3">
                                 <label for="edit_description" class="form-label">Description</label>
                                 <textarea class="form-control" id="edit_description" name="description" rows="3"></textarea>
+                            </div>
+                            <div class="mb-3">
+                                <label for="edit_caretaker_name" class="form-label">Caretaker Name</label>
+                                <input type="text" class="form-control" id="edit_caretaker_name" name="caretaker_name">
+                            </div>
+                            <div class="mb-3">
+                                <label for="edit_caretaker_contact" class="form-label">Caretaker Contact</label>
+                                <input type="text" class="form-control" id="edit_caretaker_contact" name="caretaker_contact">
                             </div>
                             <div class="mb-3">
                                 <label for="edit_year_built" class="form-label">Year Built</label>
@@ -493,6 +511,14 @@ ob_start();
                                     <tr>
                                         <th>Property Type:</th>
                                         <td id="view_property_type"></td>
+                                    </tr>
+                                    <tr>
+                                        <th>Caretaker:</th>
+                                        <td id="view_caretaker_name"></td>
+                                    </tr>
+                                    <tr>
+                                        <th>Caretaker Contact:</th>
+                                        <td id="view_caretaker_contact"></td>
                                     </tr>
                                     <tr>
                                         <th>Year Built:</th>
@@ -787,6 +813,11 @@ const viewProperty = async (id) => {
         document.getElementById('view_zip_code').textContent = property.zip_code || 'N/A';
         document.getElementById('view_property_type').textContent = 
             property.property_type ? property.property_type.charAt(0).toUpperCase() + property.property_type.slice(1) : 'N/A';
+        // Caretaker details
+        const vcName = document.getElementById('view_caretaker_name');
+        if (vcName) vcName.textContent = property.caretaker_name || 'N/A';
+        const vcContact = document.getElementById('view_caretaker_contact');
+        if (vcContact) vcContact.textContent = property.caretaker_contact || 'N/A';
         document.getElementById('view_year_built').textContent = property.year_built || 'N/A';
         document.getElementById('view_total_area').textContent = property.total_area ? `${property.total_area} sq ft` : 'N/A';
         
@@ -931,6 +962,10 @@ const editProperty = async (id) => {
         document.getElementById('edit_zip_code').value = property.zip_code;
         document.getElementById('edit_property_type').value = property.property_type;
         document.getElementById('edit_description').value = property.description || '';
+        const ecName = document.getElementById('edit_caretaker_name');
+        if (ecName) ecName.value = property.caretaker_name || '';
+        const ecContact = document.getElementById('edit_caretaker_contact');
+        if (ecContact) ecContact.value = property.caretaker_contact || '';
         document.getElementById('edit_year_built').value = property.year_built || '';
         document.getElementById('edit_total_area').value = property.total_area || '';
         

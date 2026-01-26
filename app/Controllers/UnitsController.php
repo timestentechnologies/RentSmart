@@ -67,8 +67,8 @@ class UnitsController
     public function create()
     {
         try {
-            // Only admin, landlord and manager can create units
-            if (!$this->user->isAdmin() && !$this->user->isLandlord() && !$this->user->isManager()) {
+            // Only admin, landlord, manager, and agent can create units
+            if (!$this->user->isAdmin() && !$this->user->isLandlord() && !$this->user->isManager() && !$this->user->isAgent()) {
                 $_SESSION['flash_message'] = 'Access denied';
                 $_SESSION['flash_type'] = 'danger';
                 return redirect('/units');
@@ -92,8 +92,8 @@ class UnitsController
     public function store()
     {
         try {
-            // Only admin, landlord and manager can create units
-            if (!$this->user->isAdmin() && !$this->user->isLandlord() && !$this->user->isManager()) {
+            // Only admin, landlord, manager, and agent can create units
+            if (!$this->user->isAdmin() && !$this->user->isLandlord() && !$this->user->isManager() && !$this->user->isAgent()) {
                 throw new Exception('Access denied');
             }
 
@@ -419,11 +419,12 @@ class UnitsController
                 throw new Exception('Unit not found or access denied');
             }
 
-            // Only admin, property owner, or manager can delete
+            // Only admin, property owner, manager, or agent can delete
             $property = $this->property->getById($unit['property_id'], $_SESSION['user_id']);
             if (!$this->user->isAdmin() && 
                 $property['owner_id'] != $_SESSION['user_id'] && 
-                $property['manager_id'] != $_SESSION['user_id']) {
+                $property['manager_id'] != $_SESSION['user_id'] &&
+                $property['agent_id'] != $_SESSION['user_id']) {
                 throw new Exception('Access denied');
             }
 

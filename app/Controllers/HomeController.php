@@ -97,7 +97,7 @@ class HomeController
             // Get vacant units (public - no role filters)
             $units = $unitModel->getVacantUnitsPublic();
 
-            // Attach property address and one image for display
+            // Attach property address and images for display
             $enhancedUnits = [];
             foreach ($units as $unit) {
                 $property = $propertyModel->find($unit['property_id']);
@@ -110,14 +110,19 @@ class HomeController
                 $propertyModel->id = $unit['property_id'];
                 $propertyImages = $propertyModel->getImages();
                 
-                // Priority: Unit image > Property image > Generated icon
+                // Build images list with priority: Unit images > Property images > Generated placeholder
+                $images = [];
                 if (!empty($unitImages)) {
-                    $coverImage = $unitImages[0]['url'];
+                    foreach ($unitImages as $img) {
+                        if (!empty($img['url'])) { $images[] = $img['url']; }
+                    }
                 } elseif (!empty($propertyImages)) {
-                    $coverImage = $propertyImages[0]['url'];
-                } else {
-                    // Generate icon based on unit type
-                    $coverImage = 'https://ui-avatars.com/api/?name=' . urlencode($unit['property_name'] . ' ' . $unit['unit_number']) . '&size=400&background=4F46E5&color=fff&bold=true';
+                    foreach ($propertyImages as $img) {
+                        if (!empty($img['url'])) { $images[] = $img['url']; }
+                    }
+                }
+                if (empty($images)) {
+                    $images[] = 'https://ui-avatars.com/api/?name=' . urlencode($unit['property_name'] . ' ' . $unit['unit_number']) . '&size=400&background=4F46E5&color=fff&bold=true';
                 }
 
                 $enhancedUnits[] = [
@@ -130,7 +135,10 @@ class HomeController
                     'city' => $property['city'] ?? '',
                     'state' => $property['state'] ?? '',
                     'zip_code' => $property['zip_code'] ?? '',
-                    'image' => $coverImage,
+                    'image' => $images[0],
+                    'images' => $images,
+                    'caretaker_name' => $property['caretaker_name'] ?? '',
+                    'caretaker_contact' => $property['caretaker_contact'] ?? '',
                 ];
             }
 
