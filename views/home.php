@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
     <!-- Essential Meta Tags -->
@@ -606,7 +606,7 @@
                 <div class="col-lg-6">
                     <h1 class="display-4 fw-bold">Property Management Made Easy</h1>
                     <p class="lead">Streamline your property management with RentSmart. The all-in-one solution for landlords and property managers.</p>
-                    <div class="d-flex gap-2">
+                    <div class="d-flex flex-wrap gap-2">
                         <a href="#" class="btn btn-accent btn-lg" data-bs-toggle="modal" data-bs-target="#registerModal">
                             <i class="bi bi-rocket-takeoff me-2"></i>Start 7-Day Free Trial
                         </a>
@@ -1438,5 +1438,6 @@
             });
         });
     </script>
+<a href="https://wa.me/254718883983?text=Hi%20RentSmart%20Support%2C%20I%20would%20like%20to%20get%20started%20with%20RentSmart.%20Please%20assist%20me." class="d-print-none" style="position: fixed; right: 20px; bottom: 24px; z-index: 1051; background: #25D366; color: #fff; border-radius: 999px; padding: 10px 14px; display: inline-flex; align-items: center; gap: 8px; font-weight: 600; box-shadow: 0 6px 16px rgba(0,0,0,0.2); text-decoration: none;" target="_blank" rel="noopener"><i class="bi bi-whatsapp" style="font-size: 1.25rem;"></i><span>WhatsApp Support</span></a>
 </body>
 </html>
