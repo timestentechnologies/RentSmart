@@ -790,6 +790,26 @@ ob_clean();
             transform: rotate(20deg);
         }
         
+        /* WhatsApp Floating Button */
+        .whatsapp-fab {
+            position: fixed;
+            right: 20px;
+            bottom: 90px;
+            z-index: 1051;
+            background: #25D366;
+            color: #fff !important;
+            border-radius: 999px;
+            padding: 10px 14px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+            text-decoration: none;
+        }
+        .whatsapp-fab:hover { background: #1ebe57; color: #fff !important; transform: translateY(-2px); }
+        .whatsapp-fab i { font-size: 1.25rem; }
+
         /* Additional dark mode styles */
         /* Navigation section headers */
         .nav-header {
@@ -1194,6 +1214,19 @@ ob_clean();
     <button class="theme-toggle" id="themeToggle" title="Toggle Dark Mode">
         <i class="bi bi-moon-fill" id="themeIcon"></i>
     </button>
+
+    <?php if (isset($_SESSION['user_role']) && in_array(strtolower($_SESSION['user_role']), ['manager','agent','landlord'])): ?>
+        <?php 
+            $roleTxt = ucfirst($_SESSION['user_role'] ?? 'User');
+            $nameTxt = $_SESSION['user_name'] ?? '';
+            $startMsg = "Hi RentSmart Support, I'm {$nameTxt} ({$roleTxt}). I need help getting started.";
+        ?>
+        <a href="https://wa.me/254718883983?text=<?= rawurlencode($startMsg) ?>" 
+           class="whatsapp-fab d-print-none" target="_blank" rel="noopener">
+            <i class="bi bi-whatsapp"></i>
+            <span>WhatsApp Support</span>
+        </a>
+    <?php endif; ?>
 
     <!-- Main Content -->
     <div class="main-content">
