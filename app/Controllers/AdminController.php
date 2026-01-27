@@ -390,12 +390,29 @@ class AdminController
     {
         try {
             $payments = $this->payment->getAllPayments();
-            $mpesa_transactions = $this->mpesaTransaction->getAllTransactions();
-            
+            $subscriptions = $this->subscription->getAllSubscriptions();
+
+            // Compute expected revenue from current subscriptions (latest per user)
+            $expected = 0;
+            $seenUsers = [];
+            foreach ($subscriptions as $sub) {
+                $uid = $sub['user_id'] ?? null;
+                if ($uid && isset($seenUsers[$uid])) {
+                    continue;
+                }
+                $status = strtolower($sub['status'] ?? '');
+                if ($status === 'active') {
+                    $expected += (float)($sub['plan_price'] ?? 0);
+                }
+                if ($uid) {
+                    $seenUsers[$uid] = true;
+                }
+            }
+
             echo view('admin/payments', [
                 'title' => 'Payment Management - RentSmart',
                 'payments' => $payments,
-                'mpesa_transactions' => $mpesa_transactions
+                'expected_revenue' => $expected
             ]);
         } catch (Exception $e) {
             error_log($e->getMessage());
@@ -438,6 +455,120 @@ class AdminController
             error_log($e->getMessage());
             http_response_code(500);
             echo json_encode(['error' => 'Internal server error']);
+        }
+    }
+
+    public function verifyManualSubscriptionPayment($manualMpesaId)
+    {
+        try {
+            header('Content-Type: application/json');
+
+            if (!verify_csrf_token()) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'Invalid security token']);
+                return;
+            }
+
+            $input = json_decode(file_get_contents('php://input'), true) ?: [];
+            $action = strtolower(trim($input['action'] ?? ''));
+            if (!in_array($action, ['approve', 'reject'], true)) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'Invalid action']);
+                return;
+            }
+
+            $db = $this->payment->getDb();
+            $db->beginTransaction();
+
+            $stmt = $db->prepare('SELECT * FROM manual_mpesa_payments WHERE id = ?');
+            $stmt->execute([(int)$manualMpesaId]);
+            $manual = $stmt->fetch(\PDO::FETCH_ASSOC);
+            if (!$manual) {
+                $db->rollBack();
+                http_response_code(404);
+                echo json_encode(['success' => false, 'message' => 'Manual M-Pesa payment not found']);
+                return;
+            }
+
+            $paymentId = (int)($manual['payment_id'] ?? 0);
+            if ($paymentId <= 0) {
+                $db->rollBack();
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'Invalid payment link']);
+                return;
+            }
+
+            $payStmt = $db->prepare('SELECT * FROM subscription_payments WHERE id = ?');
+            $payStmt->execute([$paymentId]);
+            $payment = $payStmt->fetch(\PDO::FETCH_ASSOC);
+            if (!$payment) {
+                $db->rollBack();
+                http_response_code(404);
+                echo json_encode(['success' => false, 'message' => 'Subscription payment not found']);
+                return;
+            }
+
+            $userId = (int)($payment['user_id'] ?? 0);
+            $subscriptionId = (int)($payment['subscription_id'] ?? 0);
+            if ($userId <= 0 || $subscriptionId <= 0) {
+                $db->rollBack();
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'Invalid subscription payment data']);
+                return;
+            }
+
+            $newVerification = $action === 'approve' ? 'verified' : 'rejected';
+            $verifiedBy = $_SESSION['user_id'] ?? null;
+            $notes = trim($input['notes'] ?? '');
+            $updManual = $db->prepare('UPDATE manual_mpesa_payments SET verification_status = ?, verification_notes = ?, verified_at = NOW(), verified_by = ? WHERE id = ?');
+            $updManual->execute([$newVerification, $notes, $verifiedBy, (int)$manualMpesaId]);
+
+            $newPaymentStatus = $action === 'approve' ? 'completed' : 'failed';
+            $updPay = $db->prepare('UPDATE subscription_payments SET status = ?, updated_at = NOW() WHERE id = ?');
+            $updPay->execute([$newPaymentStatus, $paymentId]);
+
+            if ($action === 'approve') {
+                $subStmt = $db->prepare('SELECT * FROM subscriptions WHERE id = ?');
+                $subStmt->execute([$subscriptionId]);
+                $sub = $subStmt->fetch(\PDO::FETCH_ASSOC);
+                if (!$sub) {
+                    $db->rollBack();
+                    http_response_code(404);
+                    echo json_encode(['success' => false, 'message' => 'Subscription not found']);
+                    return;
+                }
+
+                $now = new DateTime();
+                $start = !empty($sub['current_period_starts_at']) ? new DateTime($sub['current_period_starts_at']) : clone $now;
+                if ($start < $now) {
+                    $start = clone $now;
+                }
+                $end = !empty($sub['current_period_ends_at']) ? new DateTime($sub['current_period_ends_at']) : (clone $start)->modify('+31 days');
+                if ($end <= $start) {
+                    $end = (clone $start)->modify('+31 days');
+                }
+
+                $updSub = $db->prepare('UPDATE subscriptions SET status = \'active\', current_period_starts_at = ?, current_period_ends_at = ?, updated_at = NOW() WHERE id = ? AND user_id = ?');
+                $updSub->execute([$start->format('Y-m-d H:i:s'), $end->format('Y-m-d H:i:s'), $subscriptionId, $userId]);
+            }
+
+            $db->commit();
+
+            echo json_encode([
+                'success' => true,
+                'message' => $action === 'approve' ? 'Payment approved and subscription activated.' : 'Payment rejected.'
+            ]);
+        } catch (Exception $e) {
+            error_log($e->getMessage());
+            try {
+                $db = $this->payment->getDb();
+                if ($db && $db->inTransaction()) {
+                    $db->rollBack();
+                }
+            } catch (Exception $e2) {
+            }
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Internal server error']);
         }
     }
 

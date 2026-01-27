@@ -380,38 +380,32 @@ class MpesaController
                     throw new \Exception('No subscription found for user');
                 }
 
-                // Update existing subscription for the user
+                // Prepare subscription data but do NOT activate yet
                 $subscriptionModel = new \App\Models\Subscription();
                 $userId = $_SESSION['user_id'];
                 $planId = $data['plan_id'];
                 $plan = $subscriptionModel->getPlanById($planId);
                 $now = new \DateTime();
-                $duration = 31; // days
                 $newStart = clone $now;
                 if ($existingSub) {
-                    if ($existingSub['status'] === 'trialing') {
-                        // End trial, start new period from now
-                        $newStart = $now;
-                    } else {
+                    // If current period still active, start new period after it; keep status pending_verification
+                    if (!empty($existingSub['current_period_ends_at'])) {
                         $currentEnd = new \DateTime($existingSub['current_period_ends_at']);
                         if ($now < $currentEnd) {
                             $newStart = $currentEnd;
                         }
                     }
                     $newEnd = (clone $newStart)->modify('+31 days');
-                    // Add debug logging before update
-                    error_log("DEBUG: Attempting to update subscription with id={$existingSub['id']}, user_id={$userId}, plan_id={$planId}, plan_type={$plan['name']}, newStart={$newStart->format('Y-m-d H:i:s')}, newEnd={$newEnd->format('Y-m-d H:i:s')}");
                     $sql = "UPDATE subscriptions SET 
                         plan_id = ?,
                         plan_type = ?,
-                        status = 'active',
-                        trial_ends_at = NULL,
+                        status = 'pending_verification',
                         current_period_starts_at = ?,
                         current_period_ends_at = ?,
                         updated_at = NOW()
                         WHERE id = ? AND user_id = ?";
                     $stmt = $db->prepare($sql);
-                    $success = $stmt->execute([
+                    $stmt->execute([
                         $planId,
                         $plan['name'],
                         $newStart->format('Y-m-d H:i:s'),
@@ -419,34 +413,19 @@ class MpesaController
                         $existingSub['id'],
                         $userId
                     ]);
-                    $rowsAffected = $stmt->rowCount();
-                    error_log("DEBUG: Subscription update rows affected: $rowsAffected");
-                    if ($rowsAffected === 0) {
-                        // Log all subscriptions for this user for debugging
-                        $subs = $db->prepare("SELECT * FROM subscriptions WHERE user_id = ?");
-                        $subs->execute([$userId]);
-                        $allSubs = $subs->fetchAll(PDO::FETCH_ASSOC);
-                        error_log("DEBUG: All subscriptions for user $userId: " . print_r($allSubs, true));
-                        throw new \Exception('Failed to update subscription');
-                    }
                     $subscriptionId = $existingSub['id'];
                 } else {
-                    // If no subscription exists, create one (fallback)
+                    // Create a pending subscription placeholder
                     $newEnd = (clone $newStart)->modify('+31 days');
-                    $sql = "INSERT INTO subscriptions (user_id, plan_id, plan_type, status, trial_ends_at, current_period_starts_at, current_period_ends_at, created_at, updated_at) VALUES (?, ?, ?, 'active', NULL, ?, ?, NOW(), NOW())";
+                    $sql = "INSERT INTO subscriptions (user_id, plan_id, plan_type, status, trial_ends_at, current_period_starts_at, current_period_ends_at, created_at, updated_at) VALUES (?, ?, ?, 'pending_verification', NULL, ?, ?, NOW(), NOW())";
                     $stmt = $db->prepare($sql);
-                    $success = $stmt->execute([
+                    $stmt->execute([
                         $userId,
                         $planId,
                         $plan['name'],
                         $newStart->format('Y-m-d H:i:s'),
                         $newEnd->format('Y-m-d H:i:s')
                     ]);
-                    if (!$success) {
-                        $errorInfo = $stmt->errorInfo();
-                        error_log('Subscription insert failed: ' . print_r($errorInfo, true));
-                        throw new \Exception('Failed to create subscription');
-                    }
                     $subscriptionId = $db->lastInsertId();
                 }
                 if (!$subscriptionId) {
@@ -454,20 +433,20 @@ class MpesaController
                     throw new \Exception('No valid subscription ID for payment');
                 }
 
-                // Create payment record
+                // Create payment record as pending
                 $paymentId = $this->payment->create([
                     'user_id' => $userId,
                     'subscription_id' => $subscriptionId,
                     'amount' => $data['amount'],
                     'payment_method' => 'mpesa',
-                    'status' => 'completed',
+                    'status' => 'pending',
                     'transaction_reference' => $data['transaction_code']
                 ]);
 
-                // Create manual M-Pesa payment record
+                // Create manual M-Pesa payment record (pending verification)
                 $manualMpesaSql = "INSERT INTO manual_mpesa_payments 
                                 (payment_id, phone_number, transaction_code, amount, verification_status, created_at, updated_at)
-                                VALUES (?, ?, ?, ?, 'approved', NOW(), NOW())";
+                                VALUES (?, ?, ?, ?, 'pending', NOW(), NOW())";
                 $manualMpesaStmt = $db->prepare($manualMpesaSql);
                 $manualMpesaStmt->execute([
                     $paymentId,
@@ -486,7 +465,7 @@ class MpesaController
                 // Commit transaction
                 $db->commit();
 
-                // Send renewal confirmation email to user and payment notification to admin
+                // Notify user and admin of pending verification
                 try {
                     $settingModel = new \App\Models\Setting();
                     $settings = $settingModel->getAllAsAssoc();
@@ -508,13 +487,13 @@ class MpesaController
                     // Email to user
                     $mail->clearAddresses();
                     $mail->addAddress($user['email'], $user['name']);
-                    $mail->Subject = 'Your RentSmart Subscription Has Been Renewed!';
+                    $mail->Subject = 'We received your subscription payment (pending verification)';
                     $mail->Body =
                         '<div style="max-width:500px;margin:auto;border:1px solid #eee;padding:24px;font-family:sans-serif;">'
                         . ($logoUrl ? '<div style="text-align:center;margin-bottom:24px;"><img src="' . $logoUrl . '" alt="Logo" style="max-width:180px;max-height:80px;"></div>' : '') .
                         '<p style="font-size:16px;">Dear ' . htmlspecialchars($user['name']) . ',</p>' .
-                        '<p>Your RentSmart subscription has been successfully renewed via M-Pesa. Thank you for your payment!</p>' .
-                        '<p>You can continue to enjoy all features without interruption.</p>' .
+                        '<p>We have received your M-Pesa payment and it is currently pending verification by our team.</p>' .
+                        '<p>You will receive a confirmation once approved.</p>' .
                         '<p>Thank you,<br>RentSmart Team</p>' .
                         $footer .
                         '</div>';
@@ -524,18 +503,18 @@ class MpesaController
                     if (!empty($settings['site_email'])) {
                         $mail->clearAddresses();
                         $mail->addAddress($settings['site_email'], $settings['site_name'] ?? 'Admin');
-                        $mail->Subject = 'New Subscription Payment Received (M-Pesa)';
+                        $mail->Subject = 'Manual subscription payment pending verification (M-Pesa)';
                         $mail->Body =
                             '<div style="max-width:500px;margin:auto;border:1px solid #eee;padding:24px;font-family:sans-serif;">'
                             . ($logoUrl ? '<div style="text-align:center;margin-bottom:24px;"><img src="' . $logoUrl . '" alt="Logo" style="max-width:180px;max-height:80px;"></div>' : '') .
-                            '<p style="font-size:16px;">A new subscription payment has been verified and the subscription has been activated.</p>' .
+                            '<p style="font-size:16px;">A new manual subscription payment was submitted and is awaiting verification.</p>' .
                             '<ul style="font-size:15px;">
                                 <li><strong>User:</strong> ' . htmlspecialchars($user['name']) . ' (' . htmlspecialchars($user['email']) . ')</li>' .
                                 '<li><strong>Amount:</strong> Ksh ' . htmlspecialchars($data['amount']) . '</li>' .
                                 '<li><strong>Plan:</strong> ' . htmlspecialchars($plan['name']) . '</li>' .
                                 '<li><strong>M-Pesa Code:</strong> ' . htmlspecialchars($data['transaction_code']) . '</li>' .
                             '</ul>' .
-                            '<p>Login to the admin dashboard for more details.</p>' .
+                            '<p>Login to the admin dashboard to verify and approve/reject this payment.</p>' .
                             $footer .
                             '</div>';
                         $mail->send();
@@ -546,7 +525,7 @@ class MpesaController
 
                 echo json_encode([
                     'success' => true,
-                    'message' => 'Payment recorded and subscription activated for 31 days.'
+                    'message' => 'Payment submitted and is pending verification by admin.'
                 ]);
                 return;
 
