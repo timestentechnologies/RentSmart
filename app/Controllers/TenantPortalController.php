@@ -47,9 +47,15 @@ class TenantPortalController
         $maintenanceModel = new MaintenanceRequest();
         $maintenanceRequests = $maintenanceModel->getByTenant($tenantId);
         
-        // Fetch active payment methods
+        // Fetch active payment methods for the property's owner/manager/agent only
         $paymentMethodModel = new PaymentMethod();
-        $paymentMethods = $paymentMethodModel->getActive();
+        $ownerIds = [];
+        if ($property) {
+            if (!empty($property['owner_id'])) { $ownerIds[] = (int)$property['owner_id']; }
+            if (!empty($property['manager_id'])) { $ownerIds[] = (int)$property['manager_id']; }
+            if (!empty($property['agent_id'])) { $ownerIds[] = (int)$property['agent_id']; }
+        }
+        $paymentMethods = $paymentMethodModel->getActiveForUsers($ownerIds);
         
         // Fetch site logo from settings
         $settingsModel = new Setting();

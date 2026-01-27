@@ -145,6 +145,15 @@ if (!function_exists('requireAuth')) {
      */
     function requireAuth()
     {
+        $path = trim(current_uri(), '/');
+        if (
+            $path === 'subscription/initiate-stk' ||
+            $path === 'subscription/verify-mpesa' ||
+            $path === 'mpesa/callback'
+        ) {
+            return;
+        }
+
         if (!isset($_SESSION['user_id'])) {
             $_SESSION['flash_message'] = 'Please login to continue';
             $_SESSION['flash_type'] = 'warning';
@@ -153,6 +162,15 @@ if (!function_exists('requireAuth')) {
 
         // Skip subscription check for administrators
         if (isset($_SESSION['user_role']) && (strtolower($_SESSION['user_role']) === 'administrator' || strtolower($_SESSION['user_role']) === 'admin')) {
+            return;
+        }
+
+        // Allow payment initiation/verification endpoints without active subscription
+        if (
+            $path === 'subscription/initiate-stk' ||
+            $path === 'subscription/verify-mpesa' ||
+            $path === 'mpesa/callback'
+        ) {
             return;
         }
 
@@ -189,7 +207,13 @@ if (!function_exists('current_uri')) {
     function current_uri()
     {
         $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+        if (!is_string($uri)) {
+            $uri = '/';
+        }
         $base_path = parse_url(BASE_URL, PHP_URL_PATH);
+        if (!is_string($base_path)) {
+            $base_path = '';
+        }
         return substr($uri, strlen($base_path));
     }
 }

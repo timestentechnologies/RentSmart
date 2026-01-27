@@ -144,7 +144,7 @@ ob_start();
                 <input type="hidden" name="payment_method" id="paymentMethod" value="">
                 <input type="hidden" name="selected_plan_id" id="selectedPlanId" value="">
                 <button type="submit" class="btn btn-primary btn-lg">
-                    <i class="bi bi-arrow-repeat me-2"></i>Renew Subscription
+                    <i class="bi bi-arrow-repeat me-2"></i><?= (!empty($subscription) && strtolower($subscription['status']) === 'active') ? 'Upgrade Plan' : 'Renew Subscription' ?>
                 </button>
             </form>
         </div>
@@ -208,7 +208,7 @@ ob_start();
                     <div id="stkPushForm">
                         <div class="mb-3">
                             <label for="phoneNumber" class="form-label">M-Pesa Phone Number</label>
-                            <input type="tel" class="form-control" id="phoneNumber" placeholder="254700000000" required>
+                            <input type="tel" class="form-control" id="phoneNumber" name="phone_number" placeholder="254700000000" required autocomplete="off" inputmode="numeric">
                             <small class="text-muted">Enter your M-Pesa registered phone number starting with 254</small>
                         </div>
                     </div>
@@ -231,12 +231,12 @@ ob_start();
                         </div>
                         <div class="mb-3 mt-3">
                             <label for="mpesaPhone" class="form-label">Phone Number Used</label>
-                            <input type="tel" class="form-control" id="mpesaPhone" placeholder="254700000000">
+                            <input type="tel" class="form-control" id="mpesaPhone" name="mpesa_phone" placeholder="254700000000" autocomplete="off" inputmode="numeric">
                             <small class="text-muted">Enter the phone number you used to make the payment</small>
                         </div>
                         <div class="mb-3">
                             <label for="mpesaCode" class="form-label">M-Pesa Transaction Code</label>
-                            <input type="text" class="form-control" id="mpesaCode" placeholder="QWE1234567">
+                            <input type="text" class="form-control" id="mpesaCode" name="mpesa_code" placeholder="QWE1234567" autocomplete="off">
                             <small class="text-muted">Enter the M-Pesa transaction code received via SMS</small>
                         </div>
                     </div>
@@ -317,6 +317,11 @@ ob_start();
 #manualMpesaForm .form-control {
     margin-bottom: 0.5rem;
 }
+
+/* Ensure inputs inside modal always accept typing */
+.modal .form-control {
+    pointer-events: auto;
+}
 </style>
 
 <script>
@@ -381,6 +386,21 @@ function toggleMpesaForms(method) {
         manual: manualForm.style.display
     });
     
+    // Enable/disable relevant inputs and focus the active one
+    const phoneInput = document.getElementById('phoneNumber');
+    const manualPhone = document.getElementById('mpesaPhone');
+    const manualCode = document.getElementById('mpesaCode');
+
+    if (phoneInput) phoneInput.disabled = method !== 'stk';
+    if (manualPhone) manualPhone.disabled = method !== 'manual';
+    if (manualCode) manualCode.disabled = method !== 'manual';
+
+    if (method === 'stk' && phoneInput) {
+        phoneInput.focus();
+    } else if (method === 'manual' && manualPhone) {
+        manualPhone.focus();
+    }
+
     // Update amount in manual payment instructions
     if (method === 'manual' && selectedPlanDetails) {
         const amountElement = document.getElementById('mpesaAmount');
@@ -499,6 +519,7 @@ document.getElementById('processPaymentBtn').addEventListener('click', async fun
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
+                        'Accept': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('input[name="csrf_token"]').value
                     },
                     body: JSON.stringify({
@@ -507,14 +528,30 @@ document.getElementById('processPaymentBtn').addEventListener('click', async fun
                         amount: selectedPlanDetails.price
                     })
                 });
-
-                const result = await response.json();
+                const raw = await response.text();
+                let result;
+                try {
+                    result = JSON.parse(raw);
+                } catch (e) {
+                    throw new Error(raw);
+                }
                 
                 if (result.success) {
-                    alert('Please check your phone for the M-Pesa payment prompt');
-                    // Close modal and submit form
-                    bootstrap.Modal.getInstance(document.getElementById('paymentModal')).hide();
-                    document.getElementById('renewForm').submit();
+                    const checkoutId = result.checkout_request_id;
+                    // Show waiting modal and poll for status
+                    Swal.fire({
+                        title: 'Waiting for M-Pesa confirmation',
+                        text: 'Please check your phone and enter your M-Pesa PIN.',
+                        icon: 'info',
+                        allowOutsideClick: false,
+                        allowEscapeKey: false,
+                        showConfirmButton: false,
+                        didOpen: () => {
+                            if (checkoutId) {
+                                startSubscriptionStkPolling(checkoutId);
+                            }
+                        }
+                    });
                 } else {
                     throw new Error(result.message || 'Failed to initiate M-Pesa payment');
                 }
@@ -524,6 +561,7 @@ document.getElementById('processPaymentBtn').addEventListener('click', async fun
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
+                        'Accept': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('input[name="csrf_token"]').value
                     },
                     body: JSON.stringify({
@@ -534,8 +572,13 @@ document.getElementById('processPaymentBtn').addEventListener('click', async fun
                         is_manual: true
                     })
                 });
-
-                const result = await response.json();
+                const raw = await response.text();
+                let result;
+                try {
+                    result = JSON.parse(raw);
+                } catch (e) {
+                    throw new Error(raw);
+                }
                 
                 if (result.success) {
                     Swal.fire({
@@ -564,6 +607,59 @@ document.getElementById('processPaymentBtn').addEventListener('click', async fun
         spinner.classList.add('d-none');
     }
 });
+
+// Poll subscription STK status and show success modal on completion
+let subStkPollInterval = null;
+function startSubscriptionStkPolling(checkoutRequestId) {
+    let attempts = 0;
+    const maxAttempts = 60; // ~60 seconds
+    const poll = async () => {
+        try {
+            attempts++;
+            const resp = await fetch(window.BASE_URL + '/mpesa/callback?checkout_request_id=' + encodeURIComponent(checkoutRequestId), {
+                method: 'GET',
+                headers: { 'Accept': 'application/json' }
+            });
+            const raw = await resp.text();
+            let data;
+            try { data = JSON.parse(raw); } catch { data = { status: 'pending', message: raw }; }
+            if (data.status === 'completed') {
+                clearInterval(subStkPollInterval);
+                Swal.fire({
+                    title: 'Payment Successful!',
+                    text: 'Your subscription has been activated.',
+                    icon: 'success',
+                    confirmButtonText: 'OK'
+                }).then(() => {
+                    const modalEl = document.getElementById('paymentModal');
+                    const inst = bootstrap.Modal.getInstance(modalEl);
+                    if (inst) inst.hide();
+                    window.location.href = window.BASE_URL + '/dashboard';
+                });
+            } else if (data.status === 'failed' || data.status === 'cancelled') {
+                clearInterval(subStkPollInterval);
+                Swal.fire({
+                    title: 'Payment Failed',
+                    text: data.result_desc || data.message || 'The payment could not be completed.',
+                    icon: 'error',
+                    confirmButtonText: 'OK'
+                });
+            } else if (attempts >= maxAttempts) {
+                clearInterval(subStkPollInterval);
+                Swal.fire({
+                    title: 'Payment Pending',
+                    text: 'We are still awaiting confirmation. You can check again shortly.',
+                    icon: 'info',
+                    confirmButtonText: 'OK'
+                });
+            }
+        } catch (e) {
+            // Ignore transient errors and continue polling
+        }
+    };
+    clearInterval(subStkPollInterval);
+    subStkPollInterval = setInterval(poll, 1000);
+}
 
 // When payment modal is shown, update amount and ensure correct form visibility
 document.getElementById('paymentModal').addEventListener('show.bs.modal', function(event) {
@@ -621,6 +717,26 @@ document.getElementById('phoneNumber').addEventListener('input', function(e) {
     }
     e.target.value = value.substring(0, 12);
 });
+
+// Format manual M-Pesa phone input similarly
+const mpesaPhoneEl = document.getElementById('mpesaPhone');
+if (mpesaPhoneEl) {
+    mpesaPhoneEl.addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, '');
+        if (!value.startsWith('254')) {
+            value = '254' + value;
+        }
+        e.target.value = value.substring(0, 12);
+    });
+}
+
+// Uppercase and sanitize M-Pesa code
+const mpesaCodeEl = document.getElementById('mpesaCode');
+if (mpesaCodeEl) {
+    mpesaCodeEl.addEventListener('input', function(e) {
+        e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 10);
+    });
+}
 </script>
 
 <?php

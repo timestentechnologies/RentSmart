@@ -25,18 +25,56 @@ class MpesaController
         $this->payment = new Payment();
         $this->mpesaTransaction = new MpesaTransaction();
         
-        // Load M-Pesa configuration
-        $this->env = getenv('MPESA_ENV') === 'production' ? 'production' : 'sandbox';
-        $this->consumerKey = getenv('MPESA_CONSUMER_KEY');
-        $this->consumerSecret = getenv('MPESA_CONSUMER_SECRET');
-        $this->passkey = getenv('MPESA_PASSKEY');
-        $this->shortcode = getenv('MPESA_SHORTCODE');
-        $this->callbackUrl = getenv('APP_URL') . '/mpesa/callback';
+        // Load M-Pesa configuration (fallback to DB settings if env not set)
+        try {
+            $settingsModel = new \App\Models\Setting();
+            $settings = $settingsModel->getAllAsAssoc();
+        } catch (\Exception $e) {
+            error_log('Failed to load settings for M-Pesa config: ' . $e->getMessage());
+            $settings = [];
+        }
+
+
+        $envValue = getenv('MPESA_ENV') ?: ($settings['mpesa_environment'] ?? 'sandbox');
+        $this->env = strtolower((string)$envValue) === 'production' ? 'production' : 'sandbox';
+        $this->consumerKey = getenv('MPESA_CONSUMER_KEY') ?: ($settings['mpesa_consumer_key'] ?? null);
+        $this->consumerSecret = getenv('MPESA_CONSUMER_SECRET') ?: ($settings['mpesa_consumer_secret'] ?? null);
+        $this->passkey = getenv('MPESA_PASSKEY') ?: ($settings['mpesa_passkey'] ?? null);
+        $this->shortcode = getenv('MPESA_SHORTCODE') ?: ($settings['mpesa_shortcode'] ?? null);
+
+        $baseAppUrl = getenv('APP_URL');
+        if (!$baseAppUrl) {
+            $forwardedProto = $_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '';
+            $scheme = $forwardedProto ?: ((!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') ? 'https' : 'http');
+            $host = $_SERVER['HTTP_HOST'] ?? '';
+            $base = defined('BASE_URL') ? BASE_URL : '';
+            // Force https when not localhost
+            if (($host && $host !== 'localhost' && $host !== '127.0.0.1') && strtolower($scheme) !== 'https') {
+                $scheme = 'https';
+            }
+            $baseAppUrl = $host ? ($scheme . '://' . $host . $base) : '';
+        }
+        $this->callbackUrl = rtrim((string)$baseAppUrl, '/') . '/mpesa/callback';
+
+        // Allow explicit override via environment variable
+        $callbackOverride = getenv('MPESA_CALLBACK_URL');
+        if (!empty($callbackOverride)) {
+            $this->callbackUrl = rtrim((string)$callbackOverride, '/');
+        }
+
+        // Localhost fallback similar to TenantPaymentController for local testing
+        $isLocal = isset($_SERVER['HTTP_HOST']) && (strpos($_SERVER['HTTP_HOST'], 'localhost') !== false || strpos($_SERVER['HTTP_HOST'], '127.0.0.1') !== false);
+        if ($isLocal && empty($callbackOverride)) {
+            // Use a webhook.site URL for receiving callbacks during local development
+            // You can replace this with your own webhook.site URL if desired
+            $this->callbackUrl = 'https://webhook.site/8b5c7e2d-4a3f-4b1e-9c6d-1a2b3c4d5e6f';
+        }
     }
 
     public function initiateSTK()
     {
         try {
+            header('Content-Type: application/json');
             // Validate request
             if (!isset($_SESSION['user_id'])) {
                 http_response_code(401);
@@ -53,16 +91,56 @@ class MpesaController
                 return;
             }
 
-            // Create payment record
+            // Normalize and validate amount (STK requires integer amount)
+            $amountInt = (int) round((float) $data['amount']);
+            if ($amountInt <= 0) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'Invalid amount']);
+                return;
+            }
+
+            // Ensure we have a valid subscription to attach this payment to
+            $db = $this->payment->getDb();
+            $subscriptionId = null;
+            $subStmt = $db->prepare("SELECT id FROM subscriptions WHERE user_id = ? ORDER BY id DESC LIMIT 1");
+            $subStmt->execute([$_SESSION['user_id']]);
+            $existingSub = $subStmt->fetch(PDO::FETCH_ASSOC);
+            if ($existingSub && isset($existingSub['id'])) {
+                $subscriptionId = (int)$existingSub['id'];
+            } else {
+                // Create a subscription record if none exists yet
+                $subscriptionModel = new \App\Models\Subscription();
+                $plan = $subscriptionModel->getPlanById($data['plan_id']);
+                if (!$plan) {
+                    throw new Exception('Invalid plan selected');
+                }
+                $now = date('Y-m-d H:i:s');
+                $end = date('Y-m-d H:i:s', strtotime('+31 days'));
+                $ins = $db->prepare("INSERT INTO subscriptions (user_id, plan_id, plan_type, status, trial_ends_at, current_period_starts_at, current_period_ends_at, created_at, updated_at) VALUES (?, ?, ?, 'active', NULL, ?, ?, NOW(), NOW())");
+                $ok = $ins->execute([$_SESSION['user_id'], $data['plan_id'], $plan['name'], $now, $end]);
+                if (!$ok) {
+                    $err = $ins->errorInfo();
+                    throw new Exception('Failed to create subscription: ' . ($err[2] ?? ''));
+                }
+                $subscriptionId = (int)$db->lastInsertId();
+            }
+
+            // Create payment record referencing the resolved subscription ID
             $paymentId = $this->payment->create([
                 'user_id' => $_SESSION['user_id'],
-                'subscription_id' => $data['plan_id'],
-                'amount' => $data['amount'],
+                'subscription_id' => $subscriptionId,
+                'amount' => $amountInt,
                 'payment_method' => 'mpesa',
                 'status' => 'pending'
             ]);
 
             // Generate access token
+            if (empty($this->consumerKey) || empty($this->consumerSecret)) {
+                throw new Exception('M-Pesa API credentials are not configured. Please set Consumer Key/Secret in Settings or .env');
+            }
+            if (empty($this->shortcode) || empty($this->passkey)) {
+                throw new Exception('M-Pesa Shortcode/Passkey is not configured.');
+            }
             $accessToken = $this->generateAccessToken();
 
             // Prepare STK push
@@ -75,6 +153,8 @@ class MpesaController
 
             // Make STK push request
             $ch = curl_init($stkUrl);
+            // Log callback URL being sent
+            error_log('M-Pesa STK using CallBackURL: ' . $this->callbackUrl);
             curl_setopt($ch, CURLOPT_HTTPHEADER, [
                 'Authorization: Bearer ' . $accessToken,
                 'Content-Type: application/json'
@@ -85,7 +165,7 @@ class MpesaController
                 'Password' => $password,
                 'Timestamp' => $timestamp,
                 'TransactionType' => 'CustomerPayBillOnline',
-                'Amount' => $data['amount'],
+                'Amount' => $amountInt,
                 'PartyA' => $data['phone_number'],
                 'PartyB' => $this->shortcode,
                 'PhoneNumber' => $data['phone_number'],
@@ -131,7 +211,9 @@ class MpesaController
 
             echo json_encode([
                 'success' => true,
-                'message' => 'STK push initiated successfully'
+                'message' => 'STK push initiated successfully',
+                'merchant_request_id' => $result['MerchantRequestID'] ?? null,
+                'checkout_request_id' => $result['CheckoutRequestID'] ?? null
             ]);
         } catch (Exception $e) {
             error_log($e->getMessage());
@@ -152,6 +234,25 @@ class MpesaController
     public function handleCallback()
     {
         try {
+            // If this is a polling request from the UI, return current transaction status
+            if ($_SERVER['REQUEST_METHOD'] === 'GET' && isset($_GET['checkout_request_id'])) {
+                header('Content-Type: application/json');
+                $checkoutId = $_GET['checkout_request_id'];
+                $txn = $this->mpesaTransaction->findByCheckoutRequestId($checkoutId);
+                if (!$txn) {
+                    echo json_encode(['status' => 'pending', 'message' => 'Transaction not found yet']);
+                    return;
+                }
+                $status = $txn['status'] ?? 'pending';
+                echo json_encode([
+                    'status' => $status,
+                    'receipt_number' => $txn['mpesa_receipt_number'] ?? '',
+                    'transaction_date' => $txn['transaction_date'] ?? '',
+                    'result_desc' => $txn['result_description'] ?? ''
+                ]);
+                return;
+            }
+
             // Get callback data
             $callbackData = json_decode(file_get_contents('php://input'), true);
             
@@ -200,10 +301,22 @@ class MpesaController
                 // Update payment status
                 $this->payment->updateStatus($transaction['payment_id'], 'completed');
 
-                // Activate subscription
+                // Activate subscription using the underlying plan_id
                 $payment = $this->payment->findById($transaction['payment_id']);
+                $planId = null;
+                try {
+                    $db = $this->payment->getDb();
+                    $planStmt = $db->prepare("SELECT plan_id FROM subscriptions WHERE id = ?");
+                    $planStmt->execute([$payment['subscription_id']]);
+                    $planRow = $planStmt->fetch(PDO::FETCH_ASSOC);
+                    if ($planRow && isset($planRow['plan_id'])) {
+                        $planId = (int)$planRow['plan_id'];
+                    }
+                } catch (Exception $e) {
+                    error_log('Failed to fetch plan_id for subscription: ' . $e->getMessage());
+                }
                 $subscription = new SubscriptionController();
-                $subscription->activateSubscription($payment['user_id'], $payment['subscription_id']);
+                $subscription->activateSubscription($payment['user_id'], $planId ?: (int)$payment['subscription_id']);
             } else {
                 // Payment failed
                 $this->mpesaTransaction->update($transaction['id'], [
@@ -227,6 +340,7 @@ class MpesaController
     public function verifyManualPayment()
     {
         try {
+            header('Content-Type: application/json');
             // Validate request
             if (!isset($_SESSION['user_id'])) {
                 http_response_code(401);
@@ -457,6 +571,42 @@ class MpesaController
         }
     }
 
+    public function checkSTKStatus()
+    {
+        header('Content-Type: application/json');
+        try {
+            // Support both JSON and form-encoded
+            $data = json_decode(file_get_contents('php://input'), true);
+            $checkoutRequestId = $data['checkout_request_id'] ?? ($_POST['checkout_request_id'] ?? '');
+            if (!$checkoutRequestId) {
+                http_response_code(400);
+                echo json_encode(['status' => 'error', 'message' => 'Missing checkout request ID']);
+                return;
+            }
+
+            $transaction = $this->mpesaTransaction->findByCheckoutRequestId($checkoutRequestId);
+            if (!$transaction) {
+                echo json_encode(['status' => 'pending', 'message' => 'Transaction not found yet']);
+                return;
+            }
+
+            // Map response
+            $status = $transaction['status'] ?? 'pending';
+            $response = [
+                'status' => $status,
+                'message' => $transaction['result_description'] ?? '',
+                'receipt_number' => $transaction['mpesa_receipt_number'] ?? '',
+                'transaction_date' => $transaction['transaction_date'] ?? '',
+                'result_desc' => $transaction['result_description'] ?? ''
+            ];
+            echo json_encode($response);
+        } catch (Exception $e) {
+            error_log('Error checking subscription STK status: ' . $e->getMessage());
+            http_response_code(500);
+            echo json_encode(['status' => 'error', 'message' => 'Error checking payment status']);
+        }
+    }
+
     private function generateAccessToken()
     {
         $credentials = base64_encode($this->consumerKey . ':' . $this->consumerSecret);
@@ -466,7 +616,10 @@ class MpesaController
             : 'https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials';
 
         $ch = curl_init($url);
-        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Authorization: Basic ' . $credentials]);
+        curl_setopt($ch, CURLOPT_HTTPHEADER, [
+            'Authorization: Basic ' . $credentials,
+            'Accept: application/json'
+        ]);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, 0);
         
@@ -481,7 +634,9 @@ class MpesaController
         $result = json_decode($response, true);
         
         if (!isset($result['access_token'])) {
-            throw new Exception('Failed to get access token: ' . $response);
+            error_log('M-Pesa access token response: ' . $response);
+            $errMsg = isset($result['errorMessage']) ? $result['errorMessage'] : $response;
+            throw new Exception('Failed to get access token: ' . $errMsg);
         }
         
         return $result['access_token'];

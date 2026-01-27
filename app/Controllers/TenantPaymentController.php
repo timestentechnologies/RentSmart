@@ -78,6 +78,52 @@ class TenantPaymentController
             if (!$lease) {
                 throw new \Exception('No active lease found for this tenant');
             }
+            
+            // Authorize payment method against property's owner/manager/agent
+            try {
+                $db = $this->payment->getDb();
+                $propStmt = $db->prepare('SELECT p.owner_id, p.manager_id, p.agent_id
+                                          FROM leases l
+                                          JOIN units u ON l.unit_id = u.id
+                                          JOIN properties p ON u.property_id = p.id
+                                          WHERE l.id = ?');
+                $propStmt->execute([$lease['id']]);
+                $prop = $propStmt->fetch(\PDO::FETCH_ASSOC) ?: [];
+                $allowedOwners = array_values(array_filter([
+                    (int)($prop['owner_id'] ?? 0),
+                    (int)($prop['manager_id'] ?? 0),
+                    (int)($prop['agent_id'] ?? 0)
+                ]));
+                $methodOwnerId = (int)($paymentMethodData['owner_user_id'] ?? 0);
+                if (empty($methodOwnerId) || !in_array($methodOwnerId, $allowedOwners, true)) {
+                    throw new \Exception('Selected payment method is not available for this property');
+                }
+            } catch (\Exception $e) {
+                throw $e; // propagate as validation error
+            }
+
+            // Authorize payment method against property's owner/manager/agent
+            try {
+                $db = $this->payment->getDb();
+                $propStmt = $db->prepare('SELECT p.owner_id, p.manager_id, p.agent_id
+                                          FROM leases l
+                                          JOIN units u ON l.unit_id = u.id
+                                          JOIN properties p ON u.property_id = p.id
+                                          WHERE l.id = ?');
+                $propStmt->execute([$lease['id']]);
+                $prop = $propStmt->fetch(\PDO::FETCH_ASSOC) ?: [];
+                $allowedOwners = array_values(array_filter([
+                    (int)($prop['owner_id'] ?? 0),
+                    (int)($prop['manager_id'] ?? 0),
+                    (int)($prop['agent_id'] ?? 0)
+                ]));
+                $methodOwnerId = (int)($paymentMethodData['owner_user_id'] ?? 0);
+                if (empty($methodOwnerId) || !in_array($methodOwnerId, $allowedOwners, true)) {
+                    throw new \Exception('Selected payment method is not available for this property');
+                }
+            } catch (\Exception $e) {
+                throw $e; // propagate as validation error
+            }
 
             // Determine payment status based on method type
             $paymentStatus = 'completed';
