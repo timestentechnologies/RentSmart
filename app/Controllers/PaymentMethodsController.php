@@ -19,7 +19,16 @@ class PaymentMethodsController
     public function index()
     {
         try {
-            $paymentMethods = $this->paymentMethod->getAll();
+            if (session_status() === PHP_SESSION_NONE) {
+                session_start();
+            }
+            $userId = $_SESSION['user_id'] ?? null;
+            $role = strtolower($_SESSION['user_role'] ?? '');
+            $isAdmin = in_array($role, ['administrator', 'admin'], true);
+
+            $paymentMethods = $isAdmin
+                ? $this->paymentMethod->getAll()
+                : $this->paymentMethod->getByUser($userId);
             
             echo view('admin/payment_methods', [
                 'title' => 'Payment Methods - RentSmart',
@@ -42,6 +51,11 @@ class PaymentMethodsController
         try {
             $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
             
+            if (session_status() === PHP_SESSION_NONE) {
+                session_start();
+            }
+            $ownerUserId = $_SESSION['user_id'] ?? null;
+
             $name = trim($_POST['name'] ?? '');
             $type = trim($_POST['type'] ?? '');
             $description = trim($_POST['description'] ?? '');
@@ -76,6 +90,8 @@ class PaymentMethodsController
                 'description' => $description,
                 'is_active' => $isActive ? 1 : 0,
                 'details' => json_encode($details),
+                // Column must exist in DB: ALTER TABLE payment_methods ADD COLUMN owner_user_id INT NULL;
+                'owner_user_id' => $ownerUserId,
                 'created_at' => date('Y-m-d H:i:s')
             ];
 
@@ -121,6 +137,22 @@ class PaymentMethodsController
         try {
             $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
             
+            if (session_status() === PHP_SESSION_NONE) {
+                session_start();
+            }
+            $userId = $_SESSION['user_id'] ?? null;
+            $role = strtolower($_SESSION['user_role'] ?? '');
+            $isAdmin = in_array($role, ['administrator', 'admin'], true);
+
+            // Ownership guard for non-admins
+            $existing = $this->paymentMethod->getById($id);
+            if (!$existing) {
+                throw new \Exception('Payment method not found');
+            }
+            if (!$isAdmin && isset($existing['owner_user_id']) && (int)$existing['owner_user_id'] !== (int)$userId) {
+                throw new \Exception('You are not authorized to modify this payment method');
+            }
+
             $name = trim($_POST['name'] ?? '');
             $type = trim($_POST['type'] ?? '');
             $description = trim($_POST['description'] ?? '');
@@ -199,6 +231,22 @@ class PaymentMethodsController
         try {
             $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
             
+            if (session_status() === PHP_SESSION_NONE) {
+                session_start();
+            }
+            $userId = $_SESSION['user_id'] ?? null;
+            $role = strtolower($_SESSION['user_role'] ?? '');
+            $isAdmin = in_array($role, ['administrator', 'admin'], true);
+
+            // Ownership guard for non-admins
+            $existing = $this->paymentMethod->getById($id);
+            if (!$existing) {
+                throw new \Exception('Payment method not found');
+            }
+            if (!$isAdmin && isset($existing['owner_user_id']) && (int)$existing['owner_user_id'] !== (int)$userId) {
+                throw new \Exception('You are not authorized to delete this payment method');
+            }
+
             $this->paymentMethod->delete($id);
 
             if ($isAjax) {
@@ -238,10 +286,28 @@ class PaymentMethodsController
     public function get($id)
     {
         try {
+            if (session_status() === PHP_SESSION_NONE) {
+                session_start();
+            }
+            $userId = $_SESSION['user_id'] ?? null;
+            $role = strtolower($_SESSION['user_role'] ?? '');
+            $isAdmin = in_array($role, ['administrator', 'admin'], true);
+
             $paymentMethod = $this->paymentMethod->getById($id);
             
             if (!$paymentMethod) {
                 throw new \Exception('Payment method not found');
+            }
+
+            // Non-admins can only view their own payment methods
+            if (!$isAdmin && isset($paymentMethod['owner_user_id']) && (int)$paymentMethod['owner_user_id'] !== (int)$userId) {
+                header('Content-Type: application/json');
+                http_response_code(403);
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'You are not authorized to view this payment method'
+                ]);
+                exit;
             }
 
             header('Content-Type: application/json');
