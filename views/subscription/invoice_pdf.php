@@ -17,10 +17,23 @@
         th { background: #f7f7f7; text-align: left; }
         .amount { font-weight: bold; color: #1a7e1a; }
         .footer { text-align: center; font-size: 12px; color: #888; margin-top: 24px; }
+        .status-bar { text-align: right; margin-bottom: 8px; }
+        .status-badge { display: inline-block; padding: 6px 14px; border-radius: 999px; font-weight: bold; font-size: 12px; color: #fff; text-transform: uppercase; letter-spacing: 0.3px; }
+        .status-paid { background: #198754; }
+        .status-pending { background: #fd7e14; }
+        .status-failed { background: #dc3545; }
     </style>
 </head>
 <body>
     <div class="header">
+        <?php 
+            $ps = strtolower($payment['status'] ?? 'completed');
+            $badgeClass = ($ps === 'completed') ? 'status-paid' : (($ps === 'failed') ? 'status-failed' : 'status-pending');
+            $badgeText = ($ps === 'completed') ? 'Paid' : (($ps === 'failed') ? 'Failed' : 'Pending');
+        ?>
+        <div class="status-bar">
+            <span class="status-badge <?= $badgeClass ?>"><?= $badgeText ?></span>
+        </div>
         <?php if (!empty($logoDataUri)): ?>
             <img class="logo" src="<?= $logoDataUri ?>" alt="Logo">
         <?php endif; ?>
