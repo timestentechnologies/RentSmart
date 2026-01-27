@@ -853,11 +853,18 @@ class Payment extends Model
                 s.status as subscription_status,
                 mt.mpesa_receipt_number,
                 mt.phone_number,
-                mt.transaction_date as mpesa_transaction_date
+                mt.transaction_date as mpesa_transaction_date,
+                mt.result_code as mpesa_result_code,
+                mt.result_description as mpesa_result_description,
+                mmp.id as manual_mpesa_id,
+                mmp.phone_number as manual_phone_number,
+                mmp.transaction_code as manual_transaction_code,
+                mmp.verification_status as manual_verification_status
                 FROM subscription_payments sp
                 LEFT JOIN users u ON sp.user_id = u.id
                 LEFT JOIN subscriptions s ON sp.subscription_id = s.id
                 LEFT JOIN mpesa_transactions mt ON sp.id = mt.payment_id
+                LEFT JOIN manual_mpesa_payments mmp ON sp.id = mmp.payment_id
                 ORDER BY sp.created_at DESC";
         
         $stmt = $this->db->prepare($sql);

@@ -582,12 +582,12 @@ document.getElementById('processPaymentBtn').addEventListener('click', async fun
                 
                 if (result.success) {
                     Swal.fire({
-                        title: 'Payment Received',
-                        text: 'Payment received! Your subscription has been activated for 31 days.',
-                        icon: 'success',
+                        title: 'Payment Submitted',
+                        text: 'We received your M-Pesa payment. It is pending verification by admin. You will be notified once confirmed.',
+                        icon: 'info',
                         confirmButtonText: 'OK'
                     }).then(() => {
-                        // Close modal and submit form
+                        // Close modal and redirect
                         bootstrap.Modal.getInstance(document.getElementById('paymentModal')).hide();
                         window.location.href = window.BASE_URL + '/dashboard';
                     });

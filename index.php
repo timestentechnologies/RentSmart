@@ -168,6 +168,7 @@ $routes = [
     'admin/payments' => ['controller' => 'AdminController', 'action' => 'payments'],
     'admin/payments/get/(\d+)' => ['controller' => 'AdminController', 'action' => 'getPayment'],
     'admin/payments/transaction/(\d+)' => ['controller' => 'AdminController', 'action' => 'getTransaction'],
+    'admin/payments/manual-mpesa/(\d+)/verify' => ['controller' => 'AdminController', 'action' => 'verifyManualSubscriptionPayment'],
     
     'properties' => ['controller' => 'PropertyController', 'action' => 'index'],
     'properties/create' => ['controller' => 'PropertyController', 'action' => 'create'],
