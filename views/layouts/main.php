@@ -751,7 +751,7 @@ ob_clean();
         .theme-toggle {
             position: fixed;
             bottom: 20px;
-            right: 20px;
+            left: 20px;
             z-index: 1050;
             width: 50px;
             height: 50px;
@@ -794,7 +794,7 @@ ob_clean();
         .whatsapp-fab {
             position: fixed;
             right: 20px;
-            bottom: 90px;
+            bottom: 20px;
             z-index: 1051;
             background: #25D366;
             color: #fff !important;
