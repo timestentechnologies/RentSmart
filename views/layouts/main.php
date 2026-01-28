@@ -65,6 +65,7 @@ ob_clean();
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <meta name="csrf-token" content="<?= htmlspecialchars(csrf_token()) ?>">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= htmlspecialchars((isset($title) && $title) ? $title . ' - ' . $siteName : $siteName) ?></title>
@@ -83,7 +84,7 @@ ob_clean();
       const input = document.getElementById('aiChatInput');
       const sendBtn = document.getElementById('aiChatSend');
       const messages = document.getElementById('aiChatMessages');
-      const csrf = (document.querySelector('input[name="csrf_token"]')||{}).value || '';
+      const csrf = (document.querySelector('input[name="csrf_token"]')||{}).value || (document.querySelector('meta[name="csrf-token"]')||{}).content || '';
 
       if (!fab || !panel) return;
 
@@ -138,7 +139,14 @@ ob_clean();
             headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
             body: JSON.stringify({ message: text })
           });
-          const data = await res.json().catch(()=>({success:false,message:'Invalid response'}));
+          let data;
+          const ct = (res.headers.get('content-type')||'').toLowerCase();
+          if (ct.includes('application/json')) {
+            data = await res.json().catch(()=>({success:false,message:'Invalid response'}));
+          } else {
+            const txt = await res.text().catch(()=> '');
+            data = { success: false, message: txt || 'Invalid response' };
+          }
           hideThinking();
           if (data && data.success && data.reply){
             appendMsg(data.reply, 'bot');

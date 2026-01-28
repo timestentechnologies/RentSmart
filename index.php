@@ -407,7 +407,6 @@ $protectedRoutes = [
     'settings/testMpesa',
     'settings/testStripe',
     'settings/testPaypal',
-    'ai/chat',
     'leases',
     'leases/store',
     'leases/edit/(\d+)',
