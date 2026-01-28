@@ -24,12 +24,6 @@ class AiController
             return;
         }
 
-        if (!isset($_SESSION['user_id'])) {
-            http_response_code(401);
-            echo json_encode(['success' => false, 'message' => 'Unauthorized']);
-            return;
-        }
-
         if (!verify_csrf_token()) {
             http_response_code(403);
             echo json_encode(['success' => false, 'message' => 'Invalid CSRF token']);
@@ -48,7 +42,7 @@ class AiController
         $apiKey = $settings['openai_api_key'] ?? '';
         $model = $settings['openai_model'] ?? 'gpt-4.1-mini';
         $googleApiKey = $settings['google_api_key'] ?? '';
-        $googleModel = $settings['google_model'] ?? 'gemini-1.5-flash';
+        $googleModel = $settings['google_model'] ?? 'gemini-3-flash-preview';
         $systemPrompt = $settings['ai_system_prompt'] ?? 'You are RentSmart Support AI. Help users with property management tasks and app guidance.';
 
         $raw = file_get_contents('php://input');

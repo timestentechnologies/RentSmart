@@ -4,6 +4,7 @@
     <!-- Essential Meta Tags -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="<?= htmlspecialchars(csrf_token()) ?>">
     <title><?= htmlspecialchars($siteName) ?> | #1 Property Management System in Kenya | Rental & Real Estate Software</title>
     <meta name="description" content="Transform your property management with <?= htmlspecialchars($siteName) ?> - Kenya's leading rental management software. Manage properties, tenants, rent collection, maintenance, utilities & more. 7-day free trial. Perfect for landlords, property managers & real estate agents.">
     <meta name="keywords" content="property management system Kenya, rental management software, property management software Kenya, real estate management system, landlord software Kenya, tenant management system, rental property software, property manager app, online rent collection Kenya, real estate software Kenya, property accounting software, maintenance management system, utility billing software, lease management system, property portfolio management, residential property management, commercial property management, apartment management software, rental tracking system, property management app Kenya, <?= htmlspecialchars($siteName) ?>">
@@ -1487,7 +1488,7 @@ document.addEventListener('DOMContentLoaded', function(){
   const input = document.getElementById('aiChatInput');
   const sendBtn = document.getElementById('aiChatSend');
   const messages = document.getElementById('aiChatMessages');
-  const csrf = (document.querySelector('input[name="csrf_token"]')||{}).value || '';
+  const csrf = (document.querySelector('input[name="csrf_token"]')||{}).value || (document.querySelector('meta[name="csrf-token"]')||{}).content || '';
 
   if (!fab || !panel) return;
 
@@ -1541,7 +1542,14 @@ document.addEventListener('DOMContentLoaded', function(){
         headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
         body: JSON.stringify({ message: text })
       });
-      const data = await res.json().catch(()=>({success:false,message:'Invalid response'}));
+      let data;
+      const ct = (res.headers.get('content-type')||'').toLowerCase();
+      if (ct.includes('application/json')) {
+        data = await res.json().catch(()=>({success:false,message:'Invalid response'}));
+      } else {
+        const txt = await res.text().catch(()=> '');
+        data = { success: false, message: txt || 'Invalid response' };
+      }
       hideThinking();
       if (data && data.success && data.reply){
         appendMsg(data.reply, 'bot');
