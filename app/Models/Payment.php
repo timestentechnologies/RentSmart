@@ -1052,6 +1052,152 @@ class Payment extends Model
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
 
+    public function getTenantMissedRentMonths($tenantId)
+    {
+        $leaseStmt = $this->db->prepare("SELECT * FROM leases WHERE tenant_id = ? AND status = 'active' LIMIT 1");
+        $leaseStmt->execute([$tenantId]);
+        $lease = $leaseStmt->fetch(\PDO::FETCH_ASSOC);
+        if (!$lease) {
+            return [];
+        }
+
+        $rentAmount = isset($lease['rent_amount']) ? (float)$lease['rent_amount'] : 0.0;
+        if ($rentAmount <= 0) {
+            return [];
+        }
+
+        try {
+            $leaseStart = new \DateTime($lease['start_date']);
+        } catch (\Exception $e) {
+            return [];
+        }
+
+        $startMonth = new \DateTime($leaseStart->format('Y-m-01'));
+        $today = new \DateTime();
+        $currentMonth = new \DateTime($today->format('Y-m-01'));
+        if (!empty($lease['end_date'])) {
+            try {
+                $leaseEnd = new \DateTime($lease['end_date']);
+                $leaseEndMonth = new \DateTime($leaseEnd->format('Y-m-01'));
+                if ($leaseEndMonth < $currentMonth) {
+                    $currentMonth = $leaseEndMonth;
+                }
+            } catch (\Exception $e) {
+            }
+        }
+
+        $months = [];
+        $cursor = clone $startMonth;
+        while ($cursor <= $currentMonth) {
+            $months[] = [
+                'year' => (int)$cursor->format('Y'),
+                'month' => (int)$cursor->format('n'),
+                'label' => $cursor->format('F Y'),
+                'outstanding' => $rentAmount,
+            ];
+            $cursor->modify('+1 month');
+        }
+
+        if (empty($months)) {
+            return [];
+        }
+
+        $payStmt = $this->db->prepare("SELECT amount FROM payments WHERE lease_id = ? AND payment_type = 'rent' AND status IN ('completed','verified') ORDER BY payment_date ASC, id ASC");
+        $payStmt->execute([$lease['id']]);
+        $paidRows = $payStmt->fetchAll(\PDO::FETCH_ASSOC);
+
+        $remainingPaid = 0.0;
+        foreach ($paidRows as $row) {
+            $remainingPaid += isset($row['amount']) ? (float)$row['amount'] : 0.0;
+        }
+
+        for ($i = 0; $i < count($months); $i++) {
+            if ($remainingPaid <= 0) {
+                break;
+            }
+            $apply = $remainingPaid >= $rentAmount ? $rentAmount : $remainingPaid;
+            $months[$i]['outstanding'] = max(0.0, $rentAmount - $apply);
+            $remainingPaid -= $apply;
+        }
+
+        $missed = [];
+        foreach ($months as $m) {
+            if ($m['outstanding'] > 0.0001) {
+                $missed[] = [
+                    'year' => $m['year'],
+                    'month' => $m['month'],
+                    'label' => $m['label'],
+                    'amount' => $m['outstanding'],
+                ];
+            }
+        }
+
+        return $missed;
+    }
+
+    public function getTenantRentCoverage($tenantId)
+    {
+        $leaseStmt = $this->db->prepare("SELECT * FROM leases WHERE tenant_id = ? AND status = 'active' LIMIT 1");
+        $leaseStmt->execute([$tenantId]);
+        $lease = $leaseStmt->fetch(\PDO::FETCH_ASSOC);
+        if (!$lease) {
+            return [];
+        }
+
+        $rentAmount = isset($lease['rent_amount']) ? (float)$lease['rent_amount'] : 0.0;
+        if ($rentAmount <= 0.0) {
+            return [];
+        }
+
+        try {
+            $leaseStart = new \DateTime($lease['start_date']);
+        } catch (\Exception $e) {
+            return [];
+        }
+
+        $startMonth = new \DateTime($leaseStart->format('Y-m-01'));
+        $today = new \DateTime();
+        $currentMonth = new \DateTime($today->format('Y-m-01'));
+
+        $stmt = $this->db->prepare("SELECT IFNULL(SUM(amount),0) AS total_paid FROM payments WHERE lease_id = ? AND payment_type = 'rent' AND status IN ('completed','verified')");
+        $stmt->execute([$lease['id']]);
+        $row = $stmt->fetch(\PDO::FETCH_ASSOC) ?: ['total_paid' => 0];
+        $totalPaid = (float)$row['total_paid'];
+
+        if ($totalPaid < 0.01) {
+            $nextDue = clone $startMonth;
+            return [
+                'months_paid' => 0,
+                'prepaid_months' => 0,
+                'next_due_year' => (int)$nextDue->format('Y'),
+                'next_due_month' => (int)$nextDue->format('n'),
+                'next_due_label' => $nextDue->format('F Y'),
+                'due_now' => $nextDue <= $currentMonth,
+            ];
+        }
+
+        $monthsPaid = (int)floor($totalPaid / $rentAmount + 1e-6);
+        $nextDue = clone $startMonth;
+        $nextDue->modify("+{$monthsPaid} month");
+
+        $dueNow = ($nextDue <= $currentMonth);
+        $prepaidMonths = 0;
+        if (!$dueNow) {
+            $yDiff = (int)$nextDue->format('Y') - (int)$currentMonth->format('Y');
+            $mDiff = (int)$nextDue->format('n') - (int)$currentMonth->format('n');
+            $prepaidMonths = $yDiff * 12 + $mDiff;
+        }
+
+        return [
+            'months_paid' => $monthsPaid,
+            'prepaid_months' => max(0, $prepaidMonths),
+            'next_due_year' => (int)$nextDue->format('Y'),
+            'next_due_month' => (int)$nextDue->format('n'),
+            'next_due_label' => $nextDue->format('F Y'),
+            'due_now' => $dueNow,
+        ];
+    }
+
     /**
      * Delete a payment by ID
      */

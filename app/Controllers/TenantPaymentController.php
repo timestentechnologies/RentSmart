@@ -183,17 +183,15 @@ class TenantPaymentController
                 $paymentId = $paymentIds[0]; // Use first payment ID for response
             } else if ($paymentType === 'both') {
                 // Combined payment: rent + all outstanding utilities
-                // 1) Calculate rent due (current monthly rent + overdue, clamped to >=0)
-                $overdueSql = "SELECT (
-                                    l.rent_amount - IFNULL((SELECT SUM(amount) FROM payments 
-                                        WHERE lease_id = l.id AND payment_type = 'rent' AND status IN ('completed','verified')), 0)
-                                ) AS overdue_amount
-                                FROM leases l WHERE l.id = ?";
-                $overdueStmt = $this->payment->getDb()->prepare($overdueSql);
-                $overdueStmt->execute([$lease['id']]);
-                $overdueRow = $overdueStmt->fetch(\PDO::FETCH_ASSOC) ?: [];
-                $overdueAmount = max(0, floatval($overdueRow['overdue_amount'] ?? 0));
-                $totalRentAmount = floatval($lease['rent_amount'] ?? 0) + $overdueAmount;
+                // 1) Calculate rent due now using missed months and coverage
+                $missedMonths = $this->payment->getTenantMissedRentMonths($tenantId);
+                $overdueAmount = 0.0;
+                foreach ($missedMonths as $mm) {
+                    $overdueAmount += isset($mm['amount']) ? (float)$mm['amount'] : 0.0;
+                }
+                $coverage = $this->payment->getTenantRentCoverage($tenantId);
+                $dueNow = is_array($coverage) && isset($coverage['due_now']) ? (bool)$coverage['due_now'] : true;
+                $totalRentAmount = $dueNow ? max(0.0, $overdueAmount) : 0.0;
 
                 // 2) Calculate utilities due
                 $utilities = $this->utility->getTenantUtilities($tenantId);
@@ -210,30 +208,34 @@ class TenantPaymentController
                     }
                 }
 
-                // 3) Validate combined amount
+                // 3) Validate combined amount (rent due now + utilities due)
                 $expectedTotal = $totalRentAmount + $totalUtilityAmount;
                 if (abs($amount - $expectedTotal) > 0.01) {
                     throw new \Exception('Payment amount does not match combined rent and utilities total');
                 }
 
-                // 4) Create rent payment
-                $rentPaymentData = [
-                    'lease_id' => $lease['id'],
-                    'amount' => $totalRentAmount,
-                    'payment_date' => date('Y-m-d'),
-                    'payment_type' => 'rent',
-                    'payment_method' => $paymentMethodData['name'],
-                    'notes' => 'Combined Rent+Utilities via ' . $paymentMethodData['name'] . ' - ' . ($paymentDetails['mpesa_notes'] ?? ''),
-                    'status' => $paymentStatus
-                ];
-                $rentPaymentId = $this->payment->createRentPayment($rentPaymentData);
-                if ($paymentMethodData['type'] === 'mpesa_manual') {
-                    $this->saveMpesaTransaction($rentPaymentId, $paymentDetails, $totalRentAmount);
+                // 4) Create rent payment only if there is rent due now
+                $rentPaymentId = null;
+                if ($totalRentAmount > 0.0) {
+                    $rentPaymentData = [
+                        'lease_id' => $lease['id'],
+                        'amount' => $totalRentAmount,
+                        'payment_date' => date('Y-m-d'),
+                        'payment_type' => 'rent',
+                        // Use enum value for method
+                        'payment_method' => $paymentMethodData['type'],
+                        'notes' => 'Combined Rent+Utilities via ' . $paymentMethodData['name'] . ' - ' . ($paymentDetails['mpesa_notes'] ?? ''),
+                        'status' => $paymentStatus
+                    ];
+                    $rentPaymentId = $this->payment->createRentPayment($rentPaymentData);
+                    if ($paymentMethodData['type'] === 'mpesa_manual') {
+                        $this->saveMpesaTransaction($rentPaymentId, $paymentDetails, $totalRentAmount);
+                    }
                 }
 
                 // 5) Create utility payments
                 $firstUtilityPaymentId = null;
-                foreach ($utilityPayments as $utilityPayment) {
+                foreach ($utilityPayments as $idx => $utilityPayment) {
                     $paymentData = [
                         'lease_id' => $lease['id'],
                         'utility_id' => $utilityPayment['utility']['id'],
@@ -247,12 +249,23 @@ class TenantPaymentController
                     $utilPaymentId = $this->payment->createUtilityPayment($paymentData);
                     if ($firstUtilityPaymentId === null) { $firstUtilityPaymentId = $utilPaymentId; }
                     if ($paymentMethodData['type'] === 'mpesa_manual') {
-                        $this->saveMpesaTransaction($utilPaymentId, $paymentDetails, $utilityPayment['amount']);
+                        // Avoid duplicate transaction_code conflicts by suffixing for each utility split
+                        $utilDetails = $paymentDetails;
+                        if (!empty($utilDetails['mpesa_transaction_code'])) {
+                            $utilDetails['mpesa_transaction_code'] = $utilDetails['mpesa_transaction_code'] . '-U' . ($idx + 1);
+                        }
+                        $this->saveMpesaTransaction($utilPaymentId, $utilDetails, $utilityPayment['amount']);
                     }
                 }
 
-                // Use the rent payment ID for response
-                $paymentId = $rentPaymentId;
+                // Use the rent payment ID for response when present; otherwise first utility payment
+                if (!empty($rentPaymentId)) {
+                    $paymentId = $rentPaymentId;
+                } else if (!empty($firstUtilityPaymentId)) {
+                    $paymentId = $firstUtilityPaymentId;
+                } else {
+                    throw new \Exception('No payable items found for combined payment');
+                }
             } else {
                 // For rent payments, use the existing method
                 $paymentData = [
@@ -260,7 +273,7 @@ class TenantPaymentController
                     'amount' => $amount,
                     'payment_date' => date('Y-m-d'),
                     'payment_type' => $paymentType,
-                    'payment_method' => $paymentMethodData['name'],
+                    'payment_method' => $paymentMethodData['type'],
                     'notes' => 'Payment via ' . $paymentMethodData['name'] . ' - ' . ($paymentDetails['mpesa_notes'] ?? ''),
                     'status' => $paymentStatus
                 ];

@@ -208,19 +208,15 @@
                                     
                                     <?php if (isset($lease) && $lease): ?>
                                         <?php 
-                                        $overdueAmount = 0;
-                                        if (!empty($overdueRent)) {
-                                            if (is_array($overdueRent)) {
-                                                foreach ($overdueRent as $overdue) {
-                                                    $overdueAmount += $overdue['overdue_amount'] ?? 0;
-                                                }
-                                            } else {
-                                                $overdueAmount = $overdueRent['overdue_amount'] ?? 0;
+                                        $missedTotal = 0;
+                                        if (!empty($missedRentMonths)) {
+                                            foreach ($missedRentMonths as $mm) {
+                                                $missedTotal += max(0, $mm['amount'] ?? 0);
                                             }
                                         }
-                                        // If overdue amount is negative (overpaid), set it to 0
-                                        $overdueAmount = max(0, $overdueAmount);
-                                        $totalRentAmount = $lease['rent_amount'] + $overdueAmount;
+                                        $dueNowFlag = isset($rentCoverage['due_now']) ? (bool)$rentCoverage['due_now'] : true;
+                                        $nextDueLabel = isset($rentCoverage['next_due_label']) ? $rentCoverage['next_due_label'] : null;
+                                        $totalRentAmount = $missedTotal;
                                         ?>
                                         
                                         <div class="mb-3">
@@ -229,16 +225,23 @@
                                                 <strong class="text-dark">Ksh <?= number_format($lease['rent_amount'], 2) ?></strong>
                                             </div>
                                             
-                                            <?php if ($overdueAmount > 0): ?>
+                                            <?php if ($missedTotal > 0): ?>
                                                 <div class="d-flex justify-content-between align-items-center mb-2 p-2 rounded" style="background-color: #f8d7da;">
                                                     <span class="text-danger small fw-bold">Overdue:</span>
-                                                    <strong class="text-danger">Ksh <?= number_format($overdueAmount, 2) ?></strong>
+                                                    <strong class="text-danger">Ksh <?= number_format($missedTotal, 2) ?></strong>
                                                 </div>
                                             <?php else: ?>
-                                                <div class="d-flex justify-content-between align-items-center mb-2 p-2 rounded" style="background-color: #d1edff;">
-                                                    <span class="text-success small">Overdue:</span>
-                                                    <strong class="text-success">Ksh 0.00</strong>
-                                                </div>
+                                                <?php if (!$dueNowFlag && $nextDueLabel): ?>
+                                                    <div class="d-flex justify-content-between align-items-center mb-2 p-2 rounded" style="background-color: #d1edff;">
+                                                        <span class="text-success small">Next Due:</span>
+                                                        <strong class="text-success"><?= htmlspecialchars($nextDueLabel) ?></strong>
+                                                    </div>
+                                                <?php else: ?>
+                                                    <div class="d-flex justify-content-between align-items-center mb-2 p-2 rounded" style="background-color: #d1edff;">
+                                                        <span class="text-success small">Overdue:</span>
+                                                        <strong class="text-success">Ksh 0.00</strong>
+                                                    </div>
+                                                <?php endif; ?>
                                             <?php endif; ?>
                                             
                                             <div class="d-flex justify-content-between align-items-center p-2 rounded" style="background-color: #e8f5e8;">
@@ -247,9 +250,15 @@
                                             </div>
                                         </div>
                                         
-                            <button type="button" class="btn btn-success btn-sm w-100" onclick="openPaymentModal('rent', <?= htmlspecialchars(json_encode($paymentMethods)) ?>)">
-                                <i class="bi bi-credit-card me-1"></i>Pay Rent
-                            </button>
+                            <?php if ($totalRentAmount > 0): ?>
+                                <button type="button" class="btn btn-success btn-sm w-100" onclick="openPaymentModal('rent', <?= htmlspecialchars(json_encode($paymentMethods)) ?>)">
+                                    <i class="bi bi-credit-card me-1"></i>Pay Rent
+                                </button>
+                            <?php else: ?>
+                                <button type="button" class="btn btn-outline-success btn-sm w-100" onclick="openPaymentModal('rent_advance', <?= htmlspecialchars(json_encode($paymentMethods)) ?>)">
+                                    <i class="bi bi-calendar-plus me-1"></i>Pay in Advance
+                                </button>
+                            <?php endif; ?>
                                     <?php else: ?>
                                         <div class="mb-3">
                                             <p class="text-muted small mb-0">No active lease</p>
@@ -349,23 +358,17 @@
                         </div>
                     </div>
                     <?php 
-                    // Combined totals for Rent + Utilities
-                    $overdueAmountCombined = 0; 
+                    // Combined totals for Rent + Utilities using missed months and coverage
+                    $missedTotalCombined = 0; 
                     if (isset($lease) && $lease) {
-                        if (!empty($overdueRent)) {
-                            if (is_array($overdueRent)) {
-                                foreach ($overdueRent as $overdue) {
-                                    $overdueAmountCombined += $overdue['overdue_amount'] ?? 0;
-                                }
-                            } else {
-                                $overdueAmountCombined = $overdueRent['overdue_amount'] ?? 0;
+                        if (!empty($missedRentMonths)) {
+                            foreach ($missedRentMonths as $mm) {
+                                $missedTotalCombined += max(0, $mm['amount'] ?? 0);
                             }
                         }
-                        $overdueAmountCombined = max(0, $overdueAmountCombined);
-                        $totalRentAmountCombined = ($lease['rent_amount'] ?? 0) + $overdueAmountCombined;
-                    } else {
-                        $totalRentAmountCombined = 0;
                     }
+                    $dueNowFlagCombined = isset($rentCoverage['due_now']) ? (bool)$rentCoverage['due_now'] : true;
+                    $totalRentAmountCombined = $dueNowFlagCombined ? $missedTotalCombined : 0;
                     $totalUtilitiesCombined = 0;
                     if (!empty($utilities)) {
                         foreach ($utilities as $u) {
@@ -397,13 +400,23 @@
     <!-- Due Rent Card -->
     <?php if (!empty($overdueRent)): ?>
     <div class="alert alert-danger mb-4">
-        <strong>Due Rent:</strong>
+        <strong>Lease Agreement:</strong>
         <?php foreach ($overdueRent as $overdue): ?>
             <div>
-                Period: <?php echo htmlspecialchars($overdue['start_date']); ?> - <?php echo htmlspecialchars($overdue['end_date']); ?> |
-                Amount: <span class="fw-bold text-danger">Ksh <?php echo htmlspecialchars($overdue['overdue_amount']); ?></span>
+                Lease Period: <?php echo htmlspecialchars($overdue['start_date']); ?> - <?php echo htmlspecialchars($overdue['end_date']); ?>
             </div>
         <?php endforeach; ?>
+        <?php if (!empty($missedRentMonths)): ?>
+            <div class="mt-2">
+                <div class="fw-bold">Missed Months:</div>
+                <?php foreach ($missedRentMonths as $mm): ?>
+                    <div>
+                        Month: <?php echo htmlspecialchars($mm['label']); ?> |
+                        Amount: <span class="fw-bold text-danger">Ksh <?php echo number_format($mm['amount'], 2); ?></span>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
     </div>
     <?php endif; ?>
 
@@ -886,6 +899,7 @@
                 <form id="paymentForm">
                     <input type="hidden" id="paymentType" name="payment_type">
                     <input type="hidden" id="paymentAmount" name="amount">
+                    <input type="hidden" id="advanceMonthsHidden" value="0">
                     
                     <!-- Payment Summary -->
                     <div class="card mb-3">
@@ -907,6 +921,18 @@
                                 </div>
                                 <div class="col-6" id="summaryAmount">
                                     -
+                                </div>
+                            </div>
+                            <div class="row" id="advanceControls" style="display:none;">
+                                <div class="col-6">
+                                    <label for="advanceMonths" class="form-label mb-0"><strong>Months to Prepay</strong></label>
+                                    <input type="number" min="1" max="24" step="1" value="1" id="advanceMonths" class="form-control form-control-sm mt-1" />
+                                    <small class="text-muted">Pay for upcoming months</small>
+                                </div>
+                                <div class="col-6 d-flex align-items-end">
+                                    <button type="button" class="btn btn-outline-primary btn-sm w-100" onclick="recalculateAdvanceAmount()">
+                                        <i class="bi bi-calculator me-1"></i>Calculate Amount
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -1695,6 +1721,26 @@ function showPaymentSuccessModal(paymentDetails) {
     modal.show();
 }
 
+function recalculateAdvanceAmount() {
+    const paymentTypeField = document.getElementById('paymentType');
+    if (paymentTypeField.value !== 'rent' && paymentTypeField.value !== 'rent_advance') {
+        return;
+    }
+    // In our flow, rent_advance sets paymentType to 'rent' for backend, so check the controls directly
+    const monthsInput = document.getElementById('advanceMonths');
+    const months = Math.max(1, parseInt(monthsInput.value, 10) || 1);
+    <?php if (isset($lease) && $lease): ?>
+        const advanceBaseRent = <?= (float)$lease['rent_amount'] ?>;
+    <?php else: ?>
+        const advanceBaseRent = 0;
+    <?php endif; ?>
+    const advAmount = Math.max(0, months * advanceBaseRent);
+    document.getElementById('advanceMonthsHidden').value = months;
+    document.getElementById('paymentAmount').value = advAmount;
+    const summaryAmount = document.getElementById('summaryAmount');
+    summaryAmount.textContent = 'Ksh ' + advAmount.toLocaleString();
+}
+
 // Function to show maintenance request details
 function showMaintenanceRequestDetails(requestId) {
     console.log('Loading maintenance request details for ID:', requestId);
@@ -2000,6 +2046,9 @@ function openPaymentModal(type, paymentMethods = []) {
     console.log('Payment methods:', paymentMethods);
     
     const modal = new bootstrap.Modal(document.getElementById('paymentModal'));
+    const form = document.getElementById('paymentForm');
+    // Reset form first to clear any previous values
+    form.reset();
     const paymentTypeField = document.getElementById('paymentType');
     const summaryType = document.getElementById('summaryType');
     const summaryAmount = document.getElementById('summaryAmount');
@@ -2009,25 +2058,18 @@ function openPaymentModal(type, paymentMethods = []) {
     paymentTypeField.value = type;
     
     // Update summary
+    // Hide advance controls by default
+    document.getElementById('advanceControls').style.display = 'none';
     if (type === 'rent') {
         summaryType.textContent = 'Rent Payment';
         <?php if (isset($lease) && $lease): ?>
             <?php 
-            $overdueAmount = 0;
-            if (!empty($overdueRent)) {
-                if (is_array($overdueRent)) {
-                    foreach ($overdueRent as $overdue) {
-                        $overdueAmount += $overdue['overdue_amount'] ?? 0;
-                    }
-                } else {
-                    $overdueAmount = $overdueRent['overdue_amount'] ?? 0;
-                }
+            $missedTotalJs = 0;
+            if (!empty($missedRentMonths)) {
+                foreach ($missedRentMonths as $mm) { $missedTotalJs += max(0, $mm['amount'] ?? 0); }
             }
-            // If overdue amount is negative (overpaid), set it to 0
-            $overdueAmount = max(0, $overdueAmount);
-            $totalRentAmount = $lease['rent_amount'] + $overdueAmount;
             ?>
-            const totalRentAmount = <?= $totalRentAmount ?>;
+            const totalRentAmount = <?= $missedTotalJs ?>;
             document.getElementById('paymentAmount').value = totalRentAmount;
             summaryAmount.textContent = 'Ksh ' + totalRentAmount.toLocaleString();
         <?php endif; ?>
@@ -2049,16 +2091,14 @@ function openPaymentModal(type, paymentMethods = []) {
         summaryType.textContent = 'Rent + Utilities Payment';
         <?php if (isset($lease) && $lease): ?>
             <?php 
-            $overdueAmount = 0;
-            if (!empty($overdueRent)) {
-                if (is_array($overdueRent)) {
-                    foreach ($overdueRent as $overdue) { $overdueAmount += $overdue['overdue_amount'] ?? 0; }
-                } else { $overdueAmount = $overdueRent['overdue_amount'] ?? 0; }
+            $missedTotalJsBoth = 0; 
+            if (!empty($missedRentMonths)) {
+                foreach ($missedRentMonths as $mm) { $missedTotalJsBoth += max(0, $mm['amount'] ?? 0); }
             }
-            $overdueAmount = max(0, $overdueAmount);
-            $totalRentAmount = ($lease['rent_amount'] ?? 0) + $overdueAmount;
+            $dueNowFlagJs = isset($rentCoverage['due_now']) ? (bool)$rentCoverage['due_now'] : true;
+            $rentDueNowBoth = $dueNowFlagJs ? $missedTotalJsBoth : 0;
             ?>
-            const totalRentAmountBoth = <?= $totalRentAmount ?>;
+            const totalRentAmountBoth = <?= $rentDueNowBoth ?>;
         <?php else: ?>
             const totalRentAmountBoth = 0;
         <?php endif; ?>
@@ -2075,11 +2115,24 @@ function openPaymentModal(type, paymentMethods = []) {
         const grandAmount = (totalRentAmountBoth + utilitiesAmountBoth);
         document.getElementById('paymentAmount').value = grandAmount;
         summaryAmount.textContent = 'Ksh ' + grandAmount.toLocaleString();
+    } else if (type === 'rent_advance') {
+        // Treat as a rent payment under the hood
+        paymentTypeField.value = 'rent';
+        summaryType.textContent = 'Pay Rent in Advance';
+        document.getElementById('advanceControls').style.display = 'flex';
+        // Default months 1
+        const monthsInput = document.getElementById('advanceMonths');
+        monthsInput.value = monthsInput.value && parseInt(monthsInput.value, 10) > 0 ? parseInt(monthsInput.value, 10) : 1;
+        <?php if (isset($lease) && $lease): ?>
+            const advanceBaseRent = <?= (float)$lease['rent_amount'] ?>;
+        <?php else: ?>
+            const advanceBaseRent = 0;
+        <?php endif; ?>
+        const months = parseInt(monthsInput.value, 10) || 1;
+        const advAmount = Math.max(0, months * advanceBaseRent);
+        document.getElementById('paymentAmount').value = advAmount;
+        summaryAmount.textContent = 'Ksh ' + advAmount.toLocaleString();
     }
-    
-    // Reset form
-    document.getElementById('paymentForm').reset();
-    paymentTypeField.value = type;
     
     // Hide all payment method details
     document.querySelectorAll('.payment-method-details').forEach(detail => {
