@@ -348,6 +348,47 @@
                             </div>
                         </div>
                     </div>
+                    <?php 
+                    // Combined totals for Rent + Utilities
+                    $overdueAmountCombined = 0; 
+                    if (isset($lease) && $lease) {
+                        if (!empty($overdueRent)) {
+                            if (is_array($overdueRent)) {
+                                foreach ($overdueRent as $overdue) {
+                                    $overdueAmountCombined += $overdue['overdue_amount'] ?? 0;
+                                }
+                            } else {
+                                $overdueAmountCombined = $overdueRent['overdue_amount'] ?? 0;
+                            }
+                        }
+                        $overdueAmountCombined = max(0, $overdueAmountCombined);
+                        $totalRentAmountCombined = ($lease['rent_amount'] ?? 0) + $overdueAmountCombined;
+                    } else {
+                        $totalRentAmountCombined = 0;
+                    }
+                    $totalUtilitiesCombined = 0;
+                    if (!empty($utilities)) {
+                        foreach ($utilities as $u) {
+                            $net = max(0, $u['net_amount'] ?? ($u['amount'] ?? 0));
+                            $totalUtilitiesCombined += $net;
+                        }
+                    }
+                    $grandTotalCombined = $totalRentAmountCombined + $totalUtilitiesCombined;
+                    ?>
+                    <div class="mt-3 pt-3 border-top">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div>
+                                <span class="fw-bold">Total Rent + Utilities Due</span>
+                            </div>
+                            <div>
+                                <strong class="fs-6">Ksh <?= number_format($grandTotalCombined, 2) ?></strong>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-warning btn-sm w-100" <?= $grandTotalCombined > 0 ? '' : 'disabled' ?>
+                                onclick="openPaymentModal('both', <?= htmlspecialchars(json_encode($paymentMethods)) ?>)">
+                            <i class="bi bi-credit-card me-1"></i>Pay Both
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -2004,6 +2045,36 @@ function openPaymentModal(type, paymentMethods = []) {
             document.getElementById('paymentAmount').value = utilitiesAmount;
             summaryAmount.textContent = 'Ksh ' + utilitiesAmount.toLocaleString();
         <?php endif; ?>
+    } else if (type === 'both') {
+        summaryType.textContent = 'Rent + Utilities Payment';
+        <?php if (isset($lease) && $lease): ?>
+            <?php 
+            $overdueAmount = 0;
+            if (!empty($overdueRent)) {
+                if (is_array($overdueRent)) {
+                    foreach ($overdueRent as $overdue) { $overdueAmount += $overdue['overdue_amount'] ?? 0; }
+                } else { $overdueAmount = $overdueRent['overdue_amount'] ?? 0; }
+            }
+            $overdueAmount = max(0, $overdueAmount);
+            $totalRentAmount = ($lease['rent_amount'] ?? 0) + $overdueAmount;
+            ?>
+            const totalRentAmountBoth = <?= $totalRentAmount ?>;
+        <?php else: ?>
+            const totalRentAmountBoth = 0;
+        <?php endif; ?>
+        <?php 
+        $totalUtilitiesBoth = 0; 
+        if (!empty($utilities)) {
+            foreach ($utilities as $utility) {
+                $netAmount = max(0, $utility['net_amount'] ?? $utility['amount'] ?? 0);
+                $totalUtilitiesBoth += $netAmount;
+            }
+        }
+        ?>
+        const utilitiesAmountBoth = <?= $totalUtilitiesBoth ?>;
+        const grandAmount = (totalRentAmountBoth + utilitiesAmountBoth);
+        document.getElementById('paymentAmount').value = grandAmount;
+        summaryAmount.textContent = 'Ksh ' + grandAmount.toLocaleString();
     }
     
     // Reset form
@@ -2067,6 +2138,11 @@ function submitPayment() {
     
     // Check if this is an STK push payment
     if (methodType === 'mpesa_stk') {
+        // Combined payments are not supported via STK push in this flow
+        if (formData.get('payment_type') === 'both') {
+            showAlert('error', 'Pay Both is not available with STK Push. Please use a different payment method.');
+            return;
+        }
         // Handle STK push differently
         const phoneNumber = document.getElementById('mpesaStkNumber').value;
         if (!phoneNumber) {
