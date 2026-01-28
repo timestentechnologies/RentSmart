@@ -1438,6 +1438,131 @@
             });
         });
     </script>
+
+<!-- AI Chat Widget (Public) -->
+<style>
+.ai-chat-fab {
+    position: fixed; right: 20px; bottom: 80px; z-index: 1052;
+    background: #6B3E99; color: #fff; border-radius: 999px;
+    width: 56px; height: 56px; display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.2); cursor: pointer; transition: all 0.3s ease;
+    border: none; pointer-events: auto;
+}
+.ai-chat-fab:hover { background: #8E5CC4; transform: scale(1.05); }
+.ai-chat-panel {
+    position: fixed; right: 20px; bottom: 144px; width: 320px; height: 420px; z-index: 1053;
+    background: #fff; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    display: none; flex-direction: column; font-family: system-ui, sans-serif; pointer-events: auto;
+}
+.ai-chat-header { padding: 10px 12px; background: #6B3E99; color: #fff; display: flex; align-items: center; justify-content: space-between; border-radius: 12px 12px 0 0; }
+.ai-chat-messages { padding: 10px; gap: 8px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; }
+.ai-chat-input { padding: 8px; border-top: 1px solid rgba(0,0,0,0.08); display: flex; gap: 8px; }
+.ai-msg { padding: 8px 10px; border-radius: 10px; max-width: 85%; font-size: 0.9rem; }
+.ai-msg.user { align-self: flex-end; background: #e9ecef; }
+.ai-msg.bot { align-self: flex-start; background: #f8f9fa; }
+.ai-msg.thinking { opacity: 0.6; font-style: italic; }
+</style>
+
+<div id="aiChatFab" class="ai-chat-fab" title="Ask AI">
+    <i class="bi bi-robot" style="font-size: 1.25rem;"></i>
+</div>
+
+<div id="aiChatPanel" class="ai-chat-panel">
+    <div class="ai-chat-header">
+        <span><i class="bi bi-robot me-2"></i>Ask RentSmart AI</span>
+        <button id="aiChatClose" style="background:none;border:none;color:#fff;cursor:pointer;"><i class="bi bi-x-lg"></i></button>
+    </div>
+    <div id="aiChatMessages" class="ai-chat-messages"></div>
+    <div class="ai-chat-input">
+        <input id="aiChatInput" type="text" class="form-control" placeholder="Type a message..." autocomplete="off">
+        <button id="aiChatSend" class="btn btn-sm btn-primary"><i class="bi bi-send"></i></button>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function(){
+  const fab = document.getElementById('aiChatFab');
+  const panel = document.getElementById('aiChatPanel');
+  const closeBtn = document.getElementById('aiChatClose');
+  const input = document.getElementById('aiChatInput');
+  const sendBtn = document.getElementById('aiChatSend');
+  const messages = document.getElementById('aiChatMessages');
+  const csrf = (document.querySelector('input[name="csrf_token"]')||{}).value || '';
+
+  if (!fab || !panel) return;
+
+  function togglePanel(show){
+    panel.style.display = show ? 'flex' : 'none';
+    if (show) {
+      setTimeout(()=> input && input.focus(), 50);
+    }
+  }
+  function appendMsg(text, who){
+    const div = document.createElement('div');
+    div.className = 'ai-msg ' + (who || 'bot');
+    if (who === 'bot') {
+      let html = text
+        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+        .replace(/^### (.*$)/gim, '<h6>$1</h6>')
+        .replace(/^## (.*$)/gim, '<h5>$1</h5>')
+        .replace(/^# (.*$)/gim, '<h4>$1</h4>')
+        .replace(/^\* (.+)$/gim, '<li>$1</li>')
+        .replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>')
+        .replace(/\n/g, '<br>');
+      div.innerHTML = html;
+    } else {
+      div.textContent = text;
+    }
+    messages.appendChild(div);
+    messages.scrollTop = messages.scrollHeight;
+  }
+  function showThinking(){
+    const div = document.createElement('div');
+    div.className = 'ai-msg bot thinking';
+    div.innerHTML = '<em>Thinking…</em>';
+    div.id = 'aiThinking';
+    messages.appendChild(div);
+    messages.scrollTop = messages.scrollHeight;
+  }
+  function hideThinking(){
+    const el = document.getElementById('aiThinking');
+    if (el) el.remove();
+  }
+  async function send(){
+    const text = (input.value||'').trim();
+    if (!text) return;
+    input.value = '';
+    appendMsg(text, 'user');
+    sendBtn.disabled = true;
+    showThinking();
+    try {
+      const res = await fetch('<?= BASE_URL ?>/ai/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
+        body: JSON.stringify({ message: text })
+      });
+      const data = await res.json().catch(()=>({success:false,message:'Invalid response'}));
+      hideThinking();
+      if (data && data.success && data.reply){
+        appendMsg(data.reply, 'bot');
+      } else {
+        appendMsg(data.message || 'Sorry, I could not process that right now.', 'bot');
+      }
+    } catch (e) {
+      hideThinking();
+      appendMsg('Network error. Please try again.', 'bot');
+    } finally {
+      sendBtn.disabled = false;
+    }
+  }
+
+  fab.addEventListener('click', ()=> togglePanel(panel.style.display !== 'flex'));
+  closeBtn && closeBtn.addEventListener('click', ()=> togglePanel(false));
+  sendBtn && sendBtn.addEventListener('click', send);
+  input && input.addEventListener('keydown', (e)=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); send(); }});
+});
+</script>
+
 <a href="https://wa.me/254718883983?text=Hi%20RentSmart%20Support%2C%20I%20would%20like%20to%20get%20started%20with%20RentSmart.%20Please%20assist%20me." class="d-print-none" style="position: fixed; right: 20px; bottom: 24px; z-index: 1051; background: #25D366; color: #fff; border-radius: 999px; padding: 10px 14px; display: inline-flex; align-items: center; gap: 8px; font-weight: 600; box-shadow: 0 6px 16px rgba(0,0,0,0.2); text-decoration: none;" target="_blank" rel="noopener"><i class="bi bi-whatsapp" style="font-size: 1.25rem;"></i><span>WhatsApp Support</span></a>
 </body>
 </html>

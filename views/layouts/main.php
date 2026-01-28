@@ -74,6 +74,91 @@ ob_clean();
     <script>
         window.BASE_URL = '<?= BASE_URL ?>';
     </script>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function(){
+      const fab = document.getElementById('aiChatFab');
+      const panel = document.getElementById('aiChatPanel');
+      const closeBtn = document.getElementById('aiChatClose');
+      const input = document.getElementById('aiChatInput');
+      const sendBtn = document.getElementById('aiChatSend');
+      const messages = document.getElementById('aiChatMessages');
+      const csrf = (document.querySelector('input[name="csrf_token"]')||{}).value || '';
+
+      if (!fab || !panel) return;
+
+      function togglePanel(show){
+        panel.style.display = show ? 'flex' : 'none';
+        if (show) {
+          setTimeout(()=> input && input.focus(), 50);
+        }
+      }
+      function appendMsg(text, who){
+        const div = document.createElement('div');
+        div.className = 'ai-msg ' + (who || 'bot');
+        if (who === 'bot') {
+          // Basic markdown: bold, headings, lists
+          let html = text
+            .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+            .replace(/^### (.*$)/gim, '<h6>$1</h6>')
+            .replace(/^## (.*$)/gim, '<h5>$1</h5>')
+            .replace(/^# (.*$)/gim, '<h4>$1</h4>')
+            .replace(/^\* (.+)$/gim, '<li>$1</li>')
+            .replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>')
+            .replace(/\n/g, '<br>');
+          div.innerHTML = html;
+        } else {
+          div.textContent = text;
+        }
+        messages.appendChild(div);
+        messages.scrollTop = messages.scrollHeight;
+      }
+      function showThinking(){
+        const div = document.createElement('div');
+        div.className = 'ai-msg bot thinking';
+        div.innerHTML = '<em>Thinking…</em>';
+        div.id = 'aiThinking';
+        messages.appendChild(div);
+        messages.scrollTop = messages.scrollHeight;
+      }
+      function hideThinking(){
+        const el = document.getElementById('aiThinking');
+        if (el) el.remove();
+      }
+      async function send(){
+        const text = (input.value||'').trim();
+        if (!text) return;
+        input.value = '';
+        appendMsg(text, 'user');
+        sendBtn.disabled = true;
+        showThinking();
+        try {
+          const res = await fetch('<?= BASE_URL ?>/ai/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': csrf },
+            body: JSON.stringify({ message: text })
+          });
+          const data = await res.json().catch(()=>({success:false,message:'Invalid response'}));
+          hideThinking();
+          if (data && data.success && data.reply){
+            appendMsg(data.reply, 'bot');
+          } else {
+            appendMsg(data.message || 'Sorry, I could not process that right now.', 'bot');
+          }
+        } catch (e) {
+          hideThinking();
+          appendMsg('Network error. Please try again.', 'bot');
+        } finally {
+          sendBtn.disabled = false;
+        }
+      }
+
+      fab.addEventListener('click', ()=> togglePanel(panel.style.display !== 'flex'));
+      closeBtn && closeBtn.addEventListener('click', ()=> togglePanel(false));
+      sendBtn && sendBtn.addEventListener('click', send);
+      input && input.addEventListener('keydown', (e)=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); send(); }});
+    });
+    </script>
     
     <!-- Favicon -->
     <?php
@@ -810,6 +895,53 @@ ob_clean();
         .whatsapp-fab:hover { background: #1ebe57; color: #fff !important; transform: translateY(-2px); }
         .whatsapp-fab i { font-size: 1.25rem; }
 
+        .ai-chat-fab {
+            position: fixed;
+            right: 20px;
+            bottom: 76px;
+            z-index: 1052;
+            background: #6B3E99;
+            color: #fff;
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+            cursor: pointer;
+            pointer-events: auto;
+        }
+        .ai-chat-fab:hover { transform: translateY(-2px); }
+        .ai-chat-panel {
+            position: fixed;
+            right: 20px;
+            bottom: 90px;
+            width: 320px;
+            max-width: calc(100vw - 40px);
+            height: 420px;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 10px 24px rgba(0,0,0,0.2);
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            z-index: 1053;
+            pointer-events: auto;
+        }
+        [data-theme="dark"] .ai-chat-panel { background: #1f2937; color: #e5e7eb; }
+        .ai-chat-header { padding: 10px 12px; background: #6B3E99; color: #fff; display: flex; align-items: center; justify-content: space-between; }
+        .ai-chat-messages { padding: 10px; gap: 8px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; }
+        .ai-chat-input { padding: 8px; border-top: 1px solid rgba(0,0,0,0.08); display: flex; gap: 8px; }
+        [data-theme="dark"] .ai-chat-input { border-top-color: rgba(255,255,255,0.12); }
+        .ai-msg { padding: 8px 10px; border-radius: 10px; max-width: 85%; font-size: 0.9rem; }
+        .ai-msg.user { align-self: flex-end; background: #e9ecef; }
+        .ai-msg.bot { align-self: flex-start; background: #f8f9fa; }
+        .ai-msg.thinking { opacity: 0.6; font-style: italic; }
+        [data-theme="dark"] .ai-msg.user { background: #374151; }
+        [data-theme="dark"] .ai-msg.bot { background: #2d3748; }
+
         /* Additional dark mode styles */
         /* Navigation section headers */
         .nav-header {
@@ -1226,6 +1358,20 @@ ob_clean();
             <i class="bi bi-whatsapp"></i>
             <span>WhatsApp Support</span>
         </a>
+        <button type="button" class="ai-chat-fab d-print-none" id="aiChatFab" title="AI Assistant">
+            <i class="bi bi-robot"></i>
+        </button>
+        <div class="ai-chat-panel d-print-none" id="aiChatPanel" aria-hidden="true">
+            <div class="ai-chat-header">
+                <span>AI Assistant</span>
+                <button type="button" class="btn btn-sm btn-light" id="aiChatClose"><i class="bi bi-x"></i></button>
+            </div>
+            <div class="ai-chat-messages" id="aiChatMessages"></div>
+            <div class="ai-chat-input">
+                <input type="text" class="form-control" id="aiChatInput" placeholder="Type your message...">
+                <button class="btn btn-primary" id="aiChatSend"><i class="bi bi-send"></i></button>
+            </div>
+        </div>
     <?php endif; ?>
 
     <!-- Main Content -->

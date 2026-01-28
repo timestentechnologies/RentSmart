@@ -14,8 +14,17 @@ class Setting extends Model
             // Debug database connection
             error_log("Database connection status: " . ($this->db ? "Connected" : "Not connected"));
             
-            // Direct query to get all settings
-            $sql = "SELECT setting_key, setting_value FROM {$this->table}";
+            // Deterministically return the latest record per key using a self-join
+            $sql = "
+                SELECT s.setting_key, s.setting_value
+                FROM {$this->table} s
+                INNER JOIN (
+                    SELECT setting_key, MAX(id) AS max_id
+                    FROM {$this->table}
+                    GROUP BY setting_key
+                ) latest
+                ON latest.setting_key = s.setting_key AND latest.max_id = s.id
+            ";
             error_log("Executing SQL: " . $sql);
             
             $stmt = $this->db->prepare($sql);
@@ -47,7 +56,7 @@ class Setting extends Model
 
     public function get($key)
     {
-        $sql = "SELECT setting_value FROM {$this->table} WHERE setting_key = ?";
+        $sql = "SELECT setting_value FROM {$this->table} WHERE setting_key = ? ORDER BY id DESC LIMIT 1";
         $stmt = $this->db->prepare($sql);
         $stmt->execute([$key]);
         $result = $stmt->fetch(\PDO::FETCH_ASSOC);
@@ -56,12 +65,27 @@ class Setting extends Model
 
     public function updateByKey($key, $value)
     {
-        $sql = "INSERT INTO {$this->table} (setting_key, setting_value) 
-                VALUES (?, ?) 
-                ON DUPLICATE KEY UPDATE setting_value = ?";
-        
+        // Try update first
+        $sql = "UPDATE {$this->table} SET setting_value = ? WHERE setting_key = ?";
         $stmt = $this->db->prepare($sql);
-        return $stmt->execute([$key, $value, $value]);
+        $stmt->execute([$value, $key]);
+        if ($stmt->rowCount() > 0) {
+            return true;
+        }
+
+        // If no row updated, the key might not exist OR the value is identical.
+        // Check if the key already exists; if so, no insert is needed.
+        $check = $this->db->prepare("SELECT 1 FROM {$this->table} WHERE setting_key = ? LIMIT 1");
+        $check->execute([$key]);
+        if ($check->fetchColumn()) {
+            // Key exists and value was likely identical; treat as success
+            return true;
+        }
+
+        // Otherwise, insert a new row
+        $sql = "INSERT INTO {$this->table} (setting_key, setting_value) VALUES (?, ?)";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([$key, $value]);
     }
 
     public function ensureDefaultSettings()
@@ -84,13 +108,27 @@ class Setting extends Model
             'smtp_pass' => '',
             'sms_provider' => '',
             'sms_api_key' => '',
-            'sms_api_secret' => ''
+            'sms_api_secret' => '',
+            'ai_enabled' => '0',
+            'ai_provider' => 'openai',
+            'openai_api_key' => '',
+            'openai_model' => 'gpt-4.1-mini',
+            // Google Gemini defaults
+            'google_api_key' => '',
+            'google_model' => 'gemini-3-flash-preview',
+            'ai_system_prompt' => 'You are RentSmart Support AI. Help users with property management tasks and app guidance.'
         ];
 
         foreach ($defaults as $key => $value) {
-            $sql = "INSERT IGNORE INTO {$this->table} (setting_key, setting_value) VALUES (?, ?)";
-            $stmt = $this->db->prepare($sql);
-            $stmt->execute([$key, $value]);
+            // Insert only if key does not exist to prevent duplicates
+            $checkSql = "SELECT 1 FROM {$this->table} WHERE setting_key = ? LIMIT 1";
+            $check = $this->db->prepare($checkSql);
+            $check->execute([$key]);
+            if ($check->fetchColumn() === false) {
+                $insertSql = "INSERT INTO {$this->table} (setting_key, setting_value) VALUES (?, ?)";
+                $insert = $this->db->prepare($insertSql);
+                $insert->execute([$key, $value]);
+            }
         }
     }
 } 
