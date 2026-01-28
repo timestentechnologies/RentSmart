@@ -57,6 +57,86 @@ class SettingsController
         }
     }
 
+    public function ai()
+    {
+        try {
+            // Always ensure required keys exist (idempotent)
+            $this->settings->ensureDefaultSettings();
+            $settings = $this->settings->getAllAsAssoc();
+
+            echo view('settings/ai', [
+                'title' => 'AI Settings - RentSmart',
+                'settings' => $settings
+            ]);
+        } catch (Exception $e) {
+            error_log("Error loading AI settings: " . $e->getMessage());
+            echo view('errors/500', [
+                'title' => '500 Internal Server Error'
+            ]);
+        }
+    }
+
+    public function updateAI()
+    {
+        try {
+            if (!verify_csrf_token()) {
+                $_SESSION['flash_message'] = 'Invalid security token';
+                $_SESSION['flash_type'] = 'danger';
+                redirect('/settings/ai');
+            }
+
+            // Read current values to avoid overwriting with defaults when fields are missing
+            $currentProvider = $this->settings->get('ai_provider') ?? 'openai';
+            $currentApiKey   = $this->settings->get('openai_api_key') ?? '';
+            $currentModel    = $this->settings->get('openai_model') ?? 'gpt-4.1-mini';
+            $currentPrompt   = $this->settings->get('ai_system_prompt') ?? 'You are RentSmart Support AI. Help users with property management tasks and app guidance.';
+            $currentGoogleKey = $this->settings->get('google_api_key') ?? '';
+            $currentGoogleModel = $this->settings->get('google_model') ?? 'gemini-3-flash-preview';
+
+            $aiEnabled = isset($_POST['ai_enabled']) ? '1' : '0';
+            $aiProvider = isset($_POST['ai_provider']) ? trim((string)$_POST['ai_provider']) : $currentProvider;
+            $apiKey     = isset($_POST['openai_api_key']) ? trim((string)$_POST['openai_api_key']) : $currentApiKey;
+            $model      = isset($_POST['openai_model']) ? trim((string)$_POST['openai_model']) : $currentModel;
+            $prompt     = isset($_POST['ai_system_prompt']) ? (string)$_POST['ai_system_prompt'] : $currentPrompt;
+            $googleKey  = isset($_POST['google_api_key']) ? trim((string)$_POST['google_api_key']) : $currentGoogleKey;
+            $googleModel = isset($_POST['google_model']) ? trim((string)$_POST['google_model']) : $currentGoogleModel;
+
+            // If any critical field ends up blank string, preserve the current value
+            if ($aiProvider === '') { $aiProvider = $currentProvider; }
+            if ($apiKey === '')     { $apiKey = $currentApiKey; }
+            if ($model === '')      { $model = $currentModel; }
+            if ($prompt === '')     { $prompt = $currentPrompt; }
+            if ($googleKey === '')  { $googleKey = $currentGoogleKey; }
+            if ($googleModel === ''){ $googleModel = $currentGoogleModel; }
+
+            error_log('updateAI payload -> enabled: ' . $aiEnabled . ', provider: ' . $aiProvider . ', model: ' . $model . ', googleModel: ' . $googleModel);
+
+            $updates = [
+                'ai_enabled' => $aiEnabled,
+                'ai_provider' => $aiProvider,
+                'openai_api_key' => $apiKey,
+                'openai_model' => $model,
+                'google_api_key' => $googleKey,
+                'google_model' => $googleModel,
+                'ai_system_prompt' => $prompt,
+            ];
+
+            foreach ($updates as $k => $v) {
+                $this->settings->updateByKey($k, $v);
+            }
+
+            $_SESSION['flash_message'] = 'AI settings updated successfully';
+            $_SESSION['flash_type'] = 'success';
+        } catch (Exception $e) {
+            $_SESSION['flash_message'] = 'Error updating AI settings: ' . $e->getMessage();
+            $_SESSION['flash_type'] = 'danger';
+        }
+
+        // Ensure keys exist for next load and reflect latest
+        $this->settings->ensureDefaultSettings();
+        redirect('/settings/ai');
+    }
+
     public function index()
     {
         try {

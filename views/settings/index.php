@@ -95,6 +95,13 @@ if (empty($settings)) {
                             </div>
                             <i class="bi bi-chevron-right"></i>
                         </a>
+                        <a href="<?= BASE_URL ?>/settings/ai" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="bi bi-robot me-2"></i>
+                                AI Configuration
+                            </div>
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
                         <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" data-bs-toggle="modal" data-bs-target="#backupModal">
                             <div>
                                 <i class="bi bi-cloud-download me-2"></i>
