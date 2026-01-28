@@ -22,6 +22,17 @@ class UtilitiesController
         }
     }
 
+    private function ratesSupportUserScope(): bool
+    {
+        try {
+            $db = (new \App\Models\UtilityRate())->getDb();
+            $stmt = $db->query("SHOW COLUMNS FROM utility_rates LIKE 'user_id'");
+            return (bool)$stmt->fetch();
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
+
     public function index()
     {
         $userId = $_SESSION['user_id'] ?? null;
@@ -54,10 +65,23 @@ class UtilitiesController
                 $utilities = [];
             }
         }
-        $utility_types = $rateModel->getAllTypes();
+        $utility_types = [];
         $utility_rates = [];
-        foreach ($utility_types as $type) {
-            $utility_rates[$type] = $rateModel->getRatesByType($type);
+        $db = $rateModel->getDb();
+        if ($this->ratesSupportUserScope() && $userId) {
+            $stmt = $db->prepare("SELECT DISTINCT utility_type FROM utility_rates WHERE (user_id = ? OR user_id IS NULL) ORDER BY utility_type");
+            $stmt->execute([$userId]);
+            $utility_types = $stmt->fetchAll(\PDO::FETCH_COLUMN);
+            foreach ($utility_types as $type) {
+                $stmtR = $db->prepare("SELECT * FROM utility_rates WHERE utility_type = ? AND (user_id = ? OR user_id IS NULL) ORDER BY (CASE WHEN user_id = ? THEN 0 ELSE 1 END), effective_from DESC");
+                $stmtR->execute([$type, $userId, $userId]);
+                $utility_rates[$type] = $stmtR->fetchAll(\PDO::FETCH_ASSOC);
+            }
+        } else {
+            $utility_types = $rateModel->getAllTypes();
+            foreach ($utility_types as $type) {
+                $utility_rates[$type] = $rateModel->getRatesByType($type);
+            }
         }
 
         // Add readings and cost to each utility
@@ -105,7 +129,26 @@ class UtilitiesController
             $properties = $propertyModel->getAll($userId);
             $units = $unitModel->getAll($userId);
         }
-        $utilityTypes = $rateModel->getAllTypesWithMethod();
+        $db = $rateModel->getDb();
+        if ($this->ratesSupportUserScope() && $userId) {
+            $stmt = $db->prepare("
+                SELECT ur.*
+                FROM utility_rates ur
+                INNER JOIN (
+                    SELECT utility_type, MAX(effective_from) as max_date 
+                    FROM utility_rates 
+                    WHERE (effective_to IS NULL OR effective_to >= CURDATE()) 
+                      AND (user_id = ? OR user_id IS NULL)
+                    GROUP BY utility_type
+                ) latest ON ur.utility_type = latest.utility_type AND ur.effective_from = latest.max_date
+                WHERE (ur.user_id = ? OR ur.user_id IS NULL)
+                ORDER BY ur.utility_type
+            ");
+            $stmt->execute([$userId, $userId]);
+            $utilityTypes = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        } else {
+            $utilityTypes = $rateModel->getAllTypesWithMethod();
+        }
 
         $content = view('utilities/create', [
             'title' => 'Add New Utility',
@@ -127,7 +170,24 @@ class UtilitiesController
 
         $rateModel = new \App\Models\UtilityRate();
         $utilityType = $_POST['utility_type'] ?? '';
-        $rateInfo = $rateModel->getCurrentRate($utilityType);
+        $userId = $_SESSION['user_id'] ?? null;
+        $db = $rateModel->getDb();
+        if ($this->ratesSupportUserScope() && $userId) {
+            $stmt = $db->prepare("
+                SELECT *
+                FROM utility_rates
+                WHERE utility_type = ?
+                  AND effective_from <= CURDATE()
+                  AND (effective_to IS NULL OR effective_to >= CURDATE())
+                  AND (user_id = ? OR user_id IS NULL)
+                ORDER BY (CASE WHEN user_id = ? THEN 0 ELSE 1 END), effective_from DESC
+                LIMIT 1
+            ");
+            $stmt->execute([$utilityType, $userId, $userId]);
+            $rateInfo = $stmt->fetch(\PDO::FETCH_ASSOC) ?: [];
+        } else {
+            $rateInfo = $rateModel->getCurrentRate($utilityType);
+        }
         $billingMethod = $rateInfo['billing_method'] ?? 'flat_rate';
 
         $data = [
