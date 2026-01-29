@@ -41,6 +41,9 @@ class Payment extends Model
                 $sql .= " OR pr.agent_id = ?";
                 $params[] = $userId;
             }
+            // Caretaker assigned to property
+            $sql .= " OR pr.caretaker_user_id = ?";
+            $params[] = $userId;
             $sql .= ")";
         }
         
@@ -74,6 +77,9 @@ class Payment extends Model
                 $sql .= " OR pr.agent_id = ?";
                 $params[] = $userId;
             }
+            // Caretaker assigned to property
+            $sql .= " OR pr.caretaker_user_id = ?";
+            $params[] = $userId;
             $sql .= ")";
         }
         
@@ -136,6 +142,9 @@ class Payment extends Model
                 $sql .= " OR pr.agent_id = ?";
                 $params[] = $userId;
             }
+            // Caretaker assigned to property
+            $sql .= " OR pr.caretaker_user_id = ?";
+            $params[] = $userId;
             $sql .= ")";
         }
         
@@ -180,6 +189,9 @@ class Payment extends Model
                 $sql .= " OR pr.agent_id = ?";
                 $params[] = $userId;
             }
+            // Caretaker assigned to property
+            $sql .= " OR pr.caretaker_user_id = ?";
+            $params[] = $userId;
             $sql .= ")";
         }
         
@@ -230,6 +242,9 @@ class Payment extends Model
                 $sql .= " OR pr.agent_id = ?";
                 $params[] = $userId;
             }
+            // Caretaker assigned to property
+            $sql .= " OR pr.caretaker_user_id = ?";
+            $params[] = $userId;
             $sql .= ")";
         }
         
@@ -269,6 +284,9 @@ class Payment extends Model
                 $sql .= " OR pr.agent_id = ?";
                 $params[] = $userId;
             }
+            // Caretaker assigned to property
+            $sql .= " OR pr.caretaker_user_id = ?";
+            $params[] = $userId;
             $sql .= ")";
         }
         
@@ -303,6 +321,9 @@ class Payment extends Model
                 $sql .= " OR l.unit_id IN (SELECT id FROM units WHERE property_id IN (SELECT id FROM properties WHERE agent_id = ?))";
                 $params[] = $userId;
             }
+            // Caretaker assigned to property
+            $sql .= " OR l.unit_id IN (SELECT id FROM units WHERE property_id IN (SELECT id FROM properties WHERE caretaker_user_id = ?))";
+            $params[] = $userId;
             // Tenant: only their own payments
             if (isset($userData['role']) && $userData['role'] === 'tenant') {
                 // Find tenant_id for this user
@@ -387,6 +408,10 @@ class Payment extends Model
                 }
                 if ($userData['role'] === 'agent') {
                     $conditions[] = "pr.agent_id = ?";
+                    $params[] = $userId;
+                }
+                if ($userData['role'] === 'caretaker') {
+                    $conditions[] = "pr.caretaker_user_id = ?";
                     $params[] = $userId;
                 }
                 
@@ -498,6 +523,10 @@ class Payment extends Model
                 $roleFilter[] = "pr.agent_id = ?";
                 $params[] = $userId;
             }
+            if (isset($userData['role']) && $userData['role'] === 'caretaker') {
+                $roleFilter[] = "pr.caretaker_user_id = ?";
+                $params[] = $userId;
+            }
             if (isset($userData['role']) && $userData['role'] === 'tenant') {
                 $tenantModel = new \App\Models\Tenant();
                 $tenant = $tenantModel->findByEmail($userData['email']);
@@ -540,6 +569,11 @@ class Payment extends Model
             }
             if ($user->isAgent()) {
                 $roleFilter[] = "l.unit_id IN (SELECT id FROM units WHERE property_id IN (SELECT id FROM properties WHERE agent_id = ?))";
+                $params[] = $userId;
+            }
+            // Caretaker assigned to property
+            if ($user->isCaretaker()) {
+                $roleFilter[] = "l.unit_id IN (SELECT id FROM units WHERE property_id IN (SELECT id FROM properties WHERE caretaker_user_id = ?))";
                 $params[] = $userId;
             }
             if (isset($userData['role']) && $userData['role'] === 'tenant') {
@@ -780,6 +814,9 @@ class Payment extends Model
             $sql .= " OR pr.agent_id = ?";
             $params[] = $userId;
         }
+        // Caretaker
+        $sql .= " OR pr.caretaker_user_id = ?";
+        $params[] = $userId;
         
         $sql .= ")";
         
@@ -1308,11 +1345,11 @@ class Payment extends Model
                     INNER JOIN properties pr ON u.property_id = pr.id
                     WHERE p.payment_date BETWEEN ? AND ?
                     AND p.status IN ('completed', 'verified')
-                    AND pr.user_id = ?
+                    AND (pr.user_id = ? OR pr.caretaker_user_id = ?)
                     GROUP BY DATE(p.payment_date)
                     ORDER BY date ASC";
             $stmt = $this->db->prepare($sql);
-            $stmt->execute([$startDate, $endDate, $userId]);
+            $stmt->execute([$startDate, $endDate, $userId, $userId]);
         }
         
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
@@ -1360,11 +1397,11 @@ class Payment extends Model
                     LEFT JOIN units u ON l.unit_id = u.id
                     LEFT JOIN properties pr ON u.property_id = pr.id
                     WHERE p.status IN ('completed', 'verified')
-                    AND pr.user_id = ?
+                    AND (pr.user_id = ? OR pr.caretaker_user_id = ?)
                     ORDER BY p.payment_date DESC
                     LIMIT ?";
             $stmt = $this->db->prepare($sql);
-            $stmt->execute([$userId, $limit]);
+            $stmt->execute([$userId, $userId, $limit]);
         }
         
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
@@ -1410,11 +1447,11 @@ class Payment extends Model
                     LEFT JOIN payments p ON l.id = p.lease_id AND p.status IN ('completed', 'verified')
                     INNER JOIN units u ON l.unit_id = u.id
                     INNER JOIN properties pr ON u.property_id = pr.id
-                    WHERE pr.user_id = ?
+                    WHERE (pr.user_id = ? OR pr.caretaker_user_id = ?)
                     GROUP BY t.id, t.name
                     ORDER BY total_paid DESC";
             $stmt = $this->db->prepare($sql);
-            $stmt->execute([$userId]);
+            $stmt->execute([$userId, $userId]);
         }
         
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
@@ -1481,12 +1518,12 @@ class Payment extends Model
                         AND MONTH(pay.payment_date) = MONTH(CURRENT_DATE())
                         AND YEAR(pay.payment_date) = YEAR(CURRENT_DATE())
                     WHERE l.status = 'active'
-                    AND p.user_id = ?
+                    AND (p.user_id = ? OR p.caretaker_user_id = ?)
                     GROUP BY l.id, t.name, t.email, t.phone, p.name, u.unit_number, l.rent_amount, l.start_date, l.end_date
                     HAVING balance_due > 0
                     ORDER BY balance_due DESC";
             $stmt = $this->db->prepare($sql);
-            $stmt->execute([$userId]);
+            $stmt->execute([$userId, $userId]);
         }
         
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
@@ -1534,11 +1571,11 @@ class Payment extends Model
                     LEFT JOIN tenants t ON l.tenant_id = t.id
                     LEFT JOIN units u ON l.unit_id = u.id
                     LEFT JOIN properties pr ON u.property_id = pr.id
-                    WHERE pr.user_id = ?
+                    WHERE (pr.user_id = ? OR pr.caretaker_user_id = ?)
                     ORDER BY p.payment_date DESC
                     LIMIT ?";
             $stmt = $this->db->prepare($sql);
-            $stmt->execute([$userId, $limit]);
+            $stmt->execute([$userId, $userId, $limit]);
         }
         
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
@@ -1637,12 +1674,12 @@ class Payment extends Model
                     LEFT JOIN units u ON pr.id = u.property_id
                     LEFT JOIN leases l ON u.id = l.unit_id
                     LEFT JOIN payments p ON l.id = p.lease_id
-                    WHERE pr.user_id = ?
+                    WHERE (pr.user_id = ? OR pr.caretaker_user_id = ?)
                     GROUP BY pr.id, pr.name
                     HAVING revenue > 0 OR outstanding > 0
                     ORDER BY revenue DESC";
             $stmt = $this->db->prepare($sql);
-            $stmt->execute([$startDate, $endDate, $userId]);
+            $stmt->execute([$startDate, $endDate, $userId, $userId]);
         }
         
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
