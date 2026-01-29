@@ -62,6 +62,11 @@ class User extends Model
         return isset($this->userData['role']) && $this->userData['role'] === 'agent';
     }
 
+    public function isCaretaker()
+    {
+        return isset($this->userData['role']) && $this->userData['role'] === 'caretaker';
+    }
+
     // Get properties based on user role
     public function getAccessibleProperties()
     {
@@ -84,6 +89,11 @@ class User extends Model
                 SELECT p.* FROM properties p
                 WHERE p.agent_id = ?
             ");
+            $stmt->execute([$this->userData['id']]);
+            return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        } elseif ($this->isCaretaker()) {
+            // Caretaker can see properties they are assigned to
+            $stmt = $this->db->prepare("SELECT * FROM properties WHERE caretaker_user_id = ?");
             $stmt->execute([$this->userData['id']]);
             return $stmt->fetchAll(\PDO::FETCH_ASSOC);
         }

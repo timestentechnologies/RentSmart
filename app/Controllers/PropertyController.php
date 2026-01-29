@@ -5,6 +5,7 @@ namespace App\Controllers;
 use App\Models\Property;
 use App\Models\Unit;
 use App\Models\User;
+use App\Models\Employee;
 use App\Database\Connection;
 use App\Helpers\FileUploadHelper;
 use Exception;
@@ -48,6 +49,17 @@ class PropertyController
     {
         try {
             $properties = $this->property->getAll($_SESSION['user_id']);
+            // Load caretakers for selection dropdown
+            $employeeModel = new Employee();
+            $caretakers = $employeeModel->getCaretakers($_SESSION['user_id']);
+            
+            // If current user is a caretaker, only show assigned properties
+            if (isset($_SESSION['user_role']) && strtolower($_SESSION['user_role']) === 'caretaker') {
+                $db = $this->property->getDb();
+                $stmt = $db->prepare("SELECT * FROM properties WHERE caretaker_user_id = ?");
+                $stmt->execute([$_SESSION['user_id']]);
+                $properties = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+            }
         
             // Calculate statistics for each property
             foreach ($properties as &$property) {
@@ -83,7 +95,8 @@ class PropertyController
 
             echo view('properties/index', [
                 'title' => 'Properties',
-                'properties' => $properties
+                'properties' => $properties,
+                'caretakers' => $caretakers,
             ]);
         } catch (Exception $e) {
             error_log("Error in PropertyController::index: " . $e->getMessage());
@@ -137,9 +150,9 @@ class PropertyController
                 'description' => filter_var($_POST['description'] ?? '', FILTER_SANITIZE_STRING),
                 'year_built' => filter_var($_POST['year_built'] ?? '', FILTER_VALIDATE_INT),
                 'total_area' => filter_var($_POST['total_area'] ?? '', FILTER_VALIDATE_FLOAT),
-                'caretaker_name' => filter_var($_POST['caretaker_name'] ?? '', FILTER_SANITIZE_STRING),
-                'caretaker_contact' => filter_var($_POST['caretaker_contact'] ?? '', FILTER_SANITIZE_STRING)
+                // caretaker fields now handled via caretaker_employee_id
             ];
+            $caretakerEmployeeId = isset($_POST['caretaker_employee_id']) ? (int)$_POST['caretaker_employee_id'] : 0;
 
             // Set owner_id, manager_id, or agent_id based on role
             if ($this->user->isLandlord()) {
@@ -178,6 +191,67 @@ class PropertyController
 
                 if (!$propertyId) {
                     throw new Exception('Failed to create property');
+                }
+
+                // If caretaker selected, assign caretaker to this property and create caretaker user if needed
+                if ($caretakerEmployeeId > 0) {
+                    $empModel = new Employee();
+                    $emp = $empModel->find($caretakerEmployeeId);
+                    if ($emp) {
+                        $caretakerName = $emp['name'] ?? '';
+                        $caretakerContact = $emp['phone'] ?: ($emp['email'] ?? null);
+                        $userModel = new User();
+                        // Try find existing user by email or phone
+                        $caretakerUserId = null;
+                        if (!empty($emp['email'])) {
+                            $u = $userModel->findByEmail($emp['email']);
+                            if ($u) { $caretakerUserId = $u['id']; }
+                        }
+                        if (!$caretakerUserId && !empty($emp['phone'])) {
+                            $stmtU = $db->prepare("SELECT id FROM users WHERE phone = ? LIMIT 1");
+                            $stmtU->execute([$emp['phone']]);
+                            $rowU = $stmtU->fetch(\PDO::FETCH_ASSOC);
+                            if ($rowU) { $caretakerUserId = $rowU['id']; }
+                        }
+                        if (!$caretakerUserId) {
+                            // Ensure caretaker role exists in users.role enum
+                            try {
+                                $stmtRole = $db->query("SHOW COLUMNS FROM users LIKE 'role'");
+                                $col = $stmtRole->fetch(\PDO::FETCH_ASSOC);
+                                if ($col && isset($col['Type']) && strpos($col['Type'], "'caretaker'") === false) {
+                                    $db->exec("ALTER TABLE users MODIFY role ENUM('admin','landlord','agent','manager','caretaker') NOT NULL DEFAULT 'agent'");
+                                }
+                            } catch (\Exception $e) {}
+                            // Generate password from name+phone
+                            $name = $caretakerName ?: 'Caretaker';
+                            $phoneDigits = preg_replace('/\D+/', '', (string)($emp['phone'] ?? ''));
+                            $base = strtolower(preg_replace('/[^a-z]/i', '', explode(' ', trim($name))[0] ?? 'caretaker'));
+                            $suffix = substr($phoneDigits, -4) ?: '1234';
+                            $plainPassword = $base . $suffix . '!';
+                            $caretakerUserId = $userModel->createUser([
+                                'name' => $caretakerName,
+                                'email' => $emp['email'] ?: (($emp['phone'] ?? 'caretaker') . '@caretaker.local'),
+                                'phone' => $emp['phone'] ?? null,
+                                'address' => null,
+                                'password' => $plainPassword,
+                                'role' => 'caretaker',
+                                'is_subscribed' => 0
+                            ]);
+                            // Notify current user
+                            $to = $_SESSION['user_email'] ?? null;
+                            if ($to) {
+                                $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+                                $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+                                $loginUrl = $scheme . '://' . $host . BASE_URL . '/';
+                                $subject = 'Caretaker account created';
+                                $body = "Caretaker account created for {$caretakerName} (contact: {$caretakerContact}).\nLogin URL: {$loginUrl}\nUsername (email/phone): " . ($emp['email'] ?: $emp['phone']) . "\nTemporary Password: {$plainPassword}";
+                                send_email($to, $subject, $body);
+                            }
+                        }
+                        // Update property with caretaker details
+                        $stmtUpd = $db->prepare("UPDATE properties SET caretaker_user_id = ?, caretaker_name = ?, caretaker_contact = ? WHERE id = ?");
+                        $stmtUpd->execute([$caretakerUserId, $caretakerName, $caretakerContact, $propertyId]);
+                    }
                 }
 
                 // Handle file uploads
@@ -350,9 +424,9 @@ class PropertyController
                 'description' => (string)filter_input(INPUT_POST, 'description'),
                 'year_built' => filter_input(INPUT_POST, 'year_built', FILTER_VALIDATE_INT),
                 'total_area' => filter_input(INPUT_POST, 'total_area', FILTER_VALIDATE_FLOAT),
-                'caretaker_name' => (string)filter_input(INPUT_POST, 'caretaker_name'),
-                'caretaker_contact' => (string)filter_input(INPUT_POST, 'caretaker_contact')
+                // caretaker handled via caretaker_employee_id
             ];
+            $caretakerEmployeeId = (int)($_POST['caretaker_employee_id'] ?? 0);
 
             // Validate required fields
             $requiredFields = ['name', 'address', 'city', 'state', 'zip_code', 'property_type'];
@@ -374,6 +448,54 @@ class PropertyController
 
             // Update property
             if ($this->property->update($id, $data)) {
+                // Assign caretaker if provided
+                if ($caretakerEmployeeId > 0) {
+                    $empModel = new Employee();
+                    $emp = $empModel->find($caretakerEmployeeId);
+                    if ($emp) {
+                        $userModel = new User();
+                        $caretakerUserId = null;
+                        if (!empty($emp['email'])) {
+                            $u = $userModel->findByEmail($emp['email']);
+                            if ($u) { $caretakerUserId = $u['id']; }
+                        }
+                        if (!$caretakerUserId && !empty($emp['phone'])) {
+                            $stmtU = $this->property->getDb()->prepare("SELECT id FROM users WHERE phone = ? LIMIT 1");
+                            $stmtU->execute([$emp['phone']]);
+                            $rowU = $stmtU->fetch(\PDO::FETCH_ASSOC);
+                            if ($rowU) { $caretakerUserId = $rowU['id']; }
+                        }
+                        if (!$caretakerUserId) {
+                            // Create user
+                            $name = $emp['name'] ?? 'Caretaker';
+                            $phoneDigits = preg_replace('/\D+/', '', (string)($emp['phone'] ?? ''));
+                            $base = strtolower(preg_replace('/[^a-z]/i', '', explode(' ', trim($name))[0] ?? 'caretaker'));
+                            $suffix = substr($phoneDigits, -4) ?: '1234';
+                            $plainPassword = $base . $suffix . '!';
+                            $caretakerUserId = $userModel->createUser([
+                                'name' => $name,
+                                'email' => $emp['email'] ?: (($emp['phone'] ?? 'caretaker') . '@caretaker.local'),
+                                'phone' => $emp['phone'] ?? null,
+                                'address' => null,
+                                'password' => $plainPassword,
+                                'role' => 'caretaker',
+                                'is_subscribed' => 0
+                            ]);
+                            // Notify current user
+                            $to = $_SESSION['user_email'] ?? null;
+                            if ($to) {
+                                $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+                                $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+                                $loginUrl = $scheme . '://' . $host . BASE_URL . '/';
+                                $subject = 'Caretaker account created';
+                                $body = "Caretaker account created for {$name} (contact: " . ($emp['phone'] ?: $emp['email']) . ").\nLogin URL: {$loginUrl}\nUsername (email/phone): " . ($emp['email'] ?: $emp['phone']) . "\nTemporary Password: {$plainPassword}";
+                                send_email($to, $subject, $body);
+                            }
+                        }
+                        $stmtUpd = $this->property->getDb()->prepare("UPDATE properties SET caretaker_user_id = ?, caretaker_name = ?, caretaker_contact = ? WHERE id = ?");
+                        $stmtUpd->execute([$caretakerUserId, $emp['name'] ?? '', ($emp['phone'] ?: $emp['email']), $id]);
+                    }
+                }
                 // Handle file uploads
                 $fileUploadHelper = new FileUploadHelper();
                 $uploadErrors = [];

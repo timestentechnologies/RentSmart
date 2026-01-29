@@ -37,7 +37,9 @@ class Inquiry extends Model
                 JOIN units u ON u.id = i.unit_id
                 JOIN properties p ON p.id = i.property_id";
         if ($role !== 'admin') {
-            $sql .= " WHERE (p.owner_id = ? OR p.manager_id = ?)";
+            $sql .= " WHERE (p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ?)";
+            $params[] = $userId;
+            $params[] = $userId;
             $params[] = $userId;
             $params[] = $userId;
         }

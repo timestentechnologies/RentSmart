@@ -47,13 +47,77 @@ class EmployeesController
                     'name' => trim($_POST['name'] ?? ''),
                     'email' => $_POST['email'] ?? null,
                     'phone' => $_POST['phone'] ?? null,
-                    'title' => $_POST['title'] ?? null,
                     'salary' => (float)($_POST['salary'] ?? 0),
                     'property_id' => $_POST['property_id'] ? (int)$_POST['property_id'] : null,
-                    'status' => $_POST['status'] ?? 'active'
+                    'status' => $_POST['status'] ?? 'active',
+                    'role' => $_POST['role'] ?? 'general'
                 ];
                 $employeeModel = new Employee();
                 $employeeId = $employeeModel->insert($data);
+
+                // If caretaker, create a user account and optionally assign to property
+                if ($employeeId && strtolower($data['role']) === 'caretaker') {
+                    $userModel = new \App\Models\User();
+                    $db = $userModel->getDb();
+                    try {
+                        // Ensure users.role enum contains caretaker
+                        $stmt = $db->query("SHOW COLUMNS FROM users LIKE 'role'");
+                        $col = $stmt->fetch(\PDO::FETCH_ASSOC);
+                        if ($col && isset($col['Type']) && strpos($col['Type'], "'caretaker'") === false) {
+                            $db->exec("ALTER TABLE users MODIFY role ENUM('admin','landlord','agent','manager','caretaker') NOT NULL DEFAULT 'agent'");
+                        }
+                    } catch (\Exception $e) {}
+
+                    // Generate password using name and phone
+                    $name = $data['name'] ?: 'Caretaker';
+                    $phone = preg_replace('/\D+/', '', (string)($data['phone'] ?? ''));
+                    $base = strtolower(preg_replace('/[^a-z]/i', '', explode(' ', trim($name))[0] ?? 'caretaker'));
+                    $suffix = substr($phone, -4);
+                    $plainPassword = $base . ($suffix ?: '1234') . '!';
+
+                    // Check if user exists by email or phone
+                    $existing = null;
+                    if (!empty($data['email'])) {
+                        $existing = $userModel->findByEmail($data['email']);
+                    }
+                    if (!$existing && !empty($data['phone'])) {
+                        $stmt = $db->prepare("SELECT * FROM users WHERE phone = ? LIMIT 1");
+                        $stmt->execute([$data['phone']]);
+                        $existing = $stmt->fetch(\PDO::FETCH_ASSOC);
+                    }
+
+                    if (!$existing) {
+                        $caretakerUserId = $userModel->createUser([
+                            'name' => $data['name'],
+                            'email' => $data['email'] ?: ($data['phone'] . '@caretaker.local'),
+                            'phone' => $data['phone'],
+                            'address' => null,
+                            'password' => $plainPassword,
+                            'role' => 'caretaker',
+                            'is_subscribed' => 0
+                        ]);
+                    } else {
+                        $caretakerUserId = $existing['id'];
+                    }
+
+                    // Assign to property if provided
+                    if (!empty($data['property_id'])) {
+                        $propDb = $userModel->getDb();
+                        $stmt = $propDb->prepare("UPDATE properties SET caretaker_user_id = ? , caretaker_name = ?, caretaker_contact = ? WHERE id = ?");
+                        $stmt->execute([$caretakerUserId, $data['name'], ($data['phone'] ?: $data['email']), $data['property_id']]);
+                    }
+
+                    // Notify current user (manager/agent/landlord)
+                    $to = $_SESSION['user_email'] ?? null;
+                    if ($to) {
+                        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+                        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+                        $loginUrl = $scheme . '://' . $host . BASE_URL . '/';
+                        $subject = 'Caretaker account created';
+                        $body = "Caretaker account created for {$data['name']} (phone: {$data['phone']}).\nLogin URL: {$loginUrl}\nUsername (email/phone): " . ($data['email'] ?: $data['phone']) . "\nTemporary Password: {$plainPassword}";
+                        send_email($to, $subject, $body);
+                    }
+                }
                 $_SESSION['flash_message'] = 'Employee added successfully';
                 $_SESSION['flash_type'] = 'success';
             } catch (\Exception $e) {
@@ -97,7 +161,6 @@ class EmployeesController
                     'name' => trim($_POST['name'] ?? $employee['name']),
                     'email' => $_POST['email'] ?? $employee['email'],
                     'phone' => $_POST['phone'] ?? $employee['phone'],
-                    'title' => $_POST['title'] ?? $employee['title'],
                     'salary' => (float)($_POST['salary'] ?? $employee['salary']),
                     'property_id' => $_POST['property_id'] ? (int)$_POST['property_id'] : null,
                     'status' => $_POST['status'] ?? $employee['status']

@@ -80,6 +80,9 @@ class MaintenanceRequest extends Model
                 $sql .= " OR p.agent_id = ?";
                 $params[] = $userId;
             }
+            // Caretaker assigned to property
+            $sql .= " OR p.caretaker_user_id = ?";
+            $params[] = $userId;
             $sql .= ")";
         }
         
@@ -127,6 +130,9 @@ class MaintenanceRequest extends Model
                 $sql .= " OR p.agent_id = ?";
                 $params[] = $userId;
             }
+            // Caretaker assigned to property
+            $sql .= " OR p.caretaker_user_id = ?";
+            $params[] = $userId;
             $sql .= ")";
         }
         

@@ -41,6 +41,9 @@ class Lease extends Model
                 $sql .= " OR p.agent_id = ?";
                 $params[] = $userId;
             }
+            // Caretaker assigned to property
+            $sql .= " OR p.caretaker_user_id = ?";
+            $params[] = $userId;
             $sql .= ")";
         }
         
@@ -85,6 +88,9 @@ class Lease extends Model
                 $sql .= " OR p.agent_id = ?";
                 $params[] = $userId;
             }
+            // Caretaker assigned to property
+            $sql .= " OR p.caretaker_user_id = ?";
+            $params[] = $userId;
             $sql .= ")";
         }
         
@@ -126,6 +132,9 @@ class Lease extends Model
                 $sql .= " OR p.manager_id = (SELECT manager_id FROM users WHERE id = ?)";
                 $params[] = $userId;
             }
+            // Caretaker assigned to property
+            $sql .= " OR p.caretaker_user_id = ?";
+            $params[] = $userId;
             $sql .= ")";
         }
         

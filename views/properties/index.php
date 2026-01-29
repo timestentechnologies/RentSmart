@@ -287,15 +287,18 @@ ob_start();
                                 <label for="description" class="form-label">Property Description</label>
                                 <textarea class="form-control" id="description" name="description" rows="3"></textarea>
                             </div>
-                            <div class="row mb-3">
-                                <div class="col-md-6">
-                                    <label for="caretaker_name" class="form-label">Caretaker Name</label>
-                                    <input type="text" class="form-control" id="caretaker_name" name="caretaker_name" placeholder="e.g. John Doe">
-                                </div>
-                                <div class="col-md-6">
-                                    <label for="caretaker_contact" class="form-label">Caretaker Contact</label>
-                                    <input type="text" class="form-control" id="caretaker_contact" name="caretaker_contact" placeholder="Phone or Email">
-                                </div>
+                            <div class="mb-3">
+                                <label for="caretaker_employee_id" class="form-label">Caretaker</label>
+                                <select class="form-select" id="caretaker_employee_id" name="caretaker_employee_id">
+                                    <option value="">None</option>
+                                    <?php if (!empty($caretakers)):
+                                        foreach ($caretakers as $ck): ?>
+                                            <option value="<?= $ck['id'] ?>" data-name="<?= htmlspecialchars($ck['name']) ?>" data-contact="<?= htmlspecialchars($ck['phone'] ?: ($ck['email'] ?? '')) ?>">
+                                                <?= htmlspecialchars($ck['name']) ?><?= isset($ck['property_name']) && $ck['property_name'] ? ' • ' . htmlspecialchars($ck['property_name']) : '' ?>
+                                            </option>
+                                    <?php endforeach; endif; ?>
+                                </select>
+                                <div class="form-text">Caretakers are managed under Employees. Set an employee's role to "Caretaker" to list here.</div>
                             </div>
                             <div class="row">
                                 <div class="col-md-6">
@@ -399,12 +402,16 @@ ob_start();
                                 <textarea class="form-control" id="edit_description" name="description" rows="3"></textarea>
                             </div>
                             <div class="mb-3">
-                                <label for="edit_caretaker_name" class="form-label">Caretaker Name</label>
-                                <input type="text" class="form-control" id="edit_caretaker_name" name="caretaker_name">
-                            </div>
-                            <div class="mb-3">
-                                <label for="edit_caretaker_contact" class="form-label">Caretaker Contact</label>
-                                <input type="text" class="form-control" id="edit_caretaker_contact" name="caretaker_contact">
+                                <label for="edit_caretaker_employee_id" class="form-label">Caretaker</label>
+                                <select class="form-select" id="edit_caretaker_employee_id" name="caretaker_employee_id">
+                                    <option value="">None</option>
+                                    <?php if (!empty($caretakers)):
+                                        foreach ($caretakers as $ck): ?>
+                                            <option value="<?= $ck['id'] ?>" data-name="<?= htmlspecialchars($ck['name']) ?>" data-contact="<?= htmlspecialchars($ck['phone'] ?: ($ck['email'] ?? '')) ?>">
+                                                <?= htmlspecialchars($ck['name']) ?><?= isset($ck['property_name']) && $ck['property_name'] ? ' • ' . htmlspecialchars($ck['property_name']) : '' ?>
+                                            </option>
+                                    <?php endforeach; endif; ?>
+                                </select>
                             </div>
                             <div class="mb-3">
                                 <label for="edit_year_built" class="form-label">Year Built</label>
@@ -962,10 +969,20 @@ const editProperty = async (id) => {
         document.getElementById('edit_zip_code').value = property.zip_code;
         document.getElementById('edit_property_type').value = property.property_type;
         document.getElementById('edit_description').value = property.description || '';
-        const ecName = document.getElementById('edit_caretaker_name');
-        if (ecName) ecName.value = property.caretaker_name || '';
-        const ecContact = document.getElementById('edit_caretaker_contact');
-        if (ecContact) ecContact.value = property.caretaker_contact || '';
+        const editCaretakerSelect = document.getElementById('edit_caretaker_employee_id');
+        if (editCaretakerSelect) {
+            const propCaretakerName = property.caretaker_name || '';
+            const propCaretakerContact = property.caretaker_contact || '';
+            let matched = false;
+            for (const opt of editCaretakerSelect.options) {
+                if (opt.value && (opt.dataset.name === propCaretakerName || opt.dataset.contact === propCaretakerContact)) {
+                    editCaretakerSelect.value = opt.value;
+                    matched = true;
+                    break;
+                }
+            }
+            if (!matched) editCaretakerSelect.value = '';
+        }
         document.getElementById('edit_year_built').value = property.year_built || '';
         document.getElementById('edit_total_area').value = property.total_area || '';
         

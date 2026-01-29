@@ -27,6 +27,12 @@ class Property extends Model
             if ($stmt->rowCount() === 0) {
                 $this->db->exec("ALTER TABLE {$this->table} ADD COLUMN caretaker_contact VARCHAR(255) NULL AFTER caretaker_name");
             }
+
+            // caretaker_user_id
+            $stmt = $this->db->query("SHOW COLUMNS FROM {$this->table} LIKE 'caretaker_user_id'");
+            if ($stmt->rowCount() === 0) {
+                $this->db->exec("ALTER TABLE {$this->table} ADD COLUMN caretaker_user_id INT NULL AFTER agent_id");
+            }
         } catch (\Exception $e) {
             error_log("Property::ensureCaretakerColumns error: " . $e->getMessage());
         }
@@ -201,6 +207,9 @@ class Property extends Model
                 $sql .= " OR p.agent_id = ?";
                 $params[] = $userId;
             }
+            // Caretaker assigned to property
+            $sql .= " OR p.caretaker_user_id = ?";
+            $params[] = $userId;
             $sql .= ")";
         }
         
@@ -248,6 +257,9 @@ class Property extends Model
                 $sql .= " OR p.agent_id = ?";
                 $params[] = $userId;
             }
+            // Caretaker assigned to property
+            $sql .= " OR p.caretaker_user_id = ?";
+            $params[] = $userId;
             $sql .= ")";
         }
 
@@ -314,6 +326,9 @@ class Property extends Model
                     $sql .= " OR p.agent_id = ?";
                     $params[] = $userId;
                 }
+                // Caretaker assigned to property
+                $sql .= " OR p.caretaker_user_id = ?";
+                $params[] = $userId;
                 $sql .= ")";
             }
             
@@ -364,6 +379,9 @@ class Property extends Model
                 $sql .= " OR p.agent_id = ?";
                 $params[] = $userId;
             }
+            // Caretaker assigned to property
+            $sql .= " OR p.caretaker_user_id = ?";
+            $params[] = $userId;
             $sql .= ")";
         }
         
@@ -439,6 +457,9 @@ class Property extends Model
                 $sql .= " OR p.agent_id = ?";
                 $params[] = $userId;
             }
+            // Caretaker assigned to property
+            $sql .= " OR p.caretaker_user_id = ?";
+            $params[] = $userId;
             $sql .= ")";
         }
         

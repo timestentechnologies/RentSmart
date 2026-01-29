@@ -160,8 +160,8 @@ if (!function_exists('requireAuth')) {
             redirect('home');
         }
 
-        // Skip subscription check for administrators
-        if (isset($_SESSION['user_role']) && (strtolower($_SESSION['user_role']) === 'administrator' || strtolower($_SESSION['user_role']) === 'admin')) {
+        // Skip subscription check for administrators and caretakers
+        if (isset($_SESSION['user_role']) && (in_array(strtolower($_SESSION['user_role']), ['administrator','admin','caretaker']))) {
             return;
         }
 
