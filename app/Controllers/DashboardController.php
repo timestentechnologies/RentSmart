@@ -8,6 +8,7 @@ use App\Models\Lease;
 use App\Models\Payment;
 use App\Models\User;
 use App\Models\Subscription;
+use App\Models\Expense;
 
 class DashboardController
 {
@@ -17,6 +18,7 @@ class DashboardController
     private $payment;
     private $user;
     private $subscription;
+    private $expense;
 
     public function __construct()
     {
@@ -26,6 +28,7 @@ class DashboardController
         $this->payment = new Payment();
         $this->user = new User();
         $this->subscription = new Subscription();
+        $this->expense = new Expense();
         
         // Check if user is logged in
         if (!isset($_SESSION['user_id'])) {
@@ -118,8 +121,14 @@ class DashboardController
             // Get recent payments
             $recentPayments = $this->payment->getRecent(5, $userId);
             
-            // Calculate total revenue (current month)
-            $totalRevenue = $currentMonthRevenue;
+            // Calculate total expenses (current month) and adjust revenue by rent-balance-funded expenses
+            $startOfMonth = date('Y-m-01');
+            $endOfMonth = date('Y-m-t');
+            $totalExpenses = $this->expense->getTotalForPeriod($userId, $startOfMonth, $endOfMonth);
+            $rentBalanceExpenses = $this->expense->getTotalForPeriod($userId, $startOfMonth, $endOfMonth, 'rent_balance');
+
+            // Net revenue: payments minus expenses that draw from rent balance
+            $totalRevenue = $currentMonthRevenue - $rentBalanceExpenses;
             
             // Calculate total properties
             $totalProperties = count($this->property->getAll($userId));

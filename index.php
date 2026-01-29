@@ -228,6 +228,19 @@ $routes = [
     'payments/receipt/(\d+)' => ['controller' => 'PaymentsController', 'action' => 'receipt'],
     'payments/(\d+)/files' => ['controller' => 'PaymentsController', 'action' => 'getFiles'],
     'files/delete/(\d+)' => ['controller' => 'FileController', 'action' => 'delete'],
+    // Expenses routes
+    'expenses' => ['controller' => 'ExpensesController', 'action' => 'index'],
+    'expenses/store' => ['controller' => 'ExpensesController', 'action' => 'store'],
+    'expenses/get/(\d+)' => ['controller' => 'ExpensesController', 'action' => 'get'],
+    'expenses/update/(\d+)' => ['controller' => 'ExpensesController', 'action' => 'update'],
+    'expenses/delete/(\d+)' => ['controller' => 'ExpensesController', 'action' => 'delete'],
+    // Employees routes
+    'employees' => ['controller' => 'EmployeesController', 'action' => 'index'],
+    'employees/store' => ['controller' => 'EmployeesController', 'action' => 'store'],
+    'employees/get/(\d+)' => ['controller' => 'EmployeesController', 'action' => 'get'],
+    'employees/update/(\d+)' => ['controller' => 'EmployeesController', 'action' => 'update'],
+    'employees/delete/(\d+)' => ['controller' => 'EmployeesController', 'action' => 'delete'],
+    'employees/pay/(\d+)' => ['controller' => 'EmployeesController', 'action' => 'pay'],
     'reports' => ['controller' => 'ReportsController', 'action' => 'index'],
     'reports/generate' => ['controller' => 'ReportsController', 'action' => 'generateReport'],
     'admin/inquiries' => ['controller' => 'InquiriesController', 'action' => 'index'],
@@ -390,6 +403,19 @@ $protectedRoutes = [
     'payments/export/(csv|xlsx|pdf)',
     'payments/template',
     'payments/import',
+    // Expenses
+    'expenses',
+    'expenses/store',
+    'expenses/get/(\d+)',
+    'expenses/update/(\d+)',
+    'expenses/delete/(\d+)',
+    // Employees
+    'employees',
+    'employees/store',
+    'employees/get/(\d+)',
+    'employees/update/(\d+)',
+    'employees/delete/(\d+)',
+    'employees/pay/(\d+)',
     'files/delete/(\d+)',
     'reports',
     'reports/generate',
@@ -512,7 +538,7 @@ try {
         $base_route = 'tenant/' . $matches[1] . '/' . $matches[2] . '/(\d+)';
         $id = $matches[3];
         error_log("Routing - Matched tenant route with action and ID: base_route = {$base_route}, id = {$id}, uri = {$uri}");
-    } else if (preg_match('/^(units|properties|tenants|payments|leases|utilities|maintenance|payment-methods|files|admin\/users|admin\/subscriptions|admin\/payments|mpesa-verification)\/(get|update|delete|edit|show|verify|transaction|get-plan|get-subscription|extend|view)\/(\d+)$/', $uri, $matches)) {
+    } else if (preg_match('/^(units|properties|tenants|payments|expenses|employees|leases|utilities|maintenance|payment-methods|files|admin\/users|admin\/subscriptions|admin\/payments|mpesa-verification)\/(get|update|delete|edit|show|verify|transaction|get-plan|get-subscription|extend|view|pay)\/(\d+)$/', $uri, $matches)) {
         // Handle routes like units/get/16, properties/update/5, admin/users/get/3, etc.
         $base_route = $matches[1] . '/' . $matches[2] . '/(\d+)';
         $id = $matches[3];
