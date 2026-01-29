@@ -1226,6 +1226,16 @@ ob_clean();
                     </a>
                 </li>
                 <li class="nav-item">
+                    <a href="<?= BASE_URL ?>/expenses" class="nav-link <?= strpos($current_uri, 'expenses') === 0 ? 'active' : '' ?>">
+                        <i class="bi bi-receipt me-2"></i> Expenses
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="<?= BASE_URL ?>/employees" class="nav-link <?= strpos($current_uri, 'employees') === 0 ? 'active' : '' ?>">
+                        <i class="bi bi-person-badge me-2"></i> Employees
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a href="<?= BASE_URL ?>/payment-methods" class="nav-link <?= strpos($current_uri, 'payment-methods') === 0 ? 'active' : '' ?>">
                         <i class="bi bi-credit-card me-2"></i> Payment Methods
                     </a>

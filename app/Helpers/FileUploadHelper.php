@@ -276,6 +276,8 @@ class FileUploadHelper
                 return 'uploads/units';
             case 'payment':
                 return 'uploads/payments';
+            case 'expense':
+                return 'uploads/expenses';
             default:
                 throw new Exception('Invalid entity type');
         }
@@ -447,12 +449,12 @@ class FileUploadHelper
 
         // Update the entity table with JSON data
         $table = $entityType === 'property' ? 'properties' : 
-                ($entityType === 'unit' ? 'units' : 'payments');
+                ($entityType === 'unit' ? 'units' : ($entityType === 'expense' ? 'expenses' : 'payments'));
         
         $updateFields = [];
         $params = ['id' => $entityId];
 
-        if ($entityType === 'payment') {
+        if ($entityType === 'payment' || $entityType === 'expense') {
             $updateFields[] = "attachments = :attachments";
             $params['attachments'] = json_encode($attachments);
         } else {
@@ -475,7 +477,7 @@ class FileUploadHelper
                 $existingFields = [];
                 $existingParams = ['id' => $entityId];
                 
-                if ($entityType === 'payment') {
+                if ($entityType === 'payment' || $entityType === 'expense') {
                     if (in_array('attachments', $columns)) {
                         $existingFields[] = "attachments = :attachments";
                         $existingParams['attachments'] = json_encode($attachments);

@@ -42,8 +42,8 @@ ob_start();
 
     <!-- Stats Row -->
     <div class="row g-3 mb-4">
-        <!-- Total Revenue -->
-        <div class="col-md-4">
+        <!-- Total Revenue (net of rent-balance expenses) -->
+        <div class="col-md-3">
             <div class="stat-card revenue">
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
@@ -67,7 +67,7 @@ ob_start();
         </div>
 
         <!-- Occupancy Rate -->
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="stat-card occupancy">
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
@@ -83,7 +83,7 @@ ob_start();
         </div>
 
         <!-- Outstanding Balance -->
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="stat-card outstanding">
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
@@ -93,6 +93,22 @@ ob_start();
                     </div>
                     <div class="stats-icon">
                         <i class="bi bi-exclamation-circle fs-1 text-warning opacity-25"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Total Expenses (This Month) -->
+        <div class="col-md-3">
+            <div class="stat-card expenses">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="card-title">Total Expenses</h6>
+                        <h2 class="mt-3 mb-2 text-danger">Ksh<?= number_format($totalExpenses ?? 0, 2) ?></h2>
+                        <p class="mb-0">This month</p>
+                    </div>
+                    <div class="stats-icon">
+                        <i class="bi bi-receipt fs-1 text-danger opacity-25"></i>
                     </div>
                 </div>
             </div>
@@ -230,6 +246,10 @@ ob_start();
 
 .outstanding::before {
     background: linear-gradient(45deg, var(--warning-color), #e6a800);
+}
+
+.expenses::before {
+    background: linear-gradient(45deg, var(--danger-color), #dc3545);
 }
 </style>
 
