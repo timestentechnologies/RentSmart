@@ -32,10 +32,6 @@ class TenantPortalController
             $unit = $unitModel->find($lease['unit_id']);
             $propertyModel = new Property();
             $property = $propertyModel->find($unit['property_id']);
-        } elseif (!empty($tenant['property_id'])) {
-            // Tenant has a property assigned but no unit/lease
-            $propertyModel = new Property();
-            $property = $propertyModel->find($tenant['property_id']);
         }
         $paymentModel = new Payment();
         $rentPayments = $paymentModel->getTenantAllPayments($tenantId);
@@ -49,15 +45,9 @@ class TenantPortalController
         $maintenanceModel = new MaintenanceRequest();
         $maintenanceRequests = $maintenanceModel->getByTenant($tenantId);
         
-        // Fetch active payment methods for the property's owner/manager/agent only
+        // Fetch active payment methods linked to this property only
         $paymentMethodModel = new PaymentMethod();
-        $ownerIds = [];
-        if ($property) {
-            if (!empty($property['owner_id'])) { $ownerIds[] = (int)$property['owner_id']; }
-            if (!empty($property['manager_id'])) { $ownerIds[] = (int)$property['manager_id']; }
-            if (!empty($property['agent_id'])) { $ownerIds[] = (int)$property['agent_id']; }
-        }
-        $paymentMethods = $paymentMethodModel->getActiveForUsers($ownerIds);
+        $paymentMethods = $property ? $paymentMethodModel->getActiveForProperty((int)$property['id']) : [];
         
         // Fetch site logo from settings
         $settingsModel = new Setting();

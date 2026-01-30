@@ -1052,7 +1052,7 @@ class Payment extends Model
                 FROM payments p 
                 JOIN leases l ON p.lease_id = l.id 
                 LEFT JOIN manual_mpesa_payments mmp ON p.id = mmp.payment_id
-                WHERE l.tenant_id = ? AND p.payment_type = 'rent' 
+                WHERE l.tenant_id = ? AND l.status = 'active' AND p.payment_type = 'rent' 
                 ORDER BY p.payment_date DESC";
         $stmt = $this->db->prepare($sql);
         $stmt->execute([$tenantId]);
@@ -1070,11 +1070,16 @@ class Payment extends Model
                 JOIN leases l ON p.lease_id = l.id 
                 LEFT JOIN manual_mpesa_payments mmp ON p.id = mmp.payment_id
                 LEFT JOIN utilities u ON p.utility_id = u.id
-                WHERE l.tenant_id = ? 
+                WHERE l.tenant_id = ? AND l.status = 'active' 
                 ORDER BY p.payment_date DESC";
         $stmt = $this->db->prepare($sql);
         $stmt->execute([$tenantId]);
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+    }
+
+    public function getByTenant($tenantId)
+    {
+        return $this->getTenantAllPayments($tenantId);
     }
 
     public function getTenantOverdueRent($tenantId)

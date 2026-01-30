@@ -853,3 +853,119 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 }); 
+
+// =========================
+// Generic dynamic filters for DataTables across pages
+// Usage examples in HTML:
+// 1) Global search: <input type="text" data-dt-filter="global" data-dt-target="#tableId" placeholder="Search...">
+// 2) Column search: <input type="text" data-dt-filter="column" data-dt-target="#tableId" data-dt-column-index="2" data-dt-match="contains|exact">
+// 3) Attribute filter (row attribute): <select data-dt-filter="attr" data-dt-target="#tableId" data-dt-attr-name="prop-ids" data-dt-attr-mode="contains|equals">...</select>
+//    Rows must have data attributes like: <tr data-prop-ids="1,2,3"> ...
+// =========================
+(function(){
+  // Ensure only registered once
+  if (window.__dtGenericFiltersInitialized) return;
+  window.__dtGenericFiltersInitialized = true;
+
+  // Storage for attribute filters per table
+  const tableAttrFilters = {};
+
+  function getTableEl(target){
+    if (!target) return null;
+    try {
+      return document.querySelector(target);
+    } catch (e) { return null; }
+  }
+
+  function getDtInstance(tableEl){
+    try {
+      if (window.jQuery && jQuery.fn && jQuery.fn.DataTable && jQuery.fn.DataTable.isDataTable(tableEl)) {
+        return jQuery(tableEl).DataTable();
+      }
+      // v2 API may expose DataTable() instance retrieval via tableEl.DataTable
+      if (tableEl && tableEl.DataTable && typeof tableEl.DataTable === 'function') {
+        return tableEl.DataTable();
+      }
+    } catch (e) {}
+    return null;
+  }
+
+  // Attribute-level filter hook (applies to any table that defines filters)
+  function ensureAttrFilterHook(){
+    if (window.__dtAttrFilterHookAdded) return;
+    window.__dtAttrFilterHookAdded = true;
+    try {
+      const hook = function(settings, data, dataIndex){
+        const table = settings.nTable;
+        if (!table || !table.id) return true;
+        const filters = tableAttrFilters[table.id];
+        if (!filters || !filters.length) return true;
+        const row = settings.aoData[dataIndex].nTr;
+        // All filters must match
+        for (let f of filters){
+          const attrVal = (row.getAttribute('data-' + f.name) || '').trim();
+          if (!attrVal && f.value && f.value !== 'all') return false;
+          if (f.mode === 'equals') {
+            if (attrVal !== String(f.value)) return false;
+          } else { // contains
+            const arr = attrVal.split(',').map(s => s.trim()).filter(Boolean);
+            if (f.value && f.value !== 'all' && arr.indexOf(String(f.value)) === -1) return false;
+          }
+        }
+        return true;
+      };
+      if (window.jQuery && jQuery.fn && jQuery.fn.dataTable && jQuery.fn.dataTable.ext && jQuery.fn.dataTable.ext.search) {
+        jQuery.fn.dataTable.ext.search.push(hook);
+      }
+      if (window.DataTable && DataTable.ext && DataTable.ext.search) {
+        DataTable.ext.search.push(hook);
+      }
+    } catch (e) {}
+  }
+
+  document.addEventListener('DOMContentLoaded', function(){
+    ensureAttrFilterHook();
+
+    // Wire up global/column/attr filters
+    const controls = document.querySelectorAll('[data-dt-filter][data-dt-target]');
+    controls.forEach(ctrl => {
+      const target = ctrl.getAttribute('data-dt-target');
+      const tableEl = getTableEl(target);
+      if (!tableEl || !tableEl.id) return;
+      const filterType = ctrl.getAttribute('data-dt-filter');
+
+      const apply = () => {
+        const dt = getDtInstance(tableEl);
+        if (!dt) return;
+        if (filterType === 'global') {
+          dt.search(ctrl.value || '').draw();
+        } else if (filterType === 'column') {
+          const colIdx = parseInt(ctrl.getAttribute('data-dt-column-index') || '0', 10);
+          const match = (ctrl.getAttribute('data-dt-match') || 'contains').toLowerCase();
+          let val = ctrl.value || '';
+          if (match === 'exact' && val) {
+            val = '^' + val.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '$';
+            dt.column(colIdx).search(val, true, false).draw();
+          } else {
+            dt.column(colIdx).search(val).draw();
+          }
+        } else if (filterType === 'attr') {
+          const name = (ctrl.getAttribute('data-dt-attr-name') || '').trim();
+          const mode = (ctrl.getAttribute('data-dt-attr-mode') || 'contains').toLowerCase();
+          if (!name) return;
+          if (!tableAttrFilters[tableEl.id]) tableAttrFilters[tableEl.id] = [];
+          // Replace or add this filter
+          const arr = tableAttrFilters[tableEl.id];
+          const existingIdx = arr.findIndex(f => f.name === name);
+          const value = (ctrl.value || 'all');
+          const filterObj = { name, mode, value };
+          if (existingIdx >= 0) arr[existingIdx] = filterObj; else arr.push(filterObj);
+          dt.draw();
+        }
+      };
+
+      const evt = ctrl.tagName === 'SELECT' ? 'change' : 'input';
+      ctrl.addEventListener(evt, apply);
+    });
+  });
+})();
