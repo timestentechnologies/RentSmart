@@ -1374,7 +1374,6 @@ ob_clean();
         <a href="https://wa.me/254718883983?text=<?= rawurlencode($startMsg) ?>" 
            class="whatsapp-fab d-print-none" target="_blank" rel="noopener">
             <i class="bi bi-whatsapp"></i>
-            <span>WhatsApp Support</span>
         </a>
         <button type="button" class="ai-chat-fab d-print-none" id="aiChatFab" title="AI Assistant">
             <i class="bi bi-robot"></i>
