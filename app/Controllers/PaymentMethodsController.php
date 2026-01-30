@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Models\PaymentMethod;
+use App\Models\Property;
 
 class PaymentMethodsController
 {
@@ -30,9 +31,35 @@ class PaymentMethodsController
                 ? $this->paymentMethod->getAll()
                 : $this->paymentMethod->getByUser($userId);
             
+            // Properties for linking in the UI
+            $propertyModel = new Property();
+            $properties = $isAdmin ? $propertyModel->getAll() : $propertyModel->getAll($userId);
+            
+            // Map linked properties per payment method (by names)
+            $propNamesById = [];
+            foreach (($properties ?? []) as $p) {
+                $propNamesById[(int)$p['id']] = $p['name'] ?? ('Property #' . $p['id']);
+            }
+            $linkedPropertiesByMethod = [];
+            $linkedPropertyIdsByMethod = [];
+            foreach (($paymentMethods ?? []) as $pm) {
+                $ids = $this->paymentMethod->getPropertyIdsForMethod($pm['id']);
+                $names = [];
+                foreach ($ids as $pid) {
+                    if (isset($propNamesById[$pid])) {
+                        $names[] = $propNamesById[$pid];
+                    }
+                }
+                $linkedPropertiesByMethod[$pm['id']] = $names;
+                $linkedPropertyIdsByMethod[$pm['id']] = $ids;
+            }
+            
             echo view('admin/payment_methods', [
                 'title' => 'Payment Methods - RentSmart',
-                'paymentMethods' => $paymentMethods
+                'paymentMethods' => $paymentMethods,
+                'properties' => $properties,
+                'linkedPropertiesByMethod' => $linkedPropertiesByMethod,
+                'linkedPropertyIdsByMethod' => $linkedPropertyIdsByMethod
             ]);
 
         } catch (\Exception $e) {
@@ -96,6 +123,10 @@ class PaymentMethodsController
             ];
 
             $paymentMethodId = $this->paymentMethod->create($data);
+            // Link to properties (if provided)
+            $propertyIds = $_POST['property_ids'] ?? [];
+            if (!is_array($propertyIds)) { $propertyIds = []; }
+            $this->paymentMethod->assignProperties($paymentMethodId, $propertyIds);
 
             if ($isAjax) {
                 header('Content-Type: application/json');
@@ -191,6 +222,10 @@ class PaymentMethodsController
             ];
 
             $this->paymentMethod->update($id, $data);
+            // Update property links
+            $propertyIds = $_POST['property_ids'] ?? [];
+            if (!is_array($propertyIds)) { $propertyIds = []; }
+            $this->paymentMethod->assignProperties($id, $propertyIds);
 
             if ($isAjax) {
                 header('Content-Type: application/json');
@@ -310,10 +345,14 @@ class PaymentMethodsController
                 exit;
             }
 
+            // Include linked properties for the edit form
+            $linkedPropertyIds = $this->paymentMethod->getPropertyIdsForMethod($id);
+
             header('Content-Type: application/json');
             echo json_encode([
                 'success' => true,
-                'payment_method' => $paymentMethod
+                'payment_method' => $paymentMethod,
+                'property_ids' => $linkedPropertyIds
             ]);
             exit;
 

@@ -10,6 +10,17 @@ ob_start();
                     <i class="bi bi-credit-card text-primary me-2"></i>Payment Methods
                 </h1>
                 <div class="d-flex flex-wrap gap-2 align-items-center">
+                    <div class="d-flex align-items-center gap-2">
+                        <label for="pmFilterProperty" class="form-label mb-0 small text-muted">Filter by Property</label>
+                        <select id="pmFilterProperty" class="form-select form-select-sm" style="min-width: 220px;">
+                            <option value="all" selected>All Properties</option>
+                            <?php if (!empty($properties)): ?>
+                                <?php foreach ($properties as $p): ?>
+                                    <option value="<?= (int)$p['id'] ?>"><?= htmlspecialchars($p['name'] ?? ('Property #' . $p['id'])) ?></option>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </select>
+                    </div>
                     <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addPaymentMethodModal">
                         <i class="bi bi-plus-circle me-1"></i>Add Payment Method
                     </button>
@@ -23,12 +34,13 @@ ob_start();
     <!-- Payment Methods Table -->
     <div class="card mt-4">
         <div class="table-responsive">
-            <table class="table table-hover mb-0">
+            <table id="paymentMethodsTable" class="table table-hover mb-0 datatable">
                 <thead class="bg-light">
                     <tr>
                         <th class="text-muted">NAME</th>
                         <th class="text-muted">TYPE</th>
                         <th class="text-muted">DESCRIPTION</th>
+                        <th class="text-muted">LINKED PROPERTIES</th>
                         <th class="text-muted">STATUS</th>
                         <th class="text-muted">CREATED</th>
                         <th class="text-muted">ACTIONS</th>
@@ -37,7 +49,7 @@ ob_start();
                 <tbody>
                     <?php if (empty($paymentMethods)): ?>
                         <tr>
-                            <td colspan="6" class="text-center py-5">
+                            <td colspan="7" class="text-center py-5">
                                 <i class="bi bi-credit-card display-4 text-muted mb-3 d-block"></i>
                                 <h5>No payment methods found</h5>
                                 <p class="text-muted">Add your first payment method to get started</p>
@@ -45,7 +57,7 @@ ob_start();
                         </tr>
                     <?php else: ?>
                         <?php foreach ($paymentMethods as $method): ?>
-                            <tr>
+                            <tr data-prop-ids="<?= htmlspecialchars(implode(',', $linkedPropertyIdsByMethod[$method['id']] ?? [])) ?>">
                                 <td>
                                     <div class="d-flex align-items-center">
                                         <div class="me-2">
@@ -94,6 +106,20 @@ ob_start();
                                             </small>
                                         <?php endif; ?>
                                     <?php endif; ?>
+                                </td>
+                                <td>
+                                    <?php 
+                                    $linked = $linkedPropertiesByMethod[$method['id']] ?? []; 
+                                    if (empty($linked)) {
+                                        echo '<span class="badge bg-secondary">None</span>';
+                                    } else {
+                                        echo '<div class="d-flex flex-wrap gap-1">';
+                                        foreach ($linked as $pname) {
+                                            echo '<span class="badge bg-light text-dark">' . htmlspecialchars($pname) . '</span>';
+                                        }
+                                        echo '</div>';
+                                    }
+                                    ?>
                                 </td>
                                 <td>
                                     <span class="badge bg-<?= $method['is_active'] ? 'success' : 'secondary' ?>">
@@ -219,6 +245,23 @@ ob_start();
                             <label for="add_is_active" class="form-check-label">Active</label>
                         </div>
                     </div>
+                    <div class="mb-3">
+                        <label class="form-label">Link to Properties</label>
+                        <div class="border rounded p-2" style="max-height: 220px; overflow:auto;">
+                            <?php if (!empty($properties)): ?>
+                                <?php foreach ($properties as $p): ?>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="add_property_ids_<?= $p['id'] ?>" name="property_ids[]" value="<?= $p['id'] ?>">
+                                        <label class="form-check-label" for="add_property_ids_<?= $p['id'] ?>">
+                                            <?= htmlspecialchars($p['name'] ?? ('Property #' . $p['id'])) ?>
+                                        </label>
+                                    </div>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <div class="text-muted small">No properties available to link.</div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -323,6 +366,23 @@ ob_start();
                         <div class="form-check">
                             <input type="checkbox" id="edit_is_active" name="is_active" class="form-check-input">
                             <label for="edit_is_active" class="form-check-label">Active</label>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Link to Properties</label>
+                        <div class="border rounded p-2" style="max-height: 220px; overflow:auto;">
+                            <?php if (!empty($properties)): ?>
+                                <?php foreach ($properties as $p): ?>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="edit_property_ids_<?= $p['id'] ?>" name="property_ids[]" value="<?= $p['id'] ?>">
+                                        <label class="form-check-label" for="edit_property_ids_<?= $p['id'] ?>">
+                                            <?= htmlspecialchars($p['name'] ?? ('Property #' . $p['id'])) ?>
+                                        </label>
+                                    </div>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <div class="text-muted small">No properties available to link.</div>
+                            <?php endif; ?>
                         </div>
                     </div>
                 </div>
@@ -506,6 +566,17 @@ function editPaymentMethod(id) {
                 }
             }
             
+            // Pre-select linked properties
+            try {
+                // Uncheck all first
+                document.querySelectorAll('input[id^="edit_property_ids_"]').forEach(cb => cb.checked = false);
+                const linked = Array.isArray(data.property_ids) ? data.property_ids : [];
+                linked.forEach(function(pid){
+                    const el = document.getElementById('edit_property_ids_' + pid);
+                    if (el) el.checked = true;
+                });
+            } catch (e) {}
+            
             const modal = new bootstrap.Modal(document.getElementById('editPaymentMethodModal'));
             modal.show();
         } else {
@@ -539,6 +610,39 @@ function deletePaymentMethod(id) {
         });
     }
 }
+</script>
+
+<script>
+// Payment Methods: property filter integrated with DataTables
+document.addEventListener('DOMContentLoaded', function(){
+    const tableEl = document.getElementById('paymentMethodsTable');
+    const filterEl = document.getElementById('pmFilterProperty');
+    if (!tableEl || !filterEl) return;
+
+    // Custom filter: only apply to this table
+    $.fn.dataTable.ext.search.push(function(settings, data, dataIndex) {
+        if (!settings.nTable || settings.nTable.id !== 'paymentMethodsTable') return true;
+        const selected = filterEl.value || 'all';
+        if (selected === 'all') return true;
+        const row = settings.aoData[dataIndex].nTr;
+        const ids = (row.getAttribute('data-prop-ids') || '').split(',').filter(Boolean);
+        return ids.indexOf(String(selected)) !== -1;
+    });
+
+    // Trigger redraw on selection
+    filterEl.addEventListener('change', function(){
+        try {
+            if ($.fn.DataTable.isDataTable(tableEl)) {
+                $(tableEl).DataTable().draw();
+            } else if (window.DataTable) {
+                // Fallback if not yet initialized
+                new DataTable(tableEl).draw();
+            }
+        } catch (e) {
+            // no-op
+        }
+    });
+});
 </script>
 
 <?php

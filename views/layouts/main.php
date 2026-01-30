@@ -40,8 +40,20 @@ if (!defined('BASE_URL')) {
     }
 }
 
-// Normalize current_uri for sidebar highlighting and routing
-$current_uri = trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
+// Normalize current_uri for sidebar highlighting and routing (strip base path)
+if (function_exists('current_uri')) {
+    $current_uri = trim(current_uri(), '/');
+} else {
+    $current_uri = trim(parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH), '/');
+    $base_path = parse_url(defined('BASE_URL') ? BASE_URL : '', PHP_URL_PATH);
+    if ($base_path && strpos('/' . $current_uri, $base_path) === 0) {
+        $current_uri = trim(substr('/' . $current_uri, strlen($base_path)), '/');
+    }
+}
+// Remove front controller prefix if present (e.g., index.php/route)
+if (strpos($current_uri, 'index.php/') === 0) {
+    $current_uri = substr($current_uri, strlen('index.php/'));
+}
 
 try {
     // Get site settings
@@ -74,6 +86,80 @@ ob_clean();
     <!-- Add BASE_URL to JavaScript -->
     <script>
         window.BASE_URL = '<?= BASE_URL ?>';
+    </script>
+
+    <script>
+    // Persist and focus active sidebar item across refresh
+    document.addEventListener('DOMContentLoaded', function(){
+      try {
+        const currentPath = window.location.pathname.replace(/^\/+/, '');
+        // Save last visited path for sidebar persistence
+        localStorage.setItem('rentsmart:lastPath', currentPath);
+        // Auto-expand any collapsed submenu that contains the active link
+        const activeLink = document.querySelector('.sidebar .nav-link.active');
+        if (activeLink) {
+          const collapse = activeLink.closest('.collapse');
+          if (collapse && !collapse.classList.contains('show')) {
+            collapse.classList.add('show');
+            const toggle = document.querySelector('.sidebar .nav-link.dropdown-toggle[href="#' + collapse.id + '"]');
+            if (toggle) {
+              toggle.setAttribute('aria-expanded', 'true');
+            }
+          }
+        }
+        // Ensure active nav-link is scrolled into view
+        if (activeLink && typeof activeLink.scrollIntoView === 'function') {
+          activeLink.scrollIntoView({ block: 'center' });
+        }
+      } catch (e) {}
+    });
+    </script>
+
+    <script>
+    // Client-side safety net: highlight active sidebar link by URL matching
+    document.addEventListener('DOMContentLoaded', function(){
+      try {
+        const base = '<?= BASE_URL ?>' || '';
+        function normalizePath(p){
+          let out = p || '';
+          // Remove origin if present
+          try { out = new URL(out, window.location.origin).pathname; } catch(e) {}
+          // Strip BASE_URL prefix
+          if (base && out.indexOf(base) === 0) out = out.substring(base.length);
+          // Strip front controller
+          out = out.replace(/^\/index\.php/, '');
+          // Trim leading slashes
+          out = out.replace(/^\/+/, '');
+          return out;
+        }
+        const path = normalizePath(window.location.pathname);
+        const links = document.querySelectorAll('.sidebar .nav-link[href]');
+        let bestMatch = null;
+        let bestLen = -1;
+        links.forEach(a => {
+          const href = a.getAttribute('href') || '';
+          const hp = normalizePath(href);
+          if (!hp) return;
+          // Prefer the longest prefix match
+          if (path === hp || path.indexOf(hp) === 0) {
+            if (hp.length > bestLen) { bestLen = hp.length; bestMatch = a; }
+          }
+        });
+        if (bestMatch) {
+          document.querySelectorAll('.sidebar .nav-link.active').forEach(el => el.classList.remove('active'));
+          bestMatch.classList.add('active');
+          const collapse = bestMatch.closest('.collapse');
+          if (collapse && !collapse.classList.contains('show')) {
+            collapse.classList.add('show');
+            const toggle = document.querySelector('.sidebar .nav-link.dropdown-toggle[href="#' + collapse.id + '"]');
+            if (toggle) toggle.setAttribute('aria-expanded', 'true');
+          }
+          if (typeof bestMatch.scrollIntoView === 'function') {
+            bestMatch.scrollIntoView({ block: 'center' });
+          }
+        }
+      } catch(e) {}
+    });
     </script>
 
     <script>
@@ -347,11 +433,20 @@ ob_clean();
             transition: all 0.2s;
         }
 
-        .nav-link:hover,
-        .nav-link.active {
-            color:rgb(60, 4, 68);
+        .nav-link:hover {
+            color: rgb(60, 4, 68);
             background: white;
         }
+
+        /* Active link styled like a button */
+        .nav-link.active {
+            background: var(--primary-color);
+            color: #ffffff;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.12);
+            border: 1px solid rgba(0,0,0,0.05);
+        }
+        .nav-link.active i { color: #ffffff; }
+        .nav-link.active:hover { color: #ffffff; background: var(--primary-color); }
 
         .nav-link i {
             margin-right: 0.75rem;
@@ -1166,7 +1261,7 @@ ob_clean();
             <ul class="nav flex-column">
                 <!-- Dashboard -->
                 <li class="nav-item">
-                    <a class="nav-link <?= current_uri() === 'dashboard' ? 'active' : '' ?>" href="<?= BASE_URL ?>/dashboard">
+                    <a class="nav-link <?= ($current_uri === 'dashboard') ? 'active' : '' ?>" href="<?= BASE_URL ?>/dashboard">
                         <i class="bi bi-speedometer2 me-2"></i> Dashboard
                     </a>
                 </li>
@@ -1176,7 +1271,7 @@ ob_clean();
                     <small class="nav-header text-uppercase px-3">PROPERTY MANAGEMENT</small>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link <?= str_starts_with(current_uri(), 'properties') ? 'active' : '' ?>" href="<?= BASE_URL ?>/properties">
+                    <a class="nav-link <?= (strpos($current_uri, 'properties') === 0) ? 'active' : '' ?>" href="<?= BASE_URL ?>/properties">
                         <i class="bi bi-building me-2"></i> Properties
                     </a>
                 </li>
@@ -1221,8 +1316,18 @@ ob_clean();
                     <small class="nav-header text-uppercase px-3">FINANCIAL</small>
                 </li>
                 <li class="nav-item">
+                    <a href="<?= BASE_URL ?>/payment-methods" class="nav-link <?= strpos($current_uri, 'payment-methods') === 0 ? 'active' : '' ?>">
+                        <i class="bi bi-credit-card me-2"></i> Payment Methods
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a href="<?= BASE_URL ?>/payments" class="nav-link <?= strpos($current_uri, 'payments') === 0 ? 'active' : '' ?>">
                         <i class="bi bi-cash-stack me-2"></i> Payments
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="<?= BASE_URL ?>/mpesa-verification" class="nav-link <?= strpos($current_uri, 'mpesa-verification') === 0 ? 'active' : '' ?>">
+                        <i class="bi bi-shield-check me-2"></i> M-Pesa Verification
                     </a>
                 </li>
                 <li class="nav-item">
@@ -1230,20 +1335,17 @@ ob_clean();
                         <i class="bi bi-receipt me-2"></i> Expenses
                     </a>
                 </li>
+                <li class="nav-item mt-3">
+                    <small class="nav-header text-uppercase px-3">HR & PAYROLL</small>
+                </li>
                 <li class="nav-item">
                     <a href="<?= BASE_URL ?>/employees" class="nav-link <?= strpos($current_uri, 'employees') === 0 ? 'active' : '' ?>">
                         <i class="bi bi-person-badge me-2"></i> Employees
                     </a>
                 </li>
-                <li class="nav-item">
-                    <a href="<?= BASE_URL ?>/payment-methods" class="nav-link <?= strpos($current_uri, 'payment-methods') === 0 ? 'active' : '' ?>">
-                        <i class="bi bi-credit-card me-2"></i> Payment Methods
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="<?= BASE_URL ?>/mpesa-verification" class="nav-link <?= strpos($current_uri, 'mpesa-verification') === 0 ? 'active' : '' ?>">
-                        <i class="bi bi-shield-check me-2"></i> M-Pesa Verification
-                    </a>
+                
+                <li class="nav-item mt-3">
+                    <small class="nav-header text-uppercase px-3">BILLING & SUBSCRIPTION</small>
                 </li>
                 <li class="nav-item">
                     <a href="<?= BASE_URL ?>/subscription/renew" class="nav-link <?= strpos($current_uri, 'subscription') !== false ? 'active' : '' ?>">
@@ -1259,12 +1361,12 @@ ob_clean();
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="<?= BASE_URL ?>/jiji" class="nav-link <?= str_starts_with(current_uri(), 'jiji') ? 'active' : '' ?>">
+                    <a href="<?= BASE_URL ?>/jiji" class="nav-link <?= (strpos($current_uri, 'jiji') === 0) ? 'active' : '' ?>">
                         <i class="bi bi-megaphone-fill me-2"></i> Post to Jiji
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link dropdown-toggle <?= str_starts_with(current_uri(), 'integrations') ? 'active' : '' ?>" 
+                    <a class="nav-link dropdown-toggle <?= (strpos($current_uri, 'integrations') === 0) ? 'active' : '' ?>" 
                        href="#integrationsSubmenu" 
                        data-bs-toggle="collapse" 
                        role="button" 
@@ -1310,19 +1412,19 @@ ob_clean();
                     <small class="nav-header text-uppercase px-3">ADMINISTRATION</small>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link <?= str_starts_with(current_uri(), 'admin/users') ? 'active' : '' ?>" 
+                    <a class="nav-link <?= (strpos($current_uri, 'admin/users') === 0) ? 'active' : '' ?>" 
                        href="<?= BASE_URL ?>/admin/users">
                         <i class="bi bi-people-fill me-2"></i> Users
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link <?= str_starts_with(current_uri(), 'admin/subscriptions') ? 'active' : '' ?>" 
+                    <a class="nav-link <?= (strpos($current_uri, 'admin/subscriptions') === 0) ? 'active' : '' ?>" 
                        href="<?= BASE_URL ?>/admin/subscriptions">
                         <i class="bi bi-credit-card-2-front me-2"></i> Subscriptions
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link <?= str_starts_with(current_uri(), 'admin/payments') ? 'active' : '' ?>" 
+                    <a class="nav-link <?= (strpos($current_uri, 'admin/payments') === 0) ? 'active' : '' ?>" 
                        href="<?= BASE_URL ?>/admin/payments">
                         <i class="bi bi-cash-coin me-2"></i> Payment History
                     </a>
