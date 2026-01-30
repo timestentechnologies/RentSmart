@@ -402,10 +402,10 @@ class Tenant extends Model
                     LEFT JOIN leases l ON t.id = l.tenant_id AND l.status = 'active'
                     LEFT JOIN units u ON l.unit_id = u.id
                     LEFT JOIN properties p ON u.property_id = p.id
-                    WHERE (p.user_id = ? OR p.caretaker_user_id = ?)
+                    WHERE (p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ?)
                     ORDER BY t.name ASC";
             $stmt = $this->db->prepare($sql);
-            $stmt->execute([$userId, $userId]);
+            $stmt->execute([$userId, $userId, $userId, $userId]);
         }
         
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
@@ -464,12 +464,12 @@ class Tenant extends Model
                         AND pay.status IN ('completed', 'verified')
                         AND MONTH(pay.payment_date) = MONTH(CURRENT_DATE())
                         AND YEAR(pay.payment_date) = YEAR(CURRENT_DATE())
-                    WHERE (p.user_id = ? OR p.caretaker_user_id = ?)
+                    WHERE (p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ?)
                     GROUP BY t.id, l.rent_amount, u.unit_number, p.name
                     HAVING balance_due > 0
                     ORDER BY balance_due DESC";
             $stmt = $this->db->prepare($sql);
-            $stmt->execute([$userId, $userId]);
+            $stmt->execute([$userId, $userId, $userId, $userId]);
         }
         
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);

@@ -284,10 +284,10 @@ class MaintenanceRequest extends Model
                     LEFT JOIN leases l ON u.id = l.unit_id AND l.status = 'active'
                     LEFT JOIN tenants t ON l.tenant_id = t.id
                     WHERE m.created_at BETWEEN ? AND ?
-                    AND p.user_id = ?
+                    AND (p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ?)
                     ORDER BY m.created_at DESC";
             $stmt = $this->db->prepare($sql);
-            $stmt->execute([$startDate, $endDate, $userId]);
+            $stmt->execute([$startDate, $endDate, $userId, $userId, $userId, $userId]);
         }
         
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
@@ -337,11 +337,11 @@ class MaintenanceRequest extends Model
                     LEFT JOIN units u ON p.id = u.property_id
                     LEFT JOIN maintenance_requests m ON u.id = m.unit_id 
                         AND m.created_at BETWEEN ? AND ?
-                    WHERE p.user_id = ?
+                    WHERE (p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ?)
                     GROUP BY p.id, p.name
                     ORDER BY total_cost DESC";
             $stmt = $this->db->prepare($sql);
-            $stmt->execute([$startDate, $endDate, $userId]);
+            $stmt->execute([$startDate, $endDate, $userId, $userId, $userId, $userId]);
         }
         
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);

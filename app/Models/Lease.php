@@ -394,9 +394,9 @@ class Lease extends Model
                     FROM leases l
                     INNER JOIN units u ON l.unit_id = u.id
                     INNER JOIN properties p ON u.property_id = p.id
-                    WHERE p.user_id = ?";
+                    WHERE (p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ?)";
             $stmt = $this->db->prepare($sql);
-            $stmt->execute([$userId]);
+            $stmt->execute([$userId, $userId, $userId, $userId]);
         }
         
         return $stmt->fetch(\PDO::FETCH_ASSOC);
@@ -443,10 +443,10 @@ class Lease extends Model
                     INNER JOIN tenants t ON l.tenant_id = t.id
                     INNER JOIN units u ON l.unit_id = u.id
                     INNER JOIN properties p ON u.property_id = p.id
-                    WHERE p.user_id = ?
+                    WHERE (p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ?)
                     ORDER BY l.start_date DESC";
             $stmt = $this->db->prepare($sql);
-            $stmt->execute([$userId]);
+            $stmt->execute([$userId, $userId, $userId, $userId]);
         }
         
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
