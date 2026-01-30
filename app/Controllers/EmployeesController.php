@@ -109,7 +109,7 @@ class EmployeesController
 
                     // Notify current user (manager/agent/landlord)
                     $to = $_SESSION['user_email'] ?? null;
-                    if ($to) {
+                    if ($to && function_exists('send_email') && function_exists('get_setting')) {
                         $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
                         $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
                         $loginUrl = $scheme . '://' . $host . BASE_URL . '/';
