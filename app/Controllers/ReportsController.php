@@ -41,9 +41,47 @@ class ReportsController
             $_SESSION['flash_type'] = 'danger';
             redirect('/home');
         }
-        
         // Load user data
         $this->currentUser = $this->user->find($_SESSION['user_id']);
+    }
+
+    public function tenantBalances()
+    {
+        try {
+            $userId = $_SESSION['user_id'];
+            $isAdmin = $this->user->isAdmin();
+
+            $period = $_GET['period'] ?? date('Y-m');
+            if (!preg_match('/^\d{4}-\d{2}$/', $period)) {
+                $period = date('Y-m');
+            }
+            [$year, $month] = explode('-', $period);
+            $year = (int)$year; $month = (int)$month;
+
+            $propertyId = isset($_GET['property_id']) && $_GET['property_id'] !== '' ? (int)$_GET['property_id'] : null;
+            $status = $_GET['status'] ?? 'all';
+            $statusFilter = in_array($status, ['paid','due','advance'], true) ? $status : null;
+
+            // Properties for dropdown (respect visibility)
+            $properties = $this->property->getAll($isAdmin ? null : $userId);
+
+            // Compute balances
+            $rows = $this->payment->getMonthlyTenantBalances($year, $month, $propertyId, $statusFilter, $userId);
+
+            echo view('reports/tenant_balances', [
+                'title' => 'Monthly Tenant Balances',
+                'period' => sprintf('%04d-%02d', $year, $month),
+                'selectedPropertyId' => $propertyId,
+                'status' => $statusFilter ? $statusFilter : 'all',
+                'rows' => $rows,
+                'properties' => $properties,
+            ]);
+        } catch (\Throwable $e) {
+            error_log("Error in ReportsController::tenantBalances: " . $e->getMessage());
+            $_SESSION['flash_message'] = 'Error loading tenant balances';
+            $_SESSION['flash_type'] = 'danger';
+            echo view('errors/500', ['title' => '500 Internal Server Error']);
+        }
     }
 
     public function index()

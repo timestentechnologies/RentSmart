@@ -13,13 +13,14 @@ class InquiryController
         try {
             $unitId = $_POST['unit_id'] ?? null;
             $name = trim($_POST['name'] ?? '');
-            $contact = trim($_POST['contact'] ?? '');
+            $phone = trim($_POST['phone'] ?? '');
+            $email = trim($_POST['email'] ?? '');
             $preferredDate = $_POST['preferred_date'] ?? null;
             $message = trim($_POST['message'] ?? '');
 
-            if (!$unitId || !$name || !$contact) {
+            if (!$unitId || !$name || !$phone) {
                 http_response_code(422);
-                echo json_encode(['success' => false, 'message' => 'Name, contact and unit are required']);
+                echo json_encode(['success' => false, 'message' => 'Name, phone and unit are required']);
                 return;
             }
 
@@ -32,6 +33,7 @@ class InquiryController
             }
 
             $inquiry = new Inquiry();
+            $contact = $phone . ($email ? ' | ' . $email : '');
             $inquiryId = $inquiry->create([
                 'unit_id' => $unitId,
                 'property_id' => $unit['property_id'],
