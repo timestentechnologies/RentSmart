@@ -54,6 +54,112 @@ class Payment extends Model
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
 
+    public function getMonthlyTenantBalances($year, $month, $propertyId = null, $statusFilter = null, $userId = null)
+    {
+        $user = new User();
+        $user->find($userId);
+        $isAdmin = $user->isAdmin();
+
+        $ym = sprintf('%04d-%02d', (int)$year, (int)$month);
+        $startOfMonth = $ym . '-01';
+        $endOfMonth = date('Y-m-t', strtotime($startOfMonth));
+
+        $sql = "SELECT l.id AS lease_id, l.tenant_id, l.unit_id, l.rent_amount, l.start_date, l.end_date,
+                       t.name AS tenant_name, u.unit_number, pr.id AS property_id, pr.name AS property_name
+                FROM leases l
+                INNER JOIN tenants t ON l.tenant_id = t.id
+                INNER JOIN units u ON l.unit_id = u.id
+                INNER JOIN properties pr ON u.property_id = pr.id
+                WHERE l.status = 'active'";
+        $params = [];
+        if ($propertyId) {
+            $sql .= " AND pr.id = ?";
+            $params[] = $propertyId;
+        }
+        if (!$isAdmin) {
+            $sql .= " AND (pr.owner_id = ? OR pr.manager_id = ? OR pr.agent_id = ? OR pr.caretaker_user_id = ?)";
+            $params[] = $userId; $params[] = $userId; $params[] = $userId; $params[] = $userId;
+        }
+        $sql .= " ORDER BY pr.name, u.unit_number";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        $leases = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+        $sumPrev = $this->db->prepare("SELECT COALESCE(SUM(amount),0) AS s FROM payments WHERE lease_id = ? AND payment_type = 'rent' AND status IN ('completed','verified') AND payment_date < ?");
+        $sumMonth = $this->db->prepare("SELECT COALESCE(SUM(amount),0) AS s FROM payments WHERE lease_id = ? AND payment_type = 'rent' AND status IN ('completed','verified') AND payment_date BETWEEN ? AND ?");
+
+        $startMonthDt = new \DateTime($startOfMonth);
+        $rows = [];
+        foreach ($leases as $L) {
+            $rent = (float)($L['rent_amount'] ?? 0);
+            if ($rent <= 0) { continue; }
+
+            $leaseStart = new \DateTime($L['start_date']);
+            $leaseEnd = !empty($L['end_date']) ? new \DateTime($L['end_date']) : null;
+            $leaseStartMonth = new \DateTime($leaseStart->format('Y-m-01'));
+            $selectedMonth = $startMonthDt;
+            if ($selectedMonth < $leaseStartMonth) { continue; }
+            if ($leaseEnd) {
+                $leaseEndMonth = new \DateTime($leaseEnd->format('Y-m-01'));
+                if ($selectedMonth > $leaseEndMonth) { continue; }
+            }
+
+            $sumPrev->execute([$L['lease_id'], $startOfMonth]);
+            $paidPrev = (float)($sumPrev->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0);
+            $sumMonth->execute([$L['lease_id'], $startOfMonth, $endOfMonth]);
+            $paidInMonth = (float)($sumMonth->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0);
+
+            $monthsPrev = (int)floor($paidPrev / $rent + 1e-6);
+            $remainderPrev = $paidPrev - $monthsPrev * $rent;
+            // How many months from lease start up to and including the selected month
+            $monthsElapsed = ((int)$selectedMonth->format('Y') - (int)$leaseStartMonth->format('Y')) * 12 + ((int)$selectedMonth->format('n') - (int)$leaseStartMonth->format('n')) + 1;
+            $coveredByPrev = ($monthsPrev >= $monthsElapsed);
+            $applied = $remainderPrev + $paidInMonth;
+            if ($coveredByPrev) {
+                // Previous payments fully cover this month; no balance due
+                $balance = 0.0;
+            } else {
+                $balance = max($rent - $applied, 0.0);
+            }
+
+            $totalToEnd = $paidPrev + $paidInMonth;
+            $monthsPaidTotal = (int)floor($totalToEnd / $rent + 1e-6);
+            $prepaidMonths = max(0, $monthsPaidTotal - $monthsElapsed);
+
+            $status = 'paid';
+            if ($balance > 0.009) {
+                $status = 'due';
+            } else if ($prepaidMonths > 0) {
+                $status = 'advance';
+            }
+
+            if ($statusFilter) {
+                if ($statusFilter === 'due' && $status !== 'due') { continue; }
+                if ($statusFilter === 'paid' && $status !== 'paid') { continue; }
+                if ($statusFilter === 'advance' && $status !== 'advance') { continue; }
+            }
+
+            $rows[] = [
+                'lease_id' => (int)$L['lease_id'],
+                'tenant_id' => (int)$L['tenant_id'],
+                'tenant_name' => $L['tenant_name'],
+                'property_id' => (int)$L['property_id'],
+                'property_name' => $L['property_name'],
+                'unit_number' => $L['unit_number'],
+                'rent_amount' => round($rent, 2),
+                'paid_in_month' => round($paidInMonth, 2),
+                'balance' => round($balance, 2),
+                'status' => $status,
+                'prepaid_months' => $prepaidMonths,
+                'year' => (int)$year,
+                'month' => (int)$month,
+                'month_label' => $startMonthDt->format('F Y'),
+            ];
+        }
+        return $rows;
+    }
+
     public function getById($id, $userId = null)
     {
         $user = new User();

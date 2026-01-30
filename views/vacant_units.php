@@ -191,8 +191,12 @@
                             <input type="text" name="name" class="form-control" required>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Contact (phone or email)</label>
-                            <input type="text" name="contact" class="form-control" required>
+                            <label class="form-label">Phone Number</label>
+                            <input type="tel" name="phone" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Email (optional)</label>
+                            <input type="email" name="email" class="form-control">
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Preferred Date</label>

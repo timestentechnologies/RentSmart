@@ -1310,6 +1310,11 @@ ob_clean();
                         <i class="bi bi-graph-up me-2"></i> Reports
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a href="<?= BASE_URL ?>/reports/tenant-balances" class="nav-link <?= (strpos($current_uri, 'reports/tenant-balances') === 0) ? 'active' : '' ?>">
+                        <i class="bi bi-calendar-check me-2"></i> Monthly Tenant Balances
+                    </a>
+                </li>
                 
                 <!-- FINANCIAL Section -->
                 <li class="nav-item mt-3">
