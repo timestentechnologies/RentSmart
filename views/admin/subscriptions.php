@@ -16,6 +16,69 @@ ob_start();
         </div>
     </div>
 
+<!-- Edit Subscription Modal -->
+<div class="modal fade" id="editSubscriptionModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Subscription</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editSubscriptionForm" action="<?= BASE_URL ?>/admin/subscriptions/update" method="POST">
+                <?= csrf_field() ?>
+                <input type="hidden" name="subscription_id" id="editSubId">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">User</label>
+                        <select class="form-select" name="user_id" id="editSubUser" required>
+                            <?php foreach (($users ?? []) as $u): ?>
+                                <option value="<?= (int)$u['id'] ?>"><?= htmlspecialchars($u['name'] . ' - ' . $u['email']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Plan</label>
+                        <select class="form-select" name="plan_id" id="editSubPlan" required>
+                            <?php foreach ($plans as $plan): ?>
+                                <option value="<?= (int)$plan['id'] ?>"><?= htmlspecialchars($plan['name']) ?> (Ksh<?= number_format($plan['price'], 2) ?>)</option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Status</label>
+                        <select class="form-select" name="status" id="editSubStatus" required>
+                            <option value="active">Active</option>
+                            <option value="trialing">Trialing</option>
+                            <option value="inactive">Inactive</option>
+                            <option value="expired">Expired</option>
+                            <option value="pending_verification">Pending Verification</option>
+                        </select>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label">Period Start</label>
+                            <input type="datetime-local" class="form-control" name="start_at" id="editSubStart" required>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label">Period End</label>
+                            <input type="datetime-local" class="form-control" name="end_at" id="editSubEnd" required>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <label class="form-label">Trial Ends At (optional)</label>
+                        <input type="datetime-local" class="form-control" name="trial_ends_at" id="editSubTrial">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+</div>
+
     <!-- Flash messages are now handled by main layout with SweetAlert2 -->
 
     <!-- Stats Cards -->
@@ -162,6 +225,9 @@ ob_start();
                             <td><?= date('M j, Y', strtotime($sub['current_period_ends_at'])) ?></td>
                             <td>
                                 <div class="btn-group">
+                                    <button class="btn btn-sm btn-outline-secondary" onclick="editSubscription(<?= $sub['id'] ?>)">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
                                     <button class="btn btn-sm btn-outline-primary" onclick="viewSubscription(<?= $sub['id'] ?>)">
                                         <i class="bi bi-eye"></i>
                                     </button>
@@ -287,6 +353,33 @@ function editPlan(planId) {
             document.getElementById('editPlanFeatures').value = plan.features;
             
             new bootstrap.Modal(document.getElementById('editPlanModal')).show();
+        });
+}
+
+function editSubscription(subId) {
+    fetch(`<?= BASE_URL ?>/admin/subscriptions/get-subscription/${subId}`)
+        .then(response => response.json())
+        .then(sub => {
+            document.getElementById('editSubId').value = sub.id;
+            // Preselect user and plan
+            const userSel = document.getElementById('editSubUser');
+            if (userSel) userSel.value = sub.user_id;
+            const planSel = document.getElementById('editSubPlan');
+            if (planSel) planSel.value = sub.plan_id;
+            const statusSel = document.getElementById('editSubStatus');
+            if (statusSel) statusSel.value = sub.status;
+
+            // Convert datetime to input value (YYYY-MM-DDTHH:MM)
+            const toLocal = (s) => {
+                if (!s) return '';
+                const t = s.replace(' ', 'T');
+                return t.length > 16 ? t.slice(0,16) : t;
+            };
+            document.getElementById('editSubStart').value = toLocal(sub.current_period_starts_at);
+            document.getElementById('editSubEnd').value = toLocal(sub.current_period_ends_at);
+            document.getElementById('editSubTrial').value = toLocal(sub.trial_ends_at);
+
+            new bootstrap.Modal(document.getElementById('editSubscriptionModal')).show();
         });
 }
 

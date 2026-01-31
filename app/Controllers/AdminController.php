@@ -29,11 +29,93 @@ class AdminController
             $_SESSION['flash_type'] = 'danger';
             redirect('/home');
         }
-
         if ($_SESSION['user_role'] !== 'admin') {
             $_SESSION['flash_message'] = 'Access denied';
             $_SESSION['flash_type'] = 'danger';
             redirect('/dashboard');
+        }
+    }
+
+    public function updateSubscription()
+    {
+        try {
+            // Verify CSRF token
+            if (!verify_csrf_token()) {
+                $_SESSION['flash_message'] = 'Invalid security token';
+                $_SESSION['flash_type'] = 'danger';
+                redirect('/admin/subscriptions');
+            }
+
+            $subscriptionId = filter_input(INPUT_POST, 'subscription_id', FILTER_SANITIZE_NUMBER_INT);
+            $newUserId = filter_input(INPUT_POST, 'user_id', FILTER_SANITIZE_NUMBER_INT);
+            $planId = filter_input(INPUT_POST, 'plan_id', FILTER_SANITIZE_NUMBER_INT);
+            $status = filter_input(INPUT_POST, 'status', FILTER_SANITIZE_STRING);
+            $startAtRaw = $_POST['start_at'] ?? '';
+            $endAtRaw = $_POST['end_at'] ?? '';
+            $trialEndsRaw = $_POST['trial_ends_at'] ?? '';
+
+            if (!$subscriptionId || !$newUserId || !$planId || !$status || !$startAtRaw || !$endAtRaw) {
+                $_SESSION['flash_message'] = 'All fields are required';
+                $_SESSION['flash_type'] = 'danger';
+                redirect('/admin/subscriptions');
+            }
+
+            // Normalize datetime-local inputs to Y-m-d H:i:s
+            $startAt = date('Y-m-d H:i:s', strtotime(str_replace('T', ' ', $startAtRaw)) ?: time());
+            $endAt = date('Y-m-d H:i:s', strtotime(str_replace('T', ' ', $endAtRaw)) ?: time());
+            $trialEndsAt = $trialEndsRaw ? date('Y-m-d H:i:s', strtotime(str_replace('T', ' ', $trialEndsRaw))) : null;
+
+            // Get plan to ensure plan_type consistency
+            $plan = $this->subscription->getPlanById($planId);
+            if (!$plan) {
+                $_SESSION['flash_message'] = 'Invalid plan selected';
+                $_SESSION['flash_type'] = 'danger';
+                redirect('/admin/subscriptions');
+            }
+
+            // Validate target user
+            $targetUser = $this->user->find($newUserId);
+            if (!$targetUser) {
+                $_SESSION['flash_message'] = 'Selected user was not found';
+                $_SESSION['flash_type'] = 'danger';
+                redirect('/admin/subscriptions');
+            }
+
+            $payload = [
+                'user_id' => $newUserId,
+                'plan_id' => $planId,
+                'plan_type' => $plan['name'],
+                'status' => $status,
+                'current_period_starts_at' => $startAt,
+                'current_period_ends_at' => $endAt,
+                'updated_at' => date('Y-m-d H:i:s')
+            ];
+            if ($trialEndsAt) {
+                $payload['trial_ends_at'] = $trialEndsAt;
+            }
+
+            // Use a transaction to keep subscription and related payments consistent
+            $db = $this->subscription->getDb();
+            $db->beginTransaction();
+            try {
+                $this->subscription->update($subscriptionId, $payload);
+                // Keep existing payments consistent with the reassigned user
+                $stmt = $db->prepare('UPDATE subscription_payments SET user_id = ? WHERE subscription_id = ?');
+                $stmt->execute([$newUserId, $subscriptionId]);
+                $db->commit();
+            } catch (Exception $e) {
+                if ($db->inTransaction()) { $db->rollBack(); }
+                throw $e;
+            }
+
+            $_SESSION['flash_message'] = 'Subscription updated successfully';
+            $_SESSION['flash_type'] = 'success';
+            redirect('/admin/subscriptions');
+        } catch (Exception $e) {
+            error_log($e->getMessage());
+            $_SESSION['flash_message'] = 'Failed to update subscription';
+            $_SESSION['flash_type'] = 'danger';
+            redirect('/admin/subscriptions');
         }
     }
 
@@ -281,11 +363,13 @@ class AdminController
         try {
             $plans = $this->subscription->getAllPlans();
             $subscriptions = $this->subscription->getAllSubscriptions();
+            $users = $this->user->getAllUsers();
             
             echo view('admin/subscriptions', [
                 'title' => 'Subscription Management - RentSmart',
                 'plans' => $plans,
-                'subscriptions' => $subscriptions
+                'subscriptions' => $subscriptions,
+                'users' => $users
             ]);
         } catch (Exception $e) {
             error_log($e->getMessage());
