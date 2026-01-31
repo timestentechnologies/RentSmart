@@ -151,6 +151,7 @@ $routes = [
     'subscription/invoice/(\d+)' => ['controller' => 'SubscriptionController', 'action' => 'invoice'],
     'subscription/invoice/current' => ['controller' => 'SubscriptionController', 'action' => 'invoiceCurrent'],
     'logs' => ['controller' => 'LogsController', 'action' => 'index'],
+    'logs/export/(csv|xlsx)' => ['controller' => 'LogsController', 'action' => 'export'],
     
     // Admin routes
     'admin/users' => ['controller' => 'AdminController', 'action' => 'users'],
@@ -496,7 +497,8 @@ $protectedRoutes = [
     'admin/payments/get/(\d+)',
     'admin/payments/transaction/(\d+)',
     'admin/inquiries',
-    'logs'
+    'logs',
+    'logs/export/(csv|xlsx)'
 ];
 
 // Check if the current route requires authentication

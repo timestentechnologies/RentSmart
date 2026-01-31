@@ -10,6 +10,15 @@ ob_start();
                 </h1>
                 <p class="text-muted mb-0 mt-1">View recent actions across the system<?= !empty($isAdmin) ? ' (Admin)' : '' ?></p>
             </div>
+            <?php $qs = http_build_query($_GET ?? []); ?>
+            <div class="d-flex gap-2 ms-md-auto">
+                <a href="<?= BASE_URL ?>/logs/export/csv<?= $qs ? ('?' . $qs) : '' ?>" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-filetype-csv me-1"></i>Export CSV
+                </a>
+                <a href="<?= BASE_URL ?>/logs/export/xlsx<?= $qs ? ('?' . $qs) : '' ?>" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-file-earmark-excel me-1"></i>Export XLSX
+                </a>
+            </div>
         </div>
     </div>
 
