@@ -1417,6 +1417,12 @@ ob_clean();
                     </a>
                 </li>
 
+                <li class="nav-item">
+                    <a href="<?= BASE_URL ?>/files" class="nav-link <?= strpos($current_uri, 'files') === 0 ? 'active' : '' ?>">
+                        <i class="bi bi-folder2-open me-2"></i> Files
+                    </a>
+                </li>
+
                 <?php if ($_SESSION['user_role'] === 'admin'): ?>
                 <!-- ADMINISTRATION Section -->
                 <li class="nav-item mt-3">
