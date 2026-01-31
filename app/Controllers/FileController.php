@@ -25,6 +25,31 @@ class FileController
         $this->activityLog = new ActivityLog();
     }
 
+    private function ensureUploadsTable()
+    {
+        try {
+            $this->db->query("DESCRIBE file_uploads");
+        } catch (\PDOException $e) {
+            $createSql = "
+                CREATE TABLE IF NOT EXISTS file_uploads (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    filename VARCHAR(255) NOT NULL,
+                    original_name VARCHAR(255) NOT NULL,
+                    file_type VARCHAR(50) NOT NULL,
+                    mime_type VARCHAR(100) NOT NULL,
+                    file_size INT NOT NULL,
+                    entity_type VARCHAR(50) NOT NULL,
+                    entity_id INT NOT NULL,
+                    uploaded_by INT NULL,
+                    upload_path VARCHAR(255) NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    INDEX idx_entity (entity_type, entity_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+            ";
+            $this->db->exec($createSql);
+        }
+    }
+
     public function bulkDelete()
     {
         try {
@@ -118,6 +143,7 @@ class FileController
     public function index()
     {
         try {
+            $this->ensureUploadsTable();
             $q = isset($_GET['q']) ? trim($_GET['q']) : null;
             $entityType = isset($_GET['entity_type']) ? trim($_GET['entity_type']) : null;
             $fileType = isset($_GET['file_type']) ? trim($_GET['file_type']) : null;
@@ -227,6 +253,7 @@ class FileController
     public function search()
     {
         try {
+            $this->ensureUploadsTable();
             $q = isset($_GET['q']) ? trim($_GET['q']) : null;
             $entityType = isset($_GET['entity_type']) ? trim($_GET['entity_type']) : null;
             $fileType = isset($_GET['file_type']) ? trim($_GET['file_type']) : null;
