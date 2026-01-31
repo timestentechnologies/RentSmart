@@ -5,6 +5,7 @@ namespace App\Controllers;
 use App\Models\Property;
 use App\Models\Unit;
 use App\Models\User;
+use App\Models\ActivityLog;
 use App\Models\Employee;
 use App\Database\Connection;
 use App\Helpers\FileUploadHelper;
@@ -15,12 +16,14 @@ class PropertyController
     private $property;
     private $unit;
     private $user;
+    private $activityLog;
 
     public function __construct()
     {
         $this->property = new Property();
         $this->unit = new Unit();
         $this->user = new User();
+        $this->activityLog = new ActivityLog();
         
         // Check if user is logged in
         if (!isset($_SESSION['user_id'])) {
@@ -330,6 +333,10 @@ class PropertyController
             if ($db->inTransaction()) {
                 $db->commit();
             }
+
+            $ip = $_SERVER['REMOTE_ADDR'] ?? null;
+            $agent = $_SERVER['HTTP_USER_AGENT'] ?? null;
+            $this->activityLog->add($_SESSION['user_id'] ?? null, $_SESSION['user_role'] ?? null, 'property.create', 'property', (int)$propertyId, (int)$propertyId, json_encode(['name' => $data['name'] ?? '', 'city' => $data['city'] ?? '']), $ip, $agent);
         } catch (Exception $e) {
             // Rollback transaction on error
             if ($db->inTransaction()) {
@@ -541,6 +548,10 @@ class PropertyController
                     $fileUploadHelper->updateEntityFiles('property', $id);
                 }
 
+                $ip = $_SERVER['REMOTE_ADDR'] ?? null;
+                $agent = $_SERVER['HTTP_USER_AGENT'] ?? null;
+                $this->activityLog->add($_SESSION['user_id'] ?? null, $_SESSION['user_role'] ?? null, 'property.update', 'property', (int)$id, (int)$id, json_encode($data), $ip, $agent);
+
                 $message = 'Property updated successfully';
                 if (!empty($uploadErrors)) {
                     $message .= ' with some file upload issues: ' . implode(', ', $uploadErrors);
@@ -599,6 +610,9 @@ class PropertyController
             }
 
             if ($this->property->delete($id)) {
+                $ip = $_SERVER['REMOTE_ADDR'] ?? null;
+                $agent = $_SERVER['HTTP_USER_AGENT'] ?? null;
+                $this->activityLog->add($_SESSION['user_id'] ?? null, $_SESSION['user_role'] ?? null, 'property.delete', 'property', (int)$id, (int)$id, null, $ip, $agent);
                 $response = [
                     'success' => true,
                     'message' => 'Property deleted successfully'

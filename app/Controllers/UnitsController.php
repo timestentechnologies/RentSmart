@@ -7,6 +7,7 @@ use App\Models\Property;
 use App\Models\User;
 use App\Database\Connection;
 use App\Helpers\FileUploadHelper;
+use App\Models\ActivityLog;
 use Exception;
 
 class UnitsController
@@ -15,6 +16,7 @@ class UnitsController
     private $property;
     private $user;
     private $db;
+    private $activityLog;
 
     public function __construct()
     {
@@ -22,6 +24,7 @@ class UnitsController
         $this->property = new Property();
         $this->user = new User();
         $this->db = Connection::getInstance()->getConnection();
+        $this->activityLog = new ActivityLog();
         
         // Check if user is logged in
         if (!isset($_SESSION['user_id'])) {
@@ -180,6 +183,10 @@ class UnitsController
             if (empty($uploadErrors)) {
                 $fileUploadHelper->updateEntityFiles('unit', $unitId);
             }
+
+            $ip = $_SERVER['REMOTE_ADDR'] ?? null;
+            $agent = $_SERVER['HTTP_USER_AGENT'] ?? null;
+            $this->activityLog->add($_SESSION['user_id'] ?? null, $_SESSION['user_role'] ?? null, 'unit.create', 'unit', (int)$unitId, (int)$data['property_id'], json_encode(['unit_number' => $data['unit_number'], 'rent_amount' => $data['rent_amount']]), $ip, $agent);
 
             $message = 'Unit added successfully';
             if (!empty($uploadErrors)) {
@@ -369,6 +376,10 @@ class UnitsController
                     }
                 }
 
+                $ip = $_SERVER['REMOTE_ADDR'] ?? null;
+                $agent = $_SERVER['HTTP_USER_AGENT'] ?? null;
+                $this->activityLog->add($_SESSION['user_id'] ?? null, $_SESSION['user_role'] ?? null, 'unit.update', 'unit', (int)$id, (int)$unit['property_id'], json_encode($data), $ip, $agent);
+
                 $message = 'Unit updated successfully';
                 if (!empty($uploadErrors)) {
                     $message .= ' with some file upload issues: ' . implode(', ', $uploadErrors);
@@ -430,6 +441,9 @@ class UnitsController
 
             // Delete unit
             if ($this->unit->delete($id)) {
+                $ip = $_SERVER['REMOTE_ADDR'] ?? null;
+                $agent = $_SERVER['HTTP_USER_AGENT'] ?? null;
+                $this->activityLog->add($_SESSION['user_id'] ?? null, $_SESSION['user_role'] ?? null, 'unit.delete', 'unit', (int)$id, (int)$unit['property_id'], null, $ip, $agent);
                 $response = [
                     'success' => true,
                     'message' => 'Unit deleted successfully'
