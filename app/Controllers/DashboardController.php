@@ -41,8 +41,8 @@ class DashboardController
         // Load user data
         $userData = $this->user->find($_SESSION['user_id']);
         $role = strtolower($userData['role']);
-        // Check subscription for non-admin users
-        if ($role !== 'admin' && $role !== 'administrator') {
+        // Check subscription for non-admin users (allow caretakers, same as requireAuth)
+        if (!in_array($role, ['admin', 'administrator', 'caretaker'])) {
             $subscription = $this->subscription->getUserSubscription($_SESSION['user_id']);
             if ($subscription) {
                 $_SESSION['subscription_ends_at'] = $subscription['status'] === 'trialing' 
