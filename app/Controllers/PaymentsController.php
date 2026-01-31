@@ -5,10 +5,12 @@ namespace App\Controllers;
 use App\Models\Payment;
 use App\Models\Tenant;
 use App\Helpers\FileUploadHelper;
+use App\Models\ActivityLog;
 
 class PaymentsController
 {
     private $userId;
+    private $activityLog;
 
     public function __construct()
     {
@@ -22,6 +24,8 @@ class PaymentsController
             header("Location: " . BASE_URL . "/");
             exit;
         }
+
+        $this->activityLog = new ActivityLog();
     }
 
     public function export($format = 'csv')
@@ -173,6 +177,22 @@ class PaymentsController
             }
             fclose($handle);
             $_SESSION['flash_message'] = "Imported {$created} payments";
+            // Activity log: payment.import summary
+            try {
+                $ip = $_SERVER['REMOTE_ADDR'] ?? null;
+                $agent = $_SERVER['HTTP_USER_AGENT'] ?? null;
+                $this->activityLog->add(
+                    $_SESSION['user_id'] ?? null,
+                    $_SESSION['user_role'] ?? null,
+                    'payment.import',
+                    'payment',
+                    null,
+                    null,
+                    json_encode(['created' => (int)$created, 'skipped' => (int)$skipped]),
+                    $ip,
+                    $agent
+                );
+            } catch (\Exception $ex) { error_log('payment.import log failed: ' . $ex->getMessage()); }
             $_SESSION['flash_type'] = 'success';
         } catch (\Exception $e) {
             $_SESSION['flash_message'] = 'Import failed: ' . $e->getMessage();
@@ -295,6 +315,29 @@ class PaymentsController
                     }
                     
                     $successMessages[] = 'Rent payment added successfully!';
+
+                    // Activity log: payment.create (rent)
+                    try {
+                        $ip = $_SERVER['REMOTE_ADDR'] ?? null;
+                        $agent = $_SERVER['HTTP_USER_AGENT'] ?? null;
+                        $p = $paymentModel->getById($paymentId, $this->userId);
+                        $this->activityLog->add(
+                            $_SESSION['user_id'] ?? null,
+                            $_SESSION['user_role'] ?? null,
+                            'payment.create',
+                            'payment',
+                            (int)$paymentId,
+                            isset($p['property_id']) ? (int)$p['property_id'] : null,
+                            json_encode([
+                                'amount' => (float)$rentData['amount'],
+                                'payment_date' => $rentData['payment_date'],
+                                'payment_type' => $rentData['payment_type'],
+                                'payment_method' => $rentData['payment_method']
+                            ]),
+                            $ip,
+                            $agent
+                        );
+                    } catch (\Exception $ex) { error_log('payment.create log failed: ' . $ex->getMessage()); }
 
                     // Send email notifications for rent payment
                     try {
@@ -432,6 +475,29 @@ class PaymentsController
                                     'notes' => 'Utility payment: ' . ($_POST['notes'] ?? '')
                                 ];
                                 $utilityPaymentId = $paymentModel->createUtilityPayment($utilityData);
+                                // Activity log: payment.create (utility split)
+                                try {
+                                    $ip = $_SERVER['REMOTE_ADDR'] ?? null;
+                                    $agent = $_SERVER['HTTP_USER_AGENT'] ?? null;
+                                    $p = $paymentModel->getById($utilityPaymentId, $this->userId);
+                                    $this->activityLog->add(
+                                        $_SESSION['user_id'] ?? null,
+                                        $_SESSION['user_role'] ?? null,
+                                        'payment.create',
+                                        'payment',
+                                        (int)$utilityPaymentId,
+                                        isset($p['property_id']) ? (int)$p['property_id'] : null,
+                                        json_encode([
+                                            'amount' => (float)$amount,
+                                            'payment_date' => $_POST['payment_date'],
+                                            'payment_type' => 'utility',
+                                            'payment_method' => $_POST['payment_method'],
+                                            'utility_id' => (int)$utilityId
+                                        ]),
+                                        $ip,
+                                        $agent
+                                    );
+                                } catch (\Exception $ex) { error_log('payment.create log failed: ' . $ex->getMessage()); }
                                 
                                 // Handle file uploads for utility payment (only for the first one to avoid duplicates)
                                 if ($utilityId === array_key_first($utilityAmounts) && !empty($_FILES['payment_attachments']['name'][0])) {
@@ -460,6 +526,29 @@ class PaymentsController
                                     'notes' => ucfirst($_POST['utility_type']) . ' utility payment: ' . ($_POST['notes'] ?? '')
                                 ];
                                 $utilityPaymentId = $paymentModel->createUtilityPayment($utilityData);
+                                // Activity log: payment.create (utility single)
+                                try {
+                                    $ip = $_SERVER['REMOTE_ADDR'] ?? null;
+                                    $agent = $_SERVER['HTTP_USER_AGENT'] ?? null;
+                                    $p = $paymentModel->getById($utilityPaymentId, $this->userId);
+                                    $this->activityLog->add(
+                                        $_SESSION['user_id'] ?? null,
+                                        $_SESSION['user_role'] ?? null,
+                                        'payment.create',
+                                        'payment',
+                                        (int)$utilityPaymentId,
+                                        isset($p['property_id']) ? (int)$p['property_id'] : null,
+                                        json_encode([
+                                            'amount' => (float)$_POST['utility_amount'],
+                                            'payment_date' => $_POST['payment_date'],
+                                            'payment_type' => 'utility',
+                                            'payment_method' => $_POST['payment_method'],
+                                            'utility_type' => $_POST['utility_type'] ?? null
+                                        ]),
+                                        $ip,
+                                        $agent
+                                    );
+                                } catch (\Exception $ex) { error_log('payment.create log failed: ' . $ex->getMessage()); }
                                 
                                 // Handle file uploads for utility payment
                                 if (!empty($_FILES['payment_attachments']['name'][0])) {
@@ -588,6 +677,25 @@ class PaymentsController
         if (!empty($uploadErrors)) {
             $message .= ' File upload issues: ' . implode(', ', $uploadErrors);
         }
+        // Activity log: payment.update
+        try {
+            if ($success) {
+                $ip = $_SERVER['REMOTE_ADDR'] ?? null;
+                $agent = $_SERVER['HTTP_USER_AGENT'] ?? null;
+                $pPropId = $payment['property_id'] ?? null;
+                $this->activityLog->add(
+                    $_SESSION['user_id'] ?? null,
+                    $_SESSION['user_role'] ?? null,
+                    'payment.update',
+                    'payment',
+                    (int)$id,
+                    $pPropId ? (int)$pPropId : null,
+                    json_encode($data),
+                    $ip,
+                    $agent
+                );
+            }
+        } catch (\Exception $ex) { error_log('payment.update log failed: ' . $ex->getMessage()); }
         
         echo json_encode(['success' => $success, 'message' => $message, 'upload_errors' => $uploadErrors]);
         exit;
@@ -681,6 +789,23 @@ class PaymentsController
             $success = $paymentModel->delete($id);
             
             if ($success) {
+                // Activity log: payment.delete
+                try {
+                    $ip = $_SERVER['REMOTE_ADDR'] ?? null;
+                    $agent = $_SERVER['HTTP_USER_AGENT'] ?? null;
+                    $pPropId = $payment['property_id'] ?? null;
+                    $this->activityLog->add(
+                        $_SESSION['user_id'] ?? null,
+                        $_SESSION['user_role'] ?? null,
+                        'payment.delete',
+                        'payment',
+                        (int)$id,
+                        $pPropId ? (int)$pPropId : null,
+                        null,
+                        $ip,
+                        $agent
+                    );
+                } catch (\Exception $ex) { error_log('payment.delete log failed: ' . $ex->getMessage()); }
                 echo json_encode(['success' => true, 'message' => 'Payment deleted successfully']);
             } else {
                 echo json_encode(['success' => false, 'message' => 'Failed to delete payment']);

@@ -69,4 +69,82 @@ class LogsController
             ]);
         }
     }
+
+    public function export($format = 'csv')
+    {
+        try {
+            $userId = $_SESSION['user_id'];
+            $role = strtolower($_SESSION['user_role'] ?? '');
+
+            // Same filters as index
+            $filters = [];
+            $filters['action'] = isset($_GET['action']) && $_GET['action'] !== '' ? trim($_GET['action']) : null;
+            $filters['entity_type'] = isset($_GET['entity_type']) && $_GET['entity_type'] !== '' ? trim($_GET['entity_type']) : null;
+            $filters['property_id'] = isset($_GET['property_id']) && is_numeric($_GET['property_id']) ? (int)$_GET['property_id'] : null;
+            $filters['start_date'] = isset($_GET['start_date']) && $_GET['start_date'] !== '' ? $_GET['start_date'] . ' 00:00:00' : null;
+            $filters['end_date'] = isset($_GET['end_date']) && $_GET['end_date'] !== '' ? $_GET['end_date'] . ' 23:59:59' : null;
+            if (isset($_GET['user_id']) && is_numeric($_GET['user_id'])) { $filters['user_id'] = (int)$_GET['user_id']; }
+
+            $isAdmin = in_array($role, ['admin','administrator']);
+            if ($isAdmin) {
+                $logs = $this->activityLog->getLogs(array_filter($filters));
+            } else {
+                $logs = $this->activityLog->getLogsForUserScope($userId, array_filter($filters));
+            }
+
+            if ($format === 'csv') {
+                header('Content-Type: text/csv');
+                header('Content-Disposition: attachment; filename="activity_logs.csv"');
+                $out = fopen('php://output', 'w');
+                fputcsv($out, ['Date','User','Email','Role','Action','Entity','Entity ID','Property ID','IP','Details']);
+                foreach ($logs as $l) {
+                    fputcsv($out, [
+                        $l['created_at'] ?? '',
+                        $l['user_name'] ?? 'System',
+                        $l['user_email'] ?? '',
+                        $l['role'] ?? '',
+                        $l['action'] ?? '',
+                        $l['entity_type'] ?? '',
+                        $l['entity_id'] ?? '',
+                        $l['property_id'] ?? '',
+                        $l['ip_address'] ?? '',
+                        $l['details'] ?? ''
+                    ]);
+                }
+                fclose($out);
+                exit;
+            }
+
+            if ($format === 'xlsx') {
+                header('Content-Type: application/vnd.ms-excel');
+                header('Content-Disposition: attachment; filename="activity_logs.xls"');
+                echo "<table border='1'>";
+                echo '<tr><th>Date</th><th>User</th><th>Email</th><th>Role</th><th>Action</th><th>Entity</th><th>Entity ID</th><th>Property ID</th><th>IP</th><th>Details</th></tr>';
+                foreach ($logs as $l) {
+                    echo '<tr>'
+                        .'<td>'.htmlspecialchars($l['created_at'] ?? '').'</td>'
+                        .'<td>'.htmlspecialchars($l['user_name'] ?? 'System').'</td>'
+                        .'<td>'.htmlspecialchars($l['user_email'] ?? '').'</td>'
+                        .'<td>'.htmlspecialchars($l['role'] ?? '').'</td>'
+                        .'<td>'.htmlspecialchars($l['action'] ?? '').'</td>'
+                        .'<td>'.htmlspecialchars($l['entity_type'] ?? '').'</td>'
+                        .'<td>'.htmlspecialchars($l['entity_id'] ?? '').'</td>'
+                        .'<td>'.htmlspecialchars($l['property_id'] ?? '').'</td>'
+                        .'<td>'.htmlspecialchars($l['ip_address'] ?? '').'</td>'
+                        .'<td>'.htmlspecialchars($l['details'] ?? '').'</td>'
+                        .'</tr>';
+                }
+                echo '</table>';
+                exit;
+            }
+
+            http_response_code(400);
+            echo 'Unsupported format';
+        } catch (Exception $e) {
+            error_log('LogsController@export error: ' . $e->getMessage());
+            http_response_code(500);
+            echo 'Export error';
+        }
+        exit;
+    }
 }
