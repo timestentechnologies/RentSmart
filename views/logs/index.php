@@ -12,10 +12,10 @@ ob_start();
             </div>
             <?php $qs = http_build_query($_GET ?? []); ?>
             <div class="d-flex gap-2 ms-md-auto">
-                <a href="<?= BASE_URL ?>/logs/export/csv<?= $qs ? ('?' . $qs) : '' ?>" class="btn btn-outline-secondary btn-sm">
+                <a href="<?= BASE_URL ?>/activity-logs/export/csv<?= $qs ? ('?' . $qs) : '' ?>" class="btn btn-outline-secondary btn-sm">
                     <i class="bi bi-filetype-csv me-1"></i>Export CSV
                 </a>
-                <a href="<?= BASE_URL ?>/logs/export/xlsx<?= $qs ? ('?' . $qs) : '' ?>" class="btn btn-outline-secondary btn-sm">
+                <a href="<?= BASE_URL ?>/activity-logs/export/xlsx<?= $qs ? ('?' . $qs) : '' ?>" class="btn btn-outline-secondary btn-sm">
                     <i class="bi bi-file-earmark-excel me-1"></i>Export XLSX
                 </a>
             </div>
