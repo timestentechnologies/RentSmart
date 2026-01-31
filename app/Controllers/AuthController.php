@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Models\Subscription;
 use App\Models\Setting;
 use App\Models\PasswordReset;
+use App\Models\ActivityLog;
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception as MailException;
 use Exception;
@@ -15,11 +16,13 @@ class AuthController
 {
     private $user;
     private $subscription;
+    private $activityLog;
 
     public function __construct()
     {
         $this->user = new User();
         $this->subscription = new Subscription();
+        $this->activityLog = new ActivityLog();
     }
 
     public function register()
@@ -114,6 +117,23 @@ class AuthController
 
             // Create subscription with Basic plan (id=1)
             $this->subscription->createSubscription($userId, 1);
+
+            // Activity Log: auth.register
+            try {
+                $ip = $_SERVER['REMOTE_ADDR'] ?? null;
+                $agent = $_SERVER['HTTP_USER_AGENT'] ?? null;
+                $this->activityLog->add(
+                    (int)$userId,
+                    strtolower($role),
+                    'auth.register',
+                    'user',
+                    (int)$userId,
+                    null,
+                    json_encode(['name' => $name, 'email' => $email, 'role' => $role]),
+                    $ip,
+                    $agent
+                );
+            } catch (\Exception $ex) { error_log('auth.register log failed: ' . $ex->getMessage()); }
 
             // Send email notifications
             try {
@@ -229,6 +249,22 @@ class AuthController
                 }
                 $_SESSION['flash_message'] = 'Invalid security token';
                 $_SESSION['flash_type'] = 'danger';
+                // Activity Log: auth.login_failed (CSRF)
+                try {
+                    $ip = $_SERVER['REMOTE_ADDR'] ?? null;
+                    $agent = $_SERVER['HTTP_USER_AGENT'] ?? null;
+                    $this->activityLog->add(
+                        null,
+                        null,
+                        'auth.login_failed',
+                        'auth',
+                        null,
+                        null,
+                        json_encode(['reason' => 'csrf_invalid']),
+                        $ip,
+                        $agent
+                    );
+                } catch (\Exception $ex) { error_log('auth.login_failed (csrf) log failed: ' . $ex->getMessage()); }
                 header('Location: ' . BASE_URL . '/');
                 exit;
             }
@@ -267,10 +303,42 @@ class AuthController
                 if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
                     header('Content-Type: application/json');
                     echo json_encode(['success' => false, 'message' => 'Invalid email or password']);
+                    // Activity Log: auth.login_failed (invalid credentials)
+                    try {
+                        $ip = $_SERVER['REMOTE_ADDR'] ?? null;
+                        $agent = $_SERVER['HTTP_USER_AGENT'] ?? null;
+                        $this->activityLog->add(
+                            null,
+                            null,
+                            'auth.login_failed',
+                            'auth',
+                            null,
+                            null,
+                            json_encode(['reason' => 'invalid_credentials', 'identifier' => $emailOrPhone]),
+                            $ip,
+                            $agent
+                        );
+                    } catch (\Exception $ex) { error_log('auth.login_failed log failed: ' . $ex->getMessage()); }
                     exit;
                 }
                 $_SESSION['flash_message'] = 'Invalid email or password';
                 $_SESSION['flash_type'] = 'danger';
+                // Activity Log: auth.login_failed (invalid credentials)
+                try {
+                    $ip = $_SERVER['REMOTE_ADDR'] ?? null;
+                    $agent = $_SERVER['HTTP_USER_AGENT'] ?? null;
+                    $this->activityLog->add(
+                        null,
+                        null,
+                        'auth.login_failed',
+                        'auth',
+                        null,
+                        null,
+                        json_encode(['reason' => 'invalid_credentials', 'identifier' => $emailOrPhone]),
+                        $ip,
+                        $agent
+                    );
+                } catch (\Exception $ex) { error_log('auth.login_failed log failed: ' . $ex->getMessage()); }
                 header('Location: ' . BASE_URL . '/');
                 exit;
             }
@@ -305,6 +373,23 @@ class AuthController
             $_SESSION['user_email'] = $user['email'];
             $_SESSION['user_role'] = strtolower($user['role']);
             $_SESSION['is_admin'] = ($user['role'] === 'admin' || $user['role'] === 'administrator');
+
+            // Activity Log: auth.login
+            try {
+                $ip = $_SERVER['REMOTE_ADDR'] ?? null;
+                $agent = $_SERVER['HTTP_USER_AGENT'] ?? null;
+                $this->activityLog->add(
+                    (int)$user['id'],
+                    strtolower($user['role']),
+                    'auth.login',
+                    'user',
+                    (int)$user['id'],
+                    null,
+                    json_encode(['email' => $user['email'] ?? null]),
+                    $ip,
+                    $agent
+                );
+            } catch (\Exception $ex) { error_log('auth.login log failed: ' . $ex->getMessage()); }
 
             if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
                 header('Content-Type: application/json');
@@ -519,6 +604,26 @@ class AuthController
     public function logout()
     {
         try {
+            // Activity Log: auth.logout (log before destroying session)
+            try {
+                $uid = $_SESSION['user_id'] ?? null;
+                $role = $_SESSION['user_role'] ?? null;
+                if ($uid) {
+                    $ip = $_SERVER['REMOTE_ADDR'] ?? null;
+                    $agent = $_SERVER['HTTP_USER_AGENT'] ?? null;
+                    $this->activityLog->add(
+                        (int)$uid,
+                        $role,
+                        'auth.logout',
+                        'user',
+                        (int)$uid,
+                        null,
+                        null,
+                        $ip,
+                        $agent
+                    );
+                }
+            } catch (\Exception $ex) { error_log('auth.logout log failed: ' . $ex->getMessage()); }
             // Clear all session variables
             session_unset();
             

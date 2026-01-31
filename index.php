@@ -514,6 +514,32 @@ if ($requiresAuth) {
     requireAuth();
 }
 
+// Log page views for authenticated users (GET requests)
+try {
+    if (isset($_SESSION['user_id']) && $_SERVER['REQUEST_METHOD'] === 'GET') {
+        $activityLog = new \App\Models\ActivityLog();
+        $ip = $_SERVER['REMOTE_ADDR'] ?? null;
+        $agent = $_SERVER['HTTP_USER_AGENT'] ?? null;
+        $details = [
+            'uri' => $uri,
+            'method' => $method,
+            'query' => $_GET ?? [],
+            'referer' => $_SERVER['HTTP_REFERER'] ?? null
+        ];
+        $activityLog->add(
+            $_SESSION['user_id'],
+            $_SESSION['user_role'] ?? null,
+            'page.view',
+            'page',
+            null,
+            null,
+            json_encode($details),
+            $ip,
+            $agent
+        );
+    }
+} catch (Exception $e) { error_log('page.view log failed: ' . $e->getMessage()); }
+
 try {
     // Add debug logging for routing analysis
     error_log("DEBUG: REQUEST_URI = " . $_SERVER['REQUEST_URI']);
