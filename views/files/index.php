@@ -25,7 +25,7 @@ ob_start();
 
                         <div>
                             <label class="form-label">Entity Type</label>
-                            <select id="upload_entity_type" name="entity_type" class="form-select" required>
+                            <select name="entity_type" class="form-select" required>
                                 <option value="">Select entity</option>
                                 <option value="property">Property</option>
                                 <option value="unit">Unit</option>
@@ -35,11 +35,9 @@ ob_start();
                         </div>
 
                         <div>
-                            <label class="form-label">Entity</label>
-                            <input type="hidden" id="upload_entity_id" name="entity_id" required>
-                            <input type="text" id="upload_entity_search" class="form-control" placeholder="Type to search..." list="entitySuggestions" autocomplete="off">
-                            <datalist id="entitySuggestions"></datalist>
-                            <div class="form-text">Start typing to search and select the entity you want to attach files to.</div>
+                            <label class="form-label">Entity ID</label>
+                            <input type="number" name="entity_id" class="form-control" placeholder="Enter entity ID" required>
+                            <div class="form-text">Enter the ID of the selected entity.</div>
                         </div>
 
                         <div>
@@ -70,14 +68,7 @@ ob_start();
         <div class="col-12 col-lg-8">
             <div class="card mb-3">
                 <div class="card-header bg-light fw-semibold">
-                    <div class="d-flex align-items-center justify-content-between">
-                        <span><i class="bi bi-funnel me-2"></i>Search Filters</span>
-                        <div class="d-flex gap-2">
-                            <button id="btnBulkDelete" type="button" class="btn btn-sm btn-outline-danger" disabled>
-                                <i class="bi bi-trash me-1"></i>Bulk Delete
-                            </button>
-                        </div>
-                    </div>
+                    <i class="bi bi-funnel me-2"></i>Search Filters
                 </div>
                 <div class="card-body">
                     <form id="fileFilters" class="row g-3 align-items-end">
@@ -87,7 +78,7 @@ ob_start();
                         </div>
                         <div class="col-6 col-md-3">
                             <label class="form-label">Entity</label>
-                            <select id="filter_entity_type" class="form-select">
+                            <select id="entity_type" class="form-select">
                                 <option value="">All</option>
                                 <option value="property">Property</option>
                                 <option value="unit">Unit</option>
@@ -97,7 +88,7 @@ ob_start();
                         </div>
                         <div class="col-6 col-md-3">
                             <label class="form-label">Category</label>
-                            <select id="filter_file_type" class="form-select">
+                            <select id="file_type" class="form-select">
                                 <option value="">All</option>
                                 <option value="attachment">Attachment</option>
                                 <option value="image">Image</option>
@@ -106,11 +97,11 @@ ob_start();
                         </div>
                         <div class="col-6 col-md-3">
                             <label class="form-label">From</label>
-                            <input type="date" id="filter_date_from" class="form-control">
+                            <input type="date" id="date_from" class="form-control">
                         </div>
                         <div class="col-6 col-md-3">
                             <label class="form-label">To</label>
-                            <input type="date" id="filter_date_to" class="form-control">
+                            <input type="date" id="date_to" class="form-control">
                         </div>
                         <div class="col-12 col-md-3">
                             <button id="applyFilters" type="button" class="btn btn-outline-primary w-100">
@@ -132,7 +123,6 @@ ob_start();
                         <table id="filesTable" class="table table-striped table-hover align-middle">
                             <thead>
                                 <tr>
-                                    <th style="width:36px;"><input type="checkbox" id="chkAll"></th>
                                     <th>Date</th>
                                     <th>File Name</th>
                                     <th>Type</th>
@@ -152,24 +142,6 @@ ob_start();
     </div>
 </div>
 
-<!-- Preview Modal -->
-<div class="modal fade" id="filePreviewModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-xl modal-dialog-scrollable">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title"><i class="bi bi-eye me-2"></i>Preview</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <div id="previewContainer" class="ratio ratio-16x9 bg-light d-flex align-items-center justify-content-center" style="min-height:360px;"></div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-      </div>
-    </div>
-  </div>
-  </div>
-
 <script>
 (function(){
     function bytesToSize(bytes){
@@ -188,22 +160,19 @@ ob_start();
             processing: true,
             serverSide: false,
             searching: false,
-            order: [[1, 'desc']],
+            order: [[0, 'desc']],
             ajax: {
                 url: '<?= BASE_URL ?>/files/search',
                 data: function(d){
                     d.q = document.getElementById('q').value.trim();
-                    d.entity_type = document.getElementById('filter_entity_type').value;
-                    d.file_type = document.getElementById('filter_file_type').value;
-                    d.date_from = document.getElementById('filter_date_from').value;
-                    d.date_to = document.getElementById('filter_date_to').value;
+                    d.entity_type = document.getElementById('entity_type').value;
+                    d.file_type = document.getElementById('file_type').value;
+                    d.date_from = document.getElementById('date_from').value;
+                    d.date_to = document.getElementById('date_to').value;
                 },
                 dataSrc: function(json){ return json.data || []; }
             },
             columns: [
-                { data: null, orderable:false, render: function(row){
-                    return '<input type="checkbox" name="file_select" value="'+row.id+'" data-id="'+row.id+'">';
-                }},
                 { data: 'created_at', render: function(v){ return v ? v : ''; } },
                 { data: null, render: function(row){
                     const name = row.original_name || row.filename || '';
@@ -223,10 +192,9 @@ ob_start();
                 }},
                 { data: null, orderable: false, render: function(row){
                     const url = (row.url) ? row.url : ('<?= BASE_URL ?>/public/' + (row.upload_path || ''));
-                    const viewBtn = '<a href="'+url+'" target="_blank" class="btn btn-sm btn-outline-secondary me-1" title="Open in new tab"><i class="bi bi-box-arrow-up-right"></i></a>';
-                    const previewBtn = '<button type="button" class="btn btn-sm btn-outline-primary me-1 btn-preview-file" data-url="'+url+'" data-mime="'+(row.mime_type||'')+'" title="Preview"><i class="bi bi-eye"></i></button>';
+                    const viewBtn = '<a href="'+url+'" target="_blank" class="btn btn-sm btn-outline-secondary me-1"><i class="bi bi-box-arrow-up-right"></i></a>';
                     const delBtn = '<button type="button" class="btn btn-sm btn-outline-danger btn-delete-file" data-id="'+row.id+'" title="Delete"><i class="bi bi-trash"></i></button>';
-                    return previewBtn + viewBtn + delBtn;
+                    return viewBtn + delBtn;
                 }}
             ]
         });
@@ -237,17 +205,17 @@ ob_start();
     document.getElementById('applyFilters').addEventListener('click', function(){ dt ? dt.ajax.reload() : loadTable(); });
     document.getElementById('clearFilters').addEventListener('click', function(){
         document.getElementById('q').value='';
-        document.getElementById('filter_entity_type').value='';
-        document.getElementById('filter_file_type').value='';
-        document.getElementById('filter_date_from').value='';
-        document.getElementById('filter_date_to').value='';
+        document.getElementById('entity_type').value='';
+        document.getElementById('file_type').value='';
+        document.getElementById('date_from').value='';
+        document.getElementById('date_to').value='';
         dt ? dt.ajax.reload() : loadTable();
     });
     document.getElementById('q').addEventListener('keyup', debounce(function(){ dt ? dt.ajax.reload() : loadTable(); }, 400));
-    document.getElementById('filter_entity_type').addEventListener('change', function(){ dt ? dt.ajax.reload() : loadTable(); });
-    document.getElementById('filter_file_type').addEventListener('change', function(){ dt ? dt.ajax.reload() : loadTable(); });
-    document.getElementById('filter_date_from').addEventListener('change', function(){ dt ? dt.ajax.reload() : loadTable(); });
-    document.getElementById('filter_date_to').addEventListener('change', function(){ dt ? dt.ajax.reload() : loadTable(); });
+    document.getElementById('entity_type').addEventListener('change', function(){ dt ? dt.ajax.reload() : loadTable(); });
+    document.getElementById('file_type').addEventListener('change', function(){ dt ? dt.ajax.reload() : loadTable(); });
+    document.getElementById('date_from').addEventListener('change', function(){ dt ? dt.ajax.reload() : loadTable(); });
+    document.getElementById('date_to').addEventListener('change', function(){ dt ? dt.ajax.reload() : loadTable(); });
 
     // Delete handler
     $(document).on('click', '.btn-delete-file', function(){
@@ -285,81 +253,6 @@ ob_start();
 
     // initial load
     loadTable();
-
-    // Select all and bulk delete controls
-    $('#filesTable').on('change', 'input[name="file_select"]', function(){
-        const anyChecked = $('input[name="file_select"]:checked').length > 0;
-        document.getElementById('btnBulkDelete').disabled = !anyChecked;
-    });
-    $('#chkAll').on('change', function(){
-        const checked = this.checked;
-        $('input[name="file_select"]').prop('checked', checked).trigger('change');
-    });
-    document.getElementById('btnBulkDelete').addEventListener('click', function(){
-        const ids = $('input[name="file_select"]:checked').map(function(){ return this.getAttribute('data-id'); }).get();
-        if (!ids.length) return;
-        const proceed = ()=>{
-            fetch('<?= BASE_URL ?>/files/bulk-delete', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-                body: JSON.stringify({ ids })
-            }).then(r=>r.json()).then(res=>{
-                if (res.success){ if (window.Swal) Swal.fire('Deleted', (res.deleted||0)+' deleted'+(res.failed? (', '+res.failed+' failed') : ''), 'success'); if (dt) dt.ajax.reload(); }
-                else { if (window.Swal) Swal.fire('Error', res.message||'Bulk delete failed', 'error'); }
-            }).catch(()=>{ if (window.Swal) Swal.fire('Error','Bulk delete failed','error'); });
-        };
-        if (window.Swal){
-            Swal.fire({title:'Delete selected files?', text:'This cannot be undone.', icon:'warning', showCancelButton:true, confirmButtonText:'Delete', confirmButtonColor:'#d33'}).then(r=>{ if (r.isConfirmed) proceed(); });
-        } else { if (confirm('Delete selected files?')) proceed(); }
-    });
-
-    // Preview handler
-    $(document).on('click', '.btn-preview-file', function(){
-        const url = this.getAttribute('data-url');
-        const mime = (this.getAttribute('data-mime')||'').toLowerCase();
-        const cont = document.getElementById('previewContainer');
-        cont.innerHTML = '';
-        if (mime.startsWith('image/')) {
-            cont.innerHTML = '<img src="'+url+'" class="img-fluid" style="max-height:80vh;object-fit:contain;">';
-        } else if (mime === 'application/pdf' || url.toLowerCase().endsWith('.pdf')) {
-            cont.innerHTML = '<embed src="'+url+'" type="application/pdf" style="width:100%;height:80vh;" />';
-        } else {
-            cont.innerHTML = '<div class="text-center text-muted">Preview not available. <a href="'+url+'" target="_blank">Open in new tab</a></div>';
-        }
-        const modal = new bootstrap.Modal(document.getElementById('filePreviewModal'));
-        modal.show();
-    });
-
-    // Upload entity autocomplete
-    const uploadEntityType = document.getElementById('upload_entity_type');
-    const uploadEntitySearch = document.getElementById('upload_entity_search');
-    const uploadEntityId = document.getElementById('upload_entity_id');
-    let lastTerm = '';
-    function fetchEntities(term){
-        const type = uploadEntityType.value;
-        if (!type || term.length < 2) { return; }
-        const url = '<?= BASE_URL ?>/files/entities?entity_type='+encodeURIComponent(type)+'&term='+encodeURIComponent(term);
-        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }})
-            .then(r=>r.json())
-            .then(data=>{
-                const list = document.getElementById('entitySuggestions');
-                list.innerHTML='';
-                (data.results||[]).forEach(it=>{
-                    const opt = document.createElement('option');
-                    opt.value = it.text + ' [ID:'+it.id+']';
-                    list.appendChild(opt);
-                });
-            }).catch(()=>{});
-    }
-    uploadEntitySearch.addEventListener('input', debounce(function(){
-        const v = uploadEntitySearch.value.trim();
-        if (v !== lastTerm) { lastTerm = v; fetchEntities(v); }
-        const m = v.match(/\[ID:(\d+)\]$/);
-        if (m) { uploadEntityId.value = m[1]; }
-    }, 300));
-    uploadEntityType.addEventListener('change', function(){
-        uploadEntitySearch.value=''; uploadEntityId.value=''; document.getElementById('entitySuggestions').innerHTML='';
-    });
 })();
 </script>
 <?php
