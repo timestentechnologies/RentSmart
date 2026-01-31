@@ -6,6 +6,7 @@ use App\Models\User;
 use App\Models\Subscription;
 use App\Models\Payment;
 use App\Models\MpesaTransaction;
+use App\Models\ActivityLog;
 use Exception;
 use DateTime;
 
@@ -15,6 +16,7 @@ class AdminController
     private $subscription;
     private $payment;
     private $mpesaTransaction;
+    private $activityLog;
 
     public function __construct()
     {
@@ -22,6 +24,7 @@ class AdminController
         $this->subscription = new Subscription();
         $this->payment = new Payment();
         $this->mpesaTransaction = new MpesaTransaction();
+        $this->activityLog = new ActivityLog();
 
         // Check if user is logged in and is admin
         if (!isset($_SESSION['user_id'])) {
@@ -98,6 +101,7 @@ class AdminController
             $db = $this->subscription->getDb();
             $db->beginTransaction();
             try {
+                $before = $this->subscription->find($subscriptionId) ?: [];
                 $this->subscription->update($subscriptionId, $payload);
                 // Keep existing payments consistent with the reassigned user
                 $stmt = $db->prepare('UPDATE subscription_payments SET user_id = ? WHERE subscription_id = ?');
@@ -107,6 +111,20 @@ class AdminController
                 if ($db->inTransaction()) { $db->rollBack(); }
                 throw $e;
             }
+
+            $changes = [];
+            if (!empty($before)) {
+                foreach (['user_id','plan_id','plan_type','status','current_period_starts_at','current_period_ends_at','trial_ends_at'] as $k) {
+                    $beforeVal = $before[$k] ?? null;
+                    $afterVal = $payload[$k] ?? ($k === 'trial_ends_at' ? ($trialEndsAt ?? null) : null);
+                    if ($beforeVal != $afterVal) {
+                        $changes[$k] = [$beforeVal, $afterVal];
+                    }
+                }
+            }
+            $ip = $_SERVER['REMOTE_ADDR'] ?? null;
+            $agent = $_SERVER['HTTP_USER_AGENT'] ?? null;
+            $this->activityLog->add($_SESSION['user_id'] ?? null, $_SESSION['user_role'] ?? null, 'subscription.update', 'subscription', (int)$subscriptionId, null, json_encode(['changes' => $changes]), $ip, $agent);
 
             $_SESSION['flash_message'] = 'Subscription updated successfully';
             $_SESSION['flash_type'] = 'success';
@@ -183,12 +201,16 @@ class AdminController
             }
 
             // Create user
-            $this->user->createUser([
+            $newId = $this->user->createUser([
                 'name' => $name,
                 'email' => $email,
                 'password' => $password,
                 'role' => $role
             ]);
+
+            $ip = $_SERVER['REMOTE_ADDR'] ?? null;
+            $agent = $_SERVER['HTTP_USER_AGENT'] ?? null;
+            $this->activityLog->add($_SESSION['user_id'] ?? null, $_SESSION['user_role'] ?? null, 'user.create', 'user', (int)$newId, null, json_encode(['name' => $name, 'email' => $email, 'role' => $role]), $ip, $agent);
 
             $_SESSION['flash_message'] = 'User created successfully';
             $_SESSION['flash_type'] = 'success';
@@ -235,6 +257,9 @@ class AdminController
             }
 
             $this->user->update($userId, $data);
+            $ip = $_SERVER['REMOTE_ADDR'] ?? null;
+            $agent = $_SERVER['HTTP_USER_AGENT'] ?? null;
+            $this->activityLog->add($_SESSION['user_id'] ?? null, $_SESSION['user_role'] ?? null, 'user.update', 'user', (int)$userId, null, json_encode($data), $ip, $agent);
 
             $_SESSION['flash_message'] = 'User updated successfully';
             $_SESSION['flash_type'] = 'success';
@@ -335,6 +360,10 @@ class AdminController
                 $db->commit();
                 error_log("Transaction committed successfully");
                 
+                $ip = $_SERVER['REMOTE_ADDR'] ?? null;
+                $agent = $_SERVER['HTTP_USER_AGENT'] ?? null;
+                $this->activityLog->add($_SESSION['user_id'] ?? null, $_SESSION['user_role'] ?? null, 'user.delete', 'user', (int)$id, null, null, $ip, $agent);
+
                 echo json_encode(['success' => true, 'message' => 'User deleted successfully']);
             } catch (\Exception $e) {
                 // Rollback on error
@@ -427,6 +456,10 @@ class AdminController
                 'features' => $features
             ]);
 
+            $ip = $_SERVER['REMOTE_ADDR'] ?? null;
+            $agent = $_SERVER['HTTP_USER_AGENT'] ?? null;
+            $this->activityLog->add($_SESSION['user_id'] ?? null, $_SESSION['user_role'] ?? null, 'plan.update', 'plan', (int)$planId, null, json_encode(['name' => $name, 'price' => $price]), $ip, $agent);
+
             $_SESSION['flash_message'] = 'Plan updated successfully';
             $_SESSION['flash_type'] = 'success';
             redirect('/admin/subscriptions');
@@ -461,6 +494,10 @@ class AdminController
 
             $endDate = (new DateTime($subscription['current_period_ends_at']))->modify("+{$days} days");
             $this->subscription->updateSubscriptionStatus($subscription['user_id'], 'active', $endDate->format('Y-m-d H:i:s'));
+
+            $ip = $_SERVER['REMOTE_ADDR'] ?? null;
+            $agent = $_SERVER['HTTP_USER_AGENT'] ?? null;
+            $this->activityLog->add($_SESSION['user_id'] ?? null, $_SESSION['user_role'] ?? null, 'subscription.extend', 'subscription', (int)$id, null, json_encode(['days' => $days, 'new_expiry' => $endDate->format('Y-m-d H:i:s')]), $ip, $agent);
 
             echo json_encode(['success' => true, 'new_expiry' => $endDate->format('Y-m-d H:i:s')]);
         } catch (Exception $e) {
@@ -637,6 +674,10 @@ class AdminController
             }
 
             $db->commit();
+
+            $ip = $_SERVER['REMOTE_ADDR'] ?? null;
+            $agent = $_SERVER['HTTP_USER_AGENT'] ?? null;
+            $this->activityLog->add($_SESSION['user_id'] ?? null, $_SESSION['user_role'] ?? null, 'manual_mpesa.verify', 'subscription_payment', (int)$paymentId, null, json_encode(['manual_id' => (int)$manualMpesaId, 'action' => $action, 'new_status' => $newPaymentStatus]), $ip, $agent);
 
             echo json_encode([
                 'success' => true,

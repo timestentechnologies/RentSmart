@@ -1411,6 +1411,12 @@ ob_clean();
                 
                 
 
+                <li class="nav-item">
+                    <a href="<?= BASE_URL ?>/logs" class="nav-link <?= strpos($current_uri, 'logs') === 0 ? 'active' : '' ?>">
+                        <i class="bi bi-activity me-2"></i> Activity Logs
+                    </a>
+                </li>
+
                 <?php if ($_SESSION['user_role'] === 'admin'): ?>
                 <!-- ADMINISTRATION Section -->
                 <li class="nav-item mt-3">
