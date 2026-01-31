@@ -233,6 +233,8 @@ $routes = [
     'files' => ['controller' => 'FileController', 'action' => 'index'],
     'files/upload' => ['controller' => 'FileController', 'action' => 'upload'],
     'files/search' => ['controller' => 'FileController', 'action' => 'search'],
+    'files/entities' => ['controller' => 'FileController', 'action' => 'findEntities'],
+    'files/bulk-delete' => ['controller' => 'FileController', 'action' => 'bulkDelete'],
     'files/delete/(\d+)' => ['controller' => 'FileController', 'action' => 'delete'],
     // Expenses routes
     'expenses' => ['controller' => 'ExpensesController', 'action' => 'index'],
@@ -426,6 +428,8 @@ $protectedRoutes = [
     'files',
     'files/upload',
     'files/search',
+    'files/entities',
+    'files/bulk-delete',
     'files/delete/(\d+)',
     'reports',
     'reports/tenant-balances',
