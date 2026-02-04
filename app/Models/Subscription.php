@@ -219,7 +219,10 @@ class Subscription extends Model
                 sp.name as plan_name,
                 sp.price as plan_price,
                 (SELECT COUNT(*) FROM subscription_payments WHERE subscription_id = s.id) as payment_count,
-                (SELECT COUNT(*) FROM properties p WHERE p.user_id = s.user_id) as property_count
+                (SELECT COUNT(*) FROM properties p 
+                   WHERE p.owner_id = s.user_id 
+                      OR p.manager_id = s.user_id 
+                      OR p.agent_id = s.user_id) as property_count
                 FROM subscriptions s
                 LEFT JOIN users u ON s.user_id = u.id
                 LEFT JOIN subscription_plans sp ON s.plan_type = sp.name

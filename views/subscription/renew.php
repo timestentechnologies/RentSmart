@@ -124,7 +124,8 @@ ob_start();
                     <div class="card-body">
                         <input type="radio" name="plan_id" value="<?= $plan['id'] ?>" class="plan-radio" required>
                         <h5 class="card-title"><?= $plan['name'] ?></h5>
-                        <h3 class="text-primary">Ksh<?= number_format($plan['price'], 2) ?>/month</h3>
+                        <?php $isEnterprise = isset($plan['name']) && strtolower($plan['name']) === 'enterprise'; ?>
+                        <h3 class="text-primary"><?= $isEnterprise ? 'Custom Pricing' : 'Ksh' . number_format($plan['price'], 2) . '/month' ?></h3>
                         <p class="text-muted"><?= $plan['description'] ?></p>
                         <ul class="list-unstyled">
                             <?php foreach (explode("\n", $plan['features']) as $feature): ?>
