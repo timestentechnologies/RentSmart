@@ -264,6 +264,20 @@ ob_start();
                         <label class="form-label">Price</label>
                         <input type="number" class="form-control" name="price" id="editPlanPrice" step="0.01" required>
                     </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Property Limit</label>
+                                <input type="number" class="form-control" name="property_limit" id="editPlanPropertyLimit" placeholder="Unlimited if blank or 0" min="0">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label class="form-label">Unit Limit</label>
+                                <input type="number" class="form-control" name="unit_limit" id="editPlanUnitLimit" placeholder="Unlimited if blank or 0" min="0">
+                            </div>
+                        </div>
+                    </div>
                     <div class="mb-3">
                         <label class="form-label">Description</label>
                         <textarea class="form-control" name="description" id="editPlanDescription" rows="3" required></textarea>
@@ -349,6 +363,11 @@ function editPlan(planId) {
             document.getElementById('editPlanId').value = plan.id;
             document.getElementById('editPlanName').value = plan.name;
             document.getElementById('editPlanPrice').value = plan.price;
+            // Limits (may be null or undefined if columns not yet created)
+            const propLimitEl = document.getElementById('editPlanPropertyLimit');
+            const unitLimitEl = document.getElementById('editPlanUnitLimit');
+            if (propLimitEl) { propLimitEl.value = (plan.property_limit !== null && plan.property_limit !== undefined) ? plan.property_limit : ''; }
+            if (unitLimitEl) { unitLimitEl.value = (plan.unit_limit !== null && plan.unit_limit !== undefined) ? plan.unit_limit : ''; }
             document.getElementById('editPlanDescription').value = plan.description;
             document.getElementById('editPlanFeatures').value = plan.features;
             

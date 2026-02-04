@@ -106,4 +106,10 @@ class ESignRequest extends Model
         $stmt = $this->db->prepare("UPDATE {$this->table} SET status='declined', declined_at=NOW() WHERE token=?");
         return $stmt->execute([$token]);
     }
+
+    public function setSignedDocumentPath($token, $path)
+    {
+        $stmt = $this->db->prepare("UPDATE {$this->table} SET signed_document_path = ? WHERE token = ?");
+        return $stmt->execute([$path, $token]);
+    }
 }

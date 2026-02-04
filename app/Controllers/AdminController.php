@@ -442,23 +442,50 @@ class AdminController
             $price = filter_input(INPUT_POST, 'price', FILTER_VALIDATE_FLOAT);
             $description = filter_input(INPUT_POST, 'description', FILTER_SANITIZE_STRING);
             $features = filter_input(INPUT_POST, 'features', FILTER_SANITIZE_STRING);
+            // Optional limits: treat blank/0 as unlimited (NULL)
+            $propertyLimitRaw = $_POST['property_limit'] ?? '';
+            $unitLimitRaw = $_POST['unit_limit'] ?? '';
+            $propertyLimit = is_numeric($propertyLimitRaw) ? (int)$propertyLimitRaw : null;
+            $unitLimit = is_numeric($unitLimitRaw) ? (int)$unitLimitRaw : null;
+            if ($propertyLimit !== null && $propertyLimit <= 0) { $propertyLimit = null; }
+            if ($unitLimit !== null && $unitLimit <= 0) { $unitLimit = null; }
 
-            if (!$planId || !$name || !$price || !$description || !$features) {
+            if (!$planId || !$name || $price === false || !$description || !$features) {
                 $_SESSION['flash_message'] = 'All fields are required';
                 $_SESSION['flash_type'] = 'danger';
                 redirect('/admin/subscriptions');
             }
 
-            $this->subscription->updatePlan($planId, [
+            $payload = [
                 'name' => $name,
                 'price' => $price,
                 'description' => $description,
                 'features' => $features
-            ]);
+            ];
+            // Include limits in payload (null => set to NULL)
+            $payload['property_limit'] = $propertyLimit;
+            $payload['unit_limit'] = $unitLimit;
+
+            $this->subscription->updatePlan($planId, $payload);
 
             $ip = $_SERVER['REMOTE_ADDR'] ?? null;
             $agent = $_SERVER['HTTP_USER_AGENT'] ?? null;
-            $this->activityLog->add($_SESSION['user_id'] ?? null, $_SESSION['user_role'] ?? null, 'plan.update', 'plan', (int)$planId, null, json_encode(['name' => $name, 'price' => $price]), $ip, $agent);
+            $this->activityLog->add(
+                $_SESSION['user_id'] ?? null,
+                $_SESSION['user_role'] ?? null,
+                'plan.update',
+                'plan',
+                (int)$planId,
+                null,
+                json_encode([
+                    'name' => $name,
+                    'price' => $price,
+                    'property_limit' => $propertyLimit,
+                    'unit_limit' => $unitLimit
+                ]),
+                $ip,
+                $agent
+            );
 
             $_SESSION['flash_message'] = 'Plan updated successfully';
             $_SESSION['flash_type'] = 'success';

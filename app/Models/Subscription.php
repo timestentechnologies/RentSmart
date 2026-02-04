@@ -231,6 +231,14 @@ class Subscription extends Model
 
     public function updatePlan($planId, $data)
     {
+        // Ensure optional limit columns exist
+        try {
+            $this->db->query("SHOW COLUMNS FROM subscription_plans LIKE 'property_limit'")->fetch(PDO::FETCH_ASSOC) ?: $this->db->exec("ALTER TABLE subscription_plans ADD COLUMN property_limit INT NULL DEFAULT NULL");
+        } catch (\Exception $e) {}
+        try {
+            $this->db->query("SHOW COLUMNS FROM subscription_plans LIKE 'unit_limit'")->fetch(PDO::FETCH_ASSOC) ?: $this->db->exec("ALTER TABLE subscription_plans ADD COLUMN unit_limit INT NULL DEFAULT NULL");
+        } catch (\Exception $e) {}
+
         $fields = [];
         $params = [];
         foreach ($data as $key => $value) {
