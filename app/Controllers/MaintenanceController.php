@@ -6,6 +6,8 @@ use App\Models\MaintenanceRequest;
 use App\Models\Tenant;
 use App\Models\Property;
 use App\Models\Unit;
+use App\Models\Expense;
+use App\Models\Payment;
 
 class MaintenanceController
 {
@@ -85,12 +87,90 @@ class MaintenanceController
             $scheduledDate = filter_input(INPUT_POST, 'scheduled_date', FILTER_SANITIZE_STRING);
             $estimatedCost = filter_input(INPUT_POST, 'estimated_cost', FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION);
             $actualCost = filter_input(INPUT_POST, 'actual_cost', FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION);
+            $sourceOfFunds = filter_input(INPUT_POST, 'source_of_funds', FILTER_SANITIZE_STRING) ?: null;
+            $expensePaymentMethod = filter_input(INPUT_POST, 'expense_payment_method', FILTER_SANITIZE_STRING) ?: null;
+            $chargeToTenant = isset($_POST['charge_to_tenant']) ? (($_POST['charge_to_tenant'] == '1' || $_POST['charge_to_tenant'] === 'true' || $_POST['charge_to_tenant'] === true) ? true : false) : false;
 
             if (!$id || !$status) {
                 throw new \Exception('Request ID and status are required');
             }
 
             $this->maintenanceRequest->updateStatus($id, $status, $notes, $assignedTo, $scheduledDate, $estimatedCost, $actualCost);
+
+            // If actual cost provided, ensure an expense exists and handle funding/tenant charge
+            if ($actualCost !== null && $actualCost !== '' && is_numeric($actualCost) && (float)$actualCost > 0) {
+                $actualCost = (float)$actualCost;
+
+                // Load request details to get property/unit/tenant
+                $userId = $_SESSION['user_id'] ?? null;
+                $request = $this->maintenanceRequest->getById($id, $userId);
+
+                // 1) Create or update expense linked to this maintenance
+                $expenseModel = new Expense();
+                $existing = $expenseModel->findByReference('maintenance', (int)$id);
+                $allowedMethods = ['cash','check','bank_transfer','card','mpesa','other'];
+                $allowedSources = ['rent_balance','cash','bank','mpesa','owner_funds','other'];
+                $expMethod = in_array($expensePaymentMethod, $allowedMethods, true) ? $expensePaymentMethod : 'cash';
+                $srcFunds = in_array($sourceOfFunds, $allowedSources, true) ? $sourceOfFunds : ($chargeToTenant ? 'other' : 'cash');
+
+                $expenseData = [
+                    'user_id' => $userId,
+                    'property_id' => $request['property_id'] ?? null,
+                    'unit_id' => $request['unit_id'] ?? null,
+                    'category' => 'maintenance',
+                    'amount' => $actualCost,
+                    'expense_date' => date('Y-m-d'),
+                    'payment_method' => $expMethod,
+                    'source_of_funds' => $srcFunds,
+                    'notes' => 'Maintenance #' . $id . ': ' . ($request['title'] ?? ''),
+                    'reference_type' => 'maintenance',
+                    'reference_id' => (int)$id,
+                ];
+
+                if ($existing) {
+                    $expenseModel->updateExpense((int)$existing['id'], $expenseData);
+                } else {
+                    $expenseModel->insertExpense($expenseData);
+                }
+
+                // 2) Handle rent balance deduction or tenant charge
+                $shouldCreateNegativePayment = false;
+                $negativePaymentNoteTag = 'MAINT-' . (int)$id;
+                if ($srcFunds === 'rent_balance') {
+                    // Deduct from payments
+                    $shouldCreateNegativePayment = true;
+                } elseif ($chargeToTenant) {
+                    // Add to tenant's balance
+                    $shouldCreateNegativePayment = true;
+                }
+
+                if ($shouldCreateNegativePayment && !empty($request['resolved_tenant_id'])) {
+                    $paymentModel = new Payment();
+                    // Find active lease for tenant
+                    $lease = $paymentModel->getActiveLease((int)$request['resolved_tenant_id'], $userId);
+                    if ($lease && !empty($lease['id'])) {
+                        // Idempotency: check if a maintenance adjustment already exists
+                        try {
+                            $db = $paymentModel->getDb();
+                            $chk = $db->prepare("SELECT id FROM payments WHERE lease_id = ? AND notes LIKE ? LIMIT 1");
+                            $chk->execute([$lease['id'], '%' . $negativePaymentNoteTag . '%']);
+                            $existsAdj = $chk->fetch(\PDO::FETCH_ASSOC);
+                        } catch (\Exception $e) { $existsAdj = null; }
+
+                        if (!$existsAdj) {
+                            $paymentModel->createRentPayment([
+                                'lease_id' => (int)$lease['id'],
+                                'amount' => -abs($actualCost),
+                                'payment_date' => date('Y-m-d'),
+                                'payment_type' => 'rent',
+                                'payment_method' => 'other',
+                                'notes' => ($srcFunds === 'rent_balance' ? 'Maintenance deduction from rent balance ' : 'Maintenance charge to tenant ') . $negativePaymentNoteTag,
+                                'status' => 'completed'
+                            ]);
+                        }
+                    }
+                }
+            }
 
             if ($isAjax) {
                 header('Content-Type: application/json');

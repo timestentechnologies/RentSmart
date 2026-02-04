@@ -1306,6 +1306,16 @@ ob_clean();
                     </a>
                 </li>
                 <li class="nav-item">
+                    <a href="<?= BASE_URL ?>/messaging" class="nav-link <?= strpos($current_uri, 'messaging') === 0 ? 'active' : '' ?>">
+                        <i class="bi bi-chat-dots me-2"></i> Messaging
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="<?= BASE_URL ?>/notices" class="nav-link <?= strpos($current_uri, 'notices') === 0 ? 'active' : '' ?>">
+                        <i class="bi bi-megaphone me-2"></i> Notices
+                    </a>
+                </li>
+                <li class="nav-item">
                     <a href="<?= BASE_URL ?>/reports" class="nav-link <?= strpos($current_uri, 'reports') === 0 ? 'active' : '' ?>">
                         <i class="bi bi-graph-up me-2"></i> Reports
                     </a>
@@ -1340,6 +1350,54 @@ ob_clean();
                         <i class="bi bi-receipt me-2"></i> Expenses
                     </a>
                 </li>
+                <li class="nav-item">
+                    <a href="<?= BASE_URL ?>/invoices" class="nav-link <?= strpos($current_uri, 'invoices') === 0 ? 'active' : '' ?>">
+                        <i class="bi bi-receipt-cutoff me-2"></i> Invoices
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link dropdown-toggle <?= (strpos($current_uri, 'accounting') === 0) ? 'active' : '' ?>" 
+                       href="#accountingSubmenu" 
+                       data-bs-toggle="collapse" 
+                       role="button" 
+                       aria-expanded="false">
+                        <i class="bi bi-calculator me-2"></i> Accounting
+                    </a>
+                    <div class="collapse" id="accountingSubmenu">
+                        <ul class="nav flex-column ms-3">
+                            <li class="nav-item">
+                                <a href="<?= BASE_URL ?>/accounting/accounts" class="nav-link">
+                                    <i class="bi bi-journal-text me-2"></i> Chart of Accounts
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="<?= BASE_URL ?>/accounting/ledger" class="nav-link">
+                                    <i class="bi bi-journal-check me-2"></i> General Ledger
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="<?= BASE_URL ?>/accounting/trial-balance" class="nav-link">
+                                    <i class="bi bi-columns-gap me-2"></i> Trial Balance
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="<?= BASE_URL ?>/accounting/balance-sheet" class="nav-link">
+                                    <i class="bi bi-diagram-3 me-2"></i> Balance Sheet
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="<?= BASE_URL ?>/accounting/profit-loss" class="nav-link">
+                                    <i class="bi bi-graph-up me-2"></i> Profit & Loss
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="<?= BASE_URL ?>/accounting/statements" class="nav-link">
+                                    <i class="bi bi-file-earmark-text me-2"></i> Statements
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </li>
                 <li class="nav-item mt-3">
                     <small class="nav-header text-uppercase px-3">HR & PAYROLL</small>
                 </li>
@@ -1363,6 +1421,11 @@ ob_clean();
                 <li class="nav-item">
                     <a href="<?= BASE_URL ?>/vacant-units" class="nav-link" target="_blank">
                         <i class="bi bi-house-door me-2"></i> Vacant Units (Public)
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="<?= BASE_URL ?>/contact" class="nav-link <?= strpos($current_uri, 'contact') === 0 ? 'active' : '' ?>">
+                        <i class="bi bi-envelope me-2"></i> Contact Us
                     </a>
                 </li>
                 <li class="nav-item">
@@ -1420,6 +1483,11 @@ ob_clean();
                 <li class="nav-item">
                     <a href="<?= BASE_URL ?>/files" class="nav-link <?= strpos($current_uri, 'files') === 0 ? 'active' : '' ?>">
                         <i class="bi bi-folder2-open me-2"></i> Files
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="<?= BASE_URL ?>/esign" class="nav-link <?= strpos($current_uri, 'esign') === 0 ? 'active' : '' ?>">
+                        <i class="bi bi-pen me-2"></i> E‑Signatures
                     </a>
                 </li>
 

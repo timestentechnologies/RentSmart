@@ -210,9 +210,24 @@
         }
 
         .navbar {
-            padding: 1rem 0;
-            background-color: white;
+            padding: 0.85rem 0;
+            background-color: #fff;
             box-shadow: 0 2px 15px rgba(107, 62, 153, 0.1);
+            transition: box-shadow .2s ease;
+        }
+        .navbar .nav-link {
+            color: #4a5568;
+            font-weight: 500;
+            border-radius: .5rem;
+            padding: .5rem .75rem;
+            transition: color .15s ease, background-color .15s ease;
+        }
+        .navbar .nav-link:hover {
+            color: var(--primary-color);
+            background: rgba(107,62,153,.08);
+        }
+        .navbar .btn.btn-gradient {
+            padding: .5rem .9rem;
         }
 
         .navbar-brand img {
@@ -588,6 +603,9 @@
                             <a class="nav-link" href="#faq">FAQs</a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link" href="<?= BASE_URL ?>/docs">Documentation</a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#loginModal">Login</a>
                     </li>
                     <li class="nav-item">
@@ -863,7 +881,7 @@
                             <?php endforeach; ?>
                         </ul>
                         <?php if ($plan['name'] === 'Enterprise'): ?>
-                            <a href="#" class="btn <?= $plan['name'] === 'Professional' ? 'btn-gradient' : 'btn-outline-primary' ?> w-100">Contact Sales</a>
+                            <a href="<?= BASE_URL ?>/contact" class="btn <?= $plan['name'] === 'Enterprise' ? 'btn-gradient' : 'btn-outline-primary' ?> w-100">Contact Sales</a>
                         <?php else: ?>
                             <a href="#" data-bs-toggle="modal" data-bs-target="#registerModal" class="btn <?= $plan['name'] === 'Professional' ? 'btn-gradient' : 'btn-outline-primary' ?> w-100">
                                 Start 7-Day Free Trial

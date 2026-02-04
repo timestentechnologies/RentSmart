@@ -310,6 +310,43 @@ ob_start();
                                 </div>
                             </div>
                         </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="edit_source_of_funds" class="form-label">Source of Funds</label>
+                                <select id="edit_source_of_funds" name="source_of_funds" class="form-select">
+                                    <option value="">Select Source</option>
+                                    <option value="rent_balance">Rent Balance (deduct from payments)</option>
+                                    <option value="cash">Cash</option>
+                                    <option value="bank">Bank</option>
+                                    <option value="mpesa">M-Pesa</option>
+                                    <option value="owner_funds">Owner Funds</option>
+                                    <option value="other">Other</option>
+                                </select>
+                                <div class="form-text">If Rent Balance is selected and a tenant is linked, a negative rent adjustment will be recorded.</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="edit_expense_payment_method" class="form-label">Expense Payment Method</label>
+                                <select id="edit_expense_payment_method" name="expense_payment_method" class="form-select">
+                                    <option value="">Select Method</option>
+                                    <option value="cash">Cash</option>
+                                    <option value="check">Check</option>
+                                    <option value="bank_transfer">Bank Transfer</option>
+                                    <option value="card">Card</option>
+                                    <option value="mpesa">M-Pesa</option>
+                                    <option value="other">Other</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-12">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="edit_charge_to_tenant" name="charge_to_tenant" value="1">
+                                <label class="form-check-label" for="edit_charge_to_tenant">
+                                    Charge this cost to tenant (adds to their balance)
+                                </label>
+                            </div>
+                        </div>
                         <div class="col-12">
                             <div class="mb-3">
                                 <label for="edit_notes" class="form-label">Notes</label>
@@ -563,6 +600,7 @@ function showMaintenanceRequestDetails(requestId) {
     document.getElementById('detailScheduledDate').textContent = '-';
     document.getElementById('detailCompletedDate').textContent = '-';
     document.getElementById('detailProperty').textContent = '-';
+    document.getElementById('detailTenant').textContent = '-';
     document.getElementById('detailUnit').textContent = '-';
     document.getElementById('detailAssignedTo').textContent = '-';
     document.getElementById('detailEstimatedCost').textContent = '-';
@@ -637,6 +675,8 @@ function showMaintenanceRequestDetails(requestId) {
             // Location information
             document.getElementById('detailProperty').textContent = 
                 request.property_details?.name || request.property_name || '-';
+            document.getElementById('detailTenant').textContent = 
+                request.tenant_name || '-';
             document.getElementById('detailUnit').textContent = 
                 request.unit_details?.unit_number || request.unit_number || '-';
             document.getElementById('detailAssignedTo').textContent = 
@@ -744,6 +784,10 @@ function ucwords(str) {
                                 <div class="row mb-3">
                                     <div class="col-sm-4"><strong>Property:</strong></div>
                                     <div class="col-sm-8" id="detailProperty">-</div>
+                                </div>
+                                <div class="row mb-3">
+                                    <div class="col-sm-4"><strong>Tenant:</strong></div>
+                                    <div class="col-sm-8" id="detailTenant">-</div>
                                 </div>
                                 <div class="row mb-3">
                                     <div class="col-sm-4"><strong>Unit:</strong></div>
