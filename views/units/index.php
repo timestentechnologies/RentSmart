@@ -529,6 +529,16 @@ function handleUnitSubmit(event) {
             modal.hide();
             showAlert('success', 'Unit added successfully');
             window.location.reload();
+        } else if (data && data.over_limit) {
+            // Show upgrade modal if over limit
+            showUpgradeLimitModal({
+                type: data.type || 'unit',
+                limit: data.limit,
+                current: data.current,
+                plan: data.plan,
+                upgrade_url: data.upgrade_url,
+                message: data.message || 'You have reached your plan limit. Please upgrade to continue.'
+            });
         } else {
             throw new Error(data.message || 'Error adding unit');
         }

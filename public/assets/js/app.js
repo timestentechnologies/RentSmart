@@ -702,6 +702,15 @@ function handleUnitSubmit(event) {
             showAlert('success', data.message, true, () => {
                 window.location.reload();
             });
+        } else if (data && data.over_limit) {
+            showUpgradeLimitModal({
+                type: data.type || 'unit',
+                limit: data.limit,
+                current: data.current,
+                plan: data.plan,
+                upgrade_url: data.upgrade_url,
+                message: data.message || 'You have reached your plan limit. Please upgrade to continue.'
+            });
         } else {
             showAlert('error', data.message || 'An error occurred');
         }
@@ -758,6 +767,15 @@ function handlePropertySubmit(event) {
             // Show success message and reload after toast
             showAlert('success', data.message, true, () => {
                 window.location.reload();
+            });
+        } else if (data && data.over_limit) {
+            showUpgradeLimitModal({
+                type: data.type || 'property',
+                limit: data.limit,
+                current: data.current,
+                plan: data.plan,
+                upgrade_url: data.upgrade_url,
+                message: data.message || 'You have reached your plan limit. Please upgrade to continue.'
             });
         } else {
             showAlert('error', data.message || 'An error occurred while adding the property');
@@ -853,6 +871,35 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 }); 
+
+// Show Upgrade Limit Modal helper
+function showUpgradeLimitModal(opts) {
+    try {
+        const modalEl = document.getElementById('upgradeLimitModal');
+        if (!modalEl) {
+            // Fallback toast if modal markup not present on this page
+            const msg = opts && opts.message ? opts.message : 'Plan limit reached. Please upgrade to continue.';
+            showAlert('warning', msg, false);
+            return;
+        }
+        const titleEl = modalEl.querySelector('[data-upgrade-title]');
+        const msgEl = modalEl.querySelector('[data-upgrade-message]');
+        const countsEl = modalEl.querySelector('[data-upgrade-counts]');
+        const planEl = modalEl.querySelector('[data-upgrade-plan]');
+        const ctaEl = modalEl.querySelector('[data-upgrade-cta]');
+        if (titleEl) titleEl.textContent = 'Upgrade Required';
+        if (msgEl) msgEl.textContent = opts.message || 'You have reached your plan limit. Please upgrade to continue.';
+        if (countsEl) countsEl.textContent = (opts && opts.limit != null && opts.current != null)
+            ? `${String(opts.current)} of ${String(opts.limit)} ${opts.type === 'unit' ? 'units' : 'properties'} used`
+            : '';
+        if (planEl) planEl.textContent = opts && opts.plan ? String(opts.plan) : '';
+        if (ctaEl) {
+            ctaEl.setAttribute('href', (opts && opts.upgrade_url) ? opts.upgrade_url : (typeof BASE_URL !== 'undefined' ? `${BASE_URL}/subscription/renew` : '/subscription/renew'));
+        }
+        const modal = new bootstrap.Modal(modalEl);
+        modal.show();
+    } catch (e) { try { console.error(e); } catch(_){} }
+}
 
 // =========================
 // Generic dynamic filters for DataTables across pages
