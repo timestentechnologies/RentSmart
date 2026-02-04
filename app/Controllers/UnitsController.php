@@ -5,6 +5,7 @@ namespace App\Controllers;
 use App\Models\Unit;
 use App\Models\Property;
 use App\Models\User;
+use App\Models\Subscription;
 use App\Database\Connection;
 use App\Helpers\FileUploadHelper;
 use App\Models\ActivityLog;
@@ -104,6 +105,38 @@ class UnitsController
             $property = $this->property->getById($_POST['property_id'], $_SESSION['user_id']);
             if (!$property) {
                 throw new Exception('Property not found or access denied');
+            }
+
+            // Plan limits: enforce unit limit per subscription plan (dynamic from DB, fallback by plan name)
+            $subModel = new Subscription();
+            $sub = $subModel->getUserSubscription($_SESSION['user_id']);
+            $planName = strtolower($sub['name'] ?? ($sub['plan_type'] ?? ''));
+            $unitLimit = null; // null => unlimited
+            if (isset($sub['unit_limit']) && $sub['unit_limit'] !== null && $sub['unit_limit'] !== '') {
+                $unitLimit = (int)$sub['unit_limit'];
+                if ($unitLimit <= 0) { $unitLimit = null; }
+            } else {
+                // Fallback defaults when column not set
+                if ($planName === 'basic') { $unitLimit = 100; }
+                elseif ($planName === 'professional') { $unitLimit = 500; }
+                elseif ($planName === 'enterprise') { $unitLimit = null; }
+            }
+            // Count current accessible units
+            $currentUnits = $this->unit->getAll($_SESSION['user_id']);
+            $unitCount = is_array($currentUnits) ? count($currentUnits) : 0;
+            if ($unitLimit !== null && $unitCount >= $unitLimit) {
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'success' => false,
+                    'over_limit' => true,
+                    'type' => 'unit',
+                    'limit' => $unitLimit,
+                    'current' => $unitCount,
+                    'plan' => $sub['name'] ?? ($sub['plan_type'] ?? ''),
+                    'upgrade_url' => BASE_URL . '/subscription/renew',
+                    'message' => 'You have reached your plan limit of ' . $unitLimit . ' units. Please upgrade to add more.'
+                ]);
+                exit;
             }
 
             // Log the request

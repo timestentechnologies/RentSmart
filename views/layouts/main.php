@@ -1406,7 +1406,16 @@ ob_clean();
                         <i class="bi bi-person-badge me-2"></i> Employees
                     </a>
                 </li>
-                
+                <li class="nav-item">
+                    <a href="<?= BASE_URL ?>/files" class="nav-link <?= strpos($current_uri, 'files') === 0 ? 'active' : '' ?>">
+                        <i class="bi bi-folder2-open me-2"></i> Files
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="<?= BASE_URL ?>/esign" class="nav-link <?= strpos($current_uri, 'esign') === 0 ? 'active' : '' ?>">
+                        <i class="bi bi-pen me-2"></i> E‑Signatures
+                    </a>
+                </li>
                 <li class="nav-item mt-3">
                     <small class="nav-header text-uppercase px-3">BILLING & SUBSCRIPTION</small>
                 </li>
@@ -1480,16 +1489,7 @@ ob_clean();
                     </a>
                 </li>
 
-                <li class="nav-item">
-                    <a href="<?= BASE_URL ?>/files" class="nav-link <?= strpos($current_uri, 'files') === 0 ? 'active' : '' ?>">
-                        <i class="bi bi-folder2-open me-2"></i> Files
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="<?= BASE_URL ?>/esign" class="nav-link <?= strpos($current_uri, 'esign') === 0 ? 'active' : '' ?>">
-                        <i class="bi bi-pen me-2"></i> E‑Signatures
-                    </a>
-                </li>
+                
 
                 <?php if ($_SESSION['user_role'] === 'admin'): ?>
                 <!-- ADMINISTRATION Section -->

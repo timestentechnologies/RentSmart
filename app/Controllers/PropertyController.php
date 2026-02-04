@@ -7,6 +7,7 @@ use App\Models\Unit;
 use App\Models\User;
 use App\Models\ActivityLog;
 use App\Models\Employee;
+use App\Models\Subscription;
 use App\Database\Connection;
 use App\Helpers\FileUploadHelper;
 use Exception;
@@ -182,6 +183,45 @@ class PropertyController
             // Validate ZIP code format
             if (!preg_match('/^[0-9]{5}(-[0-9]{4})?$/', $data['zip_code'])) {
                 throw new Exception('Invalid ZIP code format. Use 12345 or 12345-6789');
+            }
+
+            // Plan limits: enforce property limit per subscription plan (dynamic from DB, fallback by plan name)
+            $subModel = new Subscription();
+            $sub = $subModel->getUserSubscription($_SESSION['user_id']);
+            $planName = strtolower($sub['name'] ?? ($sub['plan_type'] ?? ''));
+            $propertyLimit = null; // null => unlimited
+            if (isset($sub['property_limit']) && $sub['property_limit'] !== null && $sub['property_limit'] !== '') {
+                $propertyLimit = (int)$sub['property_limit'];
+                if ($propertyLimit <= 0) { $propertyLimit = null; }
+            } else {
+                // Fallback defaults when column not set
+                if ($planName === 'basic') { $propertyLimit = 10; }
+                elseif ($planName === 'professional') { $propertyLimit = 50; }
+                elseif ($planName === 'enterprise') { $propertyLimit = null; }
+            }
+            // Count accessible properties for this user
+            $currentProps = $this->property->getAll($_SESSION['user_id']);
+            $propCount = is_array($currentProps) ? count($currentProps) : 0;
+            if ($propertyLimit !== null && $propCount >= $propertyLimit) {
+                $msg = 'You have reached your plan limit of ' . $propertyLimit . ' properties. Please upgrade to add more.';
+                if ($isAjax) {
+                    header('Content-Type: application/json');
+                    echo json_encode([
+                        'success' => false,
+                        'over_limit' => true,
+                        'type' => 'property',
+                        'limit' => $propertyLimit,
+                        'current' => $propCount,
+                        'plan' => $sub['name'] ?? ($sub['plan_type'] ?? ''),
+                        'upgrade_url' => BASE_URL . '/subscription/renew',
+                        'message' => $msg,
+                    ]);
+                    exit;
+                }
+                $_SESSION['flash_message'] = $msg;
+                $_SESSION['flash_type'] = 'warning';
+                header('Location: ' . BASE_URL . '/subscription/renew');
+                exit;
             }
 
             // Start transaction

@@ -120,6 +120,9 @@ class ESignController
     {
         try {
             if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') throw new \Exception('Invalid request');
+            $model = new ESignRequest();
+            $req = $model->getByToken($token);
+            if (!$req) throw new \Exception('Request not found');
             $name = trim($_POST['signer_name'] ?? '');
             $method = $_POST['method'] ?? 'draw';
             if ($name === '') throw new \Exception('Name is required');
@@ -152,15 +155,153 @@ class ESignController
             }
             $ip = $_SERVER['REMOTE_ADDR'] ?? null;
             $ua = $_SERVER['HTTP_USER_AGENT'] ?? null;
-            $model = new ESignRequest();
             $ok = $model->markSigned($token, $name, $data, $ip, $ua, $sigType, $initials);
             if (!$ok) throw new \Exception('Unable to save signature');
+            if (!empty($req['document_path'])) {
+                $signedRel = $this->generateSignedCopy($req, $name, $sigType, $data, $initials);
+                if ($signedRel) { $model->setSignedDocumentPath($token, $signedRel); }
+            }
             echo '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Signature Saved</title><style>body{font-family:Arial;padding:24px}</style></head><body><h2>Thank you!</h2><p>Your signature has been recorded.</p></body></html>';
             return;
         } catch (\Exception $e) {
             http_response_code(400);
             echo '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Error</title><style>body{font-family:Arial;padding:24px;color:#a00}</style></head><body><h3>Error</h3><p>' . htmlspecialchars($e->getMessage()) . '</p></body></html>';
             return;
+        }
+    }
+
+    private function generateSignedCopy(array $req, string $name, ?string $sigType, ?string $base64Data, ?string $initials)
+    {
+        try {
+            $publicBase = realpath(__DIR__ . '/../../public');
+            if (!$publicBase) return null;
+            $srcRel = $req['document_path'];
+            $srcFull = $publicBase . DIRECTORY_SEPARATOR . str_replace(['..','\\'], ['','/'], $srcRel);
+            if (!is_file($srcFull)) return null;
+            $outDir = $publicBase . DIRECTORY_SEPARATOR . 'uploads' . DIRECTORY_SEPARATOR . 'esign';
+            if (!is_dir($outDir)) @mkdir($outDir, 0775, true);
+            $ext = strtolower(pathinfo($srcFull, PATHINFO_EXTENSION));
+            $token = $req['token'] ?? bin2hex(random_bytes(4));
+            $ts = date('Ymd_His');
+
+            $sigImg = null;
+            if ($sigType === 'initials') {
+                if (function_exists('imagecreatetruecolor')) {
+                    $sigImg = imagecreatetruecolor(800, 200);
+                    imagesavealpha($sigImg, true);
+                    $trans = imagecolorallocatealpha($sigImg, 0, 0, 0, 127);
+                    imagefill($sigImg, 0, 0, $trans);
+                    $col = imagecolorallocate($sigImg, 0, 0, 0);
+                    imagestring($sigImg, 5, 30, 80, $initials ?? '', $col);
+                }
+            } elseif ($base64Data) {
+                $bin = base64_decode($base64Data);
+                if ($bin !== false && function_exists('imagecreatefromstring')) {
+                    $sigImg = imagecreatefromstring($bin);
+                }
+            }
+
+            if (in_array($ext, ['png','jpg','jpeg'])) {
+                if (!function_exists('imagecreatefromstring') || !$sigImg) return $this->generateSignedPdfFallback($req, $name, $sigType, $base64Data, $initials, $outDir, $token, $ts);
+                $srcBin = file_get_contents($srcFull);
+                $baseIm = imagecreatefromstring($srcBin);
+                if (!$baseIm) return null;
+                $bw = imagesx($baseIm); $bh = imagesy($baseIm);
+                $sw = imagesx($sigImg); $sh = imagesy($sigImg);
+                $targetW = max(200, (int)round($bw * 0.35));
+                $ratio = $sw > 0 ? ($targetW / $sw) : 1;
+                $targetH = max(60, (int)round($sh * $ratio));
+                $res = imagecreatetruecolor($targetW, $targetH);
+                imagesavealpha($res, true);
+                $trans2 = imagecolorallocatealpha($res, 0, 0, 0, 127);
+                imagefill($res, 0, 0, $trans2);
+                imagecopyresampled($res, $sigImg, 0, 0, 0, 0, $targetW, $targetH, $sw, $sh);
+                $pad = 40;
+                $dx = $bw - $targetW - $pad; if ($dx < 0) $dx = 0;
+                $dy = $bh - $targetH - $pad; if ($dy < 0) $dy = 0;
+                imagecopy($baseIm, $res, $dx, $dy, 0, 0, $targetW, $targetH);
+                $meta = 'Signed by ' . $name . ' on ' . date('Y-m-d H:i');
+                $txtY = min($bh - 10, $dy - 15);
+                if ($txtY > 0) { $c = imagecolorallocate($baseIm, 50, 50, 50); imagestring($baseIm, 3, max(10, $dx), $txtY, $meta, $c); }
+                $destRel = 'uploads/esign/signed_' . $token . '_' . $ts . '.' . ($ext === 'jpeg' ? 'jpg' : $ext);
+                $destFull = $publicBase . DIRECTORY_SEPARATOR . $destRel;
+                if ($ext === 'png') imagepng($baseIm, $destFull, 6); else imagejpeg($baseIm, $destFull, 90);
+                return $destRel;
+            }
+
+            if ($ext === 'pdf') {
+                if (class_exists('Imagick')) {
+                    try {
+                        $pdf = new \Imagick();
+                        $pdf->readImage($srcFull);
+                        $pages = $pdf->getNumberImages();
+                        $sigPath = null;
+                        if ($sigImg) {
+                            $sigPath = $outDir . DIRECTORY_SEPARATOR . 'sig_' . $token . '_' . $ts . '.png';
+                            imagepng($sigImg, $sigPath, 6);
+                        }
+                        for ($i = 0; $i < $pages; $i++) {
+                            $pdf->setIteratorIndex($i);
+                            $w = $pdf->getImageWidth();
+                            $h = $pdf->getImageHeight();
+                            if ($sigPath) {
+                                $overlay = new \Imagick($sigPath);
+                                $overlay->thumbnailImage((int)max(200, $w * 0.35), 0);
+                                $ox = $w - $overlay->getImageWidth() - 40; if ($ox < 0) $ox = 0;
+                                $oy = $h - $overlay->getImageHeight() - 40; if ($oy < 0) $oy = 0;
+                                $pdf->compositeImage($overlay, \Imagick::COMPOSITE_OVER, $ox, $oy);
+                            }
+                        }
+                        $destRel = 'uploads/esign/signed_' . $token . '_' . $ts . '.pdf';
+                        $destFull = $publicBase . DIRECTORY_SEPARATOR . $destRel;
+                        $pdf->setImageFormat('pdf');
+                        $pdf->writeImages($destFull, true);
+                        return $destRel;
+                    } catch (\Throwable $t) {
+                        return $this->generateSignedPdfFallback($req, $name, $sigType, $base64Data, $initials, $outDir, $token, $ts);
+                    }
+                }
+                return $this->generateSignedPdfFallback($req, $name, $sigType, $base64Data, $initials, $outDir, $token, $ts);
+            }
+            return null;
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    private function generateSignedPdfFallback(array $req, string $name, ?string $sigType, ?string $base64Data, ?string $initials, string $outDir, string $token, string $ts)
+    {
+        try {
+            $publicBase = realpath(__DIR__ . '/../../public');
+            if (!$publicBase) return null;
+            $origRel = $req['document_path'];
+            $sigImgData = '';
+            if ($sigType === 'initials') {
+                $sigImgData = '';
+            } elseif ($base64Data) {
+                $sigImgData = 'data:image/png;base64,' . $base64Data;
+            }
+            ob_start();
+            $html = '<html><head><meta charset="utf-8"><style>body{font-family:DejaVu Sans,Arial,sans-serif;font-size:12px} .box{border:1px solid #ddd;padding:12px;border-radius:8px}</style></head><body>' .
+                '<h2>Signed Copy</h2>' .
+                '<div class="box">' .
+                '<div><strong>Original:</strong> ' . htmlspecialchars($origRel) . '</div>' .
+                '<div><strong>Signed by:</strong> ' . htmlspecialchars($name) . ' on ' . date('Y-m-d H:i') . '</div>' .
+                (($sigType === 'initials') ? '<div><strong>Initials:</strong> ' . htmlspecialchars((string)$initials) . '</div>' : '') .
+                (($sigImgData && $sigType !== 'initials') ? '<div style="margin-top:10px"><img style="max-width:480px" src="' . $sigImgData . '" /></div>' : '') .
+                '<div style="margin-top:10px"><a href="' . BASE_URL . '/public/' . htmlspecialchars($origRel) . '">Open original</a></div>' .
+                '</div></body></html>';
+            ob_end_clean();
+            $dompdf = new \Dompdf\Dompdf();
+            $dompdf->loadHtml($html);
+            $dompdf->setPaper('A4', 'portrait');
+            $dompdf->render();
+            $destRel = 'uploads/esign/signed_' . $token . '_' . $ts . '.pdf';
+            $destFull = $publicBase . DIRECTORY_SEPARATOR . $destRel;
+            file_put_contents($destFull, $dompdf->output());
+            return $destRel;
+        } catch (\Throwable $e) {
+            return null;
         }
     }
 
