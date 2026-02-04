@@ -359,25 +359,31 @@ class PaymentsController
                             $mail->SMTPSecure = \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
                             $mail->setFrom($settings['smtp_user'] ?? '', $settings['site_name'] ?? 'RentSmart');
                             $mail->isHTML(true);
+                            $siteUrl = rtrim($settings['site_url'] ?? 'https://rentsmart.co.ke', '/');
+                            $logoUrl = isset($settings['site_logo']) && $settings['site_logo'] ? ($siteUrl . '/public/assets/images/' . $settings['site_logo']) : '';
+                            $footer = '<div style="margin-top:30px;font-size:12px;color:#888;text-align:center;">Powered by <a href="https://timestentechnologies.co.ke" target="_blank" style="color:#888;text-decoration:none;">Timesten Technologies</a></div>';
 
                             // Email to tenant
                             if ($paymentDetails['tenant_email']) {
                                 $mail->clearAddresses();
                                 $mail->addAddress($paymentDetails['tenant_email'], $paymentDetails['tenant_name']);
                                 $mail->Subject = 'Payment Confirmation - ' . $paymentDetails['property_name'];
-                                $mail->Body = "
-                                    <p>Dear {$paymentDetails['tenant_name']},</p>
-                                    <p>Your payment has been received and recorded successfully.</p>
-                                    <p>Details:</p>
-                                    <ul>
-                                        <li>Property: {$paymentDetails['property_name']}</li>
-                                        <li>Unit: {$paymentDetails['unit_number']}</li>
-                                        <li>Amount: Ksh {$rentData['amount']}</li>
-                                        <li>Payment Date: {$rentData['payment_date']}</li>
-                                        <li>Payment Method: {$rentData['payment_method']}</li>
-                                    </ul>
-                                    <p>Thank you for your payment.</p>
-                                ";
+                                $mail->Body =
+                                    '<div style="max-width:500px;margin:auto;border:1px solid #eee;padding:24px;font-family:sans-serif;">'
+                                    . ($logoUrl ? '<div style="text-align:center;margin-bottom:24px;"><img src="' . $logoUrl . '" alt="Logo" style="max-width:180px;max-height:80px;"></div>' : '') .
+                                    '<p>Dear ' . htmlspecialchars($paymentDetails['tenant_name']) . ',</p>' .
+                                    '<p>Your payment has been received and recorded successfully.</p>' .
+                                    '<p>Details:</p>' .
+                                    '<ul>' .
+                                        '<li>Property: ' . htmlspecialchars($paymentDetails['property_name']) . '</li>' .
+                                        '<li>Unit: ' . htmlspecialchars($paymentDetails['unit_number']) . '</li>' .
+                                        '<li>Amount: Ksh ' . htmlspecialchars($rentData['amount']) . '</li>' .
+                                        '<li>Payment Date: ' . htmlspecialchars($rentData['payment_date']) . '</li>' .
+                                        '<li>Payment Method: ' . htmlspecialchars($rentData['payment_method']) . '</li>' .
+                                    '</ul>' .
+                                    '<p>Thank you for your payment.</p>' .
+                                    $footer .
+                                    '</div>';
                                 $mail->send();
                             }
 
@@ -388,19 +394,22 @@ class PaymentsController
                                     $mail->clearAddresses();
                                     $mail->addAddress($owner['email'], $owner['name']);
                                     $mail->Subject = 'New Payment Received - ' . $paymentDetails['property_name'];
-                                    $mail->Body = "
-                                        <p>Dear {$owner['name']},</p>
-                                        <p>A new payment has been received for your property.</p>
-                                        <p>Details:</p>
-                                        <ul>
-                                            <li>Property: {$paymentDetails['property_name']}</li>
-                                            <li>Unit: {$paymentDetails['unit_number']}</li>
-                                            <li>Tenant: {$paymentDetails['tenant_name']}</li>
-                                            <li>Amount: Ksh {$rentData['amount']}</li>
-                                            <li>Payment Date: {$rentData['payment_date']}</li>
-                                            <li>Payment Method: {$rentData['payment_method']}</li>
-                                        </ul>
-                                    ";
+                                    $mail->Body =
+                                        '<div style="max-width:500px;margin:auto;border:1px solid #eee;padding:24px;font-family:sans-serif;">'
+                                        . ($logoUrl ? '<div style="text-align:center;margin-bottom:24px;"><img src="' . $logoUrl . '" alt="Logo" style="max-width:180px;max-height:80px;"></div>' : '') .
+                                        '<p>Dear ' . htmlspecialchars($owner['name']) . ',</p>' .
+                                        '<p>A new payment has been received for your property.</p>' .
+                                        '<p>Details:</p>' .
+                                        '<ul>' .
+                                            '<li>Property: ' . htmlspecialchars($paymentDetails['property_name']) . '</li>' .
+                                            '<li>Unit: ' . htmlspecialchars($paymentDetails['unit_number']) . '</li>' .
+                                            '<li>Tenant: ' . htmlspecialchars($paymentDetails['tenant_name']) . '</li>' .
+                                            '<li>Amount: Ksh ' . htmlspecialchars($rentData['amount']) . '</li>' .
+                                            '<li>Payment Date: ' . htmlspecialchars($rentData['payment_date']) . '</li>' .
+                                            '<li>Payment Method: ' . htmlspecialchars($rentData['payment_method']) . '</li>' .
+                                        '</ul>' .
+                                        $footer .
+                                        '</div>';
                                     $mail->send();
                                 }
                             }
@@ -412,19 +421,22 @@ class PaymentsController
                                     $mail->clearAddresses();
                                     $mail->addAddress($manager['email'], $manager['name']);
                                     $mail->Subject = 'New Payment Received - ' . $paymentDetails['property_name'];
-                                    $mail->Body = "
-                                        <p>Dear {$manager['name']},</p>
-                                        <p>A new payment has been received for the property you manage.</p>
-                                        <p>Details:</p>
-                                        <ul>
-                                            <li>Property: {$paymentDetails['property_name']}</li>
-                                            <li>Unit: {$paymentDetails['unit_number']}</li>
-                                            <li>Tenant: {$paymentDetails['tenant_name']}</li>
-                                            <li>Amount: Ksh {$rentData['amount']}</li>
-                                            <li>Payment Date: {$rentData['payment_date']}</li>
-                                            <li>Payment Method: {$rentData['payment_method']}</li>
-                                        </ul>
-                                    ";
+                                    $mail->Body =
+                                        '<div style="max-width:500px;margin:auto;border:1px solid #eee;padding:24px;font-family:sans-serif;">'
+                                        . ($logoUrl ? '<div style="text-align:center;margin-bottom:24px;"><img src="' . $logoUrl . '" alt="Logo" style="max-width:180px;max-height:80px;"></div>' : '') .
+                                        '<p>Dear ' . htmlspecialchars($manager['name']) . ',</p>' .
+                                        '<p>A new payment has been received for the property you manage.</p>' .
+                                        '<p>Details:</p>' .
+                                        '<ul>' .
+                                            '<li>Property: ' . htmlspecialchars($paymentDetails['property_name']) . '</li>' .
+                                            '<li>Unit: ' . htmlspecialchars($paymentDetails['unit_number']) . '</li>' .
+                                            '<li>Tenant: ' . htmlspecialchars($paymentDetails['tenant_name']) . '</li>' .
+                                            '<li>Amount: Ksh ' . htmlspecialchars($rentData['amount']) . '</li>' .
+                                            '<li>Payment Date: ' . htmlspecialchars($rentData['payment_date']) . '</li>' .
+                                            '<li>Payment Method: ' . htmlspecialchars($rentData['payment_method']) . '</li>' .
+                                        '</ul>' .
+                                        $footer .
+                                        '</div>';
                                     $mail->send();
                                 }
                             }

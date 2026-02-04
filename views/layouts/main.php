@@ -1299,31 +1299,7 @@ ob_clean();
                         <i class="bi bi-tools me-2"></i> Maintenance
                     </a>
                 </li>
-                <li class="nav-item">
-                    <a href="<?= BASE_URL ?>/admin/inquiries" class="nav-link <?= strpos($current_uri, 'admin/inquiries') === 0 ? 'active' : '' ?>">
-                        <i class="bi bi-envelope-open me-2"></i> Inquiries
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="<?= BASE_URL ?>/messaging" class="nav-link <?= strpos($current_uri, 'messaging') === 0 ? 'active' : '' ?>">
-                        <i class="bi bi-chat-dots me-2"></i> Messaging
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="<?= BASE_URL ?>/notices" class="nav-link <?= strpos($current_uri, 'notices') === 0 ? 'active' : '' ?>">
-                        <i class="bi bi-megaphone me-2"></i> Notices
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="<?= BASE_URL ?>/reports" class="nav-link <?= strpos($current_uri, 'reports') === 0 ? 'active' : '' ?>">
-                        <i class="bi bi-graph-up me-2"></i> Reports
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="<?= BASE_URL ?>/reports/tenant-balances" class="nav-link <?= (strpos($current_uri, 'reports/tenant-balances') === 0) ? 'active' : '' ?>">
-                        <i class="bi bi-calendar-check me-2"></i> Monthly Tenant Balances
-                    </a>
-                </li>
+                
                 
                 <!-- FINANCIAL Section -->
                 <li class="nav-item mt-3">
@@ -1398,6 +1374,19 @@ ob_clean();
                     </div>
                 </li>
                 <li class="nav-item mt-3">
+                    <small class="nav-header text-uppercase px-3">Reports</small>
+                </li>
+                <li class="nav-item">
+                    <a href="<?= BASE_URL ?>/reports" class="nav-link <?= strpos($current_uri, 'reports') === 0 ? 'active' : '' ?>">
+                        <i class="bi bi-graph-up me-2"></i> Reports
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="<?= BASE_URL ?>/reports/tenant-balances" class="nav-link <?= (strpos($current_uri, 'reports/tenant-balances') === 0) ? 'active' : '' ?>">
+                        <i class="bi bi-calendar-check me-2"></i> Monthly Tenant Balances
+                    </a>
+                </li>
+                <li class="nav-item mt-3">
                     <small class="nav-header text-uppercase px-3">HR & PAYROLL</small>
                 </li>
                 <li class="nav-item">
@@ -1415,6 +1404,25 @@ ob_clean();
                         <i class="bi bi-pen me-2"></i> E‑Signatures
                     </a>
                 </li>
+                <li class="nav-item mt-3">
+                    <small class="nav-header text-uppercase px-3">Communication</small>
+                </li>
+                <li class="nav-item">
+                    <a href="<?= BASE_URL ?>/admin/inquiries" class="nav-link <?= strpos($current_uri, 'admin/inquiries') === 0 ? 'active' : '' ?>">
+                        <i class="bi bi-envelope-open me-2"></i> Inquiries
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="<?= BASE_URL ?>/messaging" class="nav-link <?= strpos($current_uri, 'messaging') === 0 ? 'active' : '' ?>">
+                        <i class="bi bi-chat-dots me-2"></i> Messaging
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="<?= BASE_URL ?>/notices" class="nav-link <?= strpos($current_uri, 'notices') === 0 ? 'active' : '' ?>">
+                        <i class="bi bi-megaphone me-2"></i> Notices
+                    </a>
+                </li>
+                
                 <li class="nav-item mt-3">
                     <small class="nav-header text-uppercase px-3">BILLING & SUBSCRIPTION</small>
                 </li>
