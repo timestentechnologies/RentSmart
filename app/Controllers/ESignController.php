@@ -53,6 +53,23 @@ class ESignController
             $entity_id = !empty($_POST['entity_id']) ? (int)$_POST['entity_id'] : null;
             $expires_at = !empty($_POST['expires_at']) ? $_POST['expires_at'] . ' 23:59:59' : null;
             if ($title === '' || $recipient_id <= 0) throw new \Exception('Title and recipient are required');
+
+            // Handle optional document upload
+            $document_path = null;
+            if (!empty($_FILES['document']) && is_uploaded_file($_FILES['document']['tmp_name'])) {
+                $err = $_FILES['document']['error'] ?? UPLOAD_ERR_OK;
+                if ($err !== UPLOAD_ERR_OK) throw new \Exception('Upload failed');
+                $allowed = ['application/pdf','image/png','image/jpeg'];
+                $mime = mime_content_type($_FILES['document']['tmp_name']);
+                if (!in_array($mime, $allowed)) throw new \Exception('Only PDF/PNG/JPG allowed');
+                $ext = pathinfo($_FILES['document']['name'], PATHINFO_EXTENSION) ?: ($mime === 'application/pdf' ? 'pdf' : ($mime === 'image/png' ? 'png' : 'jpg'));
+                $dir = __DIR__ . '/../../public/uploads/esign';
+                if (!is_dir($dir)) { @mkdir($dir, 0775, true); }
+                $fname = 'doc_' . date('Ymd_His') . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+                $dest = $dir . '/' . $fname;
+                if (!move_uploaded_file($_FILES['document']['tmp_name'], $dest)) throw new \Exception('Failed to save upload');
+                $document_path = 'uploads/esign/' . $fname;
+            }
             $model = new ESignRequest();
             $result = $model->createRequest([
                 'title' => $title,
@@ -63,6 +80,7 @@ class ESignController
                 'entity_type' => $entity_type,
                 'entity_id' => $entity_id,
                 'expires_at' => $expires_at,
+                'document_path' => $document_path,
             ]);
             $_SESSION['flash_message'] = 'Signature request created';
             $_SESSION['flash_type'] = 'success';
@@ -103,17 +121,39 @@ class ESignController
         try {
             if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') throw new \Exception('Invalid request');
             $name = trim($_POST['signer_name'] ?? '');
-            $data = $_POST['signature_data'] ?? '';
-            if ($name === '' || $data === '') throw new \Exception('Name and signature are required');
-            // Expect data URL like data:image/png;base64,XXXX
-            if (strpos($data, 'base64,') !== false) {
-                $data = substr($data, strpos($data, 'base64,') + 7);
+            $method = $_POST['method'] ?? 'draw';
+            if ($name === '') throw new \Exception('Name is required');
+            $data = '';
+            $sigType = null;
+            $initials = null;
+
+            if ($method === 'draw') {
+                $data = $_POST['signature_data'] ?? '';
+                if ($data === '') throw new \Exception('Please draw your signature');
+                if (strpos($data, 'base64,') !== false) { $data = substr($data, strpos($data, 'base64,') + 7); }
+                $sigType = 'draw';
+            } elseif ($method === 'upload') {
+                if (empty($_FILES['signature_file']) || !is_uploaded_file($_FILES['signature_file']['tmp_name'])) throw new \Exception('Upload a signature image');
+                $err = $_FILES['signature_file']['error'] ?? UPLOAD_ERR_OK;
+                if ($err !== UPLOAD_ERR_OK) throw new \Exception('Signature upload failed');
+                $allowed = ['image/png','image/jpeg'];
+                $mime = mime_content_type($_FILES['signature_file']['tmp_name']);
+                if (!in_array($mime, $allowed)) throw new \Exception('Only PNG/JPG signature allowed');
+                $bin = file_get_contents($_FILES['signature_file']['tmp_name']);
+                $data = base64_encode($bin);
+                $sigType = 'upload';
+            } elseif ($method === 'initials') {
+                $initials = trim($_POST['signature_initials'] ?? '');
+                if ($initials === '') throw new \Exception('Enter your initials');
+                $data = '';
+                $sigType = 'initials';
+            } else {
+                throw new \Exception('Invalid method');
             }
-            // Keep raw base64 in DB
             $ip = $_SERVER['REMOTE_ADDR'] ?? null;
             $ua = $_SERVER['HTTP_USER_AGENT'] ?? null;
             $model = new ESignRequest();
-            $ok = $model->markSigned($token, $name, $data, $ip, $ua);
+            $ok = $model->markSigned($token, $name, $data, $ip, $ua, $sigType, $initials);
             if (!$ok) throw new \Exception('Unable to save signature');
             echo '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Signature Saved</title><style>body{font-family:Arial;padding:24px}</style></head><body><h2>Thank you!</h2><p>Your signature has been recorded.</p></body></html>';
             return;

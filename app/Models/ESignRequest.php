@@ -30,6 +30,10 @@ class ESignRequest extends Model
             declined_at DATETIME NULL,
             signer_name VARCHAR(150) NULL,
             signature_image LONGTEXT NULL,
+            signature_type ENUM('draw','upload','initials') NULL,
+            initials VARCHAR(50) NULL,
+            document_path VARCHAR(255) NULL,
+            signed_document_path VARCHAR(255) NULL,
             signature_ip VARCHAR(64) NULL,
             signature_user_agent VARCHAR(255) NULL,
             created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
@@ -45,7 +49,7 @@ class ESignRequest extends Model
     public function createRequest(array $data)
     {
         $token = bin2hex(random_bytes(16));
-        $stmt = $this->db->prepare("INSERT INTO {$this->table} (title, message, requester_user_id, recipient_type, recipient_id, entity_type, entity_id, token, status, expires_at) VALUES (?,?,?,?,?,?,?,?,?,?)");
+        $stmt = $this->db->prepare("INSERT INTO {$this->table} (title, message, requester_user_id, recipient_type, recipient_id, entity_type, entity_id, token, status, expires_at, document_path) VALUES (?,?,?,?,?,?,?,?,?,?,?)");
         $stmt->execute([
             $data['title'],
             $data['message'] ?? null,
@@ -57,6 +61,7 @@ class ESignRequest extends Model
             $token,
             'pending',
             $data['expires_at'] ?? null,
+            $data['document_path'] ?? null,
         ]);
         return ['id' => (int)$this->db->lastInsertId(), 'token' => $token];
     }
@@ -88,10 +93,12 @@ class ESignRequest extends Model
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
 
-    public function markSigned($token, $name, $image, $ip = null, $ua = null)
+    public function markSigned($token, $name, $image, $ip = null, $ua = null, $sigType = null, $initials = null)
     {
-        $stmt = $this->db->prepare("UPDATE {$this->table} SET status='signed', signer_name=?, signature_image=?, signed_at=NOW(), signature_ip=?, signature_user_agent=? WHERE token=?");
-        return $stmt->execute([$name, $image, $ip, $ua, $token]);
+        $stmt = $this->db->prepare("UPDATE {$this->table} 
+            SET status='signed', signer_name=?, signature_image=?, signature_type=?, initials=?, signed_at=NOW(), signature_ip=?, signature_user_agent=? 
+            WHERE token=?");
+        return $stmt->execute([$name, $image, $sigType, $initials, $ip, $ua, $token]);
     }
 
     public function markDeclined($token)

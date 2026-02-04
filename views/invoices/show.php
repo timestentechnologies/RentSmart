@@ -32,6 +32,22 @@ ob_start();
           <div><strong>Posted:</strong> <?= !empty($invoice['posted_at']) ? date('Y-m-d', strtotime($invoice['posted_at'])) : '-' ?></div>
         </div>
       </div>
+      <?php if (!empty($paymentStatus)): ?>
+      <div class="alert alert-light border mt-3">
+        <div class="d-flex flex-wrap align-items-center gap-3">
+          <strong class="me-2">Payment Status for <?= htmlspecialchars($paymentStatus['month_label']) ?>:</strong>
+          <?php
+            $rentBadge = 'secondary';
+            if ($paymentStatus['rent']['status'] === 'paid') $rentBadge = 'success';
+            elseif ($paymentStatus['rent']['status'] === 'advance') $rentBadge = 'info';
+            elseif ($paymentStatus['rent']['status'] === 'due') $rentBadge = 'danger';
+            $utilBadge = ($paymentStatus['utilities']['status'] ?? 'due') === 'paid' ? 'success' : 'warning';
+          ?>
+          <span class="badge bg-<?= $rentBadge ?>">Rent: <?= htmlspecialchars(ucfirst($paymentStatus['rent']['status'])) ?> (Paid <?= number_format((float)$paymentStatus['rent']['paid'],2) ?> / Due <?= number_format((float)$paymentStatus['rent']['amount'],2) ?>)</span>
+          <span class="badge bg-<?= $utilBadge ?>">Utilities: <?= htmlspecialchars(ucfirst($paymentStatus['utilities']['status'])) ?> (Paid <?= number_format((float)$paymentStatus['utilities']['paid'],2) ?>)</span>
+        </div>
+      </div>
+      <?php endif; ?>
       <hr>
       <div class="table-responsive">
         <table class="table">
