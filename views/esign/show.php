@@ -28,6 +28,11 @@ ob_start();
           <?php if (!empty($req['signed_at'])): ?><div><strong>Signed:</strong> <?= htmlspecialchars($req['signed_at']) ?></div><?php endif; ?>
           <?php if (!empty($req['declined_at'])): ?><div><strong>Declined:</strong> <?= htmlspecialchars($req['declined_at']) ?></div><?php endif; ?>
           <?php if (!empty($req['signer_name'])): ?><div><strong>Signer:</strong> <?= htmlspecialchars($req['signer_name']) ?></div><?php endif; ?>
+          <?php if (!empty($req['document_path'])): ?>
+            <div class="mt-2">
+              <strong>Document:</strong> <a target="_blank" href="<?= BASE_URL ?>/public/<?= htmlspecialchars($req['document_path']) ?>">Open</a>
+            </div>
+          <?php endif; ?>
         </div>
         <div class="col-md-6">
           <div class="text-end"><small>Shareable Link:</small><br><a href="<?= htmlspecialchars($signUrl) ?>" target="_blank"><?= htmlspecialchars($signUrl) ?></a></div>

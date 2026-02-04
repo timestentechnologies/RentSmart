@@ -18,7 +18,7 @@ ob_start();
 
   <div class="card">
     <div class="card-body">
-      <form method="post" action="<?= BASE_URL ?>/esign/store">
+      <form method="post" action="<?= BASE_URL ?>/esign/store" enctype="multipart/form-data">
         <?= csrf_field() ?>
         <div class="row g-3">
           <div class="col-md-6">
@@ -64,6 +64,10 @@ ob_start();
           <div class="col-md-3">
             <label class="form-label">Entity ID (optional)</label>
             <input type="number" name="entity_id" class="form-control" value="<?= htmlspecialchars($entity_id ?? '') ?>" placeholder="e.g. 45">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Document to Sign (PDF/PNG/JPG) - optional</label>
+            <input type="file" name="document" class="form-control" accept="application/pdf,image/png,image/jpeg">
           </div>
         </div>
         <div class="text-end mt-3">

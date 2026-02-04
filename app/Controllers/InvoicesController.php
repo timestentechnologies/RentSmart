@@ -96,6 +96,42 @@ class InvoicesController
         $invModel = new Invoice();
         $invoice = $invModel->getWithItems((int)$id);
         if (!$invoice) { http_response_code(404); echo 'Invoice not found'; exit; }
+        // Compute payment status summary for the invoice's month (rent/utilities)
+        $paymentStatus = null;
+        if (!empty($invoice['tenant_id']) && !empty($invoice['issue_date'])) {
+            $payModel = new \App\Models\Payment();
+            $lease = $payModel->getActiveLease((int)$invoice['tenant_id'], $this->userId);
+            if ($lease) {
+                $start = date('Y-m-01', strtotime($invoice['issue_date']));
+                $end = date('Y-m-t', strtotime($invoice['issue_date']));
+                $monthLabel = date('F Y', strtotime($start));
+                $rows = $payModel->query(
+                    "SELECT payment_type, COALESCE(SUM(amount),0) AS total_paid
+                     FROM payments
+                     WHERE lease_id = ? AND status IN ('completed','verified')
+                       AND payment_date BETWEEN ? AND ?
+                     GROUP BY payment_type",
+                    [$lease['id'], $start, $end]
+                );
+                $paidRent = 0.0; $paidUtil = 0.0;
+                foreach ($rows as $r) {
+                    if (($r['payment_type'] ?? '') === 'rent') { $paidRent = (float)$r['total_paid']; }
+                    if (($r['payment_type'] ?? '') === 'utility') { $paidUtil = (float)$r['total_paid']; }
+                }
+                $rentAmount = (float)($lease['rent_amount'] ?? 0.0);
+                $rentStatus = 'due';
+                if ($paidRent > $rentAmount + 0.009) { $rentStatus = 'advance'; }
+                else if ($paidRent >= $rentAmount - 0.009) { $rentStatus = 'paid'; }
+                $utilStatus = $paidUtil > 0.0 ? 'paid' : 'due';
+                $paymentStatus = [
+                    'month_label' => $monthLabel,
+                    'rent' => ['status' => $rentStatus, 'paid' => $paidRent, 'amount' => $rentAmount],
+                    'utilities' => ['status' => $utilStatus, 'paid' => $paidUtil],
+                ];
+            }
+        }
+        // Make available to the view
+        $paymentStatus = $paymentStatus;
         require 'views/invoices/show.php';
     }
 
@@ -115,6 +151,40 @@ class InvoicesController
             $base64 = base64_encode($imageData);
             $mime = 'image/' . (pathinfo($logoPath, PATHINFO_EXTENSION) ?: 'png');
             $logoDataUri = 'data:' . $mime . ';base64,' . $base64;
+        }
+        // Payment status summary (same as show)
+        $paymentStatus = null;
+        if (!empty($invoice['tenant_id']) && !empty($invoice['issue_date'])) {
+            $payModel = new \App\Models\Payment();
+            $lease = $payModel->getActiveLease((int)$invoice['tenant_id'], $this->userId);
+            if ($lease) {
+                $start = date('Y-m-01', strtotime($invoice['issue_date']));
+                $end = date('Y-m-t', strtotime($invoice['issue_date']));
+                $monthLabel = date('F Y', strtotime($start));
+                $rows = $payModel->query(
+                    "SELECT payment_type, COALESCE(SUM(amount),0) AS total_paid
+                     FROM payments
+                     WHERE lease_id = ? AND status IN ('completed','verified')
+                       AND payment_date BETWEEN ? AND ?
+                     GROUP BY payment_type",
+                    [$lease['id'], $start, $end]
+                );
+                $paidRent = 0.0; $paidUtil = 0.0;
+                foreach ($rows as $r) {
+                    if (($r['payment_type'] ?? '') === 'rent') { $paidRent = (float)$r['total_paid']; }
+                    if (($r['payment_type'] ?? '') === 'utility') { $paidUtil = (float)$r['total_paid']; }
+                }
+                $rentAmount = (float)($lease['rent_amount'] ?? 0.0);
+                $rentStatus = 'due';
+                if ($paidRent > $rentAmount + 0.009) { $rentStatus = 'advance'; }
+                else if ($paidRent >= $rentAmount - 0.009) { $rentStatus = 'paid'; }
+                $utilStatus = $paidUtil > 0.0 ? 'paid' : 'due';
+                $paymentStatus = [
+                    'month_label' => $monthLabel,
+                    'rent' => ['status' => $rentStatus, 'paid' => $paidRent, 'amount' => $rentAmount],
+                    'utilities' => ['status' => $utilStatus, 'paid' => $paidUtil],
+                ];
+            }
         }
         ob_start();
         include __DIR__ . '/../../views/invoices/invoice_pdf.php';

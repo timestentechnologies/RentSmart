@@ -115,6 +115,22 @@
     </table>
   </div>
 
+  <?php if (!empty($paymentStatus)): ?>
+  <div class="section">
+    <div class="section-title">Payment Status for <?= htmlspecialchars($paymentStatus['month_label']) ?></div>
+    <table class="no-border">
+      <tr>
+        <td><strong>Rent:</strong></td>
+        <td><?= htmlspecialchars(ucfirst($paymentStatus['rent']['status'])) ?> (Paid <?= number_format((float)$paymentStatus['rent']['paid'], 2) ?> / Due <?= number_format((float)$paymentStatus['rent']['amount'], 2) ?>)</td>
+      </tr>
+      <tr>
+        <td><strong>Utilities:</strong></td>
+        <td><?= htmlspecialchars(ucfirst($paymentStatus['utilities']['status'])) ?> (Paid <?= number_format((float)$paymentStatus['utilities']['paid'], 2) ?>)</td>
+      </tr>
+    </table>
+  </div>
+  <?php endif; ?>
+
   <div class="section">
     <div class="flex">
       <div class="col" style="width:60%">
