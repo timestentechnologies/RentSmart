@@ -244,9 +244,26 @@ class InvoicesController
             $mail->setFrom($settings['smtp_user'] ?? '', $siteName);
             $mail->addAddress($invoice['tenant_email'], $invoice['tenant_name'] ?? 'Tenant');
             $mail->Subject = 'Invoice ' . ($invoice['number'] ?? ('#' . $invoice['id']));
-            $body = "Dear " . ($invoice['tenant_name'] ?? 'Customer') . ",\n\nPlease find attached your invoice " . ($invoice['number'] ?? ('#' . $invoice['id'])) . ".\nTotal Due: Ksh " . number_format((float)$invoice['total'], 2) . "\nDue Date: " . ($invoice['due_date'] ?? '-') . "\n\nRegards,\n" . $siteName;
-            $mail->Body = $body;
-            $mail->AltBody = $body;
+            $mail->isHTML(true);
+            $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+            $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+            $base = defined('BASE_URL') ? BASE_URL : '';
+            $siteUrl = rtrim((string)($settings['site_url'] ?? ($scheme . '://' . $host . $base)), '/');
+            $logoUrl = isset($settings['site_logo']) && $settings['site_logo'] ? ($siteUrl . '/public/assets/images/' . $settings['site_logo']) : '';
+            $footer = '<div style="margin-top:30px;font-size:12px;color:#888;text-align:center;">Powered by <a href="https://timestentechnologies.co.ke" target="_blank" style="color:#888;text-decoration:none;">Timesten Technologies</a></div>';
+            $plain = 'Dear ' . ($invoice['tenant_name'] ?? 'Customer') . ",\n\nPlease find attached your invoice " . ($invoice['number'] ?? ('#' . $invoice['id'])) . ".\nTotal Due: Ksh " . number_format((float)$invoice['total'], 2) . "\nDue Date: " . ($invoice['due_date'] ?? '-') . "\n\nRegards,\n" . $siteName;
+            $html =
+                '<div style="max-width:520px;margin:auto;border:1px solid #eee;padding:24px;font-family:sans-serif;">'
+                . ($logoUrl ? '<div style="text-align:center;margin-bottom:24px;"><img src="' . $logoUrl . '" alt="Logo" style="max-width:180px;max-height:80px;"></div>' : '') .
+                '<p style="font-size:16px;">Dear ' . htmlspecialchars($invoice['tenant_name'] ?? 'Customer') . ',</p>' .
+                '<p>Please find attached your invoice ' . htmlspecialchars($invoice['number'] ?? ('#' . $invoice['id'])) . '.</p>' .
+                '<p><strong>Total Due:</strong> Ksh ' . number_format((float)$invoice['total'], 2) . '</p>' .
+                '<p><strong>Due Date:</strong> ' . htmlspecialchars($invoice['due_date'] ?? '-') . '</p>' .
+                '<p>Regards,<br>' . htmlspecialchars($siteName) . '</p>' .
+                $footer .
+                '</div>';
+            $mail->Body = $html;
+            $mail->AltBody = $plain;
             $mail->addStringAttachment($pdfData, $filename, 'base64', 'application/pdf');
             $mail->send();
 

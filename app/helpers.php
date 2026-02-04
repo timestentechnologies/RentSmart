@@ -326,13 +326,29 @@ if (!function_exists('send_email')) {
         $mail->SMTPAuth = true;
         $mail->Username = get_setting('smtp_user');
         $mail->Password = get_setting('smtp_pass');
-        $mail->SMTPSecure = 'tls';
+        $mail->SMTPSecure = PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
         $mail->Port = get_setting('smtp_port');
-        $mail->setFrom(get_setting('site_email'), get_setting('site_name'));
+        $fromEmail = get_setting('smtp_user') ?: get_setting('site_email');
+        $fromName = get_setting('site_name');
+        $mail->setFrom($fromEmail, $fromName);
         $mail->addAddress($to);
         $mail->Subject = $subject;
-        $mail->Body = $body;
-        $mail->isHTML(false);
+        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        $base = defined('BASE_URL') ? BASE_URL : '';
+        $siteUrl = rtrim((string)(get_setting('site_url') ?: ($scheme . '://' . $host . $base)), '/');
+        $logo = get_setting('site_logo');
+        $logoUrl = $logo ? ($siteUrl . '/public/assets/images/' . $logo) : '';
+        $footer = '<div style="margin-top:30px;font-size:12px;color:#888;text-align:center;">Powered by <a href="https://timestentechnologies.co.ke" target="_blank" style="color:#888;text-decoration:none;">Timesten Technologies</a></div>';
+        $wrapped =
+            '<div style="max-width:520px;margin:auto;border:1px solid #eee;padding:24px;font-family:sans-serif;">'
+            . ($logoUrl ? '<div style="text-align:center;margin-bottom:24px;"><img src="' . $logoUrl . '" alt="Logo" style="max-width:180px;max-height:80px;"></div>' : '') .
+            '<div style="white-space:pre-wrap;">' . nl2br(htmlspecialchars((string)$body)) . '</div>' .
+            $footer .
+            '</div>';
+        $mail->Body = $wrapped;
+        $mail->AltBody = (string)$body;
+        $mail->isHTML(true);
         try {
             $mail->send();
         } catch (Exception $e) {

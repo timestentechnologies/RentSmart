@@ -6,6 +6,7 @@ use App\Models\Message;
 use App\Models\Tenant;
 use App\Models\Property;
 use App\Models\User;
+use App\Models\Setting;
 
 class MessagingController
 {
@@ -156,6 +157,66 @@ class MessagingController
                 'receiver_id' => $receiverId,
                 'body' => $body
             ]);
+
+            try {
+                $userModel = new User();
+                $sender = $userModel->find((int)$this->userId);
+                $recipientEmail = '';
+                $recipientName = '';
+
+                if ($receiverType === 'tenant') {
+                    $tenantModel = new Tenant();
+                    $t = $tenantModel->getById($receiverId, (int)$this->userId);
+                    if (!empty($t) && !empty($t['email'])) {
+                        $recipientEmail = (string)$t['email'];
+                        $recipientName = (string)($t['name'] ?? 'Tenant');
+                    }
+                } else {
+                    $target = $userModel->find($receiverId);
+                    if (!empty($target) && !empty($target['email'])) {
+                        $recipientEmail = (string)$target['email'];
+                        $recipientName = (string)($target['name'] ?? 'User');
+                    }
+                }
+
+                if ($recipientEmail !== '') {
+                    $settingModel = new Setting();
+                    $settings = $settingModel->getAllAsAssoc();
+                    $siteUrl = rtrim($settings['site_url'] ?? 'https://rentsmart.co.ke', '/');
+                    $logoUrl = isset($settings['site_logo']) && $settings['site_logo'] ? ($siteUrl . '/public/assets/images/' . $settings['site_logo']) : '';
+                    $footer = '<div style="margin-top:30px;font-size:12px;color:#888;text-align:center;">Powered by <a href="https://timestentechnologies.co.ke" target="_blank" style="color:#888;text-decoration:none;">Timesten Technologies</a></div>';
+
+                    $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
+                    $mail->isSMTP();
+                    $mail->Host = $settings['smtp_host'] ?? '';
+                    $mail->Port = (int)($settings['smtp_port'] ?? 587);
+                    $mail->SMTPAuth = true;
+                    $mail->Username = $settings['smtp_user'] ?? '';
+                    $mail->Password = $settings['smtp_pass'] ?? '';
+                    $mail->SMTPSecure = \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+                    $mail->setFrom($settings['smtp_user'] ?? '', $settings['site_name'] ?? 'RentSmart');
+                    $mail->isHTML(true);
+
+                    $bodyHtml =
+                        '<div style="max-width:520px;margin:auto;border:1px solid #eee;padding:24px;font-family:sans-serif;">'
+                        . ($logoUrl ? '<div style="text-align:center;margin-bottom:24px;"><img src="' . $logoUrl . '" alt="Logo" style="max-width:180px;max-height:80px;"></div>' : '') .
+                        '<p style="font-size:16px;">Dear ' . htmlspecialchars($recipientName) . ',</p>' .
+                        '<p>You have a new message from <strong>' . htmlspecialchars((string)($sender['name'] ?? 'User')) . '</strong> on RentSmart.</p>' .
+                        '<blockquote style="margin:16px 0;padding:12px 16px;background:#f9f9f9;border-left:3px solid #ccc;white-space:pre-wrap;">' . nl2br(htmlspecialchars($body)) . '</blockquote>' .
+                        '<p><a href="' . $siteUrl . '/messaging" style="background:#0061f2;color:#fff;padding:10px 16px;border-radius:6px;text-decoration:none;display:inline-block;">View and reply</a></p>' .
+                        '<p>Thank you,<br>RentSmart Team</p>' .
+                        $footer .
+                        '</div>';
+
+                    $mail->clearAddresses();
+                    $mail->addAddress($recipientEmail, $recipientName);
+                    $mail->Subject = 'New message from ' . ((string)($sender['name'] ?? 'RentSmart User'));
+                    $mail->Body = $bodyHtml;
+                    try { $mail->send(); } catch (\PHPMailer\PHPMailer\Exception $e) { error_log('Messaging mail send error: ' . $e->getMessage()); }
+                }
+            } catch (\Exception $e) {
+                error_log('Messaging mail error: ' . $e->getMessage());
+            }
             echo json_encode(['success'=>true,'id'=>$id]);
         } catch (\Exception $e) {
             http_response_code(400);
