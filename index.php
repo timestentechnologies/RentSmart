@@ -233,6 +233,7 @@ $routes = [
     'files' => ['controller' => 'FileController', 'action' => 'index'],
     'files/upload' => ['controller' => 'FileController', 'action' => 'upload'],
     'files/search' => ['controller' => 'FileController', 'action' => 'search'],
+    'files/share' => ['controller' => 'FileController', 'action' => 'share'],
     'files/delete/(\d+)' => ['controller' => 'FileController', 'action' => 'delete'],
     // Expenses routes
     'expenses' => ['controller' => 'ExpensesController', 'action' => 'index'],

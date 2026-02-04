@@ -47,6 +47,19 @@ ob_start();
                                 </a>
                             <?php endforeach; ?>
                         <?php endif; ?>
+
+                        <?php if (!empty($recipients['users'])): ?>
+                            <div class="list-group-item bg-light small text-muted">Users</div>
+                            <?php foreach ($recipients['users'] as $u): ?>
+                                <a href="#" class="list-group-item list-group-item-action recipient-item" data-type="user" data-id="<?= (int)$u['id'] ?>">
+                                    <i class="bi bi-person-circle me-2"></i>
+                                    <?= htmlspecialchars($u['name']) ?>
+                                    <?php if (!empty($u['role'])): ?>
+                                        <div class="small text-muted"><?= htmlspecialchars($u['role']) ?></div>
+                                    <?php endif; ?>
+                                </a>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>

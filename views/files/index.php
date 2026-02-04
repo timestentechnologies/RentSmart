@@ -192,9 +192,10 @@ ob_start();
                 }},
                 { data: null, orderable: false, render: function(row){
                     const url = (row.url) ? row.url : ('<?= BASE_URL ?>/public/' + (row.upload_path || ''));
-                    const viewBtn = '<a href="'+url+'" target="_blank" class="btn btn-sm btn-outline-secondary me-1"><i class="bi bi-box-arrow-up-right"></i></a>';
+                    const viewBtn = '<a href="'+url+'" target="_blank" class="btn btn-sm btn-outline-secondary me-1" title="Open"><i class="bi bi-box-arrow-up-right"></i></a>';
+                    const shareBtn = '<button type="button" class="btn btn-sm btn-outline-primary me-1 btn-share-file" data-id="'+row.id+'" title="Share"><i class="bi bi-share"></i></button>';
                     const delBtn = '<button type="button" class="btn btn-sm btn-outline-danger btn-delete-file" data-id="'+row.id+'" title="Delete"><i class="bi bi-trash"></i></button>';
-                    return viewBtn + delBtn;
+                    return viewBtn + shareBtn + delBtn;
                 }}
             ]
         });
@@ -251,10 +252,102 @@ ob_start();
             .catch(()=>{ if (window.Swal) Swal.fire('Error','Failed to delete','error'); });
     }
 
+    // Share modal logic
+    const shareRecipients = <?php echo json_encode($shareRecipients ?? ['tenants'=>[], 'caretakers'=>[], 'admins'=>[], 'users'=>[]]); ?>;
+    let shareFileId = null;
+
+    $(document).on('click', '.btn-share-file', function(){
+        shareFileId = this.getAttribute('data-id');
+        const modal = new bootstrap.Modal(document.getElementById('shareFileModal'));
+        // Reset form
+        document.getElementById('shareCategory').value = '';
+        const recSel = document.getElementById('shareRecipient');
+        recSel.innerHTML = '<option value="">Select recipient</option>';
+        modal.show();
+    });
+
+    document.getElementById('shareCategory').addEventListener('change', function(){
+        const cat = this.value;
+        const recSel = document.getElementById('shareRecipient');
+        recSel.innerHTML = '<option value="">Select recipient</option>';
+        if (!cat || !shareRecipients[cat]) return;
+        shareRecipients[cat].forEach(function(item){
+            const name = item.name || (item.id+''), meta = (item.property||item.role)? (' — '+(item.property||item.role)) : '';
+            const opt = document.createElement('option');
+            opt.value = item.id; opt.textContent = name + meta;
+            recSel.appendChild(opt);
+        });
+    });
+
+    document.getElementById('shareForm').addEventListener('submit', async function(e){
+        e.preventDefault();
+        const category = document.getElementById('shareCategory').value;
+        const recipientId = document.getElementById('shareRecipient').value;
+        if (!shareFileId || !category || !recipientId) return;
+        try {
+            const res = await fetch('<?= BASE_URL ?>/files/share', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRF-TOKEN': '<?= csrf_token() ?>'
+                },
+                body: new URLSearchParams({
+                    file_id: shareFileId,
+                    recipient_category: category,
+                    recipient_id: recipientId
+                })
+            });
+            const data = await res.json();
+            if (data && data.success) {
+                if (window.Swal) Swal.fire('Shared','File shared successfully','success');
+                bootstrap.Modal.getInstance(document.getElementById('shareFileModal')).hide();
+            } else {
+                throw new Error((data && data.message) || 'Failed to share');
+            }
+        } catch (err) {
+            if (window.Swal) Swal.fire('Error', err.message || 'Failed to share','error');
+        }
+    });
+
     // initial load
     loadTable();
 })();
 </script>
+<!-- Share File Modal -->
+<div class="modal fade" id="shareFileModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Share File</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <form id="shareForm" class="modal-body vstack gap-3">
+        <div>
+          <label class="form-label">Recipient Group</label>
+          <select id="shareCategory" class="form-select" required>
+            <option value="">Select group</option>
+            <option value="tenants">Tenants</option>
+            <option value="caretakers">Caretakers</option>
+            <option value="admins">Admins</option>
+            <?php $meRole = strtolower($_SESSION['user_role'] ?? ''); if ($meRole === 'admin' || $meRole === 'administrator'): ?>
+            <option value="users">Users</option>
+            <?php endif; ?>
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Recipient</label>
+          <select id="shareRecipient" class="form-select" required>
+            <option value="">Select recipient</option>
+          </select>
+        </div>
+        <div class="modal-footer px-0">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Share</button>
+        </div>
+      </form>
+    </div>
+  </div>
+ </div>
 <?php
 $content = ob_get_clean();
 require_once __DIR__ . '/../layouts/main.php';

@@ -30,7 +30,7 @@ class NoticesController
             $notices = $noticeModel->getVisibleForUser($this->userId);
             $user = new User();
             $user->find($this->userId);
-            $canPost = $user->isAdmin() || $user->isLandlord() || $user->isManager() || $user->isAgent();
+            $canPost = $user->isAdmin() || $user->isLandlord() || $user->isManager() || $user->isAgent() || $user->isCaretaker();
             if ($canPost) {
                 $propertyModel = new Property();
                 $properties = $propertyModel->getAll($this->userId);
@@ -63,8 +63,35 @@ class NoticesController
 
             $user = new User();
             $user->find($userId);
-            if (!($user->isAdmin() || $user->isLandlord() || $user->isManager() || $user->isAgent())) {
+            if (!($user->isAdmin() || $user->isLandlord() || $user->isManager() || $user->isAgent() || $user->isCaretaker())) {
                 throw new \Exception('Permission denied');
+            }
+
+            // Enforce scope: only admins may post global notices
+            if (!$user->isAdmin()) {
+                if (empty($propertyId) && empty($unitId) && empty($tenantId)) {
+                    throw new \Exception('Please target a property, unit, or tenant for your notice');
+                }
+                // Validate targets are within accessible properties/tenants
+                $accessibleIds = $user->getAccessiblePropertyIds();
+                if (!empty($propertyId) && !in_array((int)$propertyId, array_map('intval', $accessibleIds), true)) {
+                    throw new \Exception('You cannot post a notice to this property');
+                }
+                if (!empty($unitId)) {
+                    $stmt = (new \App\Models\Unit())->getDb()->prepare("SELECT u.property_id FROM units u WHERE u.id = ? LIMIT 1");
+                    $stmt->execute([(int)$unitId]);
+                    $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+                    $pid = (int)($row['property_id'] ?? 0);
+                    if (!$pid || !in_array($pid, array_map('intval', $accessibleIds), true)) {
+                        throw new \Exception('You cannot post a notice to this unit');
+                    }
+                }
+                if (!empty($tenantId)) {
+                    $t = (new Tenant())->getById((int)$tenantId, (int)$userId);
+                    if (empty($t)) {
+                        throw new \Exception('You cannot post a notice to this tenant');
+                    }
+                }
             }
 
             $notice = new Notice();
