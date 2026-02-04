@@ -48,7 +48,9 @@ ob_start();
                     <div>
                         <h6 class="card-title">Total Payments</h6>
                         <h2 class="mt-3 mb-2">
-                            Ksh<?= number_format(array_sum(array_column($payments, 'amount')), 2) ?>
+                            Ksh<?= number_format(array_sum(array_map(function($p){
+                                return in_array($p['status'] ?? '', ['completed','verified']) ? (float)($p['amount'] ?? 0) : 0;
+                            }, $payments)), 2) ?>
                         </h2>
                         <p class="mb-0 text-muted">All time payments</p>
                     </div>
@@ -65,7 +67,10 @@ ob_start();
                         <h6 class="card-title">This Month</h6>
                         <h2 class="mt-3 mb-2">
                             Ksh<?= number_format(array_sum(array_map(function($payment) {
-                                return date('Y-m', strtotime($payment['payment_date'])) === date('Y-m') ? $payment['amount'] : 0;
+                                return (
+                                    date('Y-m', strtotime($payment['payment_date'])) === date('Y-m')
+                                    && in_array($payment['status'] ?? '', ['completed','verified'])
+                                ) ? (float)($payment['amount'] ?? 0) : 0;
                             }, $payments)), 2) ?>
                         </h2>
                         <p class="mb-0 text-muted">Current month payments</p>
@@ -107,6 +112,17 @@ ob_start();
                         <option value="week">This Week</option>
                         <option value="month">This Month</option>
                         <option value="year">This Year</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label for="propertyFilter" class="form-label">Property</label>
+                    <select class="form-select" id="propertyFilter">
+                        <option value="">All Properties</option>
+                        <?php 
+                        $propertyNames = array_values(array_unique(array_filter(array_map(function($p){ return $p['property_name'] ?? ''; }, $payments))));
+                        foreach ($propertyNames as $pname): ?>
+                            <option value="<?= htmlspecialchars($pname) ?>"><?= htmlspecialchars($pname) ?></option>
+                        <?php endforeach; ?>
                     </select>
                 </div>
                 <div class="col-md-3">
@@ -156,6 +172,7 @@ ob_start();
                             <th>Phone Number</th>
                             <th>Status</th>
                             <th>Notes</th>
+                            <th>Property</th>
                             <th>Receipt</th>
                             <th>Actions</th>
                         </tr>
@@ -255,6 +272,9 @@ ob_start();
                                         <?php else: ?>
                                             <span class="text-muted">-</span>
                                         <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <?= htmlspecialchars($payment['property_name'] ?? '-') ?>
                                     </td>
                                     <td>
                                         <a href="<?= BASE_URL ?>/payments/receipt/<?= $payment['id'] ?>" class="btn btn-sm btn-outline-secondary" target="_blank">
@@ -1019,6 +1039,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Filter functionality
     document.getElementById('dateFilter').addEventListener('change', filterTable);
+    document.getElementById('propertyFilter').addEventListener('change', filterTable);
     document.getElementById('methodFilter').addEventListener('change', filterTable);
     document.getElementById('amountFilter').addEventListener('change', filterTable);
 
@@ -1029,16 +1050,21 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function filterTable() {
         const dateFilter = document.getElementById('dateFilter').value;
+        const propertyFilter = document.getElementById('propertyFilter').value.toLowerCase();
         const methodFilter = document.getElementById('methodFilter').value.toLowerCase();
         const amountFilter = document.getElementById('amountFilter').value;
 
         table.draw();
 
+        // Remove any existing custom search functions before adding our new one
+        DataTable.ext.search = [];
+
         // Custom filtering function
         DataTable.ext.search.push(function(settings, data, dataIndex) {
             const amount = parseFloat(data[1].replace(/[^0-9.-]+/g, ''));
             const date = new Date(data[2]);
-            const method = data[3].toLowerCase();
+            const method = (data[4] || '').toLowerCase();
+            const property = (data[9] || '').toLowerCase();
 
             // Date filter
             if (dateFilter) {
@@ -1062,6 +1088,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         break;
                 }
             }
+
+            // Property filter
+            if (propertyFilter && property !== propertyFilter) return false;
 
             // Method filter
             if (methodFilter && !method.includes(methodFilter)) return false;

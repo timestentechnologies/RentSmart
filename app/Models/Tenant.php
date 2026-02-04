@@ -17,9 +17,10 @@ class Tenant extends Model
                 l.rent_amount,
                 l.start_date,
                 l.end_date,
-                (SELECT SUM(amount) FROM payments WHERE lease_id = l.id) as total_payments,
+                (SELECT SUM(amount) FROM payments WHERE lease_id = l.id AND status IN ('completed','verified')) as total_payments,
                 (SELECT SUM(amount) FROM payments 
                  WHERE lease_id = l.id 
+                 AND status IN ('completed','verified')
                  AND payment_date >= DATE_FORMAT(NOW() ,'%Y-%m-01')) as current_month_payment,
                 (SELECT GROUP_CONCAT(
                     CONCAT(ut.utility_type, ': ', 

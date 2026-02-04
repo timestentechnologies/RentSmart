@@ -105,7 +105,7 @@ ob_start();
                     <select class="form-select" id="propertyFilter">
                         <option value="">All Properties</option>
                         <?php foreach($properties as $property): ?>
-                            <option value="<?= $property['id'] ?>"><?= htmlspecialchars($property['name']) ?></option>
+                            <option value="<?= htmlspecialchars($property['name']) ?>"><?= htmlspecialchars($property['name']) ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>
