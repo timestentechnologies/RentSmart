@@ -102,6 +102,16 @@ class Expense extends Model
     }
 
     /**
+     * Find an expense by reference type and id
+     */
+    public function findByReference(string $referenceType, int $referenceId)
+    {
+        $stmt = $this->db->prepare("SELECT * FROM {$this->table} WHERE reference_type = ? AND reference_id = ? LIMIT 1");
+        $stmt->execute([$referenceType, $referenceId]);
+        return $stmt->fetch(\PDO::FETCH_ASSOC) ?: null;
+    }
+
+    /**
      * Get total expenses for a date period with role-based filtering
      */
     public function getTotalForPeriod($userId, $startDate, $endDate, $sourceOfFunds = null)

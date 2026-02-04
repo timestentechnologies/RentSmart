@@ -53,15 +53,18 @@ class MaintenanceRequest extends Model
         $user->find($userId);
         
         $sql = "SELECT mr.*, 
-                t.name as tenant_name,
-                t.email as tenant_email,
-                t.phone as tenant_phone,
+                COALESCE(t.name, t2.name) as tenant_name,
+                COALESCE(t.email, t2.email) as tenant_email,
+                COALESCE(t.phone, t2.phone) as tenant_phone,
+                COALESCE(mr.tenant_id, l.tenant_id) as resolved_tenant_id,
                 u.unit_number,
                 p.name as property_name
                 FROM maintenance_requests mr
                 LEFT JOIN tenants t ON mr.tenant_id = t.id
                 LEFT JOIN units u ON mr.unit_id = u.id
-                LEFT JOIN properties p ON mr.property_id = p.id";
+                LEFT JOIN properties p ON mr.property_id = p.id
+                LEFT JOIN leases l ON mr.unit_id = l.unit_id AND l.status = 'active'
+                LEFT JOIN tenants t2 ON l.tenant_id = t2.id";
 
         $params = [];
         
@@ -102,15 +105,18 @@ class MaintenanceRequest extends Model
         $user->find($userId);
         
         $sql = "SELECT mr.*, 
-                t.name as tenant_name,
-                t.email as tenant_email,
-                t.phone as tenant_phone,
+                COALESCE(t.name, t2.name) as tenant_name,
+                COALESCE(t.email, t2.email) as tenant_email,
+                COALESCE(t.phone, t2.phone) as tenant_phone,
+                COALESCE(mr.tenant_id, l.tenant_id) as resolved_tenant_id,
                 u.unit_number,
                 p.name as property_name
                 FROM maintenance_requests mr
                 LEFT JOIN tenants t ON mr.tenant_id = t.id
                 LEFT JOIN units u ON mr.unit_id = u.id
                 LEFT JOIN properties p ON mr.property_id = p.id
+                LEFT JOIN leases l ON mr.unit_id = l.unit_id AND l.status = 'active'
+                LEFT JOIN tenants t2 ON l.tenant_id = t2.id
                 WHERE mr.id = ?";
 
         $params = [$id];
