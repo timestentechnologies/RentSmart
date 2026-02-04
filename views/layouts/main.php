@@ -87,7 +87,6 @@ ob_clean();
     <script>
         window.BASE_URL = '<?= BASE_URL ?>';
     </script>
-
     <script>
     // Persist and focus active sidebar item across refresh
     document.addEventListener('DOMContentLoaded', function(){
@@ -1600,6 +1599,27 @@ ob_clean();
         <?= csrf_field() ?>
 
         <?= $content ?? '' ?>
+    </div>
+
+    <!-- Upgrade Limit Modal (reusable across pages) -->
+    <div class="modal fade" id="upgradeLimitModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" data-upgrade-title>Upgrade Required</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <p class="mb-2" data-upgrade-message>You have reached your plan limit. Please upgrade to continue.</p>
+            <p class="text-muted small mb-2" data-upgrade-counts></p>
+            <p class="text-muted small mb-0">Current plan: <strong data-upgrade-plan></strong></p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <a href="<?= BASE_URL ?>/subscription/renew" class="btn btn-primary" data-upgrade-cta>Upgrade Plan</a>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Scripts -->

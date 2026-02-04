@@ -150,6 +150,7 @@ ob_start();
                     <tr>
                         <th class="text-muted">PLAN NAME</th>
                         <th class="text-muted">PRICE</th>
+                        <th class="text-muted">PROPERTY LIMIT</th>
                         <th class="text-muted">DESCRIPTION</th>
                         <th class="text-muted">FEATURES</th>
                         <th class="text-muted">ACTIONS</th>
@@ -167,6 +168,20 @@ ob_start();
                                 </div>
                             </td>
                             <td>Ksh<?= number_format($plan['price'], 2) ?></td>
+                            <td>
+                                <?php
+                                $nameLower = strtolower($plan['name']);
+                                $limit = null;
+                                if (isset($plan['property_limit']) && $plan['property_limit'] !== null && $plan['property_limit'] !== '' && (int)$plan['property_limit'] > 0) {
+                                    $limit = (int)$plan['property_limit'];
+                                } else {
+                                    if ($nameLower === 'basic') { $limit = 10; }
+                                    elseif ($nameLower === 'professional') { $limit = 50; }
+                                    elseif ($nameLower === 'enterprise') { $limit = null; }
+                                }
+                                echo $limit === null ? '<span class="badge bg-success">Unlimited</span>' : '<span class="badge bg-secondary">' . (int)$limit . '</span>';
+                                ?>
+                            </td>
                             <td><?= htmlspecialchars($plan['description']) ?></td>
                             <td>
                                 <ul class="list-unstyled mb-0">
@@ -198,6 +213,7 @@ ob_start();
                     <tr>
                         <th class="text-muted">USER</th>
                         <th class="text-muted">PLAN</th>
+                        <th class="text-muted">PROPERTIES</th>
                         <th class="text-muted">STATUS</th>
                         <th class="text-muted">START DATE</th>
                         <th class="text-muted">END DATE</th>
@@ -216,6 +232,9 @@ ob_start();
                                 </div>
                             </td>
                             <td><?= htmlspecialchars($sub['plan_type']) ?></td>
+                            <td>
+                                <span class="badge bg-primary"><?= (int)($sub['property_count'] ?? 0) ?></span>
+                            </td>
                             <td>
                                 <span class="badge bg-<?= $sub['status'] === 'active' ? 'success' : ($sub['status'] === 'trialing' ? 'info' : 'warning') ?>">
                                     <?= ucfirst($sub['status']) ?>

@@ -869,8 +869,30 @@
                 <div class="col-md-4">
                     <div class="pricing-card <?= $plan['name'] === 'Professional' ? 'featured' : '' ?>">
                         <h3><?= htmlspecialchars($plan['name']) ?></h3>
-                        <div class="display-6 fw-bold mb-3">
-                            Ksh <?= number_format($plan['price'], 2) ?><small class="fs-6">/month</small>
+                        <div class="display-6 fw-bold mb-2">
+                            <?php if (strtolower($plan['name']) === 'enterprise'): ?>
+                                Custom Pricing
+                            <?php else: ?>
+                                Ksh <?= number_format($plan['price'], 2) ?><small class="fs-6">/month</small>
+                            <?php endif; ?>
+                        </div>
+                        <div class="mb-3">
+                            <?php
+                            $nameLower = strtolower($plan['name']);
+                            $limit = null;
+                            if (isset($plan['property_limit']) && $plan['property_limit'] !== null && $plan['property_limit'] !== '' && (int)$plan['property_limit'] > 0) {
+                                $limit = (int)$plan['property_limit'];
+                            } else {
+                                if ($nameLower === 'basic') { $limit = 10; }
+                                elseif ($nameLower === 'professional') { $limit = 50; }
+                                elseif ($nameLower === 'enterprise') { $limit = null; }
+                            }
+                            if ($limit === null) {
+                                echo '<span class="badge bg-success">Unlimited Properties</span>';
+                            } else {
+                                echo '<span class="badge bg-secondary">Up to ' . (int)$limit . ' Properties</span>';
+                            }
+                            ?>
                         </div>
                         <p class="text-muted mb-4"><?= htmlspecialchars($plan['description']) ?></p>
                         <ul class="list-unstyled mb-4">
