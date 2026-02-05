@@ -127,6 +127,8 @@ ob_start();
                         <?php $isEnterprise = isset($plan['name']) && strtolower($plan['name']) === 'enterprise'; ?>
                         <h3 class="text-primary"><?= $isEnterprise ? 'Custom Pricing' : 'Ksh' . number_format($plan['price'], 2) . '/month' ?></h3>
                         <p class="text-muted"><?= $plan['description'] ?></p>
+                        <?php $__pl = isset($plan['property_limit']) ? (int)$plan['property_limit'] : null; $__pl_text = ($__pl && $__pl > 0) ? ('Up to ' . number_format($__pl) . ' properties') : 'Unlimited properties'; ?>
+                        <div class="mb-2"><span class="badge bg-secondary"><?= $__pl_text ?></span></div>
                         <ul class="list-unstyled">
                             <?php foreach (explode("\n", $plan['features']) as $feature): ?>
                                 <li><i class="bi bi-check-circle text-success me-2"></i><?= $feature ?></li>

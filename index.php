@@ -339,6 +339,10 @@ $routes = [
     ],
     'tenant/logout' => ['controller' => 'TenantAuthController', 'action' => 'logout'],
     'tenant/dashboard' => ['controller' => 'TenantPortalController', 'action' => 'dashboard'],
+    // Tenant Messaging routes
+    'tenant/messaging' => ['controller' => 'TenantMessagingController', 'action' => 'index'],
+    'tenant/messaging/thread' => ['controller' => 'TenantMessagingController', 'action' => 'thread'],
+    'tenant/messaging/send' => ['controller' => 'TenantMessagingController', 'action' => 'send'],
     
     // Tenant Maintenance routes
     'tenant/maintenance' => ['controller' => 'TenantMaintenanceController', 'action' => 'index'],
