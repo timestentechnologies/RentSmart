@@ -301,6 +301,8 @@ $routes = [
     'messaging' => ['controller' => 'MessagingController', 'action' => 'index'],
     'messaging/thread' => ['controller' => 'MessagingController', 'action' => 'thread'],
     'messaging/send' => ['controller' => 'MessagingController', 'action' => 'send'],
+    // Notifications
+    'notifications/feed' => ['controller' => 'NotificationsController', 'action' => 'feed'],
     // Notices
     'notices' => ['controller' => 'NoticesController', 'action' => 'index'],
     'notices/store' => ['controller' => 'NoticesController', 'action' => 'store'],
