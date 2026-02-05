@@ -29,6 +29,7 @@ $.extend(true, $.fn.dataTable.defaults, {
         lengthMenu: "_MENU_ records per page",
         info: "Showing _START_ to _END_ of _TOTAL_ records",
         infoEmpty: "Showing 0 to 0 of 0 records",
+        emptyTable: "No data available",
         infoFiltered: "(filtered from _MAX_ total records)"
     },
     dom: "<'row'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>>" +
@@ -54,8 +55,13 @@ document.addEventListener('DOMContentLoaded', function() {
             pageLength: table.dataset.pageLength || 10,
             order: table.dataset.order ? JSON.parse(table.dataset.order) : [[0, "desc"]]
         };
-        
-        new DataTable(table, options);
+        // If jQuery DataTables is present, skip vanilla init to avoid double initialization
+        if (typeof jQuery !== 'undefined' && jQuery.fn && jQuery.fn.DataTable) {
+            return;
+        }
+        if (typeof window.DataTable === 'function') {
+            new DataTable(table, options);
+        }
     });
 });
 
@@ -894,7 +900,12 @@ function showUpgradeLimitModal(opts) {
             : '';
         if (planEl) planEl.textContent = opts && opts.plan ? String(opts.plan) : '';
         if (ctaEl) {
-            ctaEl.setAttribute('href', (opts && opts.upgrade_url) ? opts.upgrade_url : (typeof BASE_URL !== 'undefined' ? `${BASE_URL}/subscription/renew` : '/subscription/renew'));
+            const targetHref = (opts && opts.upgrade_url) ? opts.upgrade_url : (typeof BASE_URL !== 'undefined' ? `${BASE_URL}/subscription/renew` : '/subscription/renew');
+            ctaEl.setAttribute('href', targetHref);
+            ctaEl.classList.remove('disabled');
+            ctaEl.removeAttribute('disabled');
+            try { ctaEl.style.pointerEvents = 'auto'; } catch(e){}
+            ctaEl.addEventListener('click', function(e){ e.preventDefault(); window.location.href = targetHref; }, { once: true });
         }
         const modal = new bootstrap.Modal(modalEl);
         modal.show();

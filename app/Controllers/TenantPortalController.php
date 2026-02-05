@@ -10,6 +10,8 @@ use App\Models\Utility;
 use App\Models\Setting;
 use App\Models\MaintenanceRequest;
 use App\Models\PaymentMethod;
+use App\Models\Notice;
+use App\Models\Message;
 
 class TenantPortalController
 {
@@ -58,6 +60,16 @@ class TenantPortalController
         $siteFavicon = isset($settings['site_favicon']) && $settings['site_favicon']
             ? BASE_URL . '/public/assets/images/' . $settings['site_favicon']
             : BASE_URL . '/public/assets/images/site_favicon_1750832003.png';
+
+        // Tenant notices
+        $noticeModel = new Notice();
+        $tenantNotices = $noticeModel->getVisibleForTenant((int)$tenantId);
+
+        // Recent messages for this tenant
+        $msgModel = new Message();
+        $stmt = $msgModel->getDb()->prepare("SELECT * FROM messages WHERE (receiver_type = 'tenant' AND receiver_id = ?) OR (sender_type = 'tenant' AND sender_id = ?) ORDER BY created_at DESC LIMIT 10");
+        $stmt->execute([(int)$tenantId, (int)$tenantId]);
+        $tenantMessages = $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
         require_once __DIR__ . '/../../views/tenant/dashboard.php';
     }
 } 

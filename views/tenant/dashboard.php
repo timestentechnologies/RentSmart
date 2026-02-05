@@ -183,6 +183,62 @@
         </div>
     </div>
 
+    <div class="row mb-4">
+        <div class="col-lg-6 col-md-12 mb-3">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-megaphone me-2"></i>Latest Notices</h5>
+                    <a href="<?= BASE_URL ?>/tenant/notices" class="btn btn-sm btn-outline-primary">View all</a>
+                </div>
+                <div class="card-body">
+                    <?php if (empty($tenantNotices)): ?>
+                        <div class="text-muted">No notices available.</div>
+                    <?php else: ?>
+                        <ul class="list-unstyled mb-0">
+                            <?php foreach (array_slice($tenantNotices, 0, 5) as $n): ?>
+                                <li class="mb-3">
+                                    <div class="fw-semibold"><?= htmlspecialchars($n['title'] ?? 'Notice') ?></div>
+                                    <div class="small text-muted"><?= htmlspecialchars(date('M j, Y g:i A', strtotime($n['created_at'] ?? 'now'))) ?></div>
+                                    <div class="text-muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;">
+                                        <?= htmlspecialchars(mb_strimwidth(strip_tags($n['body'] ?? ''), 0, 120, '…', 'UTF-8')) ?>
+                                    </div>
+                                </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6 col-md-12 mb-3">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-chat-dots me-2"></i>Recent Messages</h5>
+                </div>
+                <div class="card-body">
+                    <?php if (empty($tenantMessages)): ?>
+                        <div class="text-muted">No messages yet.</div>
+                    <?php else: ?>
+                        <ul class="list-unstyled mb-0">
+                            <?php foreach (array_slice($tenantMessages, 0, 5) as $m): ?>
+                                <li class="mb-3">
+                                    <div class="d-flex justify-content-between">
+                                        <div class="fw-semibold">
+                                            <?= $m['sender_type'] === 'tenant' ? 'You' : 'From Management' ?>
+                                        </div>
+                                        <div class="small text-muted"><?= htmlspecialchars(date('M j, Y g:i A', strtotime($m['created_at'] ?? 'now'))) ?></div>
+                                    </div>
+                                    <div class="text-muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;">
+                                        <?= htmlspecialchars(mb_strimwidth(trim(preg_replace('/\s+/', ' ', $m['body'] ?? '')), 0, 120, '…', 'UTF-8')) ?>
+                                    </div>
+                                </li>
+                            <?php endforeach; ?>
+                        </ul>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Payment Section -->
     <div class="row mb-4">
         <div class="col-12">
