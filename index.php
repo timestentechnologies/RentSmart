@@ -69,9 +69,11 @@ if (!defined('BASE_URL')) {
 // Parse the URL
 $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
 $base_path = parse_url(BASE_URL, PHP_URL_PATH);
-$uri = substr($uri, strlen($base_path));
+$base_path = is_string($base_path) ? $base_path : '';
+$uri = is_string($uri) ? $uri : '/';
+$uri = $base_path !== '' && strpos($uri, $base_path) === 0 ? substr($uri, strlen($base_path)) : $uri;
 $uri = trim($uri, '/');
-$uri = rtrim($uri, '/'); // Ensure no trailing slash
+$uri = rtrim($uri, '/');
 
 if (empty($uri)) {
     // If user is logged in, redirect to dashboard
@@ -628,7 +630,8 @@ try {
     
     error_log("Routing - Original URI: " . $uri);
     error_log("Routing - Request Method: " . $method);
-    error_log("Routing - Request Headers: " . print_r(getallheaders(), true));
+    $hdrs = function_exists('getallheaders') ? getallheaders() : $_SERVER;
+    error_log("Routing - Request Headers: " . print_r($hdrs, true));
     
     // Check for routes with numeric IDs
     // Note: Order matters - check more specific patterns first
