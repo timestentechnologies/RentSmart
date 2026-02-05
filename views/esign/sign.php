@@ -31,6 +31,41 @@
                   <div><i class="bi bi-file-earmark-text me-2"></i>Document to Sign</div>
                   <a class="btn btn-sm btn-outline-primary" target="_blank" href="<?= BASE_URL ?>/public/<?= htmlspecialchars($req['document_path']) ?>">Open</a>
                 </div>
+                <?php 
+                  $docRel = (string)$req['document_path'];
+                  $ext = strtolower(pathinfo($docRel, PATHINFO_EXTENSION));
+                ?>
+                <div class="mb-3" id="placementOptions">
+                  <?php if (in_array($ext, ['png','jpg','jpeg'])): ?>
+                    <label class="form-label">Click on the document to place your signature</label>
+                    <div id="docWrap" class="position-relative border rounded" style="background:#fff;overflow:auto;max-height:60vh;">
+                      <img id="docPrev" src="<?= BASE_URL ?>/public/<?= htmlspecialchars($docRel) ?>" class="img-fluid w-100" alt="Document preview">
+                      <div id="docMarker" style="position:absolute;width:16px;height:16px;border-radius:50%;background:#0d6efd;transform:translate(-50%,-50%);display:none;"></div>
+                    </div>
+                    <small class="text-muted">A blue dot will indicate the placement. You can click again to adjust.</small>
+                  <?php elseif ($ext === 'pdf'): ?>
+                    <div class="row g-2 align-items-end">
+                      <div class="col-auto">
+                        <label class="form-label">Placement</label>
+                        <select name="corner" id="corner" class="form-select form-select-sm">
+                          <option value="br" selected>Bottom Right</option>
+                          <option value="bl">Bottom Left</option>
+                          <option value="tr">Top Right</option>
+                          <option value="tl">Top Left</option>
+                        </select>
+                      </div>
+                      <div class="col-auto">
+                        <label class="form-label">Pages</label>
+                        <select name="page_mode" id="page_mode" class="form-select form-select-sm">
+                          <option value="all" selected>All Pages</option>
+                          <option value="first">First Page</option>
+                          <option value="last">Last Page</option>
+                        </select>
+                      </div>
+                    </div>
+                    <small class="text-muted d-block mt-1">Note: For PDFs, choose corner and page range. (Preview click placement is for images.)</small>
+                  <?php endif; ?>
+                </div>
               <?php endif; ?>
               <?php if (!empty($req['message'])): ?>
                 <div class="alert alert-info"><?= nl2br(htmlspecialchars($req['message'])) ?></div>
@@ -67,6 +102,14 @@
                   <label class="form-label">Type Your Initials</label>
                   <input type="text" name="signature_initials" class="form-control" maxlength="10" placeholder="e.g. JM">
                 </div>
+                <!-- Placement fields -->
+                <input type="hidden" name="pos_mode" id="pos_mode" value="auto">
+                <input type="hidden" name="pos_x" id="pos_x">
+                <input type="hidden" name="pos_y" id="pos_y">
+                <?php if (empty($ext) || !in_array($ext, ['pdf'])): ?>
+                  <input type="hidden" name="corner" id="corner" value="br">
+                  <input type="hidden" name="page_mode" id="page_mode" value="all">
+                <?php endif; ?>
                 <div class="d-flex gap-2">
                   <button class="btn btn-primary" type="submit">Submit Signature</button>
                   <a href="<?= BASE_URL ?>/esign/decline/<?= htmlspecialchars($req['token']) ?>" class="btn btn-outline-danger" onclick="return confirm('Decline to sign?')">Decline</a>
@@ -89,6 +132,12 @@
       const panelDraw = document.getElementById('panel_draw');
       const panelUpload = document.getElementById('panel_upload');
       const panelInitials = document.getElementById('panel_initials');
+      const docPrev = document.getElementById('docPrev');
+      const docWrap = document.getElementById('docWrap');
+      const docMarker = document.getElementById('docMarker');
+      const posMode = document.getElementById('pos_mode');
+      const posX = document.getElementById('pos_x');
+      const posY = document.getElementById('pos_y');
       let drawing = false, last = null;
       ctx.lineWidth = 2;
       ctx.lineCap = 'round';
@@ -119,6 +168,25 @@
       }
       radios.forEach(r => r.addEventListener('change', togglePanels));
       togglePanels();
+
+      // Image document placement capture
+      function placeMarker(px, py){
+        if (!docWrap || !docMarker || !docPrev) return;
+        docMarker.style.left = (px * 100) + '%';
+        docMarker.style.top = (py * 100) + '%';
+        docMarker.style.display = 'block';
+      }
+      if (docPrev && posMode && posX && posY){
+        docPrev.addEventListener('click', function(e){
+          const rect = docPrev.getBoundingClientRect();
+          const x = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+          const y = Math.max(0, Math.min(1, (e.clientY - rect.top) / rect.height));
+          posX.value = x.toFixed(4);
+          posY.value = y.toFixed(4);
+          posMode.value = 'click';
+          placeMarker(x, y);
+        });
+      }
 
       form && form.addEventListener('submit', function(e){
         const val = document.querySelector('input[name="method"]:checked').value;

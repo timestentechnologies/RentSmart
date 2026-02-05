@@ -155,6 +155,12 @@ class ESignController
             $data = '';
             $sigType = null;
             $initials = null;
+            // Placement options
+            $pos_mode = $_POST['pos_mode'] ?? 'auto';
+            $x_pct = isset($_POST['pos_x']) && is_numeric($_POST['pos_x']) ? max(0.0, min(1.0, (float)$_POST['pos_x'])) : null;
+            $y_pct = isset($_POST['pos_y']) && is_numeric($_POST['pos_y']) ? max(0.0, min(1.0, (float)$_POST['pos_y'])) : null;
+            $corner = $_POST['corner'] ?? 'br'; // br, bl, tr, tl
+            $page_mode = $_POST['page_mode'] ?? 'all'; // all, first, last
 
             if ($method === 'draw') {
                 $data = $_POST['signature_data'] ?? '';
@@ -184,7 +190,13 @@ class ESignController
             $ok = $model->markSigned($token, $name, $data, $ip, $ua, $sigType, $initials);
             if (!$ok) throw new \Exception('Unable to save signature');
             if (!empty($req['document_path'])) {
-                $signedRel = $this->generateSignedCopy($req, $name, $sigType, $data, $initials);
+                $signedRel = $this->generateSignedCopy($req, $name, $sigType, $data, $initials, [
+                    'pos_mode' => $pos_mode,
+                    'x_pct' => $x_pct,
+                    'y_pct' => $y_pct,
+                    'corner' => $corner,
+                    'page_mode' => $page_mode,
+                ]);
                 if ($signedRel) { $model->setSignedDocumentPath($token, $signedRel); }
             }
             echo '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Signature Saved</title><style>body{font-family:Arial;padding:24px}</style></head><body><h2>Thank you!</h2><p>Your signature has been recorded.</p></body></html>';
@@ -196,7 +208,7 @@ class ESignController
         }
     }
 
-    private function generateSignedCopy(array $req, string $name, ?string $sigType, ?string $base64Data, ?string $initials)
+    private function generateSignedCopy(array $req, string $name, ?string $sigType, ?string $base64Data, ?string $initials, array $options = [])
     {
         try {
             $publicBase = realpath(__DIR__ . '/../../public');
@@ -209,6 +221,11 @@ class ESignController
             $ext = strtolower(pathinfo($srcFull, PATHINFO_EXTENSION));
             $token = $req['token'] ?? bin2hex(random_bytes(4));
             $ts = date('Ymd_His');
+            $pos_mode = $options['pos_mode'] ?? 'auto';
+            $x_pct = isset($options['x_pct']) ? (float)$options['x_pct'] : null;
+            $y_pct = isset($options['y_pct']) ? (float)$options['y_pct'] : null;
+            $corner = $options['corner'] ?? 'br';
+            $page_mode = $options['page_mode'] ?? 'all';
 
             $sigImg = null;
             if ($sigType === 'initials') {
@@ -243,8 +260,24 @@ class ESignController
                 imagefill($res, 0, 0, $trans2);
                 imagecopyresampled($res, $sigImg, 0, 0, 0, 0, $targetW, $targetH, $sw, $sh);
                 $pad = 40;
-                $dx = $bw - $targetW - $pad; if ($dx < 0) $dx = 0;
-                $dy = $bh - $targetH - $pad; if ($dy < 0) $dy = 0;
+                if ($pos_mode === 'click' && $x_pct !== null && $y_pct !== null) {
+                    $dx = (int)round($bw * $x_pct - $targetW / 2);
+                    $dy = (int)round($bh * $y_pct - $targetH / 2);
+                    if ($dx < 0) $dx = 0; if ($dy < 0) $dy = 0;
+                    if ($dx > $bw - $targetW) $dx = $bw - $targetW;
+                    if ($dy > $bh - $targetH) $dy = $bh - $targetH;
+                } else {
+                    // Corner placement
+                    switch (strtolower($corner)) {
+                        case 'tl': $dx = $pad; $dy = $pad; break;
+                        case 'tr': $dx = max(0, $bw - $targetW - $pad); $dy = $pad; break;
+                        case 'bl': $dx = $pad; $dy = max(0, $bh - $targetH - $pad); break;
+                        case 'br':
+                        default:
+                            $dx = max(0, $bw - $targetW - $pad);
+                            $dy = max(0, $bh - $targetH - $pad);
+                    }
+                }
                 imagecopy($baseIm, $res, $dx, $dy, 0, 0, $targetW, $targetH);
                 $meta = 'Signed by ' . $name . ' on ' . date('Y-m-d H:i');
                 $txtY = min($bh - 10, $dy - 15);
@@ -267,14 +300,24 @@ class ESignController
                             imagepng($sigImg, $sigPath, 6);
                         }
                         for ($i = 0; $i < $pages; $i++) {
+                            if ($page_mode === 'first' && $i !== 0) { continue; }
+                            if ($page_mode === 'last' && $i !== ($pages - 1)) { continue; }
                             $pdf->setIteratorIndex($i);
                             $w = $pdf->getImageWidth();
                             $h = $pdf->getImageHeight();
                             if ($sigPath) {
                                 $overlay = new \Imagick($sigPath);
                                 $overlay->thumbnailImage((int)max(200, $w * 0.35), 0);
-                                $ox = $w - $overlay->getImageWidth() - 40; if ($ox < 0) $ox = 0;
-                                $oy = $h - $overlay->getImageHeight() - 40; if ($oy < 0) $oy = 0;
+                                $pad = 40;
+                                switch (strtolower($corner)) {
+                                    case 'tl': $ox = $pad; $oy = $pad; break;
+                                    case 'tr': $ox = max(0, $w - $overlay->getImageWidth() - $pad); $oy = $pad; break;
+                                    case 'bl': $ox = $pad; $oy = max(0, $h - $overlay->getImageHeight() - $pad); break;
+                                    case 'br':
+                                    default:
+                                        $ox = max(0, $w - $overlay->getImageWidth() - $pad);
+                                        $oy = max(0, $h - $overlay->getImageHeight() - $pad);
+                                }
                                 $pdf->compositeImage($overlay, \Imagick::COMPOSITE_OVER, $ox, $oy);
                             }
                         }
