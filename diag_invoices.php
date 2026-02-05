@@ -83,17 +83,54 @@ if ($op === 'require_invoices_controller') {
 }
 
 $log = __DIR__.'/logs/php_errors.log';
-echo "\nRecent app log (logs/php_errors.log):\n";
-if (is_readable($log)) {
-    $lines = @file($log, FILE_IGNORE_NEW_LINES);
-    if (is_array($lines)) {
-        $tail = array_slice($lines, -200);
-        echo implode("\n", $tail)."\n";
-    } else {
-        echo "Cannot read php_errors.log\n";
+$altLog = __DIR__.'/views/logs/php_errors.log';
+
+// Memory-safe tail implementation (does not load entire file)
+function tail_file($file, $lines = 300, $buffer = 4096) {
+    $result = '';
+    if (!is_readable($file)) {
+        return $result;
     }
+    $f = @fopen($file, 'rb');
+    if (!$f) return $result;
+    try {
+        fseek($f, 0, SEEK_END);
+        $pos = ftell($f);
+        $data = '';
+        $lineCount = 0;
+        while ($pos > 0 && $lineCount <= $lines) {
+            $seek = max($pos - $buffer, 0);
+            $bytes = $pos - $seek;
+            fseek($f, $seek);
+            $chunk = fread($f, $bytes);
+            if ($chunk === false) { break; }
+            $data = $chunk . $data;
+            $lineCount = substr_count($data, "\n");
+            $pos = $seek;
+        }
+        $parts = explode("\n", $data);
+        $result = implode("\n", array_slice($parts, -$lines));
+    } finally {
+        fclose($f);
+    }
+    return $result;
+}
+
+$tailLines = isset($_GET['tail']) ? max(50, min(5000, (int)$_GET['tail'])) : 300;
+echo "\nRecent app log (logs/php_errors.log) — last {$tailLines} line(s):\n";
+if (is_readable($log)) {
+    $tail = tail_file($log, $tailLines);
+    echo ($tail !== '' ? $tail : "(empty)") . "\n";
 } else {
     echo "No readable logs/php_errors.log\n";
+}
+
+echo "\nAlternate view log (views/logs/php_errors.log) — last {$tailLines} line(s):\n";
+if (is_readable($altLog)) {
+    $tail2 = tail_file($altLog, $tailLines);
+    echo ($tail2 !== '' ? $tail2 : "(empty)") . "\n";
+} else {
+    echo "No readable views/logs/php_errors.log\n";
 }
 
 echo "\nUsage:\n";
