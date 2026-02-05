@@ -403,6 +403,12 @@ class Payment extends Model
         return $stmt->fetch(\PDO::FETCH_ASSOC);
     }
 
+    public function getTotalsByTypeForLeaseInRange($leaseId, $startDate, $endDate)
+    {
+        $stmt = $this->db->prepare("SELECT payment_type, COALESCE(SUM(amount),0) AS total_paid FROM payments WHERE lease_id = ? AND status IN ('completed','verified') AND payment_date BETWEEN ? AND ? GROUP BY payment_type");
+        $stmt->execute([$leaseId, $startDate, $endDate]);
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+    }
     public function getRecent($limit = 5, $userId = null)
     {
         $user = new User();
