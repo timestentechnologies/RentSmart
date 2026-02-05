@@ -31,9 +31,35 @@ class ESignController
         // Users by selected roles
         $userModel = new User();
         $db = $userModel->getDb();
-        $stmt = $db->prepare("SELECT id, name, role, email FROM users WHERE role IN ('admin','administrator','manager','agent','landlord','caretaker') ORDER BY name ASC");
-        $stmt->execute();
-        $users = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        $userModel->find($this->userId);
+        if ($userModel->isAdmin()) {
+            $stmt = $db->prepare("SELECT id, name, role, email FROM users WHERE role IN ('admin','administrator','manager','agent','landlord','caretaker') ORDER BY name ASC");
+            $stmt->execute();
+            $users = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        } else {
+            $propIds = $userModel->getAccessiblePropertyIds();
+            $users = [];
+            if (!empty($propIds)) {
+                $in = implode(',', array_fill(0, count($propIds), '?'));
+                // Caretakers assigned to accessible properties
+                $sqlCaretakers = "SELECT DISTINCT u.id, u.name, u.role, u.email
+                                   FROM users u
+                                   JOIN properties p ON p.caretaker_user_id = u.id
+                                   WHERE u.role = 'caretaker' AND p.id IN ($in)
+                                   ORDER BY u.name ASC";
+                $stmtC = $db->prepare($sqlCaretakers);
+                $stmtC->execute($propIds);
+                $users = $stmtC->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+            }
+            // Always include admins
+            $stmtA = $db->prepare("SELECT id, name, role, email FROM users WHERE role IN ('admin','administrator') ORDER BY name ASC");
+            $stmtA->execute();
+            $admins = $stmtA->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+            $byId = [];
+            foreach ($users as $u) { $byId[(int)$u['id']] = $u; }
+            foreach ($admins as $a) { $byId[(int)$a['id']] = $a; }
+            $users = array_values($byId);
+        }
         $entity_type = $_GET['entity_type'] ?? null;
         $entity_id = isset($_GET['entity_id']) ? (int)$_GET['entity_id'] : null;
         require 'views/esign/create.php';
