@@ -1190,14 +1190,48 @@ class Payment extends Model
 
     public function getTenantOverdueRent($tenantId)
     {
-        $sql = "SELECT l.*, (
-                    l.rent_amount - IFNULL((SELECT SUM(amount) FROM payments WHERE lease_id = l.id AND payment_type = 'rent' AND status IN ('completed', 'verified')), 0)
-                ) AS overdue_amount
-                FROM leases l
-                WHERE l.tenant_id = ? AND l.status = 'active'";
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute([$tenantId]);
-        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        // Compute current-month rent balance for the active lease using monthly allocation logic
+        $leaseStmt = $this->db->prepare("SELECT * FROM leases WHERE tenant_id = ? AND status = 'active' LIMIT 1");
+        $leaseStmt->execute([$tenantId]);
+        $lease = $leaseStmt->fetch(\PDO::FETCH_ASSOC);
+        if (!$lease) {
+            return [];
+        }
+
+        $rent = isset($lease['rent_amount']) ? (float)$lease['rent_amount'] : 0.0;
+        if ($rent <= 0) {
+            $lease['overdue_amount'] = 0.0;
+            return [$lease];
+        }
+
+        $startOfMonth = date('Y-m-01');
+        $endOfMonth = date('Y-m-t');
+
+        $sumPrev = $this->db->prepare("SELECT COALESCE(SUM(amount),0) AS s FROM payments WHERE lease_id = ? AND payment_type = 'rent' AND status IN ('completed','verified') AND payment_date < ?");
+        $sumMonth = $this->db->prepare("SELECT COALESCE(SUM(amount),0) AS s FROM payments WHERE lease_id = ? AND payment_type = 'rent' AND status IN ('completed','verified') AND payment_date BETWEEN ? AND ?");
+
+        $sumPrev->execute([(int)$lease['id'], $startOfMonth]);
+        $paidPrev = (float)($sumPrev->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0);
+        $sumMonth->execute([(int)$lease['id'], $startOfMonth, $endOfMonth]);
+        $paidInMonth = (float)($sumMonth->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0);
+
+        try {
+            $leaseStart = new \DateTime($lease['start_date']);
+        } catch (\Exception $e) {
+            $lease['overdue_amount'] = max(0.0, $rent - $paidInMonth);
+            return [$lease];
+        }
+        $selectedMonth = new \DateTime($startOfMonth);
+        $leaseStartMonth = new \DateTime($leaseStart->format('Y-m-01'));
+        $monthsPrev = (int)floor($paidPrev / $rent + 1e-6);
+        $remainderPrev = $paidPrev - $monthsPrev * $rent;
+        $monthsElapsed = ((int)$selectedMonth->format('Y') - (int)$leaseStartMonth->format('Y')) * 12 + ((int)$selectedMonth->format('n') - (int)$leaseStartMonth->format('n')) + 1;
+        $coveredByPrev = ($monthsPrev >= $monthsElapsed);
+        $applied = $remainderPrev + $paidInMonth;
+        $balance = $coveredByPrev ? 0.0 : max($rent - $applied, 0.0);
+
+        $lease['overdue_amount'] = round($balance, 2);
+        return [$lease];
     }
 
     public function getTenantMissedRentMonths($tenantId)
