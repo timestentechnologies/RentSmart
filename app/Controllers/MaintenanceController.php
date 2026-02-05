@@ -112,6 +112,10 @@ class MaintenanceController
                 $allowedSources = ['rent_balance','cash','bank','mpesa','owner_funds','other'];
                 $expMethod = in_array($expensePaymentMethod, $allowedMethods, true) ? $expensePaymentMethod : 'cash';
                 $srcFunds = in_array($sourceOfFunds, $allowedSources, true) ? $sourceOfFunds : ($chargeToTenant ? 'other' : 'cash');
+                // If we are charging the tenant, do not mark expense as funded from rent_balance
+                if ($chargeToTenant && $srcFunds === 'rent_balance') {
+                    $srcFunds = 'other';
+                }
 
                 $expenseData = [
                     'user_id' => $userId,
@@ -133,14 +137,11 @@ class MaintenanceController
                     $expenseModel->insertExpense($expenseData);
                 }
 
-                // 2) Handle rent balance deduction or tenant charge
+                // 2) Handle tenant charge only: create a negative payment to increase tenant balance
+                //    When funded from rent balance, DO NOT create a negative payment; dashboards already adjust using expenses.
                 $shouldCreateNegativePayment = false;
                 $negativePaymentNoteTag = 'MAINT-' . (int)$id;
-                if ($srcFunds === 'rent_balance') {
-                    // Deduct from payments
-                    $shouldCreateNegativePayment = true;
-                } elseif ($chargeToTenant) {
-                    // Add to tenant's balance
+                if ($chargeToTenant) {
                     $shouldCreateNegativePayment = true;
                 }
 
@@ -157,14 +158,14 @@ class MaintenanceController
                             $existsAdj = $chk->fetch(\PDO::FETCH_ASSOC);
                         } catch (\Exception $e) { $existsAdj = null; }
 
-                        if (!$existsAdj) {
+                        if (!$existsAdj && $shouldCreateNegativePayment) {
                             $paymentModel->createRentPayment([
                                 'lease_id' => (int)$lease['id'],
                                 'amount' => -abs($actualCost),
                                 'payment_date' => date('Y-m-d'),
                                 'payment_type' => 'rent',
                                 'payment_method' => 'other',
-                                'notes' => ($srcFunds === 'rent_balance' ? 'Maintenance deduction from rent balance ' : 'Maintenance charge to tenant ') . $negativePaymentNoteTag,
+                                'notes' => ($chargeToTenant ? 'Maintenance charge to tenant ' : 'Maintenance deduction from rent balance ') . $negativePaymentNoteTag,
                                 'status' => 'completed'
                             ]);
                         }
