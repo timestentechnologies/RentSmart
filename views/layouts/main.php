@@ -1648,6 +1648,100 @@ ob_clean();
       })();
     </script>
 
+    <script>
+      // Notifications bell + tray
+      (function(){
+        try {
+          if (!window.BASE_URL) return;
+          const container = document.createElement('div');
+          container.id = 'notifContainer';
+          container.style.position = 'fixed';
+          container.style.right = '18px';
+          container.style.bottom = '18px';
+          container.style.zIndex = '1061';
+
+          const btn = document.createElement('button');
+          btn.id = 'notifBellBtn';
+          btn.className = 'btn btn-primary rounded-circle position-relative';
+          btn.style.width = '48px'; btn.style.height = '48px';
+          btn.innerHTML = '<i class="bi bi-bell"></i><span id="notifBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none">0</span>';
+
+          const tray = document.createElement('div');
+          tray.id = 'notifTray';
+          tray.className = 'card shadow';
+          tray.style.position = 'fixed';
+          tray.style.right = '18px';
+          tray.style.bottom = '72px';
+          tray.style.width = '320px';
+          tray.style.maxHeight = '60vh';
+          tray.style.overflow = 'hidden';
+          tray.style.display = 'none';
+          tray.innerHTML = '\
+            <div class="card-header d-flex justify-content-between align-items-center">\
+              <strong>Notifications</strong>\
+              <button type="button" class="btn-close" aria-label="Close"></button>\
+            </div>\
+            <div id="notifList" class="list-group list-group-flush" style="max-height:48vh;overflow:auto"></div>';
+
+          container.appendChild(btn);
+          container.appendChild(tray);
+          document.body.appendChild(container);
+
+          const badge = btn.querySelector('#notifBadge');
+          const list = tray.querySelector('#notifList');
+          const closer = tray.querySelector('.btn-close');
+
+          function fmtItem(it){
+            const icon = it.icon || 'bi-dot';
+            const title = (it.title||'').toString();
+            const body = (it.body||'').toString();
+            const link = (it.link||'');
+            const aOpen = link ? '<a class="list-group-item list-group-item-action" href="'+link+'">' : '<div class="list-group-item">';
+            const aClose = link ? '</a>' : '</div>';
+            return aOpen + '\
+              <div class="d-flex">\
+                <div class="me-2 text-primary"><i class="bi '+icon+'"></i></div>\
+                <div>\
+                  <div class="fw-semibold">'+title+'</div>\
+                  <div class="small text-muted">'+body+'</div>\
+                </div>\
+              </div>' + aClose;
+          }
+
+          async function loadFeed(){
+            try {
+              const res = await fetch(window.BASE_URL + '/notifications/feed', { credentials: 'same-origin' });
+              const data = await res.json();
+              const items = (data && data.success && Array.isArray(data.items)) ? data.items : [];
+              // Update badge
+              if (items.length > 0) {
+                badge.textContent = String(items.length);
+                badge.classList.remove('d-none');
+              } else {
+                badge.classList.add('d-none');
+              }
+              // Render list
+              list.innerHTML = items.length ? items.map(fmtItem).join('') : '<div class="list-group-item text-muted">No recent activity</div>';
+            } catch (e) {
+              // ignore
+            }
+          }
+
+          btn.addEventListener('click', function(){
+            tray.style.display = (tray.style.display === 'none') ? 'block' : 'none';
+          });
+          closer.addEventListener('click', function(){ tray.style.display = 'none'; });
+          document.addEventListener('click', function(ev){
+            const el = ev.target;
+            if (!container.contains(el)) tray.style.display = 'none';
+          });
+
+          loadFeed();
+          setInterval(loadFeed, 45000);
+        } catch(e) { /* no-op */ }
+      })();
+    </script>
+
     <!-- Manual Install Help Modal -->
     <div class="modal fade" id="pwaInstallHelpModal" tabindex="-1" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered">

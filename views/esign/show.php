@@ -43,6 +43,13 @@ ob_start();
       <h6 class="mb-2">Captured Signature</h6>
       <img src="data:image/png;base64,<?= $req['signature_image'] ?>" alt="Signature" style="max-height:140px;border:1px solid #ddd;padding:8px;background:#fff">
       <?php endif; ?>
+      <?php if (!empty($req['signed_document_path'])): ?>
+      <hr>
+      <h6 class="mb-2">Signed Document</h6>
+      <a class="btn btn-sm btn-success" target="_blank" href="<?= BASE_URL ?>/public/<?= htmlspecialchars($req['signed_document_path']) ?>">
+        <i class="bi bi-file-earmark-check"></i> Open Signed Copy
+      </a>
+      <?php endif; ?>
       <?php if (!empty($req['message'])): ?>
       <hr>
       <h6 class="mb-2">Message</h6>

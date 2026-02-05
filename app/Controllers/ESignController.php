@@ -155,12 +155,13 @@ class ESignController
             $data = '';
             $sigType = null;
             $initials = null;
-            // Placement options
+            // Placement & scale options
             $pos_mode = $_POST['pos_mode'] ?? 'auto';
             $x_pct = isset($_POST['pos_x']) && is_numeric($_POST['pos_x']) ? max(0.0, min(1.0, (float)$_POST['pos_x'])) : null;
             $y_pct = isset($_POST['pos_y']) && is_numeric($_POST['pos_y']) ? max(0.0, min(1.0, (float)$_POST['pos_y'])) : null;
             $corner = $_POST['corner'] ?? 'br'; // br, bl, tr, tl
             $page_mode = $_POST['page_mode'] ?? 'all'; // all, first, last
+            $sig_scale = isset($_POST['sig_scale']) && is_numeric($_POST['sig_scale']) ? max(10.0, min(90.0, (float)$_POST['sig_scale'])) : 35.0; // percent of page width
 
             if ($method === 'draw') {
                 $data = $_POST['signature_data'] ?? '';
@@ -182,6 +183,12 @@ class ESignController
                 if ($initials === '') throw new \Exception('Enter your initials');
                 $data = '';
                 $sigType = 'initials';
+            } elseif ($method === 'type') {
+                // typed signature is sent as base64 in signature_data (canvas-rendered text)
+                $data = $_POST['signature_data'] ?? '';
+                if ($data === '') throw new \Exception('Please type your signature');
+                if (strpos($data, 'base64,') !== false) { $data = substr($data, strpos($data, 'base64,') + 7); }
+                $sigType = 'type';
             } else {
                 throw new \Exception('Invalid method');
             }
@@ -196,6 +203,7 @@ class ESignController
                     'y_pct' => $y_pct,
                     'corner' => $corner,
                     'page_mode' => $page_mode,
+                    'scale' => $sig_scale,
                 ]);
                 if ($signedRel) { $model->setSignedDocumentPath($token, $signedRel); }
             }
@@ -226,6 +234,7 @@ class ESignController
             $y_pct = isset($options['y_pct']) ? (float)$options['y_pct'] : null;
             $corner = $options['corner'] ?? 'br';
             $page_mode = $options['page_mode'] ?? 'all';
+            $scalePct = isset($options['scale']) ? max(10.0, min(90.0, (float)$options['scale'])) : 35.0;
 
             $sigImg = null;
             if ($sigType === 'initials') {
@@ -251,7 +260,7 @@ class ESignController
                 if (!$baseIm) return null;
                 $bw = imagesx($baseIm); $bh = imagesy($baseIm);
                 $sw = imagesx($sigImg); $sh = imagesy($sigImg);
-                $targetW = max(200, (int)round($bw * 0.35));
+                $targetW = max(100, (int)round($bw * ($scalePct / 100.0)));
                 $ratio = $sw > 0 ? ($targetW / $sw) : 1;
                 $targetH = max(60, (int)round($sh * $ratio));
                 $res = imagecreatetruecolor($targetW, $targetH);
@@ -307,7 +316,7 @@ class ESignController
                             $h = $pdf->getImageHeight();
                             if ($sigPath) {
                                 $overlay = new \Imagick($sigPath);
-                                $overlay->thumbnailImage((int)max(200, $w * 0.35), 0);
+                                $overlay->thumbnailImage((int)max(100, $w * ($scalePct / 100.0)), 0);
                                 $pad = 40;
                                 switch (strtolower($corner)) {
                                     case 'tl': $ox = $pad; $oy = $pad; break;
