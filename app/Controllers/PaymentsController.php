@@ -303,6 +303,11 @@ class PaymentsController
                     }
                     
                     $paymentId = $paymentModel->createRentPayment($rentData);
+                    // Auto-create monthly rent invoice (idempotent)
+                    try {
+                        $invModel = new \App\Models\Invoice();
+                        $invModel->ensureMonthlyRentInvoice((int)$lease['tenant_id'], $rentData['payment_date'], (float)$lease['rent_amount'], (int)($_SESSION['user_id'] ?? 0), 'AUTO');
+                    } catch (\Exception $e) { error_log('Auto-invoice (admin rent) failed: ' . $e->getMessage()); }
                     
                     // Handle file uploads for rent payment
                     if (!empty($_FILES['payment_attachments']['name'][0])) {
