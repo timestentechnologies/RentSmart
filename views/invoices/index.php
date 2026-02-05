@@ -40,7 +40,8 @@ ob_start();
                 <td><?= htmlspecialchars($inv['issue_date']) ?></td>
                 <td><?= htmlspecialchars($inv['due_date'] ?? '-') ?></td>
                 <td class="text-end"><?= number_format((float)$inv['total'], 2) ?></td>
-                <td><span class="badge bg-secondary"><?= htmlspecialchars(ucfirst($inv['status'])) ?></span></td>
+                <?php $statusLabel = ($inv['status'] === 'sent') ? 'Due' : ucfirst($inv['status']); ?>
+                <td><span class="badge bg-secondary"><?= htmlspecialchars($statusLabel) ?></span></td>
                 <td><?= !empty($inv['posted_at']) ? date('Y-m-d', strtotime($inv['posted_at'])) : '-' ?></td>
                 <td>
                   <div class="btn-group btn-group-sm">

@@ -12,6 +12,24 @@ class Invoice extends Model
         $this->ensureTables();
     }
 
+    /**
+     * Ensure invoices exist for each month from start to end (or now if end null), capped to 36 months.
+     */
+    public function ensureInvoicesForLeaseMonths(int $tenantId, float $rentAmount, string $startDate, ?string $endDate = null, ?int $userId = null, ?string $noteTag = 'AUTO')
+    {
+        if (empty($tenantId) || $rentAmount <= 0 || empty($startDate)) return;
+        $start = new \DateTime(date('Y-m-01', strtotime($startDate)));
+        $endBoundary = $endDate ? new \DateTime($endDate) : new \DateTime();
+        // Use the month of end boundary
+        $end = new \DateTime(date('Y-m-01', $endBoundary->getTimestamp()));
+        $months = 0;
+        while ($start <= $end && $months < 36) {
+            $this->ensureMonthlyRentInvoice($tenantId, $start->format('Y-m-01'), $rentAmount, $userId, $noteTag);
+            $start->modify('+1 month');
+            $months++;
+        }
+    }
+
     private function ensureTables()
     {
         $this->db->exec("CREATE TABLE IF NOT EXISTS invoices (
@@ -45,11 +63,15 @@ class Invoice extends Model
             created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
             INDEX idx_invoice (invoice_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+        // Ensure 'partial' status exists in enum (safe no-op if already present)
+        try {
+            $this->db->exec("ALTER TABLE invoices MODIFY status ENUM('draft','sent','partial','paid','void') NOT NULL DEFAULT 'sent'");
+        } catch (\Exception $e) {}
     }
 
-    public function generateNumber()
+    public function generateNumber(?string $issueDate = null)
     {
-        $prefix = 'INV-' . date('Ymd') . '-';
+        $prefix = 'INV-' . date('Ymd', $issueDate ? strtotime($issueDate) : time()) . '-';
         $stmt = $this->db->prepare("SELECT COUNT(*) FROM {$this->table} WHERE number LIKE ?");
         $stmt->execute([$prefix . '%']);
         $count = (int)$stmt->fetchColumn();
@@ -60,7 +82,7 @@ class Invoice extends Model
     {
         $this->db->beginTransaction();
         try {
-            $number = $this->generateNumber();
+            $number = $this->generateNumber($data['issue_date'] ?? null);
             $subtotal = 0.0;
             foreach ($items as $it) {
                 $qty = (float)($it['quantity'] ?? 1);
@@ -147,6 +169,98 @@ class Invoice extends Model
         } catch (\Exception $e) {
             $this->db->rollBack();
             throw $e;
+        }
+    }
+
+    /**
+     * Find an existing invoice for a tenant within the same issue month
+     */
+    public function findByTenantAndIssueMonth(int $tenantId, string $issueDate)
+    {
+        $start = date('Y-m-01', strtotime($issueDate));
+        $end = date('Y-m-t', strtotime($issueDate));
+        $stmt = $this->db->prepare("SELECT * FROM {$this->table} WHERE tenant_id = ? AND issue_date BETWEEN ? AND ? ORDER BY id DESC LIMIT 1");
+        $stmt->execute([$tenantId, $start, $end]);
+        return $stmt->fetch(\PDO::FETCH_ASSOC) ?: null;
+    }
+
+    /**
+     * Ensure a monthly rent invoice exists for the tenant for the given issue date.
+     * Creates one with a single line item if missing. Returns the invoice id.
+     */
+    public function ensureMonthlyRentInvoice(int $tenantId, string $issueDate, float $rentAmount, ?int $userId = null, ?string $noteTag = null)
+    {
+        $existing = $this->findByTenantAndIssueMonth($tenantId, $issueDate);
+        if ($existing && (!empty($existing['id']))) {
+            return (int)$existing['id'];
+        }
+        $monthLabel = date('F Y', strtotime($issueDate));
+        $items = [[
+            'description' => 'Monthly Rent - ' . $monthLabel,
+            'quantity' => 1,
+            'unit_price' => $rentAmount,
+        ]];
+        return (int)$this->createInvoice([
+            'tenant_id' => $tenantId,
+            'issue_date' => $issueDate,
+            'due_date' => $issueDate,
+            'status' => 'sent',
+            'notes' => trim(($noteTag ? ($noteTag . ' ') : '') . 'Auto-created monthly rent invoice for ' . $monthLabel),
+            'user_id' => $userId,
+        ], $items);
+    }
+
+    /**
+     * Update invoice status for a tenant's invoice in the given issue month based on rent payments in that month.
+     * Marks as 'paid' if monthly payments >= invoice total, otherwise 'sent'. Returns the new status or null if none.
+     */
+    public function updateStatusForTenantMonth(int $tenantId, string $issueDate)
+    {
+        $inv = $this->findByTenantAndIssueMonth($tenantId, $issueDate);
+        if (!$inv) return null;
+        $first = date('Y-m-01', strtotime($inv['issue_date']));
+        $last = date('Y-m-t', strtotime($inv['issue_date']));
+        $sql = "SELECT COALESCE(SUM(p.amount),0) AS s
+                FROM payments p
+                JOIN leases l ON p.lease_id = l.id
+                WHERE l.tenant_id = ?
+                  AND p.payment_type = 'rent'
+                  AND p.status IN ('completed','verified')
+                  AND p.payment_date BETWEEN ? AND ?";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([$tenantId, $first, $last]);
+        $paid = (float)($stmt->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0);
+        $total = (float)$inv['total'];
+        if ($total > 0) {
+            if ($paid + 1e-6 >= $total) {
+                $newStatus = 'paid';
+            } elseif ($paid > 0) {
+                $newStatus = 'partial';
+            } else {
+                $newStatus = 'sent';
+            }
+        } else {
+            $newStatus = 'sent';
+        }
+        if ($inv['status'] !== $newStatus) {
+            $upd = $this->db->prepare("UPDATE {$this->table} SET status = ?, updated_at = NOW() WHERE id = ?");
+            $upd->execute([$newStatus, (int)$inv['id']]);
+        }
+        return $newStatus;
+    }
+
+    /**
+     * Batch: Update statuses for all invoices in the month of the given date.
+     */
+    public function updateStatusesForMonth(string $anyDateInMonth)
+    {
+        $first = date('Y-m-01', strtotime($anyDateInMonth));
+        $last = date('Y-m-t', strtotime($anyDateInMonth));
+        $stmt = $this->db->prepare("SELECT id, tenant_id, total, status, issue_date FROM {$this->table} WHERE issue_date BETWEEN ? AND ?");
+        $stmt->execute([$first, $last]);
+        $invoices = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        foreach ($invoices as $inv) {
+            $this->updateStatusForTenantMonth((int)$inv['tenant_id'], $inv['issue_date']);
         }
     }
 }

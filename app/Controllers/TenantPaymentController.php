@@ -210,6 +210,11 @@ class TenantPaymentController
                         'status' => $paymentStatus
                     ];
                     $rentPaymentId = $this->payment->createRentPayment($rentPaymentData);
+                    try {
+                        // Ensure a monthly rent invoice exists for this tenant for this month
+                        $invModel = new \App\Models\Invoice();
+                        $invModel->ensureMonthlyRentInvoice((int)$lease['tenant_id'], $rentPaymentData['payment_date'], (float)$lease['rent_amount'], null, 'AUTO');
+                    } catch (\Exception $e) { error_log('Auto-invoice (both) failed: ' . $e->getMessage()); }
                     if ($paymentMethodData['type'] === 'mpesa_manual') {
                         $this->saveMpesaTransaction($rentPaymentId, $paymentDetails, $totalRentAmount);
                     }
@@ -261,6 +266,11 @@ class TenantPaymentController
                 ];
 
                 $paymentId = $this->payment->createRentPayment($paymentData);
+                try {
+                    // Ensure a monthly rent invoice exists for this tenant for this month
+                    $invModel = new \App\Models\Invoice();
+                    $invModel->ensureMonthlyRentInvoice((int)$lease['tenant_id'], $paymentData['payment_date'], (float)$lease['rent_amount'], null, 'AUTO');
+                } catch (\Exception $e) { error_log('Auto-invoice (rent) failed: ' . $e->getMessage()); }
                 
                 // If it's an M-Pesa payment, save to manual_mpesa_payments table
                 if ($paymentMethodData['type'] === 'mpesa_manual' || $paymentMethodData['type'] === 'mpesa_stk') {

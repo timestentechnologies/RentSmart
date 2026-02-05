@@ -6,8 +6,6 @@ use App\Models\Tenant;
 use App\Models\Account;
 use App\Models\LedgerEntry;
 use App\Models\Lease;
-use App\Models\Setting;
-use App\Models\Payment;
 
 class InvoicesController
 {
