@@ -888,6 +888,20 @@ function showUpgradeLimitModal(opts) {
             showAlert('warning', msg, false);
             return;
         }
+        // If another Bootstrap modal is open (e.g., Add Property), hide it first to avoid z-index/backdrop capture
+        try {
+            document.querySelectorAll('.modal.show').forEach(el => {
+                const inst = bootstrap.Modal.getInstance(el);
+                if (inst) inst.hide();
+            });
+        } catch (e) {}
+
+        // Ensure the upgrade modal is attached to <body> for proper stacking
+        try {
+            if (modalEl.parentNode && modalEl.parentNode !== document.body) {
+                document.body.appendChild(modalEl);
+            }
+        } catch (e) {}
         const titleEl = modalEl.querySelector('[data-upgrade-title]');
         const msgEl = modalEl.querySelector('[data-upgrade-message]');
         const countsEl = modalEl.querySelector('[data-upgrade-counts]');
@@ -907,8 +921,11 @@ function showUpgradeLimitModal(opts) {
             try { ctaEl.style.pointerEvents = 'auto'; } catch(e){}
             ctaEl.addEventListener('click', function(e){ e.preventDefault(); window.location.href = targetHref; }, { once: true });
         }
-        const modal = new bootstrap.Modal(modalEl);
-        modal.show();
+        // Show after a short delay to allow previous backdrop to close
+        setTimeout(function(){
+            const modal = new bootstrap.Modal(modalEl, { backdrop: 'static', keyboard: true });
+            modal.show();
+        }, 120);
     } catch (e) { try { console.error(e); } catch(_){} }
 }
 
