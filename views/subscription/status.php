@@ -21,6 +21,11 @@
                                 <h5>Current Plan</h5>
                                 <h3 class="text-primary"><?= $subscription['plan_type'] ?></h3>
                                 <p class="text-muted"><?= $subscription['description'] ?></p>
+                                <?php 
+                                    $pl = isset($subscription['property_limit']) ? (int)$subscription['property_limit'] : null; 
+                                    $pl_text = ($pl && $pl > 0) ? ('Up to ' . number_format($pl) . ' properties') : 'Unlimited properties';
+                                ?>
+                                <span class="badge bg-secondary"><?= $pl_text ?></span>
                             </div>
                             <div class="col-md-6">
                                 <h5>Status</h5>
