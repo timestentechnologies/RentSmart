@@ -221,16 +221,23 @@
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0"><i class="bi bi-chat-dots me-2"></i>Recent Messages</h5>
                     <div class="d-flex gap-2">
-                        <button type="button" class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#tenantQuickReplyModal">Reply</button>
                         <a href="<?= BASE_URL ?>/tenant/messaging" class="btn btn-sm btn-outline-primary">View all</a>
                     </div>
                 </div>
                 <div class="card-body" style="padding:12px;">
+                    <?php
+                      $replyUserId = null;
+                      if (!empty($property)) {
+                          foreach (['owner_id','manager_id','agent_id','caretaker_user_id'] as $k) {
+                              if (!empty($property[$k])) { $replyUserId = (int)$property[$k]; break; }
+                          }
+                      }
+                    ?>
                     <?php if (empty($tenantMessages)): ?>
                         <div class="text-muted">No messages yet.</div>
                     <?php else: ?>
-                        <div style="height: 220px; overflow-y: auto; background: #f4f6fb; border-radius: 10px; padding: 10px;">
-                            <?php foreach (array_slice($tenantMessages, 0, 5) as $m): ?>
+                        <div id="tenantRecentMessagesScroll" style="height: 220px; overflow-y: auto; background: #f4f6fb; border-radius: 10px; padding: 10px;">
+                            <?php foreach (array_reverse(array_slice($tenantMessages, 0, 5)) as $m): ?>
                                 <?php $mine = (($m['sender_type'] ?? '') === 'tenant'); ?>
                                 <div class="d-flex mb-2 <?= $mine ? 'justify-content-end' : 'justify-content-start' ?>">
                                     <div style="max-width: 85%;">
@@ -245,6 +252,20 @@
                             <?php endforeach; ?>
                         </div>
                     <?php endif; ?>
+
+                    <div class="mt-2">
+                        <?php if (empty($replyUserId)): ?>
+                            <div class="small text-muted">No management contact found for this property.</div>
+                        <?php else: ?>
+                            <form id="tenantRecentReplyForm" class="d-flex gap-2 align-items-end">
+                                <?= csrf_field() ?>
+                                <input type="hidden" name="user_id" value="<?= (int)$replyUserId ?>">
+                                <input type="text" name="body" id="tenantRecentReplyBody" class="form-control" placeholder="Type a reply…" autocomplete="off">
+                                <button class="btn btn-success" type="submit" id="tenantRecentReplySendBtn">Send</button>
+                            </form>
+                            <div class="small text-danger mt-1" id="tenantRecentReplyError" style="display:none;"></div>
+                        <?php endif; ?>
+                    </div>
                 </div>
             </div>
         </div>
@@ -518,12 +539,13 @@
                                     $amount = (float)($payment['amount'] ?? 0);
                                     $hasUtility = !empty($payment['utility_id']) || !empty($payment['utility_type']);
                                     $isMaint = ($rawType === 'rent' && $amount < 0 && $notes !== '' && preg_match('/MAINT-\d+/i', $notes));
+                                    $isUtilByNotes = ($notes !== '' && preg_match('/\b(util|utility|water|electricity|gas|internet)\b/i', $notes));
 
                                     // Normalize type to avoid everything showing as rent
                                     if ($isMaint) {
                                         $typeClass = 'bg-warning text-dark';
                                         $typeText = 'Maintenance';
-                                    } elseif ($rawType === 'utility' || $hasUtility) {
+                                    } elseif ($rawType === 'utility' || $hasUtility || $isUtilByNotes) {
                                         $typeClass = 'bg-info';
                                         $typeText = !empty($payment['utility_type']) ? ucfirst((string)$payment['utility_type']) : 'Utility';
                                     } else {
@@ -1169,35 +1191,6 @@
     </div>
 </div>
 
-<!-- Tenant Quick Reply Modal -->
-<?php
-  $replyUserId = null;
-  if (!empty($property)) {
-      foreach (['owner_id','manager_id','agent_id','caretaker_user_id'] as $k) {
-          if (!empty($property[$k])) { $replyUserId = (int)$property[$k]; break; }
-      }
-  }
-?>
-<div class="modal fade" id="tenantQuickReplyModal" tabindex="-1">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Quick Reply</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <textarea id="tenantQuickReplyBody" class="form-control" rows="5" placeholder="Type your message..."></textarea>
-                <div id="tenantQuickReplyError" class="text-danger mt-2"></div>
-                <div id="tenantQuickReplySuccess" class="text-success mt-2"></div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" id="tenantQuickReplySendBtn" class="btn btn-primary">Send</button>
-            </div>
-        </div>
-    </div>
-</div>
-
 <!-- Bootstrap Icons CDN -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
 
@@ -1229,42 +1222,40 @@
       });
     }
 
-    var sendBtn = document.getElementById('tenantQuickReplySendBtn');
-    if (sendBtn) {
-      sendBtn.addEventListener('click', async function () {
-        var bodyEl = document.getElementById('tenantQuickReplyBody');
-        var errEl = document.getElementById('tenantQuickReplyError');
-        var okEl = document.getElementById('tenantQuickReplySuccess');
-        if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
-        if (okEl) { okEl.style.display = 'none'; okEl.textContent = ''; }
+    var scrollBox = document.getElementById('tenantRecentMessagesScroll');
+    if (scrollBox) {
+      scrollBox.scrollTop = scrollBox.scrollHeight;
+    }
 
-        var text = bodyEl ? bodyEl.value.trim() : '';
+    var form = document.getElementById('tenantRecentReplyForm');
+    if (form) {
+      form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        var input = document.getElementById('tenantRecentReplyBody');
+        var btn = document.getElementById('tenantRecentReplySendBtn');
+        var err = document.getElementById('tenantRecentReplyError');
+        if (err) { err.style.display = 'none'; err.textContent = ''; }
+
+        var text = input ? String(input.value || '').trim() : '';
         if (!text) {
-          if (errEl) { errEl.textContent = 'Please type a message.'; errEl.style.display = 'block'; }
+          if (err) { err.textContent = 'Please type a message.'; err.style.display = 'block'; }
           return;
         }
 
-        sendBtn.disabled = true;
+        if (btn) btn.disabled = true;
         try {
-          var resp = await fetch('<?= BASE_URL ?>/tenant/messaging/send', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({
-              csrf_token: '<?= htmlspecialchars($_SESSION['csrf_token'] ?? '', ENT_QUOTES) ?>',
-              user_id: '<?= (int)($replyUserId ?? 0) ?>',
-              body: text
-            })
-          });
+          var fd = new FormData(form);
+          var resp = await fetch('<?= BASE_URL ?>/tenant/messaging/send', { method: 'POST', body: fd });
           var data = await resp.json();
           if (!data || !data.success) {
             throw new Error((data && data.message) ? data.message : 'Failed to send');
           }
-          if (okEl) { okEl.textContent = 'Message sent.'; okEl.style.display = 'block'; }
-          if (bodyEl) bodyEl.value = '';
-        } catch (e) {
-          if (errEl) { errEl.textContent = e.message || 'Failed to send'; errEl.style.display = 'block'; }
+          if (input) input.value = '';
+          window.location.reload();
+        } catch (ex) {
+          if (err) { err.textContent = ex.message || 'Failed to send'; err.style.display = 'block'; }
         } finally {
-          sendBtn.disabled = false;
+          if (btn) btn.disabled = false;
         }
       });
     }
