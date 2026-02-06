@@ -293,6 +293,8 @@ $routes = [
     'invoices/pdf/(\d+)' => ['controller' => 'InvoicesController', 'action' => 'pdf'],
     'invoices/email/(\d+)' => ['controller' => 'InvoicesController', 'action' => 'email'],
     'invoices/delete/(\d+)' => ['controller' => 'InvoicesController', 'action' => 'delete'],
+    'invoices/unarchive/(\d+)' => ['controller' => 'InvoicesController', 'action' => 'unarchive'],
+    'invoices/unvoid/(\d+)' => ['controller' => 'InvoicesController', 'action' => 'unvoid'],
     'invoices/post/(\d+)' => ['controller' => 'InvoicesController', 'action' => 'post'],
     // E-Signature
     'esign' => ['controller' => 'ESignController', 'action' => 'index'],

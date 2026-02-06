@@ -256,6 +256,19 @@ class Invoice extends Model
         return $stmt->execute([(int)$id]);
     }
 
+    public function unarchiveInvoice($id)
+    {
+        $stmt = $this->db->prepare("UPDATE {$this->table} SET archived_at = NULL, updated_at = NOW() WHERE id = ?");
+        return $stmt->execute([(int)$id]);
+    }
+
+    public function unvoidInvoice($id, ?string $restoreStatus = 'sent')
+    {
+        $restoreStatus = $restoreStatus ?: 'sent';
+        $stmt = $this->db->prepare("UPDATE {$this->table} SET status = ?, updated_at = NOW() WHERE id = ?");
+        return $stmt->execute([(string)$restoreStatus, (int)$id]);
+    }
+
     /**
      * Find an existing invoice for a tenant within the same issue month
      */
