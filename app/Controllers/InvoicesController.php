@@ -378,6 +378,40 @@ class InvoicesController
         exit;
     }
 
+    public function unarchive($id)
+    {
+        try {
+            $invModel = new Invoice();
+            $invModel->unarchiveInvoice((int)$id);
+            $_SESSION['flash_message'] = 'Invoice unarchived';
+            $_SESSION['flash_type'] = 'success';
+        } catch (\Exception $e) {
+            $_SESSION['flash_message'] = 'Unarchive failed';
+            $_SESSION['flash_type'] = 'danger';
+        }
+        header('Location: ' . BASE_URL . '/invoices');
+        exit;
+    }
+
+    public function unvoid($id)
+    {
+        try {
+            $status = isset($_GET['status']) ? trim((string)$_GET['status']) : 'sent';
+            if ($status === '') { $status = 'sent'; }
+            $allowed = ['draft','sent','partial','paid'];
+            if (!in_array($status, $allowed, true)) { $status = 'sent'; }
+            $invModel = new Invoice();
+            $invModel->unvoidInvoice((int)$id, $status);
+            $_SESSION['flash_message'] = 'Invoice restored';
+            $_SESSION['flash_type'] = 'success';
+        } catch (\Exception $e) {
+            $_SESSION['flash_message'] = 'Restore failed';
+            $_SESSION['flash_type'] = 'danger';
+        }
+        header('Location: ' . BASE_URL . '/invoices');
+        exit;
+    }
+
     public function post($id)
     {
         try {

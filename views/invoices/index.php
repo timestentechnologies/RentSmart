@@ -18,10 +18,10 @@ ob_start();
 
   <div class="card mb-3">
     <div class="card-body">
-      <form method="get" class="row g-2 align-items-end">
+      <form method="get" class="row g-2 align-items-end" id="invoiceFiltersForm">
         <div class="col-12 col-md-3">
           <label class="form-label mb-1">Search</label>
-          <input type="text" class="form-control" name="q" value="<?= htmlspecialchars($_GET['q'] ?? '') ?>" placeholder="Invoice no, tenant, notes">
+          <input type="text" class="form-control" name="q" value="<?= htmlspecialchars($_GET['q'] ?? '') ?>" placeholder="Invoice no, tenant, notes" id="invoiceSearchInput" autocomplete="off">
         </div>
         <div class="col-6 col-md-2">
           <label class="form-label mb-1">Status</label>
@@ -111,6 +111,12 @@ ob_start();
                     <a href="<?= BASE_URL ?>/invoices/pdf/<?= (int)$inv['id'] ?>" class="btn btn-outline-secondary">PDF</a>
                     <?php $isAuto = stripos((string)($inv['notes'] ?? ''), 'Auto-created') !== false || stripos((string)($inv['notes'] ?? ''), 'AUTO') !== false; ?>
                     <?php $label = $isAuto ? 'Void & Archive' : 'Archive'; ?>
+                    <?php if (!empty($inv['archived_at'])): ?>
+                      <a href="<?= BASE_URL ?>/invoices/unarchive/<?= (int)$inv['id'] ?>" class="btn btn-outline-success" onclick="return confirm('Unarchive this invoice?')">Unarchive</a>
+                    <?php endif; ?>
+                    <?php if (($inv['status'] ?? '') === 'void'): ?>
+                      <a href="<?= BASE_URL ?>/invoices/unvoid/<?= (int)$inv['id'] ?>" class="btn btn-outline-success" onclick="return confirm('Restore this invoice?')">Unvoid</a>
+                    <?php endif; ?>
                     <a href="<?= BASE_URL ?>/invoices/delete/<?= (int)$inv['id'] ?>" class="btn btn-outline-danger" onclick="return confirm('<?= $isAuto ? 'Void & archive' : 'Archive' ?> this invoice?')"><?= htmlspecialchars($label) ?></a>
                   </div>
                 </td>
@@ -129,3 +135,35 @@ ob_start();
 $content = ob_get_clean();
 require __DIR__ . '/../layouts/main.php';
 ?>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var form = document.getElementById('invoiceFiltersForm');
+    if (!form) return;
+
+    var search = document.getElementById('invoiceSearchInput');
+    var timer = null;
+
+    function submitWithDebounce() {
+      if (timer) window.clearTimeout(timer);
+      timer = window.setTimeout(function () {
+        form.submit();
+      }, 350);
+    }
+
+    if (search) {
+      search.addEventListener('input', submitWithDebounce);
+      search.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+        }
+      });
+    }
+
+    form.querySelectorAll('select, input[type="date"]').forEach(function (el) {
+      el.addEventListener('change', function () {
+        form.submit();
+      });
+    });
+  });
+</script>
