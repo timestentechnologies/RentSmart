@@ -410,6 +410,64 @@
             color: var(--primary-color);
         }
 
+        .split-section {
+            background: linear-gradient(180deg, rgba(107, 62, 153, 0.04) 0%, rgba(255, 138, 0, 0.03) 100%);
+        }
+
+        .split-media {
+            border-radius: 1.25rem;
+            overflow: hidden;
+            box-shadow: 0 18px 45px rgba(107, 62, 153, 0.16);
+            background: #fff;
+            border: 1px solid rgba(107, 62, 153, 0.10);
+        }
+
+        .split-media img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .split-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: .5rem;
+            padding: .4rem .75rem;
+            border-radius: 999px;
+            background: rgba(107, 62, 153, 0.10);
+            color: var(--primary-color);
+            font-weight: 600;
+            font-size: .9rem;
+        }
+
+        .split-title {
+            letter-spacing: -0.02em;
+        }
+
+        .split-list {
+            margin: 0;
+            padding: 0;
+            list-style: none;
+        }
+
+        .split-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: .75rem;
+            padding: .65rem .75rem;
+            border-radius: .85rem;
+            background: rgba(107, 62, 153, 0.04);
+            border: 1px solid rgba(107, 62, 153, 0.08);
+            margin-bottom: .6rem;
+        }
+
+        .split-list i {
+            color: var(--accent-color);
+            font-size: 1.1rem;
+            line-height: 1.2;
+            margin-top: .1rem;
+        }
+
         .dashboard-preview {
             background: white;
             border-radius: 20px;
@@ -742,17 +800,26 @@
         </div>
     </section>
 
-    <section class="py-5">
+    <section class="py-5 split-section">
         <div class="container">
             <div class="row align-items-center g-4">
                 <div class="col-lg-6">
-                    <div class="p-4 bg-white rounded shadow-sm">
-                        <img src="<?= asset('images/dashboard.png') ?>" alt="RentSmart" class="img-fluid" style="max-height: 260px;">
+                    <div class="split-media">
+                        <img src="<?= asset('images/dashboard.png') ?>" alt="RentSmart" class="img-fluid">
                     </div>
                 </div>
                 <div class="col-lg-6">
-                    <h2 class="fw-bold mb-3">Manage Rent, Utilities & Maintenance in One Place</h2>
+                    <div class="split-badge mb-3">
+                        <i class="bi bi-lightning-charge-fill"></i>
+                        <span>All-in-one platform</span>
+                    </div>
+                    <h2 class="fw-bold mb-3 split-title">Manage Rent, Utilities & Maintenance in One Place</h2>
                     <p class="text-muted mb-4">Track payments, utilities, and maintenance requests with clear records and automated invoicing—so landlords and tenants always know what is due and what has been paid.</p>
+                    <ul class="split-list mb-4">
+                        <li><i class="bi bi-check-circle-fill"></i><div><strong>Accurate payment types</strong><br><span class="text-muted">Rent, utilities, and maintenance always recorded correctly.</span></div></li>
+                        <li><i class="bi bi-check-circle-fill"></i><div><strong>Automated invoicing</strong><br><span class="text-muted">Invoices update based on what was paid—no confusion.</span></div></li>
+                        <li><i class="bi bi-check-circle-fill"></i><div><strong>Tenant self-service</strong><br><span class="text-muted">Tenants can pay and track balances from the portal.</span></div></li>
+                    </ul>
                     <div class="d-flex flex-wrap gap-2">
                         <a href="#" class="btn btn-gradient" data-bs-toggle="modal" data-bs-target="#registerModal">Get Started</a>
                         <a href="#features" class="btn btn-outline-accent">See Features</a>
