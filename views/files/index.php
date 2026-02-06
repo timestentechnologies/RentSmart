@@ -84,6 +84,7 @@ ob_start();
                                 <option value="unit">Unit</option>
                                 <option value="payment">Payment</option>
                                 <option value="expense">Expense</option>
+                                <option value="esign">E‑Sign</option>
                             </select>
                         </div>
                         <div class="col-6 col-md-3">
@@ -193,8 +194,15 @@ ob_start();
                 { data: null, orderable: false, render: function(row){
                     const url = (row.url) ? row.url : ('<?= BASE_URL ?>/public/' + (row.upload_path || ''));
                     const viewBtn = '<a href="'+url+'" target="_blank" class="btn btn-sm btn-outline-secondary me-1" title="Open"><i class="bi bi-box-arrow-up-right"></i></a>';
-                    const shareBtn = '<button type="button" class="btn btn-sm btn-outline-primary me-1 btn-share-file" data-id="'+row.id+'" title="Share"><i class="bi bi-share"></i></button>';
-                    const delBtn = '<button type="button" class="btn btn-sm btn-outline-danger btn-delete-file" data-id="'+row.id+'" title="Delete"><i class="bi bi-trash"></i></button>';
+                    const canShare = (row.can_share === undefined) ? true : !!parseInt(row.can_share);
+                    const canDelete = (row.can_delete === undefined) ? true : !!parseInt(row.can_delete);
+                    const isVirtual = (parseInt(row.id || 0) < 0);
+                    const shareBtn = (canShare && !isVirtual)
+                        ? '<button type="button" class="btn btn-sm btn-outline-primary me-1 btn-share-file" data-id="'+row.id+'" title="Share"><i class="bi bi-share"></i></button>'
+                        : '';
+                    const delBtn = (canDelete && !isVirtual)
+                        ? '<button type="button" class="btn btn-sm btn-outline-danger btn-delete-file" data-id="'+row.id+'" title="Delete"><i class="bi bi-trash"></i></button>'
+                        : '';
                     return viewBtn + shareBtn + delBtn;
                 }}
             ]
