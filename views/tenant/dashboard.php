@@ -225,25 +225,25 @@
                         <a href="<?= BASE_URL ?>/tenant/messaging" class="btn btn-sm btn-outline-primary">View all</a>
                     </div>
                 </div>
-                <div class="card-body">
+                <div class="card-body" style="padding:12px;">
                     <?php if (empty($tenantMessages)): ?>
                         <div class="text-muted">No messages yet.</div>
                     <?php else: ?>
-                        <ul class="list-unstyled mb-0">
+                        <div style="height: 220px; overflow-y: auto; background: #f4f6fb; border-radius: 10px; padding: 10px;">
                             <?php foreach (array_slice($tenantMessages, 0, 5) as $m): ?>
-                                <li class="mb-3">
-                                    <div class="d-flex justify-content-between">
-                                        <div class="fw-semibold">
-                                            <?= $m['sender_type'] === 'tenant' ? 'You' : 'From Management' ?>
+                                <?php $mine = (($m['sender_type'] ?? '') === 'tenant'); ?>
+                                <div class="d-flex mb-2 <?= $mine ? 'justify-content-end' : 'justify-content-start' ?>">
+                                    <div style="max-width: 85%;">
+                                        <div class="px-3 py-2" style="border-radius:14px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;<?= $mine ? 'background:#0d6efd;color:#fff;border-bottom-right-radius:6px;' : 'background:#fff;border:1px solid rgba(0,0,0,.08);border-bottom-left-radius:6px;' ?>">
+                                            <?= htmlspecialchars(mb_strimwidth(trim(preg_replace('/\s+/', ' ', $m['body'] ?? '')), 0, 120, '…', 'UTF-8')) ?>
                                         </div>
-                                        <div class="small text-muted"><?= htmlspecialchars(date('M j, Y g:i A', strtotime($m['created_at'] ?? 'now'))) ?></div>
+                                        <div class="small" style="opacity:.75;<?= $mine ? 'text-align:right;color:#0d6efd;' : 'color:#6c757d;' ?>">
+                                            <?= $mine ? 'You' : 'Management' ?> • <?= htmlspecialchars(date('M j, g:i A', strtotime($m['created_at'] ?? 'now'))) ?>
+                                        </div>
                                     </div>
-                                    <div class="text-muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;">
-                                        <?= htmlspecialchars(mb_strimwidth(trim(preg_replace('/\s+/', ' ', $m['body'] ?? '')), 0, 120, '…', 'UTF-8')) ?>
-                                    </div>
-                                </li>
+                                </div>
                             <?php endforeach; ?>
-                        </ul>
+                        </div>
                     <?php endif; ?>
                 </div>
             </div>
@@ -513,13 +513,22 @@
                                 <td>Ksh <?php echo number_format($payment['amount'], 2); ?></td>
                                 <td>
                                     <?php 
-                                    $paymentType = $payment['payment_type'] ?? 'rent';
-                                    $typeClass = $paymentType === 'utility' ? 'bg-info' : 'bg-success';
-                                    $typeText = $paymentType === 'utility' ? 'Utility' : 'Rent';
-                                    
-                                    // For utility payments, show the specific utility type
-                                    if ($paymentType === 'utility' && !empty($payment['utility_type'])) {
-                                        $typeText = ucfirst($payment['utility_type']);
+                                    $rawType = strtolower((string)($payment['payment_type'] ?? 'rent'));
+                                    $notes = (string)($payment['notes'] ?? '');
+                                    $amount = (float)($payment['amount'] ?? 0);
+                                    $hasUtility = !empty($payment['utility_id']) || !empty($payment['utility_type']);
+                                    $isMaint = ($rawType === 'rent' && $amount < 0 && $notes !== '' && preg_match('/MAINT-\d+/i', $notes));
+
+                                    // Normalize type to avoid everything showing as rent
+                                    if ($isMaint) {
+                                        $typeClass = 'bg-warning text-dark';
+                                        $typeText = 'Maintenance';
+                                    } elseif ($rawType === 'utility' || $hasUtility) {
+                                        $typeClass = 'bg-info';
+                                        $typeText = !empty($payment['utility_type']) ? ucfirst((string)$payment['utility_type']) : 'Utility';
+                                    } else {
+                                        $typeClass = 'bg-success';
+                                        $typeText = 'Rent';
                                     }
                                     ?>
                                     <span class="badge <?php echo $typeClass; ?>"><?php echo $typeText; ?></span>
