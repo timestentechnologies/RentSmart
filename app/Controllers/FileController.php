@@ -151,29 +151,112 @@ class FileController
             $dateFrom = isset($_GET['date_from']) && $_GET['date_from'] !== '' ? $_GET['date_from'] . ' 00:00:00' : null;
             $dateTo = isset($_GET['date_to']) && $_GET['date_to'] !== '' ? $_GET['date_to'] . ' 23:59:59' : null;
 
-            $sql = "SELECT fu.*, u.name AS uploader_name, u.email AS uploader_email 
-                    FROM file_uploads fu 
-                    LEFT JOIN users u ON fu.uploaded_by = u.id 
-                    WHERE 1=1";
-            $params = [];
-            if ($q) { $sql .= " AND (fu.original_name LIKE :q OR fu.filename LIKE :q OR fu.entity_type LIKE :q)"; $params['q'] = "%{$q}%"; }
-            if ($entityType) { $sql .= " AND fu.entity_type = :entity_type"; $params['entity_type'] = $entityType; }
-            if ($fileType) { $sql .= " AND fu.file_type = :file_type"; $params['file_type'] = $fileType; }
-            if ($dateFrom) { $sql .= " AND fu.created_at >= :date_from"; $params['date_from'] = $dateFrom; }
-            if ($dateTo) { $sql .= " AND fu.created_at <= :date_to"; $params['date_to'] = $dateTo; }
-
-            // Restrict visibility for non-admins: own uploads or files shared to them
             $me = new User();
             $me->find($_SESSION['user_id']);
-            if (!$me->isAdmin()) {
-                $sql .= " AND (fu.uploaded_by = :me1 OR EXISTS (
+            $isAdmin = $me->isAdmin();
+            $meId = (int)$_SESSION['user_id'];
+
+            $fuWhere = "1=1";
+            $erWhere = "1=1";
+            $params = [];
+            if ($q) {
+                $fuWhere .= " AND (fu.original_name LIKE :q OR fu.filename LIKE :q OR fu.entity_type LIKE :q)";
+                $erWhere .= " AND (er.title LIKE :q OR er.message LIKE :q OR 'esign' LIKE :q)";
+                $params['q'] = "%{$q}%";
+            }
+            if ($entityType) {
+                // Special case: allow filtering to only esign documents
+                if ($entityType === 'esign') {
+                    $fuWhere .= " AND 1=0";
+                } else {
+                    $fuWhere .= " AND fu.entity_type = :entity_type";
+                    $params['entity_type'] = $entityType;
+                }
+            }
+            if ($fileType) {
+                $fuWhere .= " AND fu.file_type = :file_type";
+                // esign docs are always treated as 'document'
+                if ($fileType !== 'document') {
+                    $erWhere .= " AND 1=0";
+                }
+                $params['file_type'] = $fileType;
+            }
+            if ($dateFrom) {
+                $fuWhere .= " AND fu.created_at >= :date_from";
+                $erWhere .= " AND er.created_at >= :date_from";
+                $params['date_from'] = $dateFrom;
+            }
+            if ($dateTo) {
+                $fuWhere .= " AND fu.created_at <= :date_to";
+                $erWhere .= " AND er.created_at <= :date_to";
+                $params['date_to'] = $dateTo;
+            }
+
+            if (!$isAdmin) {
+                $fuWhere .= " AND (fu.uploaded_by = :me1 OR EXISTS (
                             SELECT 1 FROM file_shares fs
                             WHERE fs.file_id = fu.id AND fs.recipient_type = 'user' AND fs.recipient_id = :me2
                         ))";
-                $params['me1'] = (int)$_SESSION['user_id'];
-                $params['me2'] = (int)$_SESSION['user_id'];
+                $erWhere .= " AND (er.requester_user_id = :me3 OR (er.recipient_type = 'user' AND er.recipient_id = :me4))";
+                $params['me1'] = $meId;
+                $params['me2'] = $meId;
+                $params['me3'] = $meId;
+                $params['me4'] = $meId;
             }
-            $sql .= " ORDER BY fu.created_at DESC LIMIT 200";
+
+            $sql = "(
+                        SELECT fu.id, fu.filename, fu.original_name, fu.file_type, fu.mime_type, fu.file_size,
+                               fu.entity_type, fu.entity_id, fu.uploaded_by, fu.upload_path, fu.created_at,
+                               u.name AS uploader_name, u.email AS uploader_email,
+                               1 AS can_share, 1 AS can_delete
+                        FROM file_uploads fu
+                        LEFT JOIN users u ON fu.uploaded_by = u.id
+                        WHERE {$fuWhere}
+                    )
+                    UNION ALL
+                    (
+                        SELECT
+                            er.id * -1 AS id,
+                            NULL AS filename,
+                            CONCAT('[E-SIGN] ', er.title) AS original_name,
+                            'document' AS file_type,
+                            NULL AS mime_type,
+                            0 AS file_size,
+                            'esign' AS entity_type,
+                            er.id AS entity_id,
+                            er.requester_user_id AS uploaded_by,
+                            er.document_path AS upload_path,
+                            er.created_at AS created_at,
+                            u2.name AS uploader_name,
+                            u2.email AS uploader_email,
+                            0 AS can_share, 0 AS can_delete
+                        FROM esign_requests er
+                        LEFT JOIN users u2 ON er.requester_user_id = u2.id
+                        WHERE er.document_path IS NOT NULL AND {$erWhere}
+                    )
+                    UNION ALL
+                    (
+                        SELECT
+                            er.id * -10 AS id,
+                            NULL AS filename,
+                            CONCAT('[E-SIGN SIGNED] ', er.title) AS original_name,
+                            'document' AS file_type,
+                            NULL AS mime_type,
+                            0 AS file_size,
+                            'esign' AS entity_type,
+                            er.id AS entity_id,
+                            er.requester_user_id AS uploaded_by,
+                            er.signed_document_path AS upload_path,
+                            er.updated_at AS created_at,
+                            u3.name AS uploader_name,
+                            u3.email AS uploader_email,
+                            0 AS can_share, 0 AS can_delete
+                        FROM esign_requests er
+                        LEFT JOIN users u3 ON er.requester_user_id = u3.id
+                        WHERE er.signed_document_path IS NOT NULL AND {$erWhere}
+                    )
+                    ORDER BY created_at DESC
+                    LIMIT 200";
             $stmt = $this->db->prepare($sql);
             $stmt->execute($params);
             $files = $stmt->fetchAll(\PDO::FETCH_ASSOC);
@@ -306,28 +389,109 @@ class FileController
             $dateFrom = isset($_GET['date_from']) && $_GET['date_from'] !== '' ? $_GET['date_from'] . ' 00:00:00' : null;
             $dateTo = isset($_GET['date_to']) && $_GET['date_to'] !== '' ? $_GET['date_to'] . ' 23:59:59' : null;
 
-            $sql = "SELECT fu.*, u.name AS uploader_name, u.email AS uploader_email 
-                    FROM file_uploads fu 
-                    LEFT JOIN users u ON fu.uploaded_by = u.id 
-                    WHERE 1=1";
-            $params = [];
-            if ($q) { $sql .= " AND (fu.original_name LIKE :q OR fu.filename LIKE :q OR fu.entity_type LIKE :q)"; $params['q'] = "%{$q}%"; }
-            if ($entityType) { $sql .= " AND fu.entity_type = :entity_type"; $params['entity_type'] = $entityType; }
-            if ($fileType) { $sql .= " AND fu.file_type = :file_type"; $params['file_type'] = $fileType; }
-            if ($dateFrom) { $sql .= " AND fu.created_at >= :date_from"; $params['date_from'] = $dateFrom; }
-            if ($dateTo) { $sql .= " AND fu.created_at <= :date_to"; $params['date_to'] = $dateTo; }
-            // Restrict for non-admin
             $me = new User();
             $me->find($_SESSION['user_id']);
-            if (!$me->isAdmin()) {
-                $sql .= " AND (fu.uploaded_by = :me1 OR EXISTS (
+            $isAdmin = $me->isAdmin();
+            $meId = (int)$_SESSION['user_id'];
+
+            $fuWhere = "1=1";
+            $erWhere = "1=1";
+            $params = [];
+            if ($q) {
+                $fuWhere .= " AND (fu.original_name LIKE :q OR fu.filename LIKE :q OR fu.entity_type LIKE :q)";
+                $erWhere .= " AND (er.title LIKE :q OR er.message LIKE :q OR 'esign' LIKE :q)";
+                $params['q'] = "%{$q}%";
+            }
+            if ($entityType) {
+                if ($entityType === 'esign') {
+                    $fuWhere .= " AND 1=0";
+                } else {
+                    $fuWhere .= " AND fu.entity_type = :entity_type";
+                    $params['entity_type'] = $entityType;
+                }
+            }
+            if ($fileType) {
+                $fuWhere .= " AND fu.file_type = :file_type";
+                if ($fileType !== 'document') {
+                    $erWhere .= " AND 1=0";
+                }
+                $params['file_type'] = $fileType;
+            }
+            if ($dateFrom) {
+                $fuWhere .= " AND fu.created_at >= :date_from";
+                $erWhere .= " AND er.created_at >= :date_from";
+                $params['date_from'] = $dateFrom;
+            }
+            if ($dateTo) {
+                $fuWhere .= " AND fu.created_at <= :date_to";
+                $erWhere .= " AND er.created_at <= :date_to";
+                $params['date_to'] = $dateTo;
+            }
+            if (!$isAdmin) {
+                $fuWhere .= " AND (fu.uploaded_by = :me1 OR EXISTS (
                             SELECT 1 FROM file_shares fs
                             WHERE fs.file_id = fu.id AND fs.recipient_type = 'user' AND fs.recipient_id = :me2
                         ))";
-                $params['me1'] = (int)$_SESSION['user_id'];
-                $params['me2'] = (int)$_SESSION['user_id'];
+                $erWhere .= " AND (er.requester_user_id = :me3 OR (er.recipient_type = 'user' AND er.recipient_id = :me4))";
+                $params['me1'] = $meId;
+                $params['me2'] = $meId;
+                $params['me3'] = $meId;
+                $params['me4'] = $meId;
             }
-            $sql .= " ORDER BY fu.created_at DESC LIMIT 500";
+
+            $sql = "(
+                        SELECT fu.id, fu.filename, fu.original_name, fu.file_type, fu.mime_type, fu.file_size,
+                               fu.entity_type, fu.entity_id, fu.uploaded_by, fu.upload_path, fu.created_at,
+                               u.name AS uploader_name, u.email AS uploader_email,
+                               1 AS can_share, 1 AS can_delete
+                        FROM file_uploads fu
+                        LEFT JOIN users u ON fu.uploaded_by = u.id
+                        WHERE {$fuWhere}
+                    )
+                    UNION ALL
+                    (
+                        SELECT
+                            er.id * -1 AS id,
+                            NULL AS filename,
+                            CONCAT('[E-SIGN] ', er.title) AS original_name,
+                            'document' AS file_type,
+                            NULL AS mime_type,
+                            0 AS file_size,
+                            'esign' AS entity_type,
+                            er.id AS entity_id,
+                            er.requester_user_id AS uploaded_by,
+                            er.document_path AS upload_path,
+                            er.created_at AS created_at,
+                            u2.name AS uploader_name,
+                            u2.email AS uploader_email,
+                            0 AS can_share, 0 AS can_delete
+                        FROM esign_requests er
+                        LEFT JOIN users u2 ON er.requester_user_id = u2.id
+                        WHERE er.document_path IS NOT NULL AND {$erWhere}
+                    )
+                    UNION ALL
+                    (
+                        SELECT
+                            er.id * -10 AS id,
+                            NULL AS filename,
+                            CONCAT('[E-SIGN SIGNED] ', er.title) AS original_name,
+                            'document' AS file_type,
+                            NULL AS mime_type,
+                            0 AS file_size,
+                            'esign' AS entity_type,
+                            er.id AS entity_id,
+                            er.requester_user_id AS uploaded_by,
+                            er.signed_document_path AS upload_path,
+                            er.updated_at AS created_at,
+                            u3.name AS uploader_name,
+                            u3.email AS uploader_email,
+                            0 AS can_share, 0 AS can_delete
+                        FROM esign_requests er
+                        LEFT JOIN users u3 ON er.requester_user_id = u3.id
+                        WHERE er.signed_document_path IS NOT NULL AND {$erWhere}
+                    )
+                    ORDER BY created_at DESC
+                    LIMIT 500";
             $stmt = $this->db->prepare($sql);
             $stmt->execute($params);
             $files = $stmt->fetchAll(\PDO::FETCH_ASSOC);
