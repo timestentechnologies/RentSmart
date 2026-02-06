@@ -177,8 +177,9 @@ document.addEventListener('DOMContentLoaded', function(){
     const gridEmptyEl = document.getElementById('gridEmptyState');
 
     function getFilters(){
+        const qEl = document.getElementById('q');
         return {
-            q: (document.getElementById('q') && document.getElementById('q').value || '').trim(),
+            q: ((qEl && qEl.value) || '').trim(),
             entity_type: document.getElementById('entity_type') ? document.getElementById('entity_type').value : '',
             file_type: document.getElementById('file_type') ? document.getElementById('file_type').value : '',
             date_from: document.getElementById('date_from') ? document.getElementById('date_from').value : '',
@@ -202,6 +203,7 @@ document.addEventListener('DOMContentLoaded', function(){
         const filters = getFilters();
         const url = new URL('<?= BASE_URL ?>/files/search', window.location.origin);
         Object.keys(filters).forEach(k => { if (filters[k]) url.searchParams.set(k, filters[k]); });
+        url.searchParams.set('_ts', Date.now().toString());
         const res = await fetch(url.toString(), { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
         const txt = await res.text();
         let json;
@@ -307,6 +309,7 @@ document.addEventListener('DOMContentLoaded', function(){
                     d.file_type = f.file_type;
                     d.date_from = f.date_from;
                     d.date_to = f.date_to;
+                    d._ts = Date.now();
                 },
                 dataSrc: function(json){
                     try {
@@ -371,6 +374,13 @@ document.addEventListener('DOMContentLoaded', function(){
 
     function debounce(fn, delay){let t;return function(){clearTimeout(t);t=setTimeout(()=>fn.apply(this, arguments), delay)}}
 
+    const filtersForm = document.getElementById('fileFilters');
+    if (filtersForm) filtersForm.addEventListener('submit', function(e){
+        e.preventDefault();
+        reloadResults();
+        return false;
+    });
+
     const applyBtn = document.getElementById('applyFilters');
     if (applyBtn) applyBtn.addEventListener('click', function(){ reloadResults(); });
 
@@ -391,6 +401,12 @@ document.addEventListener('DOMContentLoaded', function(){
 
     const qInput = document.getElementById('q');
     if (qInput) qInput.addEventListener('input', debounce(function(){ reloadResults(); }, 350));
+    if (qInput) qInput.addEventListener('keydown', function(e){
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            reloadResults();
+        }
+    });
     const entitySel = document.getElementById('entity_type');
     if (entitySel) entitySel.addEventListener('change', function(){ reloadResults(); });
     const ftSel = document.getElementById('file_type');
