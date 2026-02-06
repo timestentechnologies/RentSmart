@@ -47,6 +47,100 @@ class FileController
         }
     }
 
+    public function debugFiles()
+    {
+        // Auth is already enforced by requireAuth() via protectedRoutes, and constructor checks session.
+        // Additional guard: require a key that matches the user's CSRF token.
+        $key = $_GET['key'] ?? null;
+        if (!$key || !isset($_SESSION['csrf_token']) || !hash_equals((string)$_SESSION['csrf_token'], (string)$key)) {
+            header('HTTP/1.0 403 Forbidden');
+            header('Content-Type: text/plain; charset=utf-8');
+            echo "Forbidden\n";
+            echo "Provide ?key=<csrf_token>\n";
+            exit;
+        }
+
+        header('Content-Type: text/plain; charset=utf-8');
+        echo "debug/files\n";
+        echo "time=" . date('c') . "\n";
+        echo "user_id=" . (string)($_SESSION['user_id'] ?? '') . "\n";
+        echo "user_role=" . (string)($_SESSION['user_role'] ?? '') . "\n";
+        echo "php=" . PHP_VERSION . "\n\n";
+
+        try {
+            // Execute the same logic as index() but without rendering HTML views
+            $q = isset($_GET['q']) ? trim($_GET['q']) : null;
+            $entityType = isset($_GET['entity_type']) ? trim($_GET['entity_type']) : null;
+            $fileType = isset($_GET['file_type']) ? trim($_GET['file_type']) : null;
+            $dateFrom = isset($_GET['date_from']) && $_GET['date_from'] !== '' ? $_GET['date_from'] . ' 00:00:00' : null;
+            $dateTo = isset($_GET['date_to']) && $_GET['date_to'] !== '' ? $_GET['date_to'] . ' 23:59:59' : null;
+
+            $sql = "SELECT fu.*, u.name AS uploader_name, u.email AS uploader_email
+                    FROM file_uploads fu
+                    LEFT JOIN users u ON fu.uploaded_by = u.id
+                    WHERE 1=1";
+            $params = [];
+            if ($q) { $sql .= " AND (fu.original_name LIKE :q OR fu.filename LIKE :q OR fu.entity_type LIKE :q)"; $params['q'] = "%{$q}%"; }
+            if ($entityType) { $sql .= " AND fu.entity_type = :entity_type"; $params['entity_type'] = $entityType; }
+            if ($fileType) { $sql .= " AND fu.file_type = :file_type"; $params['file_type'] = $fileType; }
+            if ($dateFrom) { $sql .= " AND fu.created_at >= :date_from"; $params['date_from'] = $dateFrom; }
+            if ($dateTo) { $sql .= " AND fu.created_at <= :date_to"; $params['date_to'] = $dateTo; }
+
+            $me = new User();
+            $me->find($_SESSION['user_id']);
+            if (!$me->isAdmin()) {
+                $sql .= " AND (fu.uploaded_by = :me OR EXISTS (
+                            SELECT 1 FROM file_shares fs
+                            WHERE fs.file_id = fu.id AND fs.recipient_type = 'user' AND fs.recipient_id = :me
+                        ))";
+                $params['me'] = (int)$_SESSION['user_id'];
+            }
+            $sql .= " ORDER BY fu.created_at DESC LIMIT 200";
+
+            echo "SQL:\n{$sql}\n\n";
+            echo "Params:\n" . print_r($params, true) . "\n";
+
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($params);
+            $files = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+            echo "Files count: " . count($files) . "\n";
+
+            // Try building recipients too (this is where landlord-only crashes often happen)
+            $recipients = [ 'tenants'=>[], 'caretakers'=>[], 'admins'=>[], 'users'=>[] ];
+            $tenantModel = new Tenant();
+            $tenants = $tenantModel->getAll($_SESSION['user_id']) ?? [];
+            echo "Tenants count: " . count($tenants) . "\n";
+
+            $caretakerIds = [];
+            $propertyIds = [];
+            try {
+                $propertyIds = $me->getAccessiblePropertyIds();
+            } catch (\Exception $e) {
+                $propertyIds = [];
+            }
+            echo "Accessible property IDs: " . json_encode($propertyIds) . "\n";
+            if (!empty($propertyIds)) {
+                $inProps = implode(',', array_fill(0, count($propertyIds), '?'));
+                $stmtP = $this->db->prepare("SELECT caretaker_user_id FROM properties WHERE id IN ($inProps)");
+                $stmtP->execute(array_map('intval', $propertyIds));
+                foreach ($stmtP->fetchAll(\PDO::FETCH_ASSOC) as $row) {
+                    if (!empty($row['caretaker_user_id'])) {
+                        $caretakerIds[(int)$row['caretaker_user_id']] = true;
+                    }
+                }
+            }
+            echo "Caretaker IDs: " . json_encode(array_keys($caretakerIds)) . "\n";
+
+            echo "\nOK\n";
+        } catch (\Throwable $e) {
+            echo "\nEXCEPTION\n";
+            echo get_class($e) . ": " . $e->getMessage() . "\n";
+            echo "File: " . $e->getFile() . ":" . $e->getLine() . "\n\n";
+            echo $e->getTraceAsString() . "\n";
+        }
+        exit;
+    }
+
     public function index()
     {
         try {
