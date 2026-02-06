@@ -171,7 +171,30 @@ ob_start();
                     d.date_from = document.getElementById('date_from').value;
                     d.date_to = document.getElementById('date_to').value;
                 },
-                dataSrc: function(json){ return json.data || []; }
+                dataSrc: function(json){
+                    try {
+                        if (!json || typeof json !== 'object') {
+                            console.error('Files search: invalid JSON payload', json);
+                            return [];
+                        }
+                        if (json.error) {
+                            console.error('Files search error:', json);
+                            return [];
+                        }
+                        if (!Array.isArray(json.data)) {
+                            console.error('Files search: expected {data: []}, got:', json);
+                            return [];
+                        }
+                        return json.data;
+                    } catch (e) {
+                        console.error('Files search dataSrc error:', e, json);
+                        return [];
+                    }
+                },
+                error: function(xhr, status, err){
+                    console.error('Files search AJAX failed:', status, err);
+                    try { console.error('Response:', xhr && xhr.responseText); } catch(e) {}
+                }
             },
             columns: [
                 { data: 'created_at', render: function(v){ return v ? v : ''; } },
