@@ -144,6 +144,7 @@ ob_start();
 </div>
 
 <script>
+document.addEventListener('DOMContentLoaded', function(){
 (function(){
     function bytesToSize(bytes){
         if (!bytes) return '0 B';
@@ -234,20 +235,34 @@ ob_start();
 
     function debounce(fn, delay){let t;return function(){clearTimeout(t);t=setTimeout(()=>fn.apply(this, arguments), delay)}}
 
-    document.getElementById('applyFilters').addEventListener('click', function(){ dt ? dt.ajax.reload() : loadTable(); });
-    document.getElementById('clearFilters').addEventListener('click', function(){
-        document.getElementById('q').value='';
-        document.getElementById('entity_type').value='';
-        document.getElementById('file_type').value='';
-        document.getElementById('date_from').value='';
-        document.getElementById('date_to').value='';
+    const applyBtn = document.getElementById('applyFilters');
+    if (applyBtn) applyBtn.addEventListener('click', function(){ dt ? dt.ajax.reload() : loadTable(); });
+
+    const clearBtn = document.getElementById('clearFilters');
+    if (clearBtn) clearBtn.addEventListener('click', function(){
+        const qEl = document.getElementById('q');
+        const entityEl = document.getElementById('entity_type');
+        const ftEl = document.getElementById('file_type');
+        const dfEl = document.getElementById('date_from');
+        const dtEl = document.getElementById('date_to');
+        if (qEl) qEl.value='';
+        if (entityEl) entityEl.value='';
+        if (ftEl) ftEl.value='';
+        if (dfEl) dfEl.value='';
+        if (dtEl) dtEl.value='';
         dt ? dt.ajax.reload() : loadTable();
     });
-    document.getElementById('q').addEventListener('keyup', debounce(function(){ dt ? dt.ajax.reload() : loadTable(); }, 400));
-    document.getElementById('entity_type').addEventListener('change', function(){ dt ? dt.ajax.reload() : loadTable(); });
-    document.getElementById('file_type').addEventListener('change', function(){ dt ? dt.ajax.reload() : loadTable(); });
-    document.getElementById('date_from').addEventListener('change', function(){ dt ? dt.ajax.reload() : loadTable(); });
-    document.getElementById('date_to').addEventListener('change', function(){ dt ? dt.ajax.reload() : loadTable(); });
+
+    const qInput = document.getElementById('q');
+    if (qInput) qInput.addEventListener('keyup', debounce(function(){ dt ? dt.ajax.reload() : loadTable(); }, 400));
+    const entitySel = document.getElementById('entity_type');
+    if (entitySel) entitySel.addEventListener('change', function(){ dt ? dt.ajax.reload() : loadTable(); });
+    const ftSel = document.getElementById('file_type');
+    if (ftSel) ftSel.addEventListener('change', function(){ dt ? dt.ajax.reload() : loadTable(); });
+    const dfSel = document.getElementById('date_from');
+    if (dfSel) dfSel.addEventListener('change', function(){ dt ? dt.ajax.reload() : loadTable(); });
+    const dtSel = document.getElementById('date_to');
+    if (dtSel) dtSel.addEventListener('change', function(){ dt ? dt.ajax.reload() : loadTable(); });
 
     // Delete handler
     $(document).on('click', '.btn-delete-file', function(){
@@ -297,9 +312,11 @@ ob_start();
         modal.show();
     });
 
-    document.getElementById('shareCategory').addEventListener('change', function(){
+    const shareCategoryEl = document.getElementById('shareCategory');
+    if (shareCategoryEl) shareCategoryEl.addEventListener('change', function(){
         const cat = this.value;
         const recSel = document.getElementById('shareRecipient');
+        if (!recSel) return;
         recSel.innerHTML = '<option value="">Select recipient</option>';
         if (!cat || !shareRecipients[cat]) return;
         shareRecipients[cat].forEach(function(item){
@@ -310,7 +327,8 @@ ob_start();
         });
     });
 
-    document.getElementById('shareForm').addEventListener('submit', async function(e){
+    const shareFormEl = document.getElementById('shareForm');
+    if (shareFormEl) shareFormEl.addEventListener('submit', async function(e){
         e.preventDefault();
         const category = document.getElementById('shareCategory').value;
         const recipientId = document.getElementById('shareRecipient').value;
@@ -343,6 +361,7 @@ ob_start();
     // initial load
     loadTable();
 })();
+});
 </script>
 <!-- Share File Modal -->
 <div class="modal fade" id="shareFileModal" tabindex="-1" aria-hidden="true">
