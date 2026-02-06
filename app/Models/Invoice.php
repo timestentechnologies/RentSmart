@@ -24,7 +24,13 @@ class Invoice extends Model
         $end = new \DateTime(date('Y-m-01', $endBoundary->getTimestamp()));
         $months = 0;
         while ($start <= $end && $months < 36) {
-            $this->ensureMonthlyRentInvoice($tenantId, $start->format('Y-m-01'), $rentAmount, $userId, $noteTag);
+            $issueDate = $start->format('Y-m-01');
+            $this->ensureMonthlyRentInvoice($tenantId, $issueDate, $rentAmount, $userId, $noteTag);
+            try {
+                $this->syncMaintenanceChargesForTenantMonth($tenantId, $issueDate);
+            } catch (\Exception $e) {
+                error_log('Sync maintenance charges failed: ' . $e->getMessage());
+            }
             $start->modify('+1 month');
             $months++;
         }
@@ -132,6 +138,80 @@ class Invoice extends Model
         } catch (\Exception $e) {
             $this->db->rollBack();
             throw $e;
+        }
+    }
+
+    public function recalculateTotals(int $invoiceId): void
+    {
+        $stmt = $this->db->prepare("SELECT COALESCE(SUM(line_total),0) AS s FROM invoice_items WHERE invoice_id = ?");
+        $stmt->execute([(int)$invoiceId]);
+        $subtotal = (float)($stmt->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0);
+
+        $taxStmt = $this->db->prepare("SELECT tax_rate FROM {$this->table} WHERE id = ? LIMIT 1");
+        $taxStmt->execute([(int)$invoiceId]);
+        $taxRateRaw = $taxStmt->fetch(\PDO::FETCH_ASSOC);
+        $taxRate = isset($taxRateRaw['tax_rate']) ? (float)$taxRateRaw['tax_rate'] : null;
+        $taxAmount = $taxRate !== null ? round($subtotal * ($taxRate / 100), 2) : 0.0;
+        $total = $subtotal + $taxAmount;
+
+        $upd = $this->db->prepare("UPDATE {$this->table} SET subtotal = ?, tax_amount = ?, total = ?, updated_at = NOW() WHERE id = ?");
+        $upd->execute([$subtotal, $taxAmount, $total, (int)$invoiceId]);
+    }
+
+    public function syncMaintenanceChargesForTenantMonth(int $tenantId, string $issueDate): void
+    {
+        $inv = $this->findByTenantAndIssueMonth($tenantId, $issueDate);
+        if (!$inv || empty($inv['id'])) return;
+
+        $leaseStmt = $this->db->prepare("SELECT id FROM leases WHERE tenant_id = ? AND status = 'active' LIMIT 1");
+        $leaseStmt->execute([(int)$tenantId]);
+        $leaseId = (int)($leaseStmt->fetch(\PDO::FETCH_ASSOC)['id'] ?? 0);
+        if ($leaseId <= 0) return;
+
+        $start = date('Y-m-01', strtotime($issueDate));
+        $end = date('Y-m-t', strtotime($issueDate));
+
+        $pStmt = $this->db->prepare(
+            "SELECT id, amount, payment_date, notes\n"
+            . "FROM payments\n"
+            . "WHERE lease_id = ?\n"
+            . "  AND payment_type = 'rent'\n"
+            . "  AND amount < 0\n"
+            . "  AND status IN ('completed','verified')\n"
+            . "  AND payment_date BETWEEN ? AND ?\n"
+            . "  AND notes LIKE ?\n"
+            . "ORDER BY payment_date ASC, id ASC"
+        );
+        $pStmt->execute([(int)$leaseId, $start, $end, '%MAINT-%']);
+        $rows = $pStmt->fetchAll(\PDO::FETCH_ASSOC);
+        if (empty($rows)) return;
+
+        $ins = $this->db->prepare("INSERT INTO invoice_items (invoice_id, description, quantity, unit_price, line_total) VALUES (?,?,?,?,?)");
+        $addedAny = false;
+        foreach ($rows as $r) {
+            $notes = (string)($r['notes'] ?? '');
+            if ($notes === '') continue;
+
+            $tag = null;
+            if (preg_match('/(MAINT-\d+)/i', $notes, $m)) {
+                $tag = strtoupper($m[1]);
+            }
+            $desc = $tag ? ('Maintenance Charge - ' . $tag) : ('Maintenance Charge - Payment #' . (int)$r['id']);
+
+            $chk = $this->db->prepare("SELECT id FROM invoice_items WHERE invoice_id = ? AND description LIKE ? LIMIT 1");
+            $chk->execute([(int)$inv['id'], '%' . $desc . '%']);
+            $exists = $chk->fetch(\PDO::FETCH_ASSOC);
+            if ($exists) continue;
+
+            $amount = abs((float)($r['amount'] ?? 0));
+            if ($amount <= 0) continue;
+            $line = round($amount, 2);
+            $ins->execute([(int)$inv['id'], $desc, 1, $line, $line]);
+            $addedAny = true;
+        }
+
+        if ($addedAny) {
+            $this->recalculateTotals((int)$inv['id']);
         }
     }
 
@@ -289,6 +369,11 @@ class Invoice extends Model
     {
         $existing = $this->findByTenantAndIssueMonth($tenantId, $issueDate);
         if ($existing && (!empty($existing['id']))) {
+            try {
+                $this->syncMaintenanceChargesForTenantMonth($tenantId, $issueDate);
+            } catch (\Exception $e) {
+                error_log('Sync maintenance charges (existing) failed: ' . $e->getMessage());
+            }
             return (int)$existing['id'];
         }
         $monthLabel = date('F Y', strtotime($issueDate));
@@ -297,7 +382,7 @@ class Invoice extends Model
             'quantity' => 1,
             'unit_price' => $rentAmount,
         ]];
-        return (int)$this->createInvoice([
+        $invoiceId = (int)$this->createInvoice([
             'tenant_id' => $tenantId,
             'issue_date' => $issueDate,
             'due_date' => $issueDate,
@@ -305,6 +390,12 @@ class Invoice extends Model
             'notes' => trim(($noteTag ? ($noteTag . ' ') : '') . 'Auto-created draft rent invoice for ' . $monthLabel),
             'user_id' => $userId,
         ], $items);
+        try {
+            $this->syncMaintenanceChargesForTenantMonth($tenantId, $issueDate);
+        } catch (\Exception $e) {
+            error_log('Sync maintenance charges (new) failed: ' . $e->getMessage());
+        }
+        return $invoiceId;
     }
 
     /**
