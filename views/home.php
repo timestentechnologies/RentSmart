@@ -295,19 +295,23 @@
             transform: translateY(-5px);
         }
 
+        .features-section {
+            background: #fbfbff;
+        }
+
         .features-section .feature-card {
-            border: 2px solid #FF8A00;
-            box-shadow:
-                0 0 0 3px rgba(255, 138, 0, 0.12),
-                0 14px 35px rgba(255, 138, 0, 0.18);
-            transition: transform .2s ease, box-shadow .2s ease;
+            background: #fff;
+            border: 1px solid rgba(17, 24, 39, 0.08);
+            box-shadow: 0 10px 26px rgba(17, 24, 39, 0.08);
+            transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease;
         }
 
         .features-section .feature-card:hover {
             transform: translateY(-6px);
+            border-color: #FF8A00;
             box-shadow:
-                0 0 0 4px rgba(255, 138, 0, 0.18),
-                0 20px 60px rgba(255, 138, 0, 0.26);
+                0 0 0 4px rgba(255, 138, 0, 0.12),
+                0 22px 60px rgba(17, 24, 39, 0.12);
         }
 
         .feature-icon-circle {
@@ -1060,8 +1064,8 @@
                         <div class="feature-icon-circle mx-auto">
                             <i class="bi bi-cash-coin"></i>
                         </div>
-                        <h3>Online Rent Collection</h3>
-                        <p>Automate rent collection with M-PESA integration. Accept payments online, send reminders, and track payment history effortlessly.</p>
+                        <h3>Rent Collection & Tenant Portal</h3>
+                        <p>Collect rent via M-PESA and give tenants self-service access to pay, view balances, and track payment history—anytime, anywhere.</p>
                     </div>
                 </div>
                 <div class="col-12 col-md-6 col-lg-3">
@@ -1078,17 +1082,8 @@
                         <div class="feature-icon-circle mx-auto">
                             <i class="bi bi-graph-up"></i>
                         </div>
-                        <h3>Financial Reporting & Analytics</h3>
-                        <p>Generate comprehensive financial reports including income statements, expense tracking, and property performance analytics for better decision-making.</p>
-                    </div>
-                </div>
-                <div class="col-12 col-md-6 col-lg-3">
-                    <div class="feature-card text-center p-4">
-                        <div class="feature-icon-circle mx-auto">
-                            <i class="bi bi-people"></i>
-                        </div>
-                        <h3>Tenant Management Portal</h3>
-                        <p>Provide tenants with self-service access to make rent payments, submit maintenance requests, and view lease documents online 24/7.</p>
+                        <h3>Invoices & Financial Reports</h3>
+                        <p>Generate invoices and receipts, and access clear reporting on income, expenses, and performance for confident decision-making.</p>
                     </div>
                 </div>
                 <div class="col-12 col-md-6 col-lg-3">
@@ -1118,16 +1113,6 @@
                         </div>
                         <h3>Maintenance Management</h3>
                         <p>Log requests, assign work, track progress, and record maintenance costs with clear references for invoices and statements.</p>
-                    </div>
-                </div>
-
-                <div class="col-12 col-md-6 col-lg-3">
-                    <div class="feature-card text-center p-4">
-                        <div class="feature-icon-circle mx-auto">
-                            <i class="bi bi-receipt"></i>
-                        </div>
-                        <h3>Invoices & Receipts</h3>
-                        <p>Generate professional invoices and receipts and keep balances accurate with automated invoice status updates.</p>
                     </div>
                 </div>
 
