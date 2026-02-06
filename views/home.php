@@ -742,6 +742,26 @@
         </div>
     </section>
 
+    <section class="py-5">
+        <div class="container">
+            <div class="row align-items-center g-4">
+                <div class="col-lg-6">
+                    <div class="p-4 bg-white rounded shadow-sm">
+                        <img src="<?= asset('images/dashboard.png') ?>" alt="RentSmart" class="img-fluid" style="max-height: 260px;">
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <h2 class="fw-bold mb-3">Manage Rent, Utilities & Maintenance in One Place</h2>
+                    <p class="text-muted mb-4">Track payments, utilities, and maintenance requests with clear records and automated invoicing—so landlords and tenants always know what is due and what has been paid.</p>
+                    <div class="d-flex flex-wrap gap-2">
+                        <a href="#" class="btn btn-gradient" data-bs-toggle="modal" data-bs-target="#registerModal">Get Started</a>
+                        <a href="#features" class="btn btn-outline-accent">See Features</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <!-- Why Choose Us Section -->
     <section class="py-5 bg-light">
         <div class="container">
