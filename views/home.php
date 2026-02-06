@@ -1200,9 +1200,14 @@
                             <label for="loginEmail">Email or Phone Number</label>
                         </div>
 
-                        <div class="form-floating mb-3">
-                            <input type="password" class="form-control" id="loginPassword" name="password" placeholder="Password" required>
-                            <label for="loginPassword">Password</label>
+                        <div class="input-group mb-3">
+                            <div class="form-floating flex-grow-1">
+                                <input type="password" class="form-control" id="loginPassword" name="password" placeholder="Password" required>
+                                <label for="loginPassword">Password</label>
+                            </div>
+                            <button class="btn btn-outline-secondary" type="button" id="toggleLoginPassword" aria-label="Show password">
+                                <i class="bi bi-eye"></i>
+                            </button>
                         </div>
 
                         <div class="form-check mb-3">
@@ -1271,14 +1276,27 @@
                             <label for="registerAddress">Address</label>
                         </div>
 
-                        <div class="form-floating mb-3">
-                            <input type="password" class="form-control" id="registerPassword" name="password" placeholder="Password" required>
-                            <label for="registerPassword">Password</label>
+                        <div class="input-group mb-2">
+                            <div class="form-floating flex-grow-1">
+                                <input type="password" class="form-control" id="registerPassword" name="password" placeholder="Password" required>
+                                <label for="registerPassword">Password</label>
+                            </div>
+                            <button class="btn btn-outline-secondary" type="button" id="toggleRegisterPassword" aria-label="Show password">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                        <div class="small text-muted mb-3" id="passwordHint">
+                            Password must be at least 8 characters and include uppercase, lowercase, number, and special character.
                         </div>
 
-                        <div class="form-floating mb-3">
-                            <input type="password" class="form-control" id="registerConfirmPassword" name="confirm_password" placeholder="Confirm Password" required>
-                            <label for="registerConfirmPassword">Confirm Password</label>
+                        <div class="input-group mb-3">
+                            <div class="form-floating flex-grow-1">
+                                <input type="password" class="form-control" id="registerConfirmPassword" name="confirm_password" placeholder="Confirm Password" required>
+                                <label for="registerConfirmPassword">Confirm Password</label>
+                            </div>
+                            <button class="btn btn-outline-secondary" type="button" id="toggleRegisterConfirmPassword" aria-label="Show password">
+                                <i class="bi bi-eye"></i>
+                            </button>
                         </div>
 
                         <div class="form-floating mb-3">
@@ -1434,6 +1452,17 @@
                 return false;
             }
 
+            // Strong password check (UX only; server also enforces)
+            const hasMinLen = (password || '').length >= 8;
+            const hasUpper = /[A-Z]/.test(password || '');
+            const hasLower = /[a-z]/.test(password || '');
+            const hasDigit = /\d/.test(password || '');
+            const hasSpecial = /[^A-Za-z0-9]/.test(password || '');
+            if (!hasMinLen || !hasUpper || !hasLower || !hasDigit || !hasSpecial) {
+                showAlert('register', 'Password must be at least 8 characters and include uppercase, lowercase, number, and special character.');
+                return false;
+            }
+
             // Get the button and set loading
             const submitBtn = form.querySelector('button[type="submit"]');
             const originalBtnHtml = submitBtn.innerHTML;
@@ -1469,6 +1498,25 @@
 
         // Add animation to preview bars
         document.addEventListener('DOMContentLoaded', function() {
+            function wireToggle(btnId, inputId) {
+                const btn = document.getElementById(btnId);
+                const input = document.getElementById(inputId);
+                if (!btn || !input) return;
+                btn.addEventListener('click', function() {
+                    const isPassword = input.getAttribute('type') === 'password';
+                    input.setAttribute('type', isPassword ? 'text' : 'password');
+                    const icon = btn.querySelector('i');
+                    if (icon) {
+                        icon.className = isPassword ? 'bi bi-eye-slash' : 'bi bi-eye';
+                    }
+                    btn.setAttribute('aria-label', isPassword ? 'Hide password' : 'Show password');
+                });
+            }
+
+            wireToggle('toggleLoginPassword', 'loginPassword');
+            wireToggle('toggleRegisterPassword', 'registerPassword');
+            wireToggle('toggleRegisterConfirmPassword', 'registerConfirmPassword');
+
             const bars = document.querySelectorAll('.preview-bar');
             bars.forEach(bar => {
                 const originalHeight = bar.style.height;

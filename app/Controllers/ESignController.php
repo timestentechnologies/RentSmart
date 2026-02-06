@@ -240,6 +240,7 @@ class ESignController
             if ($sigType === 'initials') {
                 if (function_exists('imagecreatetruecolor')) {
                     $sigImg = imagecreatetruecolor(800, 200);
+                    imagealphablending($sigImg, false);
                     imagesavealpha($sigImg, true);
                     $trans = imagecolorallocatealpha($sigImg, 0, 0, 0, 127);
                     imagefill($sigImg, 0, 0, $trans);
@@ -250,6 +251,12 @@ class ESignController
                 $bin = base64_decode($base64Data);
                 if ($bin !== false && function_exists('imagecreatefromstring')) {
                     $sigImg = imagecreatefromstring($bin);
+                    if ($sigImg) {
+                        // Ensure transparency is preserved when saving/resampling
+                        if (function_exists('imagepalettetotruecolor')) { @imagepalettetotruecolor($sigImg); }
+                        imagealphablending($sigImg, false);
+                        imagesavealpha($sigImg, true);
+                    }
                 }
             }
 
@@ -264,6 +271,7 @@ class ESignController
                 $ratio = $sw > 0 ? ($targetW / $sw) : 1;
                 $targetH = max(60, (int)round($sh * $ratio));
                 $res = imagecreatetruecolor($targetW, $targetH);
+                imagealphablending($res, false);
                 imagesavealpha($res, true);
                 $trans2 = imagecolorallocatealpha($res, 0, 0, 0, 127);
                 imagefill($res, 0, 0, $trans2);
@@ -306,6 +314,9 @@ class ESignController
                         $sigPath = null;
                         if ($sigImg) {
                             $sigPath = $outDir . DIRECTORY_SEPARATOR . 'sig_' . $token . '_' . $ts . '.png';
+                            // Ensure alpha channel is preserved in the written overlay PNG
+                            imagealphablending($sigImg, false);
+                            imagesavealpha($sigImg, true);
                             imagepng($sigImg, $sigPath, 6);
                         }
                         for ($i = 0; $i < $pages; $i++) {

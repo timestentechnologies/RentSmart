@@ -213,6 +213,7 @@
             <div class="card h-100">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0"><i class="bi bi-chat-dots me-2"></i>Recent Messages</h5>
+                    <a href="<?= BASE_URL ?>/tenant/messaging" class="btn btn-sm btn-outline-primary">View all</a>
                 </div>
                 <div class="card-body">
                     <?php if (empty($tenantMessages)): ?>

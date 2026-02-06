@@ -110,6 +110,17 @@ class Subscription extends Model
         return $subscription['status'] === 'active' && $now <= $endDate;
     }
 
+    public function isEnterprisePlan($userId): bool
+    {
+        try {
+            $sub = $this->getUserSubscription($userId);
+            $name = strtolower((string)($sub['name'] ?? ($sub['plan_type'] ?? '')));
+            return $name === 'enterprise';
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
+
     /**
      * Update subscription status
      */

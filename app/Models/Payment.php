@@ -4,10 +4,147 @@ namespace App\Models;
 
 use App\Database\Connection;
 use PDO;
+use App\Models\Account;
+use App\Models\LedgerEntry;
+use App\Models\Invoice;
 
 class Payment extends Model
 {
     protected $table = 'payments';
+
+    private function resolveAccountingUserIdForLease(int $leaseId): ?int
+    {
+        try {
+            $stmt = $this->db->prepare("SELECT p.owner_id, p.manager_id, p.agent_id, p.caretaker_user_id
+                                        FROM leases l
+                                        JOIN units u ON l.unit_id = u.id
+                                        JOIN properties p ON u.property_id = p.id
+                                        WHERE l.id = ? LIMIT 1");
+            $stmt->execute([(int)$leaseId]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+            foreach (['owner_id','manager_id','agent_id','caretaker_user_id'] as $k) {
+                if (!empty($row[$k])) return (int)$row[$k];
+            }
+        } catch (\Exception $e) {
+        }
+        return null;
+    }
+
+    private function resolvePropertyIdForLease(int $leaseId): ?int
+    {
+        try {
+            $stmt = $this->db->prepare("SELECT u.property_id
+                                        FROM leases l
+                                        JOIN units u ON l.unit_id = u.id
+                                        WHERE l.id = ? LIMIT 1");
+            $stmt->execute([(int)$leaseId]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
+            return !empty($row['property_id']) ? (int)$row['property_id'] : null;
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+
+    private function shouldPostToLedger(?string $status): bool
+    {
+        return in_array((string)$status, ['completed','verified'], true);
+    }
+
+    private function postPaymentToLedgerIfNeeded(int $paymentId, array $data): void
+    {
+        try {
+            $status = $data['status'] ?? 'completed';
+            if (!$this->shouldPostToLedger($status)) return;
+
+            $leaseId = (int)($data['lease_id'] ?? 0);
+            if ($leaseId <= 0) return;
+
+            $amount = (float)($data['amount'] ?? 0);
+            if ($amount <= 0) return;
+
+            $ledger = new LedgerEntry();
+            if ($ledger->referenceExists('payment', $paymentId)) return;
+
+            $accModel = new Account();
+            $cash = $accModel->findByCode('1000');
+            $rev = $accModel->findByCode('4000');
+            if (!$cash || !$rev) return;
+
+            $userId = $data['user_id'] ?? null;
+            if (empty($userId)) {
+                $userId = $this->resolveAccountingUserIdForLease($leaseId);
+            }
+            $propertyId = $data['property_id'] ?? null;
+            if (empty($propertyId)) {
+                $propertyId = $this->resolvePropertyIdForLease($leaseId);
+            }
+
+            $date = $data['payment_date'] ?? date('Y-m-d');
+            $type = $data['payment_type'] ?? 'rent';
+            $desc = ucfirst((string)$type) . ' payment #' . $paymentId;
+
+            // Debit Cash, Credit Revenue
+            $ledger->post([
+                'entry_date' => $date,
+                'account_id' => (int)$cash['id'],
+                'description' => $desc,
+                'debit' => $amount,
+                'credit' => 0,
+                'user_id' => $userId,
+                'property_id' => $propertyId,
+                'reference_type' => 'payment',
+                'reference_id' => $paymentId,
+            ]);
+            $ledger->post([
+                'entry_date' => $date,
+                'account_id' => (int)$rev['id'],
+                'description' => $desc,
+                'debit' => 0,
+                'credit' => $amount,
+                'user_id' => $userId,
+                'property_id' => $propertyId,
+                'reference_type' => 'payment',
+                'reference_id' => $paymentId,
+            ]);
+        } catch (\Exception $e) {
+            // Do not block payment
+            error_log('Payment ledger post failed: ' . $e->getMessage());
+        }
+    }
+
+    private function ensureInvoicesForAdvanceIfNeeded(int $leaseId, ?int $userId = null): void
+    {
+        try {
+            $stmt = $this->db->prepare("SELECT id, tenant_id, start_date, rent_amount FROM leases WHERE id = ? LIMIT 1");
+            $stmt->execute([(int)$leaseId]);
+            $lease = $stmt->fetch(PDO::FETCH_ASSOC);
+            if (!$lease) return;
+            $tenantId = (int)($lease['tenant_id'] ?? 0);
+            $rent = (float)($lease['rent_amount'] ?? 0);
+            $startDate = (string)($lease['start_date'] ?? '');
+            if ($tenantId <= 0 || $rent <= 0 || $startDate === '') return;
+
+            $payStmt = $this->db->prepare("SELECT COALESCE(SUM(amount),0) AS s FROM payments WHERE lease_id = ? AND payment_type = 'rent' AND status IN ('completed','verified')");
+            $payStmt->execute([(int)$leaseId]);
+            $paidTotal = (float)(($payStmt->fetch(PDO::FETCH_ASSOC)['s'] ?? 0));
+            if ($paidTotal <= 0) return;
+
+            $monthsPaid = (int)floor($paidTotal / $rent + 1e-6);
+            $today = new \DateTime();
+            $end = clone $today;
+            if ($monthsPaid > 0) {
+                $leaseStart = new \DateTime(date('Y-m-01', strtotime($startDate)));
+                $leaseStart->modify('+' . max(0, $monthsPaid - 1) . ' month');
+                // Ensure through the last month covered by payments
+                if ($leaseStart > $end) { $end = $leaseStart; }
+            }
+
+            $inv = new Invoice();
+            $inv->ensureInvoicesForLeaseMonths($tenantId, $rent, $startDate, $end->format('Y-m-d'), $userId, 'AUTO');
+        } catch (\Exception $e) {
+            error_log('Ensure advance invoices failed: ' . $e->getMessage());
+        }
+    }
 
     public function getAll($userId = null)
     {
@@ -47,7 +184,7 @@ class Payment extends Model
             $sql .= ")";
         }
         
-        $sql .= " ORDER BY p.payment_date DESC";
+        $sql .= " ORDER BY p.payment_date DESC, p.id DESC";
         
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
@@ -117,8 +254,10 @@ class Payment extends Model
             $coveredByPrev = ($monthsPrev >= $monthsElapsed);
             $applied = $remainderPrev + $paidInMonth;
             if ($coveredByPrev) {
-                // Previous payments fully cover this month; no balance due
-                $balance = 0.0;
+                // Previous payments fully cover this month, but tenant-billed charges may still exist.
+                // Maintenance charges are recorded as negative rent adjustments, so if net paid in this month is negative,
+                // show it as an additional balance due.
+                $balance = max(-$paidInMonth, 0.0);
             } else {
                 $balance = max($rent - $applied, 0.0);
             }
@@ -354,7 +493,7 @@ class Payment extends Model
             $sql .= ")";
         }
         
-        $sql .= " ORDER BY p.payment_date DESC";
+        $sql .= " ORDER BY p.payment_date DESC, p.id DESC";
         
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
@@ -448,7 +587,7 @@ class Payment extends Model
             }
             $sql .= ")";
         }
-        $sql .= " ORDER BY p.payment_date DESC LIMIT ?";
+        $sql .= " ORDER BY p.payment_date DESC, p.id DESC LIMIT ?";
         $params[] = $limit;
         return $this->query($sql, $params);
     }
@@ -733,7 +872,7 @@ class Payment extends Model
                 JOIN units u ON l.unit_id = u.id
                 JOIN properties pr ON u.property_id = pr.id
                 WHERE p.payment_date BETWEEN ? AND ?
-                ORDER BY p.payment_date DESC";
+                ORDER BY p.payment_date DESC, p.id DESC";
         
         return $this->query($sql, [$startDate, $endDate]);
     }
@@ -1099,7 +1238,13 @@ class Payment extends Model
             'notes' => $data['notes'] ?? null,
             'status' => $data['status'] ?? 'completed'
         ]);
-        return $this->db->lastInsertId();
+        $id = (int)$this->db->lastInsertId();
+        // Auto-post to ledger + ensure invoices (including future months if paid in advance)
+        $this->postPaymentToLedgerIfNeeded($id, $data);
+        if (($data['payment_type'] ?? '') === 'rent') {
+            $this->ensureInvoicesForAdvanceIfNeeded((int)$data['lease_id'], isset($data['user_id']) ? (int)$data['user_id'] : null);
+        }
+        return $id;
     }
 
     public function createUtilityPayment($data)
@@ -1117,7 +1262,10 @@ class Payment extends Model
             'notes' => $data['notes'] ?? null,
             'status' => $data['status'] ?? 'completed'
         ]);
-        return $this->db->lastInsertId();
+        $id = (int)$this->db->lastInsertId();
+        // Auto-post to ledger
+        $this->postPaymentToLedgerIfNeeded($id, $data);
+        return $id;
     }
 
     /**
@@ -1165,7 +1313,7 @@ class Payment extends Model
                 JOIN leases l ON p.lease_id = l.id 
                 LEFT JOIN manual_mpesa_payments mmp ON p.id = mmp.payment_id
                 WHERE l.tenant_id = ? AND l.status = 'active' AND p.payment_type = 'rent' 
-                ORDER BY p.payment_date DESC";
+                ORDER BY p.payment_date DESC, p.id DESC";
         $stmt = $this->db->prepare($sql);
         $stmt->execute([$tenantId]);
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
@@ -1183,7 +1331,7 @@ class Payment extends Model
                 LEFT JOIN manual_mpesa_payments mmp ON p.id = mmp.payment_id
                 LEFT JOIN utilities u ON p.utility_id = u.id
                 WHERE l.tenant_id = ? AND l.status = 'active' 
-                ORDER BY p.payment_date DESC";
+                ORDER BY p.payment_date DESC, p.id DESC";
         $stmt = $this->db->prepare($sql);
         $stmt->execute([$tenantId]);
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
@@ -1531,7 +1679,7 @@ class Payment extends Model
                     LEFT JOIN units u ON l.unit_id = u.id
                     LEFT JOIN properties pr ON u.property_id = pr.id
                     WHERE p.status IN ('completed', 'verified')
-                    ORDER BY p.payment_date DESC
+                    ORDER BY p.payment_date DESC, p.id DESC
                     LIMIT ?";
             $stmt = $this->db->prepare($sql);
             $stmt->execute([$limit]);
@@ -1549,7 +1697,7 @@ class Payment extends Model
                     LEFT JOIN properties pr ON u.property_id = pr.id
                     WHERE p.status IN ('completed', 'verified')
                     AND (pr.owner_id = ? OR pr.manager_id = ? OR pr.agent_id = ? OR pr.caretaker_user_id = ?)
-                    ORDER BY p.payment_date DESC
+                    ORDER BY p.payment_date DESC, p.id DESC
                     LIMIT ?";
             $stmt = $this->db->prepare($sql);
             $stmt->execute([$userId, $userId, $userId, $userId, $limit]);
@@ -1705,7 +1853,7 @@ class Payment extends Model
                     LEFT JOIN tenants t ON l.tenant_id = t.id
                     LEFT JOIN units u ON l.unit_id = u.id
                     LEFT JOIN properties pr ON u.property_id = pr.id
-                    ORDER BY p.payment_date DESC
+                    ORDER BY p.payment_date DESC, p.id DESC
                     LIMIT ?";
             $stmt = $this->db->prepare($sql);
             $stmt->execute([$limit]);
@@ -1723,7 +1871,7 @@ class Payment extends Model
                     LEFT JOIN units u ON l.unit_id = u.id
                     LEFT JOIN properties pr ON u.property_id = pr.id
                     WHERE (pr.owner_id = ? OR pr.manager_id = ? OR pr.agent_id = ? OR pr.caretaker_user_id = ?)
-                    ORDER BY p.payment_date DESC
+                    ORDER BY p.payment_date DESC, p.id DESC
                     LIMIT ?";
             $stmt = $this->db->prepare($sql);
             $stmt->execute([$userId, $userId, $userId, $userId, $limit]);

@@ -32,4 +32,12 @@ class ContactMessage extends Model
     {
         return parent::create($data);
     }
+
+    public function getAll(): array
+    {
+        $stmt = $this->db->prepare("SELECT * FROM {$this->table} ORDER BY id DESC");
+        $stmt->execute();
+        $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        return is_array($rows) ? $rows : [];
+    }
 }

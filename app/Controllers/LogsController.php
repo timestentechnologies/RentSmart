@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use App\Models\ActivityLog;
 use App\Models\Property;
+use App\Models\Subscription;
 use App\Models\User;
 use Exception;
 
@@ -34,6 +35,18 @@ class LogsController
             $userId = $_SESSION['user_id'];
             $role = strtolower($_SESSION['user_role'] ?? '');
 
+            $isAdmin = in_array($role, ['admin','administrator']);
+            if (!$isAdmin) {
+                $isLandlord = ($role === 'landlord');
+                $sub = new Subscription();
+                $isEnterprise = $sub->isEnterprisePlan($userId);
+                if (!$isLandlord || !$isEnterprise) {
+                    $_SESSION['flash_message'] = 'Access denied';
+                    $_SESSION['flash_type'] = 'danger';
+                    redirect('/dashboard');
+                }
+            }
+
             // Filters
             $filters = [];
             $filters['action'] = isset($_GET['action']) && $_GET['action'] !== '' ? trim($_GET['action']) : null;
@@ -44,7 +57,6 @@ class LogsController
             if (isset($_GET['user_id']) && is_numeric($_GET['user_id'])) { $filters['user_id'] = (int)$_GET['user_id']; }
 
             // Get logs based on role
-            $isAdmin = in_array($role, ['admin','administrator']);
             if ($isAdmin) {
                 $logs = $this->activityLog->getLogs(array_filter($filters));
                 $properties = $this->propertyModel->getAll();
@@ -76,6 +88,18 @@ class LogsController
             $userId = $_SESSION['user_id'];
             $role = strtolower($_SESSION['user_role'] ?? '');
 
+            $isAdmin = in_array($role, ['admin','administrator']);
+            if (!$isAdmin) {
+                $isLandlord = ($role === 'landlord');
+                $sub = new Subscription();
+                $isEnterprise = $sub->isEnterprisePlan($userId);
+                if (!$isLandlord || !$isEnterprise) {
+                    $_SESSION['flash_message'] = 'Access denied';
+                    $_SESSION['flash_type'] = 'danger';
+                    redirect('/dashboard');
+                }
+            }
+
             // Same filters as index
             $filters = [];
             $filters['action'] = isset($_GET['action']) && $_GET['action'] !== '' ? trim($_GET['action']) : null;
@@ -85,7 +109,6 @@ class LogsController
             $filters['end_date'] = isset($_GET['end_date']) && $_GET['end_date'] !== '' ? $_GET['end_date'] . ' 23:59:59' : null;
             if (isset($_GET['user_id']) && is_numeric($_GET['user_id'])) { $filters['user_id'] = (int)$_GET['user_id']; }
 
-            $isAdmin = in_array($role, ['admin','administrator']);
             if ($isAdmin) {
                 $logs = $this->activityLog->getLogs(array_filter($filters));
             } else {

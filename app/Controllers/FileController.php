@@ -96,11 +96,23 @@ class FileController
                     ];
                 }
                 // Caretakers for accessible properties
-                $propertyModel = new Property();
-                $properties = $propertyModel->getAll($_SESSION['user_id']);
                 $caretakerIds = [];
-                foreach ($properties as $p) {
-                    if (!empty($p['caretaker_user_id'])) { $caretakerIds[(int)$p['caretaker_user_id']] = true; }
+                $propertyIds = [];
+                try {
+                    // Use lightweight property scope from User model (avoids heavy GROUP BY queries)
+                    $propertyIds = $me->getAccessiblePropertyIds();
+                } catch (\Exception $e) {
+                    $propertyIds = [];
+                }
+                if (!empty($propertyIds)) {
+                    $inProps = implode(',', array_fill(0, count($propertyIds), '?'));
+                    $stmtP = $this->db->prepare("SELECT caretaker_user_id FROM properties WHERE id IN ($inProps)");
+                    $stmtP->execute(array_map('intval', $propertyIds));
+                    foreach ($stmtP->fetchAll(\PDO::FETCH_ASSOC) as $row) {
+                        if (!empty($row['caretaker_user_id'])) {
+                            $caretakerIds[(int)$row['caretaker_user_id']] = true;
+                        }
+                    }
                 }
                 if (!empty($caretakerIds)) {
                     $ids = array_keys($caretakerIds);

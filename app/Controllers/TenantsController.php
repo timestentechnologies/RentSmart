@@ -256,7 +256,13 @@ class TenantsController
                         'notes' => '',
                         'created_at' => date('Y-m-d H:i:s')
                     ];
-                    $leaseModel->create($leaseData);
+                    $leaseId = (int)$leaseModel->create($leaseData);
+
+                    // Auto-create draft invoices immediately for this lease (idempotent)
+                    try {
+                        $inv = new \App\Models\Invoice();
+                        $inv->ensureInvoicesForLeaseMonths((int)$tenantId, (float)$effectiveRent, (string)$leaseData['start_date'], date('Y-m-d'), (int)($_SESSION['user_id'] ?? 0), 'AUTO');
+                    } catch (\Exception $e) { error_log('Auto-invoice (tenant assign) failed: ' . $e->getMessage()); }
 
                     // Send email notifications
                     try {
@@ -511,7 +517,13 @@ class TenantsController
                             'notes' => '',
                             'created_at' => date('Y-m-d H:i:s')
                         ];
-                        $leaseModel->create($leaseData);
+                        $leaseId = (int)$leaseModel->create($leaseData);
+
+                        // Auto-create draft invoices immediately for this lease (idempotent)
+                        try {
+                            $inv = new \App\Models\Invoice();
+                            $inv->ensureInvoicesForLeaseMonths((int)$id, (float)$effectiveRent, (string)$leaseData['start_date'], date('Y-m-d'), (int)($_SESSION['user_id'] ?? 0), 'AUTO');
+                        } catch (\Exception $e) { error_log('Auto-invoice (tenant update assign) failed: ' . $e->getMessage()); }
                         
                         // Update unit status
                         $this->unit->update($unitId, [

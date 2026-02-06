@@ -131,8 +131,16 @@ class Invoice extends Model
         $sql = "SELECT i.*, t.name AS tenant_name
                 FROM {$this->table} i
                 LEFT JOIN tenants t ON i.tenant_id = t.id
-                ORDER BY i.created_at DESC";
-        return $this->db->query($sql)->fetchAll(\PDO::FETCH_ASSOC);
+                ";
+        $params = [];
+        if (!empty($userId)) {
+            $sql .= " WHERE (i.user_id = ? OR i.user_id IS NULL)";
+            $params[] = (int)$userId;
+        }
+        $sql .= " ORDER BY i.created_at DESC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
 
     public function getWithItems($id)
@@ -204,8 +212,8 @@ class Invoice extends Model
             'tenant_id' => $tenantId,
             'issue_date' => $issueDate,
             'due_date' => $issueDate,
-            'status' => 'sent',
-            'notes' => trim(($noteTag ? ($noteTag . ' ') : '') . 'Auto-created monthly rent invoice for ' . $monthLabel),
+            'status' => 'draft',
+            'notes' => trim(($noteTag ? ($noteTag . ' ') : '') . 'Auto-created draft rent invoice for ' . $monthLabel),
             'user_id' => $userId,
         ], $items);
     }
@@ -218,29 +226,33 @@ class Invoice extends Model
     {
         $inv = $this->findByTenantAndIssueMonth($tenantId, $issueDate);
         if (!$inv) return null;
-        $first = date('Y-m-01', strtotime($inv['issue_date']));
-        $last = date('Y-m-t', strtotime($inv['issue_date']));
-        $sql = "SELECT COALESCE(SUM(p.amount),0) AS s
-                FROM payments p
-                JOIN leases l ON p.lease_id = l.id
-                WHERE l.tenant_id = ?
-                  AND p.payment_type = 'rent'
-                  AND p.status IN ('completed','verified')
-                  AND p.payment_date BETWEEN ? AND ?";
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute([$tenantId, $first, $last]);
-        $paid = (float)($stmt->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0);
+        // IMPORTANT: handle advance rent. We allocate total rent paid sequentially from lease start month.
+        $leaseStmt = $this->db->prepare("SELECT id, start_date, rent_amount FROM leases WHERE tenant_id = ? AND status = 'active' LIMIT 1");
+        $leaseStmt->execute([(int)$tenantId]);
+        $lease = $leaseStmt->fetch(\PDO::FETCH_ASSOC);
+        $rent = (float)($lease['rent_amount'] ?? 0);
         $total = (float)$inv['total'];
-        if ($total > 0) {
-            if ($paid + 1e-6 >= $total) {
+        if (!$lease || $rent <= 0 || $total <= 0) {
+            $newStatus = ($inv['status'] === 'draft') ? 'draft' : 'sent';
+        } else {
+            $startMonth = date('Y-m-01', strtotime($lease['start_date']));
+            $invMonth = date('Y-m-01', strtotime($inv['issue_date']));
+            $monthIndex = ((int)date('Y', strtotime($invMonth)) - (int)date('Y', strtotime($startMonth))) * 12
+                + ((int)date('n', strtotime($invMonth)) - (int)date('n', strtotime($startMonth)));
+            if ($monthIndex < 0) { $monthIndex = 0; }
+
+            $payStmt = $this->db->prepare("SELECT COALESCE(SUM(amount),0) AS s FROM payments WHERE lease_id = ? AND payment_type = 'rent' AND status IN ('completed','verified')");
+            $payStmt->execute([(int)$lease['id']]);
+            $paidTotal = (float)(($payStmt->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0));
+
+            $remainingForThisMonth = $paidTotal - ($monthIndex * $rent);
+            if ($remainingForThisMonth + 1e-6 >= $total) {
                 $newStatus = 'paid';
-            } elseif ($paid > 0) {
+            } elseif ($remainingForThisMonth > 0.01) {
                 $newStatus = 'partial';
             } else {
-                $newStatus = 'sent';
+                $newStatus = ($inv['status'] === 'draft') ? 'draft' : 'sent';
             }
-        } else {
-            $newStatus = 'sent';
         }
         if ($inv['status'] !== $newStatus) {
             $upd = $this->db->prepare("UPDATE {$this->table} SET status = ?, updated_at = NOW() WHERE id = ?");

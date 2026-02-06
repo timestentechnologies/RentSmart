@@ -31,13 +31,30 @@ class MaintenanceController
     {
         try {
             $userId = $_SESSION['user_id'];
-            $requests = $this->maintenanceRequest->getAllForAdmin($userId);
+            $status = isset($_GET['status']) ? trim((string)$_GET['status']) : '';
+            $priority = isset($_GET['priority']) ? trim((string)$_GET['priority']) : '';
+            $category = isset($_GET['category']) ? trim((string)$_GET['category']) : '';
+
+            $allowedStatus = ['pending','in_progress','completed','cancelled'];
+            $allowedPriority = ['urgent','high','medium','low'];
+            $allowedCategory = ['plumbing','electrical','hvac','appliance','structural','pest_control','cleaning','other','maintenance'];
+
+            $status = in_array($status, $allowedStatus, true) ? $status : null;
+            $priority = in_array($priority, $allowedPriority, true) ? $priority : null;
+            $category = in_array($category, $allowedCategory, true) ? $category : null;
+
+            $requests = $this->maintenanceRequest->getAllForAdminFiltered($userId, $status, $priority, $category);
             $statistics = $this->maintenanceRequest->getStatistics($userId);
             
             echo view('maintenance/index', [
                 'title' => 'Maintenance Requests - RentSmart',
                 'requests' => $requests,
-                'statistics' => $statistics
+                'statistics' => $statistics,
+                'filters' => [
+                    'status' => $status,
+                    'priority' => $priority,
+                    'category' => $category,
+                ]
             ]);
         } catch (\Exception $e) {
             error_log("Error in MaintenanceController::index: " . $e->getMessage());

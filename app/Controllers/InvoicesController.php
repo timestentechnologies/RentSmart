@@ -43,7 +43,7 @@ class InvoicesController
     public function index()
     {
         $inv = new Invoice();
-        // Idempotently ensure a current-month rent invoice exists for each active lease
+        // Idempotently ensure rent invoices exist for each active lease from start month through current month
         try {
             $leaseModel = new Lease();
             $leases = $leaseModel->getActiveLeases($this->userId);
@@ -51,7 +51,10 @@ class InvoicesController
             foreach ($leases as $L) {
                 $tenantId = (int)($L['tenant_id'] ?? 0);
                 $rent = (float)($L['rent_amount'] ?? 0);
-                if ($tenantId > 0 && $rent > 0) {
+                $startDate = $L['start_date'] ?? null;
+                if ($tenantId > 0 && $rent > 0 && !empty($startDate)) {
+                    $inv->ensureInvoicesForLeaseMonths($tenantId, $rent, (string)$startDate, $today, $this->userId, 'AUTO');
+                } elseif ($tenantId > 0 && $rent > 0) {
                     $inv->ensureMonthlyRentInvoice($tenantId, $today, $rent, $this->userId, 'AUTO');
                 }
             }

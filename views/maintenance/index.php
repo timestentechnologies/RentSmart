@@ -79,39 +79,39 @@ ob_start();
     <!-- Filters Section -->
     <div class="card mb-4">
         <div class="card-body">
-            <form id="filterForm" class="row g-3">
+            <form id="filterForm" class="row g-3" method="GET" action="<?= BASE_URL ?>/maintenance">
                 <div class="col-md-3">
                     <label for="statusFilter" class="form-label">Status</label>
-                    <select class="form-select" id="statusFilter">
+                    <select class="form-select" id="statusFilter" name="status">
                         <option value="">All Statuses</option>
-                        <option value="pending">Pending</option>
-                        <option value="in_progress">In Progress</option>
-                        <option value="completed">Completed</option>
-                        <option value="cancelled">Cancelled</option>
+                        <option value="pending" <?= (($filters['status'] ?? '') === 'pending') ? 'selected' : '' ?>>Pending</option>
+                        <option value="in_progress" <?= (($filters['status'] ?? '') === 'in_progress') ? 'selected' : '' ?>>In Progress</option>
+                        <option value="completed" <?= (($filters['status'] ?? '') === 'completed') ? 'selected' : '' ?>>Completed</option>
+                        <option value="cancelled" <?= (($filters['status'] ?? '') === 'cancelled') ? 'selected' : '' ?>>Cancelled</option>
                     </select>
                 </div>
                 <div class="col-md-3">
                     <label for="priorityFilter" class="form-label">Priority</label>
-                    <select class="form-select" id="priorityFilter">
+                    <select class="form-select" id="priorityFilter" name="priority">
                         <option value="">All Priorities</option>
-                        <option value="urgent">Urgent</option>
-                        <option value="high">High</option>
-                        <option value="medium">Medium</option>
-                        <option value="low">Low</option>
+                        <option value="urgent" <?= (($filters['priority'] ?? '') === 'urgent') ? 'selected' : '' ?>>Urgent</option>
+                        <option value="high" <?= (($filters['priority'] ?? '') === 'high') ? 'selected' : '' ?>>High</option>
+                        <option value="medium" <?= (($filters['priority'] ?? '') === 'medium') ? 'selected' : '' ?>>Medium</option>
+                        <option value="low" <?= (($filters['priority'] ?? '') === 'low') ? 'selected' : '' ?>>Low</option>
                     </select>
                 </div>
                 <div class="col-md-3">
                     <label for="categoryFilter" class="form-label">Category</label>
-                    <select class="form-select" id="categoryFilter">
+                    <select class="form-select" id="categoryFilter" name="category">
                         <option value="">All Categories</option>
-                        <option value="plumbing">Plumbing</option>
-                        <option value="electrical">Electrical</option>
-                        <option value="hvac">HVAC</option>
-                        <option value="appliance">Appliance</option>
-                        <option value="structural">Structural</option>
-                        <option value="pest_control">Pest Control</option>
-                        <option value="cleaning">Cleaning</option>
-                        <option value="other">Other</option>
+                        <option value="plumbing" <?= (($filters['category'] ?? '') === 'plumbing') ? 'selected' : '' ?>>Plumbing</option>
+                        <option value="electrical" <?= (($filters['category'] ?? '') === 'electrical') ? 'selected' : '' ?>>Electrical</option>
+                        <option value="hvac" <?= (($filters['category'] ?? '') === 'hvac') ? 'selected' : '' ?>>HVAC</option>
+                        <option value="appliance" <?= (($filters['category'] ?? '') === 'appliance') ? 'selected' : '' ?>>Appliance</option>
+                        <option value="structural" <?= (($filters['category'] ?? '') === 'structural') ? 'selected' : '' ?>>Structural</option>
+                        <option value="pest_control" <?= (($filters['category'] ?? '') === 'pest_control') ? 'selected' : '' ?>>Pest Control</option>
+                        <option value="cleaning" <?= (($filters['category'] ?? '') === 'cleaning') ? 'selected' : '' ?>>Cleaning</option>
+                        <option value="other" <?= (($filters['category'] ?? '') === 'other') ? 'selected' : '' ?>>Other</option>
                     </select>
                 </div>
                 <div class="col-md-3 d-flex align-items-end">
@@ -421,15 +421,30 @@ document.addEventListener('DOMContentLoaded', function() {
     const categoryFilter = document.getElementById('categoryFilter');
     const tableRows = document.querySelectorAll('tbody tr');
 
+    function submitFilters() {
+        const url = new URL(window.location.href);
+        const status = statusFilter.value;
+        const priority = priorityFilter.value;
+        const category = categoryFilter.value;
+        if (status) { url.searchParams.set('status', status); } else { url.searchParams.delete('status'); }
+        if (priority) { url.searchParams.set('priority', priority); } else { url.searchParams.delete('priority'); }
+        if (category) { url.searchParams.set('category', category); } else { url.searchParams.delete('category'); }
+        window.location.href = url.toString();
+    }
+
     function applyFilters() {
         const selectedStatus = statusFilter.value.toLowerCase();
         const selectedPriority = priorityFilter.value.toLowerCase();
         const selectedCategory = categoryFilter.value.toLowerCase();
 
         tableRows.forEach(row => {
-            const statusCell = row.querySelector('td:nth-child(6) .badge').textContent.toLowerCase();
-            const priorityCell = row.querySelector('td:nth-child(5) .badge').textContent.toLowerCase();
-            const categoryCell = row.querySelector('td:nth-child(4) .badge').textContent.toLowerCase();
+            const statusBadge = row.querySelector('td:nth-child(7) .badge');
+            const priorityBadge = row.querySelector('td:nth-child(6) .badge');
+            const categoryBadge = row.querySelector('td:nth-child(5) .badge');
+
+            const statusCell = statusBadge ? statusBadge.textContent.toLowerCase().trim() : '';
+            const priorityCell = priorityBadge ? priorityBadge.textContent.toLowerCase().trim() : '';
+            const categoryCell = categoryBadge ? categoryBadge.textContent.toLowerCase().trim() : '';
 
             let showRow = true;
 
@@ -453,13 +468,19 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     // Add event listeners to filters
-    statusFilter.addEventListener('change', applyFilters);
-    priorityFilter.addEventListener('change', applyFilters);
-    categoryFilter.addEventListener('change', applyFilters);
+    statusFilter.addEventListener('change', submitFilters);
+    priorityFilter.addEventListener('change', submitFilters);
+    categoryFilter.addEventListener('change', submitFilters);
 
     // Reset filters
     filterForm.addEventListener('reset', function() {
-        setTimeout(applyFilters, 0);
+        setTimeout(() => {
+            const url = new URL(window.location.href);
+            url.searchParams.delete('status');
+            url.searchParams.delete('priority');
+            url.searchParams.delete('category');
+            window.location.href = url.toString();
+        }, 0);
     });
 
     // Edit Maintenance Request Handling
