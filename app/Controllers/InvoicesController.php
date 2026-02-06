@@ -58,7 +58,35 @@ class InvoicesController
                 $rent = (float)($L['rent_amount'] ?? 0);
                 $startDate = $L['start_date'] ?? null;
                 if ($tenantId > 0 && $rent > 0 && !empty($startDate)) {
-                    $inv->ensureInvoicesForLeaseMonths($tenantId, $rent, (string)$startDate, $today, $this->userId, 'AUTO');
+                    // Also ensure invoices for future months when rent is paid in advance.
+                    // This is important for historical payments that already exist in DB.
+                    $endDate = $today;
+                    try {
+                        $leaseId = (int)($L['id'] ?? 0);
+                        if ($leaseId > 0) {
+                            $payModel = new Payment();
+                            $rows = $payModel->query(
+                                "SELECT COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END),0) AS s\n"
+                                . "FROM payments\n"
+                                . "WHERE lease_id = ? AND payment_type = 'rent' AND status IN ('completed','verified')",
+                                [$leaseId]
+                            );
+                            $paidTotal = (float)($rows[0]['s'] ?? 0);
+                            $monthsPaid = (int)floor(($paidTotal / $rent) + 1e-6);
+                            if ($monthsPaid > 0) {
+                                $leaseStart = new \DateTime(date('Y-m-01', strtotime((string)$startDate)));
+                                $coveredEnd = clone $leaseStart;
+                                $coveredEnd->modify('+' . max(0, $monthsPaid - 1) . ' month');
+                                $todayMonth = new \DateTime(date('Y-m-01', strtotime((string)$today)));
+                                if ($coveredEnd > $todayMonth) {
+                                    $endDate = $coveredEnd->format('Y-m-d');
+                                }
+                            }
+                        }
+                    } catch (\Exception $e) {
+                        error_log('Advance invoice ensure (index) failed: ' . $e->getMessage());
+                    }
+                    $inv->ensureInvoicesForLeaseMonths($tenantId, $rent, (string)$startDate, $endDate, $this->userId, 'AUTO');
                 } elseif ($tenantId > 0 && $rent > 0) {
                     $inv->ensureMonthlyRentInvoice($tenantId, $today, $rent, $this->userId, 'AUTO');
                 }
