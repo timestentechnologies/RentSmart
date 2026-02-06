@@ -28,6 +28,7 @@ class Invoice extends Model
             $this->ensureMonthlyRentInvoice($tenantId, $issueDate, $rentAmount, $userId, $noteTag);
             try {
                 $this->syncMaintenanceChargesForTenantMonth($tenantId, $issueDate);
+                $this->syncUtilityChargesForTenantMonth($tenantId, $issueDate);
             } catch (\Exception $e) {
                 error_log('Sync maintenance charges failed: ' . $e->getMessage());
             }
@@ -215,6 +216,69 @@ class Invoice extends Model
         }
     }
 
+    public function syncUtilityChargesForTenantMonth(int $tenantId, string $issueDate): void
+    {
+        $inv = $this->findByTenantAndIssueMonth($tenantId, $issueDate);
+        if (!$inv || empty($inv['id'])) return;
+
+        $leaseStmt = $this->db->prepare("SELECT id, unit_id FROM leases WHERE tenant_id = ? AND status = 'active' LIMIT 1");
+        $leaseStmt->execute([(int)$tenantId]);
+        $lease = $leaseStmt->fetch(\PDO::FETCH_ASSOC);
+        $leaseId = (int)($lease['id'] ?? 0);
+        $unitId = (int)($lease['unit_id'] ?? 0);
+        if ($leaseId <= 0 || $unitId <= 0) return;
+
+        $start = date('Y-m-01', strtotime($issueDate));
+        $end = date('Y-m-t', strtotime($issueDate));
+        $ym = date('Ym', strtotime($issueDate));
+
+        $uStmt = $this->db->prepare("SELECT id, utility_type, is_metered, flat_rate FROM utilities WHERE unit_id = ? ORDER BY utility_type");
+        $uStmt->execute([(int)$unitId]);
+        $utils = $uStmt->fetchAll(\PDO::FETCH_ASSOC);
+        if (empty($utils)) return;
+
+        $ins = $this->db->prepare("INSERT INTO invoice_items (invoice_id, description, quantity, unit_price, line_total) VALUES (?,?,?,?,?)");
+        $addedAny = false;
+
+        foreach ($utils as $u) {
+            $utilityId = (int)($u['id'] ?? 0);
+            if ($utilityId <= 0) continue;
+            $type = (string)($u['utility_type'] ?? 'utility');
+            $isMetered = !empty($u['is_metered']);
+
+            $charge = 0.0;
+            if ($isMetered) {
+                $rStmt = $this->db->prepare(
+                    "SELECT cost FROM utility_readings\n"
+                    . "WHERE utility_id = ? AND reading_date BETWEEN ? AND ?\n"
+                    . "ORDER BY reading_date DESC, id DESC LIMIT 1"
+                );
+                $rStmt->execute([$utilityId, $start, $end]);
+                $charge = (float)($rStmt->fetch(\PDO::FETCH_ASSOC)['cost'] ?? 0);
+            } else {
+                $charge = (float)($u['flat_rate'] ?? 0);
+            }
+
+            if ($charge <= 0) continue;
+
+            $tag = 'UTIL-' . $utilityId . '-' . $ym;
+            $desc = 'Utility - ' . ucfirst($type) . ' - ' . $tag;
+
+            $chk = $this->db->prepare("SELECT id FROM invoice_items WHERE invoice_id = ? AND description LIKE ? LIMIT 1");
+            $chk->execute([(int)$inv['id'], '%' . $tag . '%']);
+            $exists = $chk->fetch(\PDO::FETCH_ASSOC);
+            if ($exists) continue;
+
+            $line = round($charge, 2);
+            $ins->execute([(int)$inv['id'], $desc, 1, $line, $line]);
+            $addedAny = true;
+        }
+
+        if ($addedAny) {
+            $this->recalculateTotals((int)$inv['id']);
+        }
+    }
+
     public function getAll($userId = null)
     {
         return $this->search([
@@ -371,6 +435,7 @@ class Invoice extends Model
         if ($existing && (!empty($existing['id']))) {
             try {
                 $this->syncMaintenanceChargesForTenantMonth($tenantId, $issueDate);
+                $this->syncUtilityChargesForTenantMonth($tenantId, $issueDate);
             } catch (\Exception $e) {
                 error_log('Sync maintenance charges (existing) failed: ' . $e->getMessage());
             }
@@ -392,6 +457,7 @@ class Invoice extends Model
         ], $items);
         try {
             $this->syncMaintenanceChargesForTenantMonth($tenantId, $issueDate);
+            $this->syncUtilityChargesForTenantMonth($tenantId, $issueDate);
         } catch (\Exception $e) {
             error_log('Sync maintenance charges (new) failed: ' . $e->getMessage());
         }
@@ -426,10 +492,17 @@ class Invoice extends Model
             $payStmt->execute([(int)$lease['id']]);
             $paidTotal = (float)(($payStmt->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0));
 
+            $monthStart = date('Y-m-01', strtotime($inv['issue_date']));
+            $monthEnd = date('Y-m-t', strtotime($inv['issue_date']));
+            $utilStmt = $this->db->prepare("SELECT COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END),0) AS s FROM payments WHERE lease_id = ? AND payment_type = 'utility' AND status IN ('completed','verified') AND payment_date BETWEEN ? AND ?");
+            $utilStmt->execute([(int)$lease['id'], $monthStart, $monthEnd]);
+            $utilityPaidInMonth = (float)(($utilStmt->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0));
+
             $remainingForThisMonth = $paidTotal - ($monthIndex * $rent);
-            if ($remainingForThisMonth + 1e-6 >= $total) {
+            $availableToSettle = $remainingForThisMonth + $utilityPaidInMonth;
+            if ($availableToSettle + 1e-6 >= $total) {
                 $newStatus = 'paid';
-            } elseif ($remainingForThisMonth > 0.01) {
+            } elseif ($availableToSettle > 0.01) {
                 $newStatus = 'partial';
             } else {
                 $newStatus = ($inv['status'] === 'draft') ? 'draft' : 'sent';
