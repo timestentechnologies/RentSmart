@@ -1423,6 +1423,13 @@ ob_clean();
                         <i class="bi bi-megaphone me-2"></i> Notices
                     </a>
                 </li>
+                <?php if (isset($_SESSION['user_role']) && !in_array(strtolower($_SESSION['user_role']), ['admin','administrator'], true)): ?>
+                    <li class="nav-item">
+                        <a href="<?= BASE_URL ?>/contact" class="nav-link <?= (strpos($current_uri, 'contact') === 0) ? 'active' : '' ?>">
+                            <i class="bi bi-life-preserver me-2"></i> Contact Us
+                        </a>
+                    </li>
+                <?php endif; ?>
                 
                 <li class="nav-item mt-3">
                     <small class="nav-header text-uppercase px-3">BILLING & SUBSCRIPTION</small>
