@@ -163,6 +163,15 @@ class TenantPaymentController
                 }
                 
                 $paymentId = $paymentIds[0]; // Use first payment ID for response
+
+                // Ensure invoice exists and update statuses for this month (utility payments should affect invoices)
+                try {
+                    $invModel = new \App\Models\Invoice();
+                    $invModel->ensureMonthlyRentInvoice((int)$lease['tenant_id'], date('Y-m-d'), (float)($lease['rent_amount'] ?? 0), null, 'AUTO');
+                    $invModel->updateStatusForTenantMonth((int)$lease['tenant_id'], date('Y-m-d'));
+                } catch (\Exception $e) {
+                    error_log('Auto-invoice (tenant utility) failed: ' . $e->getMessage());
+                }
             } else if ($paymentType === 'both') {
                 // Combined payment: rent + all outstanding utilities
                 // 1) Calculate rent due now using missed months and coverage
@@ -253,29 +262,108 @@ class TenantPaymentController
                 } else {
                     throw new \Exception('No payable items found for combined payment');
                 }
-            } else {
-                // For rent payments, use the existing method
-                $paymentData = [
-                    'lease_id' => $lease['id'],
-                    'amount' => $amount,
-                    'payment_date' => date('Y-m-d'),
-                    'payment_type' => $paymentType,
-                    'payment_method' => $paymentMethodData['type'],
-                    'notes' => 'Payment via ' . $paymentMethodData['name'] . ' - ' . ($paymentDetails['mpesa_notes'] ?? ''),
-                    'status' => $paymentStatus
-                ];
 
-                $paymentId = $this->payment->createRentPayment($paymentData);
+                // Update invoice status after combined payment
+                try {
+                    $invModel = new \App\Models\Invoice();
+                    $invModel->ensureMonthlyRentInvoice((int)$lease['tenant_id'], date('Y-m-d'), (float)($lease['rent_amount'] ?? 0), null, 'AUTO');
+                    $invModel->updateStatusForTenantMonth((int)$lease['tenant_id'], date('Y-m-d'));
+                } catch (\Exception $e) {
+                    error_log('Auto-invoice (tenant both) failed: ' . $e->getMessage());
+                }
+            } else {
+                // For rent payments, auto-split any outstanding maintenance charges (MAINT-) for this month
+                $today = date('Y-m-d');
+                $monthStart = date('Y-m-01', strtotime($today));
+                $monthEnd = date('Y-m-t', strtotime($today));
+
+                $maintenanceOutstanding = 0.0;
+                try {
+                    $db = $this->payment->getDb();
+                    $maintChargesStmt = $db->prepare(
+                        "SELECT COALESCE(SUM(ABS(amount)),0) AS s\n"
+                        . "FROM payments\n"
+                        . "WHERE lease_id = ?\n"
+                        . "  AND payment_type = 'rent'\n"
+                        . "  AND amount < 0\n"
+                        . "  AND notes LIKE ?\n"
+                        . "  AND status IN ('completed','verified')\n"
+                        . "  AND payment_date BETWEEN ? AND ?"
+                    );
+                    $maintChargesStmt->execute([(int)$lease['id'], '%MAINT-%', $monthStart, $monthEnd]);
+                    $charged = (float)($maintChargesStmt->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0);
+
+                    $maintPaidStmt = $db->prepare(
+                        "SELECT COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END),0) AS s\n"
+                        . "FROM payments\n"
+                        . "WHERE lease_id = ?\n"
+                        . "  AND payment_type = 'other'\n"
+                        . "  AND status IN ('completed','verified')\n"
+                        . "  AND payment_date BETWEEN ? AND ?\n"
+                        . "  AND (notes LIKE 'Maintenance payment:%' OR notes LIKE '%MAINT-%')"
+                    );
+                    $maintPaidStmt->execute([(int)$lease['id'], $monthStart, $monthEnd]);
+                    $paid = (float)($maintPaidStmt->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0);
+
+                    $maintenanceOutstanding = max(0.0, $charged - $paid);
+                } catch (\Exception $e) {
+                    $maintenanceOutstanding = 0.0;
+                }
+
+                $remainingAmount = (float)$amount;
+                $createdPaymentId = null;
+
+                // 1) Maintenance payment part
+                if ($maintenanceOutstanding > 0.0 && $remainingAmount > 0.0) {
+                    $maintPayAmount = min($remainingAmount, $maintenanceOutstanding);
+                    if ($maintPayAmount > 0.0) {
+                        $maintenancePaymentData = [
+                            'lease_id' => $lease['id'],
+                            'amount' => $maintPayAmount,
+                            'payment_date' => $today,
+                            'payment_type' => 'other',
+                            'payment_method' => $paymentMethodData['type'],
+                            'notes' => 'Maintenance payment: Payment via ' . $paymentMethodData['name'] . ' - ' . ($paymentDetails['mpesa_notes'] ?? ''),
+                            'status' => $paymentStatus
+                        ];
+                        $createdPaymentId = $this->payment->createRentPayment($maintenancePaymentData);
+                        $remainingAmount -= $maintPayAmount;
+
+                        if ($paymentMethodData['type'] === 'mpesa_manual' || $paymentMethodData['type'] === 'mpesa_stk') {
+                            $maintDetails = $paymentDetails;
+                            if (!empty($maintDetails['mpesa_transaction_code'])) {
+                                $maintDetails['mpesa_transaction_code'] = $maintDetails['mpesa_transaction_code'] . '-M';
+                            }
+                            $this->saveMpesaTransaction($createdPaymentId, $maintDetails, $maintPayAmount);
+                        }
+                    }
+                }
+
+                // 2) Rent payment part
+                if ($remainingAmount > 0.0) {
+                    $paymentData = [
+                        'lease_id' => $lease['id'],
+                        'amount' => $remainingAmount,
+                        'payment_date' => $today,
+                        'payment_type' => $paymentType,
+                        'payment_method' => $paymentMethodData['type'],
+                        'notes' => 'Payment via ' . $paymentMethodData['name'] . ' - ' . ($paymentDetails['mpesa_notes'] ?? ''),
+                        'status' => $paymentStatus
+                    ];
+                    $createdPaymentId = $this->payment->createRentPayment($paymentData);
+
+                    if ($paymentMethodData['type'] === 'mpesa_manual' || $paymentMethodData['type'] === 'mpesa_stk') {
+                        $this->saveMpesaTransaction($createdPaymentId, $paymentDetails, $remainingAmount);
+                    }
+                }
+
+                $paymentId = $createdPaymentId;
                 try {
                     // Ensure a monthly rent invoice exists for this tenant for this month
                     $invModel = new \App\Models\Invoice();
-                    $invModel->ensureMonthlyRentInvoice((int)$lease['tenant_id'], $paymentData['payment_date'], (float)$lease['rent_amount'], null, 'AUTO');
+                    $invModel->ensureMonthlyRentInvoice((int)$lease['tenant_id'], $today, (float)$lease['rent_amount'], null, 'AUTO');
+                    $invModel->updateStatusForTenantMonth((int)$lease['tenant_id'], $today);
                 } catch (\Exception $e) { error_log('Auto-invoice (rent) failed: ' . $e->getMessage()); }
-                
-                // If it's an M-Pesa payment, save to manual_mpesa_payments table
-                if ($paymentMethodData['type'] === 'mpesa_manual' || $paymentMethodData['type'] === 'mpesa_stk') {
-                    $this->saveMpesaTransaction($paymentId, $paymentDetails, $amount);
-                }
             }
 
             if ($isAjax) {

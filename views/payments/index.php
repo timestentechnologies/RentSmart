@@ -369,6 +369,12 @@ ob_start();
                                 Utility Payment
                             </label>
                         </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="maintenance_payment" name="payment_types[]" value="maintenance">
+                            <label class="form-check-label" for="maintenance_payment">
+                                Maintenance Payment
+                            </label>
+                        </div>
                     </div>
 
                     <div id="rent_payment_section" class="mb-3">
@@ -403,6 +409,15 @@ ob_start();
                                 <input type="number" step="0.01" class="form-control" id="utility_amount" name="utility_amount">
                             </div>
                         </div>
+                    </div>
+
+                    <div id="maintenance_payment_section" class="mb-3" style="display: none;">
+                        <label for="maintenance_amount" class="form-label">Maintenance Amount</label>
+                        <div class="input-group">
+                            <span class="input-group-text">Ksh</span>
+                            <input type="number" step="0.01" class="form-control" id="maintenance_amount" name="maintenance_amount">
+                        </div>
+                        <div class="form-text">Use this when a tenant is paying a maintenance charge (e.g. MAINT-123).</div>
                     </div>
 
                     <div class="mb-3">
@@ -1131,10 +1146,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const rentPaymentCheckbox = document.getElementById('rent_payment');
     const utilityPaymentCheckbox = document.getElementById('utility_payment');
+    const maintenancePaymentCheckbox = document.getElementById('maintenance_payment');
     const rentPaymentSection = document.getElementById('rent_payment_section');
     const utilityPaymentSection = document.getElementById('utility_payment_section');
+    const maintenancePaymentSection = document.getElementById('maintenance_payment_section');
     const rentAmountInput = document.getElementById('rent_amount');
     const utilityAmountInput = document.getElementById('utility_amount');
+    const maintenanceAmountInput = document.getElementById('maintenance_amount');
     const utilityTypeSelect = document.getElementById('utility_type');
     const utilityDetails = document.getElementById('utility_details');
 
@@ -1151,11 +1169,33 @@ document.addEventListener('DOMContentLoaded', function() {
     utilityPaymentCheckbox.addEventListener('change', function() {
         utilityPaymentSection.style.display = this.checked ? 'block' : 'none';
         if (this.checked) {
+            // Prevent accidental double-capture as rent when user intends utilities only
+            if (rentPaymentCheckbox && rentPaymentCheckbox.checked) {
+                rentPaymentCheckbox.checked = false;
+                rentPaymentCheckbox.dispatchEvent(new Event('change'));
+            }
             utilityAmountInput.setAttribute('required', '');
             utilityTypeSelect.setAttribute('required', '');
         } else {
             utilityAmountInput.removeAttribute('required');
             utilityTypeSelect.removeAttribute('required');
+        }
+    });
+
+    maintenancePaymentCheckbox && maintenancePaymentCheckbox.addEventListener('change', function() {
+        if (!maintenancePaymentSection) return;
+        maintenancePaymentSection.style.display = this.checked ? 'block' : 'none';
+        if (maintenanceAmountInput) {
+            if (this.checked) {
+                // Prevent accidental double-capture as rent when user intends maintenance only
+                if (rentPaymentCheckbox && rentPaymentCheckbox.checked) {
+                    rentPaymentCheckbox.checked = false;
+                    rentPaymentCheckbox.dispatchEvent(new Event('change'));
+                }
+                maintenanceAmountInput.setAttribute('required', '');
+            } else {
+                maintenanceAmountInput.removeAttribute('required');
+            }
         }
     });
 
