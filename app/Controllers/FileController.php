@@ -85,11 +85,13 @@ class FileController
             $meId = (int)$_SESSION['user_id'];
 
             $fuWhere = "1=1";
-            $erWhere = "1=1";
+            $erWhereDoc = "1=1";
+            $erWhereSigned = "1=1";
             $params = [];
             if ($q) {
                 $fuWhere .= " AND (fu.original_name LIKE :q OR fu.filename LIKE :q OR fu.entity_type LIKE :q)";
-                $erWhere .= " AND (er.title LIKE :q OR er.message LIKE :q OR 'esign' LIKE :q)";
+                $erWhereDoc .= " AND (er.title LIKE :q OR er.message LIKE :q OR 'esign' LIKE :q)";
+                $erWhereSigned .= " AND (er.title LIKE :q OR er.message LIKE :q OR 'esign' LIKE :q)";
                 $params['q'] = "%{$q}%";
             }
             if ($entityType) {
@@ -103,18 +105,21 @@ class FileController
             if ($fileType) {
                 $fuWhere .= " AND fu.file_type = :file_type";
                 if ($fileType !== 'document') {
-                    $erWhere .= " AND 1=0";
+                    $erWhereDoc .= " AND 1=0";
+                    $erWhereSigned .= " AND 1=0";
                 }
                 $params['file_type'] = $fileType;
             }
             if ($dateFrom) {
                 $fuWhere .= " AND fu.created_at >= :date_from";
-                $erWhere .= " AND er.created_at >= :date_from";
+                $erWhereDoc .= " AND er.created_at >= :date_from";
+                $erWhereSigned .= " AND er.created_at >= :date_from";
                 $params['date_from'] = $dateFrom;
             }
             if ($dateTo) {
                 $fuWhere .= " AND fu.created_at <= :date_to";
-                $erWhere .= " AND er.created_at <= :date_to";
+                $erWhereDoc .= " AND er.created_at <= :date_to";
+                $erWhereSigned .= " AND er.created_at <= :date_to";
                 $params['date_to'] = $dateTo;
             }
 
@@ -123,11 +128,14 @@ class FileController
                     . "            SELECT 1 FROM file_shares fs\n"
                     . "            WHERE fs.file_id = fu.id AND fs.recipient_type = 'user' AND fs.recipient_id = :me2\n"
                     . "        ))";
-                $erWhere .= " AND (er.requester_user_id = :me3 OR (er.recipient_type = 'user' AND er.recipient_id = :me4))";
+                $erWhereDoc .= " AND (er.requester_user_id = :me3 OR (er.recipient_type = 'user' AND er.recipient_id = :me4))";
+                $erWhereSigned .= " AND (er.requester_user_id = :me5 OR (er.recipient_type = 'user' AND er.recipient_id = :me6))";
                 $params['me1'] = $meId;
                 $params['me2'] = $meId;
                 $params['me3'] = $meId;
                 $params['me4'] = $meId;
+                $params['me5'] = $meId;
+                $params['me6'] = $meId;
             }
 
             $sql = "(\n"
@@ -158,7 +166,7 @@ class FileController
                 . "        0 AS can_share, 0 AS can_delete\n"
                 . "    FROM esign_requests er\n"
                 . "    LEFT JOIN users u2 ON er.requester_user_id = u2.id\n"
-                . "    WHERE er.document_path IS NOT NULL AND {$erWhere}\n"
+                . "    WHERE er.document_path IS NOT NULL AND {$erWhereDoc}\n"
                 . ")\n"
                 . "UNION ALL\n"
                 . "(\n"
@@ -179,7 +187,7 @@ class FileController
                 . "        0 AS can_share, 0 AS can_delete\n"
                 . "    FROM esign_requests er\n"
                 . "    LEFT JOIN users u3 ON er.requester_user_id = u3.id\n"
-                . "    WHERE er.signed_document_path IS NOT NULL AND {$erWhere}\n"
+                . "    WHERE er.signed_document_path IS NOT NULL AND {$erWhereSigned}\n"
                 . ")\n"
                 . "ORDER BY created_at DESC\n"
                 . "LIMIT 200";
@@ -243,11 +251,13 @@ class FileController
             $meId = (int)$_SESSION['user_id'];
 
             $fuWhere = "1=1";
-            $erWhere = "1=1";
+            $erWhereDoc = "1=1";
+            $erWhereSigned = "1=1";
             $params = [];
             if ($q) {
                 $fuWhere .= " AND (fu.original_name LIKE :q OR fu.filename LIKE :q OR fu.entity_type LIKE :q)";
-                $erWhere .= " AND (er.title LIKE :q OR er.message LIKE :q OR 'esign' LIKE :q)";
+                $erWhereDoc .= " AND (er.title LIKE :q OR er.message LIKE :q OR 'esign' LIKE :q)";
+                $erWhereSigned .= " AND (er.title LIKE :q OR er.message LIKE :q OR 'esign' LIKE :q)";
                 $params['q'] = "%{$q}%";
             }
             if ($entityType) {
@@ -263,18 +273,21 @@ class FileController
                 $fuWhere .= " AND fu.file_type = :file_type";
                 // esign docs are always treated as 'document'
                 if ($fileType !== 'document') {
-                    $erWhere .= " AND 1=0";
+                    $erWhereDoc .= " AND 1=0";
+                    $erWhereSigned .= " AND 1=0";
                 }
                 $params['file_type'] = $fileType;
             }
             if ($dateFrom) {
                 $fuWhere .= " AND fu.created_at >= :date_from";
-                $erWhere .= " AND er.created_at >= :date_from";
+                $erWhereDoc .= " AND er.created_at >= :date_from";
+                $erWhereSigned .= " AND er.created_at >= :date_from";
                 $params['date_from'] = $dateFrom;
             }
             if ($dateTo) {
                 $fuWhere .= " AND fu.created_at <= :date_to";
-                $erWhere .= " AND er.created_at <= :date_to";
+                $erWhereDoc .= " AND er.created_at <= :date_to";
+                $erWhereSigned .= " AND er.created_at <= :date_to";
                 $params['date_to'] = $dateTo;
             }
 
@@ -283,11 +296,14 @@ class FileController
                             SELECT 1 FROM file_shares fs
                             WHERE fs.file_id = fu.id AND fs.recipient_type = 'user' AND fs.recipient_id = :me2
                         ))";
-                $erWhere .= " AND (er.requester_user_id = :me3 OR (er.recipient_type = 'user' AND er.recipient_id = :me4))";
+                $erWhereDoc .= " AND (er.requester_user_id = :me3 OR (er.recipient_type = 'user' AND er.recipient_id = :me4))";
+                $erWhereSigned .= " AND (er.requester_user_id = :me5 OR (er.recipient_type = 'user' AND er.recipient_id = :me6))";
                 $params['me1'] = $meId;
                 $params['me2'] = $meId;
                 $params['me3'] = $meId;
                 $params['me4'] = $meId;
+                $params['me5'] = $meId;
+                $params['me6'] = $meId;
             }
 
             $sql = "(
@@ -318,7 +334,7 @@ class FileController
                             0 AS can_share, 0 AS can_delete
                         FROM esign_requests er
                         LEFT JOIN users u2 ON er.requester_user_id = u2.id
-                        WHERE er.document_path IS NOT NULL AND {$erWhere}
+                        WHERE er.document_path IS NOT NULL AND {$erWhereDoc}
                     )
                     UNION ALL
                     (
@@ -339,7 +355,7 @@ class FileController
                             0 AS can_share, 0 AS can_delete
                         FROM esign_requests er
                         LEFT JOIN users u3 ON er.requester_user_id = u3.id
-                        WHERE er.signed_document_path IS NOT NULL AND {$erWhere}
+                        WHERE er.signed_document_path IS NOT NULL AND {$erWhereSigned}
                     )
                     ORDER BY created_at DESC
                     LIMIT 200";
@@ -483,11 +499,13 @@ class FileController
             $meId = (int)$_SESSION['user_id'];
 
             $fuWhere = "1=1";
-            $erWhere = "1=1";
+            $erWhereDoc = "1=1";
+            $erWhereSigned = "1=1";
             $params = [];
             if ($q) {
                 $fuWhere .= " AND (fu.original_name LIKE :q OR fu.filename LIKE :q OR fu.entity_type LIKE :q)";
-                $erWhere .= " AND (er.title LIKE :q OR er.message LIKE :q OR 'esign' LIKE :q)";
+                $erWhereDoc .= " AND (er.title LIKE :q OR er.message LIKE :q OR 'esign' LIKE :q)";
+                $erWhereSigned .= " AND (er.title LIKE :q OR er.message LIKE :q OR 'esign' LIKE :q)";
                 $params['q'] = "%{$q}%";
             }
             if ($entityType) {
@@ -501,18 +519,21 @@ class FileController
             if ($fileType) {
                 $fuWhere .= " AND fu.file_type = :file_type";
                 if ($fileType !== 'document') {
-                    $erWhere .= " AND 1=0";
+                    $erWhereDoc .= " AND 1=0";
+                    $erWhereSigned .= " AND 1=0";
                 }
                 $params['file_type'] = $fileType;
             }
             if ($dateFrom) {
                 $fuWhere .= " AND fu.created_at >= :date_from";
-                $erWhere .= " AND er.created_at >= :date_from";
+                $erWhereDoc .= " AND er.created_at >= :date_from";
+                $erWhereSigned .= " AND er.created_at >= :date_from";
                 $params['date_from'] = $dateFrom;
             }
             if ($dateTo) {
                 $fuWhere .= " AND fu.created_at <= :date_to";
-                $erWhere .= " AND er.created_at <= :date_to";
+                $erWhereDoc .= " AND er.created_at <= :date_to";
+                $erWhereSigned .= " AND er.created_at <= :date_to";
                 $params['date_to'] = $dateTo;
             }
             if (!$isAdmin) {
@@ -520,11 +541,14 @@ class FileController
                             SELECT 1 FROM file_shares fs
                             WHERE fs.file_id = fu.id AND fs.recipient_type = 'user' AND fs.recipient_id = :me2
                         ))";
-                $erWhere .= " AND (er.requester_user_id = :me3 OR (er.recipient_type = 'user' AND er.recipient_id = :me4))";
+                $erWhereDoc .= " AND (er.requester_user_id = :me3 OR (er.recipient_type = 'user' AND er.recipient_id = :me4))";
+                $erWhereSigned .= " AND (er.requester_user_id = :me5 OR (er.recipient_type = 'user' AND er.recipient_id = :me6))";
                 $params['me1'] = $meId;
                 $params['me2'] = $meId;
                 $params['me3'] = $meId;
                 $params['me4'] = $meId;
+                $params['me5'] = $meId;
+                $params['me6'] = $meId;
             }
 
             $sql = "(
@@ -555,7 +579,7 @@ class FileController
                             0 AS can_share, 0 AS can_delete
                         FROM esign_requests er
                         LEFT JOIN users u2 ON er.requester_user_id = u2.id
-                        WHERE er.document_path IS NOT NULL AND {$erWhere}
+                        WHERE er.document_path IS NOT NULL AND {$erWhereDoc}
                     )
                     UNION ALL
                     (
@@ -576,7 +600,7 @@ class FileController
                             0 AS can_share, 0 AS can_delete
                         FROM esign_requests er
                         LEFT JOIN users u3 ON er.requester_user_id = u3.id
-                        WHERE er.signed_document_path IS NOT NULL AND {$erWhere}
+                        WHERE er.signed_document_path IS NOT NULL AND {$erWhereSigned}
                     )
                     ORDER BY created_at DESC
                     LIMIT 500";
