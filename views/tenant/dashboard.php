@@ -197,11 +197,18 @@
                         <ul class="list-unstyled mb-0">
                             <?php foreach (array_slice($tenantNotices, 0, 5) as $n): ?>
                                 <li class="mb-3">
-                                    <div class="fw-semibold"><?= htmlspecialchars($n['title'] ?? 'Notice') ?></div>
-                                    <div class="small text-muted"><?= htmlspecialchars(date('M j, Y g:i A', strtotime($n['created_at'] ?? 'now'))) ?></div>
-                                    <div class="text-muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;">
-                                        <?= htmlspecialchars(mb_strimwidth(strip_tags($n['body'] ?? ''), 0, 120, '…', 'UTF-8')) ?>
-                                    </div>
+                                    <a href="#" class="text-decoration-none" data-bs-toggle="modal" data-bs-target="#tenantNoticeModal"
+                                       data-title="<?= htmlspecialchars($n['title'] ?? 'Notice', ENT_QUOTES) ?>"
+                                       data-created="<?= htmlspecialchars(date('M j, Y g:i A', strtotime($n['created_at'] ?? 'now')), ENT_QUOTES) ?>"
+                                       data-body="<?= htmlspecialchars($n['body'] ?? '', ENT_QUOTES) ?>"
+                                       data-property="<?= htmlspecialchars($n['property_name'] ?? '', ENT_QUOTES) ?>"
+                                       data-unit="<?= htmlspecialchars($n['unit_number'] ?? '', ENT_QUOTES) ?>">
+                                        <div class="fw-semibold"><?= htmlspecialchars($n['title'] ?? 'Notice') ?></div>
+                                        <div class="small text-muted"><?= htmlspecialchars(date('M j, Y g:i A', strtotime($n['created_at'] ?? 'now'))) ?></div>
+                                        <div class="text-muted" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;">
+                                            <?= htmlspecialchars(mb_strimwidth(strip_tags($n['body'] ?? ''), 0, 120, '…', 'UTF-8')) ?>
+                                        </div>
+                                    </a>
                                 </li>
                             <?php endforeach; ?>
                         </ul>
@@ -213,7 +220,10 @@
             <div class="card h-100">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0"><i class="bi bi-chat-dots me-2"></i>Recent Messages</h5>
-                    <a href="<?= BASE_URL ?>/tenant/messaging" class="btn btn-sm btn-outline-primary">View all</a>
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-sm btn-outline-success" data-bs-toggle="modal" data-bs-target="#tenantQuickReplyModal">Reply</button>
+                        <a href="<?= BASE_URL ?>/tenant/messaging" class="btn btn-sm btn-outline-primary">View all</a>
+                    </div>
                 </div>
                 <div class="card-body">
                     <?php if (empty($tenantMessages)): ?>
@@ -1131,9 +1141,126 @@
     </div>
 </div>
 
+<!-- Tenant Notice Modal -->
+<div class="modal fade" id="tenantNoticeModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="tenantNoticeModalTitle"></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p id="tenantNoticeModalMeta" class="text-muted"></p>
+                <p id="tenantNoticeModalBody"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Tenant Quick Reply Modal -->
+<?php
+  $replyUserId = null;
+  if (!empty($property)) {
+      foreach (['owner_id','manager_id','agent_id','caretaker_user_id'] as $k) {
+          if (!empty($property[$k])) { $replyUserId = (int)$property[$k]; break; }
+      }
+  }
+?>
+<div class="modal fade" id="tenantQuickReplyModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Quick Reply</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <textarea id="tenantQuickReplyBody" class="form-control" rows="5" placeholder="Type your message..."></textarea>
+                <div id="tenantQuickReplyError" class="text-danger mt-2"></div>
+                <div id="tenantQuickReplySuccess" class="text-success mt-2"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" id="tenantQuickReplySendBtn" class="btn btn-primary">Send</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Bootstrap Icons CDN -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    var noticeModal = document.getElementById('tenantNoticeModal');
+    if (noticeModal) {
+      noticeModal.addEventListener('show.bs.modal', function (event) {
+        var btn = event.relatedTarget;
+        if (!btn) return;
+        var title = btn.getAttribute('data-title') || 'Notice';
+        var created = btn.getAttribute('data-created') || '';
+        var body = btn.getAttribute('data-body') || '';
+        var property = btn.getAttribute('data-property') || '';
+        var unit = btn.getAttribute('data-unit') || '';
+
+        var meta = created;
+        if (property) meta += (meta ? ' • ' : '') + 'Property: ' + property;
+        if (unit) meta += (meta ? ' • ' : '') + 'Unit: ' + unit;
+
+        var t = document.getElementById('tenantNoticeModalTitle');
+        var m = document.getElementById('tenantNoticeModalMeta');
+        var b = document.getElementById('tenantNoticeModalBody');
+        if (t) t.textContent = title;
+        if (m) m.textContent = meta;
+        if (b) b.textContent = body;
+      });
+    }
+
+    var sendBtn = document.getElementById('tenantQuickReplySendBtn');
+    if (sendBtn) {
+      sendBtn.addEventListener('click', async function () {
+        var bodyEl = document.getElementById('tenantQuickReplyBody');
+        var errEl = document.getElementById('tenantQuickReplyError');
+        var okEl = document.getElementById('tenantQuickReplySuccess');
+        if (errEl) { errEl.style.display = 'none'; errEl.textContent = ''; }
+        if (okEl) { okEl.style.display = 'none'; okEl.textContent = ''; }
+
+        var text = bodyEl ? bodyEl.value.trim() : '';
+        if (!text) {
+          if (errEl) { errEl.textContent = 'Please type a message.'; errEl.style.display = 'block'; }
+          return;
+        }
+
+        sendBtn.disabled = true;
+        try {
+          var resp = await fetch('<?= BASE_URL ?>/tenant/messaging/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({
+              csrf_token: '<?= htmlspecialchars($_SESSION['csrf_token'] ?? '', ENT_QUOTES) ?>',
+              user_id: '<?= (int)($replyUserId ?? 0) ?>',
+              body: text
+            })
+          });
+          var data = await resp.json();
+          if (!data || !data.success) {
+            throw new Error((data && data.message) ? data.message : 'Failed to send');
+          }
+          if (okEl) { okEl.textContent = 'Message sent.'; okEl.style.display = 'block'; }
+          if (bodyEl) bodyEl.value = '';
+        } catch (e) {
+          if (errEl) { errEl.textContent = e.message || 'Failed to send'; errEl.style.display = 'block'; }
+        } finally {
+          sendBtn.disabled = false;
+        }
+      });
+    }
+  });
+</script>
 
 <style>
 /* Payment Cards Styling */
