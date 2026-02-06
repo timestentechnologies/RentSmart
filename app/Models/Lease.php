@@ -129,7 +129,7 @@ class Lease extends Model
                 $params[] = $userId;
             }
             if ($user->isAgent()) {
-                $sql .= " OR p.manager_id = (SELECT manager_id FROM users WHERE id = ?)";
+                $sql .= " OR p.agent_id = ?";
                 $params[] = $userId;
             }
             // Caretaker assigned to property
