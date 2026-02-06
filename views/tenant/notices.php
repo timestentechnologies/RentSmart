@@ -1,7 +1,33 @@
-<?php
-ob_start();
-?>
-<div class="container-fluid pt-4">
+<!DOCTYPE html>
+<html>
+<head>
+    <?php
+    $siteName = isset($settings['site_name']) && $settings['site_name'] ? $settings['site_name'] : 'RentSmart';
+    $pageTitle = 'Notices | ' . htmlspecialchars($siteName);
+    ?>
+    <title><?= $pageTitle ?></title>
+    <link rel="icon" type="image/png" href="<?= htmlspecialchars($siteFavicon ?? '') ?>">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="<?= BASE_URL ?>/public/assets/css/style.css">
+</head>
+<body>
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div class="d-flex align-items-center gap-3">
+            <a href="<?= BASE_URL ?>/tenant/dashboard" class="btn btn-outline-secondary btn-sm">
+                <i class="bi bi-arrow-left"></i> Back
+            </a>
+            <div class="d-flex align-items-center gap-2">
+                <?php if (!empty($siteLogo)): ?>
+                    <img src="<?= htmlspecialchars($siteLogo) ?>" alt="Site Logo" style="max-height:40px;max-width:160px;object-fit:contain;">
+                <?php endif; ?>
+                <span class="fw-semibold">Notices</span>
+            </div>
+        </div>
+        <a href="<?= BASE_URL ?>/tenant/logout" class="btn btn-outline-secondary btn-sm">Logout</a>
+    </div>
+
     <div class="card page-header mb-3">
         <div class="card-body d-flex justify-content-between align-items-center">
             <h1 class="h4 mb-0"><i class="bi bi-megaphone text-primary me-2"></i>Notices</h1>
@@ -75,6 +101,7 @@ ob_start();
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script>
   document.addEventListener('DOMContentLoaded', function () {
     var noticeModal = document.getElementById('tenantNoticeModal');
@@ -101,7 +128,5 @@ ob_start();
     });
   });
 </script>
-<?php
-$content = ob_get_clean();
-require __DIR__ . '/../layouts/main.php';
-?>
+</body>
+</html>

@@ -240,6 +240,19 @@ class NoticesController
         // For tenant portal
         $tenantId = $_SESSION['tenant_id'] ?? null;
         if (!$tenantId) { redirect('/tenant/login'); return; }
+
+        $tenantModel = new Tenant();
+        $tenant = $tenantModel->find((int)$tenantId);
+
+        $settingModel = new Setting();
+        $settings = $settingModel->getAllAsAssoc();
+        $siteLogo = isset($settings['site_logo']) && $settings['site_logo']
+            ? BASE_URL . '/public/assets/images/' . $settings['site_logo']
+            : BASE_URL . '/public/assets/images/logo.svg';
+        $siteFavicon = isset($settings['site_favicon']) && $settings['site_favicon']
+            ? BASE_URL . '/public/assets/images/' . $settings['site_favicon']
+            : BASE_URL . '/public/assets/images/site_favicon_1750832003.png';
+
         $noticeModel = new Notice();
         $notices = $noticeModel->getVisibleForTenant((int)$tenantId);
         require 'views/tenant/notices.php';
