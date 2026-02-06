@@ -124,7 +124,8 @@ class Payment extends Model
             $startDate = (string)($lease['start_date'] ?? '');
             if ($tenantId <= 0 || $rent <= 0 || $startDate === '') return;
 
-            $payStmt = $this->db->prepare("SELECT COALESCE(SUM(amount),0) AS s FROM payments WHERE lease_id = ? AND payment_type = 'rent' AND status IN ('completed','verified')");
+            // Only positive payments count toward rent coverage; negative rows are adjustments/discounts.
+            $payStmt = $this->db->prepare("SELECT COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END),0) AS s FROM payments WHERE lease_id = ? AND payment_type = 'rent' AND status IN ('completed','verified')");
             $payStmt->execute([(int)$leaseId]);
             $paidTotal = (float)(($payStmt->fetch(PDO::FETCH_ASSOC)['s'] ?? 0));
             if ($paidTotal <= 0) return;
