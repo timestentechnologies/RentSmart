@@ -45,6 +45,7 @@ class Invoice extends Model
             tax_amount DECIMAL(15,2) NULL,
             total DECIMAL(15,2) NOT NULL DEFAULT 0.00,
             posted_at DATETIME NULL,
+            archived_at DATETIME NULL,
             user_id INT NULL,
             created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -66,6 +67,14 @@ class Invoice extends Model
         // Ensure 'partial' status exists in enum (safe no-op if already present)
         try {
             $this->db->exec("ALTER TABLE invoices MODIFY status ENUM('draft','sent','partial','paid','void') NOT NULL DEFAULT 'sent'");
+        } catch (\Exception $e) {}
+
+        // Ensure archived_at exists (for older deployments)
+        try {
+            $this->db->exec("ALTER TABLE invoices ADD COLUMN archived_at DATETIME NULL");
+        } catch (\Exception $e) {}
+        try {
+            $this->db->exec("ALTER TABLE invoices ADD INDEX idx_archived_at (archived_at)");
         } catch (\Exception $e) {}
     }
 
@@ -128,16 +137,65 @@ class Invoice extends Model
 
     public function getAll($userId = null)
     {
+        return $this->search([
+            'visibility' => 'active',
+        ], $userId);
+    }
+
+    public function search(array $filters = [], $userId = null)
+    {
         $sql = "SELECT i.*, t.name AS tenant_name
                 FROM {$this->table} i
-                LEFT JOIN tenants t ON i.tenant_id = t.id
-                ";
+                LEFT JOIN tenants t ON i.tenant_id = t.id";
+        $where = [];
         $params = [];
+
         if (!empty($userId)) {
-            $sql .= " WHERE (i.user_id = ? OR i.user_id IS NULL)";
+            $where[] = "(i.user_id = ? OR i.user_id IS NULL)";
             $params[] = (int)$userId;
         }
-        $sql .= " ORDER BY i.created_at DESC";
+
+        $visibility = $filters['visibility'] ?? 'active';
+        if ($visibility === 'archived') {
+            $where[] = "i.archived_at IS NOT NULL";
+        } elseif ($visibility === 'all') {
+            // no filter
+        } else {
+            $where[] = "i.archived_at IS NULL";
+        }
+
+        if (!empty($filters['status']) && $filters['status'] !== 'all') {
+            $where[] = "i.status = ?";
+            $params[] = (string)$filters['status'];
+        }
+
+        if (!empty($filters['tenant_id'])) {
+            $where[] = "i.tenant_id = ?";
+            $params[] = (int)$filters['tenant_id'];
+        }
+
+        if (!empty($filters['date_from'])) {
+            $where[] = "i.issue_date >= ?";
+            $params[] = (string)$filters['date_from'];
+        }
+
+        if (!empty($filters['date_to'])) {
+            $where[] = "i.issue_date <= ?";
+            $params[] = (string)$filters['date_to'];
+        }
+
+        if (!empty($filters['q'])) {
+            $q = '%' . trim((string)$filters['q']) . '%';
+            $where[] = "(i.number LIKE ? OR t.name LIKE ? OR i.notes LIKE ?)";
+            $params[] = $q;
+            $params[] = $q;
+            $params[] = $q;
+        }
+
+        if (!empty($where)) {
+            $sql .= " WHERE " . implode(' AND ', $where);
+        }
+        $sql .= " ORDER BY i.issue_date DESC, i.id DESC";
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
@@ -183,6 +241,18 @@ class Invoice extends Model
     public function voidInvoice($id)
     {
         $stmt = $this->db->prepare("UPDATE {$this->table} SET status = 'void', updated_at = NOW() WHERE id = ?");
+        return $stmt->execute([(int)$id]);
+    }
+
+    public function archiveInvoice($id)
+    {
+        $stmt = $this->db->prepare("UPDATE {$this->table} SET archived_at = NOW(), updated_at = NOW() WHERE id = ?");
+        return $stmt->execute([(int)$id]);
+    }
+
+    public function voidAndArchive($id)
+    {
+        $stmt = $this->db->prepare("UPDATE {$this->table} SET status = 'void', archived_at = NOW(), updated_at = NOW() WHERE id = ?");
         return $stmt->execute([(int)$id]);
     }
 

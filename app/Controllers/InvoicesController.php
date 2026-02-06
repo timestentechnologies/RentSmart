@@ -66,7 +66,17 @@ class InvoicesController
             // Update statuses for current month
             $inv->updateStatusesForMonth($today);
         } catch (\Exception $e) { error_log('Auto-invoice index ensure failed: ' . $e->getMessage()); }
-        $invoices = $inv->getAll($scopeUserId);
+        $filters = [
+            'q' => isset($_GET['q']) ? trim((string)$_GET['q']) : null,
+            'status' => isset($_GET['status']) ? trim((string)$_GET['status']) : 'all',
+            'visibility' => isset($_GET['visibility']) ? trim((string)$_GET['visibility']) : 'active',
+            'tenant_id' => isset($_GET['tenant_id']) && $_GET['tenant_id'] !== '' ? (int)$_GET['tenant_id'] : null,
+            'date_from' => isset($_GET['date_from']) ? trim((string)$_GET['date_from']) : null,
+            'date_to' => isset($_GET['date_to']) ? trim((string)$_GET['date_to']) : null,
+        ];
+        $invoices = $inv->search($filters, $scopeUserId);
+        $tenantModel = new Tenant();
+        $tenants = $tenantModel->getAll($this->userId);
         require 'views/invoices/index.php';
     }
 
@@ -353,11 +363,11 @@ class InvoicesController
             // Void them instead so the ensure logic finds them and does not recreate.
             $isAuto = (stripos($notes, 'Auto-created') !== false) || (stripos($notes, 'AUTO') !== false);
             if ($isAuto) {
-                $invModel->voidInvoice((int)$id);
-                $_SESSION['flash_message'] = 'Invoice voided';
+                $invModel->voidAndArchive((int)$id);
+                $_SESSION['flash_message'] = 'Invoice voided & archived';
             } else {
-                $invModel->deleteInvoice((int)$id);
-                $_SESSION['flash_message'] = 'Invoice deleted';
+                $invModel->archiveInvoice((int)$id);
+                $_SESSION['flash_message'] = 'Invoice archived';
             }
             $_SESSION['flash_type'] = 'success';
         } catch (\Exception $e) {
