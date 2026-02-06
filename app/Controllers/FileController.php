@@ -89,11 +89,12 @@ class FileController
             $me = new User();
             $me->find($_SESSION['user_id']);
             if (!$me->isAdmin()) {
-                $sql .= " AND (fu.uploaded_by = :me OR EXISTS (
+                $sql .= " AND (fu.uploaded_by = :me1 OR EXISTS (
                             SELECT 1 FROM file_shares fs
-                            WHERE fs.file_id = fu.id AND fs.recipient_type = 'user' AND fs.recipient_id = :me
+                            WHERE fs.file_id = fu.id AND fs.recipient_type = 'user' AND fs.recipient_id = :me2
                         ))";
-                $params['me'] = (int)$_SESSION['user_id'];
+                $params['me1'] = (int)$_SESSION['user_id'];
+                $params['me2'] = (int)$_SESSION['user_id'];
             }
             $sql .= " ORDER BY fu.created_at DESC LIMIT 200";
 
@@ -165,11 +166,12 @@ class FileController
             $me = new User();
             $me->find($_SESSION['user_id']);
             if (!$me->isAdmin()) {
-                $sql .= " AND (fu.uploaded_by = :me OR EXISTS (
+                $sql .= " AND (fu.uploaded_by = :me1 OR EXISTS (
                             SELECT 1 FROM file_shares fs
-                            WHERE fs.file_id = fu.id AND fs.recipient_type = 'user' AND fs.recipient_id = :me
+                            WHERE fs.file_id = fu.id AND fs.recipient_type = 'user' AND fs.recipient_id = :me2
                         ))";
-                $params['me'] = (int)$_SESSION['user_id'];
+                $params['me1'] = (int)$_SESSION['user_id'];
+                $params['me2'] = (int)$_SESSION['user_id'];
             }
             $sql .= " ORDER BY fu.created_at DESC LIMIT 200";
             $stmt = $this->db->prepare($sql);
@@ -318,11 +320,12 @@ class FileController
             $me = new User();
             $me->find($_SESSION['user_id']);
             if (!$me->isAdmin()) {
-                $sql .= " AND (fu.uploaded_by = :me OR EXISTS (
+                $sql .= " AND (fu.uploaded_by = :me1 OR EXISTS (
                             SELECT 1 FROM file_shares fs
-                            WHERE fs.file_id = fu.id AND fs.recipient_type = 'user' AND fs.recipient_id = :me
+                            WHERE fs.file_id = fu.id AND fs.recipient_type = 'user' AND fs.recipient_id = :me2
                         ))";
-                $params['me'] = (int)$_SESSION['user_id'];
+                $params['me1'] = (int)$_SESSION['user_id'];
+                $params['me2'] = (int)$_SESSION['user_id'];
             }
             $sql .= " ORDER BY fu.created_at DESC LIMIT 500";
             $stmt = $this->db->prepare($sql);
