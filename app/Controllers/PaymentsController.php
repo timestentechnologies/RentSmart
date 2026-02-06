@@ -576,6 +576,79 @@ class PaymentsController
                             }
                         }
                     }
+
+                    // Ensure invoice exists and update statuses for this month (utility payments should affect invoices)
+                    try {
+                        $invModel = new \App\Models\Invoice();
+                        $invModel->ensureMonthlyRentInvoice((int)$lease['tenant_id'], $_POST['payment_date'], (float)($lease['rent_amount'] ?? 0), (int)($_SESSION['user_id'] ?? 0), 'AUTO');
+                        $invModel->updateStatusForTenantMonth((int)$lease['tenant_id'], $_POST['payment_date']);
+                    } catch (\Exception $e) {
+                        error_log('Auto-invoice (admin utility) failed: ' . $e->getMessage());
+                    }
+                }
+
+                // Process maintenance payment if selected
+                if (in_array('maintenance', $paymentTypes) && !empty($_POST['maintenance_amount'])) {
+                    $maintData = [
+                        'lease_id' => $lease['id'],
+                        'amount' => $_POST['maintenance_amount'],
+                        'payment_date' => $_POST['payment_date'],
+                        'payment_type' => 'other',
+                        'payment_method' => $_POST['payment_method'],
+                        'notes' => 'Maintenance payment: ' . ($_POST['notes'] ?? '')
+                    ];
+
+                    if ($_POST['payment_method'] === 'mpesa_manual') {
+                        $maintData['mpesa_phone'] = $_POST['mpesa_phone'] ?? '';
+                        $maintData['mpesa_transaction_code'] = $_POST['mpesa_transaction_code'] ?? '';
+                        $maintData['mpesa_verification_status'] = $_POST['mpesa_verification_status'] ?? 'pending';
+                    }
+
+                    $maintenancePaymentId = $paymentModel->createRentPayment($maintData);
+
+                    // Attachments
+                    if (!empty($_FILES['payment_attachments']['name'][0])) {
+                        $this->handlePaymentAttachments($maintenancePaymentId);
+                    }
+
+                    // Save M-Pesa transaction details if applicable
+                    if ($_POST['payment_method'] === 'mpesa_manual' && !empty($_POST['mpesa_phone']) && !empty($_POST['mpesa_transaction_code'])) {
+                        $this->saveMpesaTransaction($maintenancePaymentId, $_POST);
+                    }
+
+                    $successMessages[] = 'Maintenance payment added successfully!';
+
+                    // Activity log: payment.create (maintenance)
+                    try {
+                        $ip = $_SERVER['REMOTE_ADDR'] ?? null;
+                        $agent = $_SERVER['HTTP_USER_AGENT'] ?? null;
+                        $p = $paymentModel->getById($maintenancePaymentId, $this->userId);
+                        $this->activityLog->add(
+                            $_SESSION['user_id'] ?? null,
+                            $_SESSION['user_role'] ?? null,
+                            'payment.create',
+                            'payment',
+                            (int)$maintenancePaymentId,
+                            isset($p['property_id']) ? (int)$p['property_id'] : null,
+                            json_encode([
+                                'amount' => (float)$maintData['amount'],
+                                'payment_date' => $maintData['payment_date'],
+                                'payment_type' => 'maintenance',
+                                'payment_method' => $maintData['payment_method']
+                            ]),
+                            $ip,
+                            $agent
+                        );
+                    } catch (\Exception $ex) { error_log('payment.create log failed: ' . $ex->getMessage()); }
+
+                    // Ensure invoice exists and update statuses for this month (maintenance payments should affect invoices)
+                    try {
+                        $invModel = new \App\Models\Invoice();
+                        $invModel->ensureMonthlyRentInvoice((int)$lease['tenant_id'], $_POST['payment_date'], (float)($lease['rent_amount'] ?? 0), (int)($_SESSION['user_id'] ?? 0), 'AUTO');
+                        $invModel->updateStatusForTenantMonth((int)$lease['tenant_id'], $_POST['payment_date']);
+                    } catch (\Exception $e) {
+                        error_log('Auto-invoice (admin maintenance) failed: ' . $e->getMessage());
+                    }
                 }
 
                 if (!empty($successMessages)) {

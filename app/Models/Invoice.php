@@ -498,8 +498,21 @@ class Invoice extends Model
             $utilStmt->execute([(int)$lease['id'], $monthStart, $monthEnd]);
             $utilityPaidInMonth = (float)(($utilStmt->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0));
 
+            // Maintenance payments are captured as payment_type='other' and should count towards settling invoice items.
+            $maintStmt = $this->db->prepare(
+                "SELECT COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END),0) AS s\n"
+                . "FROM payments\n"
+                . "WHERE lease_id = ?\n"
+                . "  AND payment_type = 'other'\n"
+                . "  AND status IN ('completed','verified')\n"
+                . "  AND payment_date BETWEEN ? AND ?\n"
+                . "  AND (notes LIKE 'Maintenance payment:%' OR notes LIKE '%MAINT-%')"
+            );
+            $maintStmt->execute([(int)$lease['id'], $monthStart, $monthEnd]);
+            $maintenancePaidInMonth = (float)((($maintStmt->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0)));
+
             $remainingForThisMonth = $paidTotal - ($monthIndex * $rent);
-            $availableToSettle = $remainingForThisMonth + $utilityPaidInMonth;
+            $availableToSettle = $remainingForThisMonth + $utilityPaidInMonth + $maintenancePaidInMonth;
             if ($availableToSettle + 1e-6 >= $total) {
                 $newStatus = 'paid';
             } elseif ($availableToSettle > 0.01) {
