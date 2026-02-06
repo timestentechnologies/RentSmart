@@ -10,6 +10,14 @@ ob_start();
                 </h1>
                 <p class="text-muted mb-0 mt-1">Upload and manage your files. Use the filters to search dynamically.</p>
             </div>
+            <div class="btn-group" role="group" aria-label="View mode">
+                <button type="button" class="btn btn-outline-secondary" id="viewTableBtn">
+                    <i class="bi bi-table me-1"></i>Table
+                </button>
+                <button type="button" class="btn btn-outline-secondary" id="viewGridBtn">
+                    <i class="bi bi-grid-3x3-gap me-1"></i>Grid
+                </button>
+            </div>
         </div>
     </div>
 
@@ -118,7 +126,7 @@ ob_start();
                 </div>
             </div>
 
-            <div class="card">
+            <div class="card" id="tableViewCard">
                 <div class="card-body">
                     <div class="table-responsive">
                         <table id="filesTable" class="table table-striped table-hover align-middle">
@@ -139,6 +147,13 @@ ob_start();
                     </div>
                 </div>
             </div>
+
+            <div class="card d-none" id="gridViewCard">
+                <div class="card-body">
+                    <div class="row g-3" id="filesGrid"></div>
+                    <div class="text-muted small mt-2 d-none" id="gridEmptyState">No files found.</div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
@@ -155,6 +170,126 @@ document.addEventListener('DOMContentLoaded', function(){
 
     const tableEl = document.getElementById('filesTable');
     let dt;
+    let viewMode = (localStorage.getItem('files_view_mode') || 'table');
+    const tableCard = document.getElementById('tableViewCard');
+    const gridCard = document.getElementById('gridViewCard');
+    const gridEl = document.getElementById('filesGrid');
+    const gridEmptyEl = document.getElementById('gridEmptyState');
+
+    function getFilters(){
+        return {
+            q: (document.getElementById('q') && document.getElementById('q').value || '').trim(),
+            entity_type: document.getElementById('entity_type') ? document.getElementById('entity_type').value : '',
+            file_type: document.getElementById('file_type') ? document.getElementById('file_type').value : '',
+            date_from: document.getElementById('date_from') ? document.getElementById('date_from').value : '',
+            date_to: document.getElementById('date_to') ? document.getElementById('date_to').value : ''
+        };
+    }
+
+    function setViewMode(mode){
+        viewMode = (mode === 'grid') ? 'grid' : 'table';
+        localStorage.setItem('files_view_mode', viewMode);
+        const tableBtn = document.getElementById('viewTableBtn');
+        const gridBtn = document.getElementById('viewGridBtn');
+        if (tableBtn) tableBtn.classList.toggle('active', viewMode === 'table');
+        if (gridBtn) gridBtn.classList.toggle('active', viewMode === 'grid');
+        if (tableCard) tableCard.classList.toggle('d-none', viewMode !== 'table');
+        if (gridCard) gridCard.classList.toggle('d-none', viewMode !== 'grid');
+        reloadResults();
+    }
+
+    async function fetchFiles(){
+        const filters = getFilters();
+        const url = new URL('<?= BASE_URL ?>/files/search', window.location.origin);
+        Object.keys(filters).forEach(k => { if (filters[k]) url.searchParams.set(k, filters[k]); });
+        const res = await fetch(url.toString(), { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        const txt = await res.text();
+        let json;
+        try { json = JSON.parse(txt); } catch (e) {
+            console.error('Grid fetch: invalid JSON', txt);
+            return [];
+        }
+        if (!json || json.error) {
+            console.error('Grid fetch error:', json);
+            return [];
+        }
+        return Array.isArray(json.data) ? json.data : [];
+    }
+
+    function renderGrid(rows){
+        if (!gridEl) return;
+        gridEl.innerHTML = '';
+        const hasRows = Array.isArray(rows) && rows.length > 0;
+        if (gridEmptyEl) gridEmptyEl.classList.toggle('d-none', hasRows);
+        if (!hasRows) return;
+
+        rows.forEach(function(row){
+            const name = row.original_name || row.filename || '';
+            const url = (row.url) ? row.url : ('<?= BASE_URL ?>/public/' + (row.upload_path || ''));
+            const size = bytesToSize(parseInt(row.file_size||0));
+            const created = row.created_at || '';
+            const entity = row.entity_type || '';
+            const entityId = (row.entity_id !== undefined && row.entity_id !== null) ? row.entity_id : '';
+            const uploader = (row.uploader_name||'') + (row.uploader_email? (' ('+row.uploader_email+')') : '');
+
+            const canShare = (row.can_share === undefined) ? true : !!parseInt(row.can_share);
+            const canDelete = (row.can_delete === undefined) ? true : !!parseInt(row.can_delete);
+            const isVirtual = (parseInt(row.id || 0) < 0);
+
+            const shareBtn = (canShare && !isVirtual)
+                ? '<button type="button" class="btn btn-sm btn-outline-primary me-1 btn-share-file" data-id="'+row.id+'" title="Share"><i class="bi bi-share"></i></button>'
+                : '';
+            const delBtn = (canDelete && !isVirtual)
+                ? '<button type="button" class="btn btn-sm btn-outline-danger btn-delete-file" data-id="'+row.id+'" title="Delete"><i class="bi bi-trash"></i></button>'
+                : '';
+
+            const badgeMap = {image:'primary',document:'info',attachment:'secondary'};
+            const b = badgeMap[row.file_type] || 'secondary';
+            const badge = '<span class="badge bg-'+b+' text-uppercase">'+ $('<div>').text(row.file_type||'').html() +'</span>';
+
+            const col = document.createElement('div');
+            col.className = 'col-12 col-md-6 col-xl-4';
+            col.innerHTML =
+                '<div class="card h-100">'
+                + '<div class="card-body">'
+                +   '<div class="d-flex justify-content-between align-items-start gap-2">'
+                +     '<div class="flex-grow-1">'
+                +       '<div class="fw-semibold mb-1">'
+                +         '<a href="'+url+'" target="_blank" class="text-decoration-none"><i class="bi bi-file-earmark me-1"></i>'+ $('<div>').text(name).html() +'</a>'
+                +       '</div>'
+                +       '<div class="text-muted small">'+ $('<div>').text(created).html() +'</div>'
+                +     '</div>'
+                +     '<div>'+badge+'</div>'
+                +   '</div>'
+                +   '<div class="mt-2 small">'
+                +     '<div><span class="text-muted">Entity:</span> '+ $('<div>').text(entity).html() +' <span class="text-muted">#</span>'+ $('<div>').text(entityId+'').html() +'</div>'
+                +     '<div><span class="text-muted">Size:</span> '+ $('<div>').text(size).html() +'</div>'
+                +     '<div class="text-truncate"><span class="text-muted">By:</span> '+ $('<div>').text(uploader).html() +'</div>'
+                +   '</div>'
+                + '</div>'
+                + '<div class="card-footer bg-transparent">'
+                +   '<a href="'+url+'" target="_blank" class="btn btn-sm btn-outline-secondary me-1" title="Open"><i class="bi bi-box-arrow-up-right"></i></a>'
+                +   shareBtn
+                +   delBtn
+                + '</div>'
+                + '</div>';
+            gridEl.appendChild(col);
+        });
+    }
+
+    async function reloadResults(){
+        if (viewMode === 'grid') {
+            try {
+                const rows = await fetchFiles();
+                renderGrid(rows);
+            } catch (e) {
+                console.error('Grid reload failed', e);
+                renderGrid([]);
+            }
+            return;
+        }
+        if (dt) { dt.ajax.reload(); }
+    }
 
     function loadTable(){
         if (dt) { dt.destroy(); tableEl.querySelector('tbody').innerHTML = ''; }
@@ -166,11 +301,12 @@ document.addEventListener('DOMContentLoaded', function(){
             ajax: {
                 url: '<?= BASE_URL ?>/files/search',
                 data: function(d){
-                    d.q = document.getElementById('q').value.trim();
-                    d.entity_type = document.getElementById('entity_type').value;
-                    d.file_type = document.getElementById('file_type').value;
-                    d.date_from = document.getElementById('date_from').value;
-                    d.date_to = document.getElementById('date_to').value;
+                    const f = getFilters();
+                    d.q = f.q;
+                    d.entity_type = f.entity_type;
+                    d.file_type = f.file_type;
+                    d.date_from = f.date_from;
+                    d.date_to = f.date_to;
                 },
                 dataSrc: function(json){
                     try {
@@ -236,7 +372,7 @@ document.addEventListener('DOMContentLoaded', function(){
     function debounce(fn, delay){let t;return function(){clearTimeout(t);t=setTimeout(()=>fn.apply(this, arguments), delay)}}
 
     const applyBtn = document.getElementById('applyFilters');
-    if (applyBtn) applyBtn.addEventListener('click', function(){ dt ? dt.ajax.reload() : loadTable(); });
+    if (applyBtn) applyBtn.addEventListener('click', function(){ reloadResults(); });
 
     const clearBtn = document.getElementById('clearFilters');
     if (clearBtn) clearBtn.addEventListener('click', function(){
@@ -250,19 +386,24 @@ document.addEventListener('DOMContentLoaded', function(){
         if (ftEl) ftEl.value='';
         if (dfEl) dfEl.value='';
         if (dtEl) dtEl.value='';
-        dt ? dt.ajax.reload() : loadTable();
+        reloadResults();
     });
 
     const qInput = document.getElementById('q');
-    if (qInput) qInput.addEventListener('keyup', debounce(function(){ dt ? dt.ajax.reload() : loadTable(); }, 400));
+    if (qInput) qInput.addEventListener('input', debounce(function(){ reloadResults(); }, 350));
     const entitySel = document.getElementById('entity_type');
-    if (entitySel) entitySel.addEventListener('change', function(){ dt ? dt.ajax.reload() : loadTable(); });
+    if (entitySel) entitySel.addEventListener('change', function(){ reloadResults(); });
     const ftSel = document.getElementById('file_type');
-    if (ftSel) ftSel.addEventListener('change', function(){ dt ? dt.ajax.reload() : loadTable(); });
+    if (ftSel) ftSel.addEventListener('change', function(){ reloadResults(); });
     const dfSel = document.getElementById('date_from');
-    if (dfSel) dfSel.addEventListener('change', function(){ dt ? dt.ajax.reload() : loadTable(); });
+    if (dfSel) dfSel.addEventListener('change', function(){ reloadResults(); });
     const dtSel = document.getElementById('date_to');
-    if (dtSel) dtSel.addEventListener('change', function(){ dt ? dt.ajax.reload() : loadTable(); });
+    if (dtSel) dtSel.addEventListener('change', function(){ reloadResults(); });
+
+    const viewTableBtn = document.getElementById('viewTableBtn');
+    if (viewTableBtn) viewTableBtn.addEventListener('click', function(){ setViewMode('table'); });
+    const viewGridBtn = document.getElementById('viewGridBtn');
+    if (viewGridBtn) viewGridBtn.addEventListener('click', function(){ setViewMode('grid'); });
 
     // Delete handler
     $(document).on('click', '.btn-delete-file', function(){
@@ -360,6 +501,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
     // initial load
     loadTable();
+    setViewMode(viewMode);
 })();
 });
 </script>
