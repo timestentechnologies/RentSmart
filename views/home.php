@@ -295,6 +295,21 @@
             transform: translateY(-5px);
         }
 
+        .features-section .feature-card {
+            border: 2px solid #FF8A00;
+            box-shadow:
+                0 0 0 3px rgba(255, 138, 0, 0.12),
+                0 14px 35px rgba(255, 138, 0, 0.18);
+            transition: transform .2s ease, box-shadow .2s ease;
+        }
+
+        .features-section .feature-card:hover {
+            transform: translateY(-6px);
+            box-shadow:
+                0 0 0 4px rgba(255, 138, 0, 0.18),
+                0 20px 60px rgba(255, 138, 0, 0.26);
+        }
+
         .feature-icon-circle {
             width: 64px;
             height: 64px;
@@ -367,10 +382,11 @@
         }
 
         .pricing-price {
-            font-size: 2rem;
+            font-size: 1.65rem;
             font-weight: 800;
             color: var(--primary-color);
             letter-spacing: -0.02em;
+            white-space: nowrap;
         }
 
         .pricing-subtext {
@@ -378,27 +394,11 @@
         }
 
         .pricing-card.featured {
-            position: relative;
-        }
-
-        .pricing-card.featured::before {
-            content: '';
-            position: absolute;
-            inset: 0;
-            border-radius: 1rem;
-            padding: 2px;
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
-            -webkit-mask:
-                linear-gradient(#fff 0 0) content-box,
-                linear-gradient(#fff 0 0);
-            -webkit-mask-composite: xor;
-            mask-composite: exclude;
-            pointer-events: none;
-        }
-
-        .pricing-card.featured {
-            border: 2px solid var(--primary-color);
-            transform: scale(1.02);
+            border: 3px solid #FF8A00;
+            box-shadow:
+                0 0 0 4px rgba(255, 138, 0, 0.18),
+                0 18px 50px rgba(255, 138, 0, 0.22);
+            transform: none;
         }
 
         .why-section {
@@ -1046,7 +1046,7 @@
                 <p class="lead text-muted">Streamline your rental business with our comprehensive property management tools designed for landlords and real estate professionals in Kenya</p>
             </div>
             <div class="row g-4">
-                <div class="col-md-4">
+                <div class="col-12 col-md-6 col-lg-3">
                     <div class="feature-card text-center p-4">
                         <div class="feature-icon-circle mx-auto">
                             <i class="bi bi-house-door"></i>
@@ -1055,7 +1055,7 @@
                         <p>Manage unlimited properties, units, and tenants from one centralized dashboard. Track occupancy rates, rental income, and property performance in real-time.</p>
                     </div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-12 col-md-6 col-lg-3">
                     <div class="feature-card text-center p-4">
                         <div class="feature-icon-circle mx-auto">
                             <i class="bi bi-cash-coin"></i>
@@ -1064,7 +1064,7 @@
                         <p>Automate rent collection with M-PESA integration. Accept payments online, send reminders, and track payment history effortlessly.</p>
                     </div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-12 col-md-6 col-lg-3">
                     <div class="feature-card text-center p-4">
                         <div class="feature-icon-circle mx-auto">
                             <i class="bi bi-file-earmark-text"></i>
@@ -1073,7 +1073,7 @@
                         <p>Create digital lease agreements, track lease terms, and receive automated renewal reminders. Simplify tenant onboarding and documentation.</p>
                     </div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-12 col-md-6 col-lg-3">
                     <div class="feature-card text-center p-4">
                         <div class="feature-icon-circle mx-auto">
                             <i class="bi bi-graph-up"></i>
@@ -1082,7 +1082,7 @@
                         <p>Generate comprehensive financial reports including income statements, expense tracking, and property performance analytics for better decision-making.</p>
                     </div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-12 col-md-6 col-lg-3">
                     <div class="feature-card text-center p-4">
                         <div class="feature-icon-circle mx-auto">
                             <i class="bi bi-people"></i>
@@ -1091,7 +1091,7 @@
                         <p>Provide tenants with self-service access to make rent payments, submit maintenance requests, and view lease documents online 24/7.</p>
                     </div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-12 col-md-6 col-lg-3">
                     <div class="feature-card text-center p-4">
                         <div class="feature-icon-circle mx-auto">
                             <i class="bi bi-bell"></i>
@@ -1101,7 +1101,7 @@
                     </div>
                 </div>
 
-                <div class="col-md-4">
+                <div class="col-12 col-md-6 col-lg-3">
                     <div class="feature-card text-center p-4">
                         <div class="feature-icon-circle mx-auto">
                             <i class="bi bi-lightning-charge"></i>
@@ -1111,7 +1111,7 @@
                     </div>
                 </div>
 
-                <div class="col-md-4">
+                <div class="col-12 col-md-6 col-lg-3">
                     <div class="feature-card text-center p-4">
                         <div class="feature-icon-circle mx-auto">
                             <i class="bi bi-tools"></i>
@@ -1121,7 +1121,7 @@
                     </div>
                 </div>
 
-                <div class="col-md-4">
+                <div class="col-12 col-md-6 col-lg-3">
                     <div class="feature-card text-center p-4">
                         <div class="feature-icon-circle mx-auto">
                             <i class="bi bi-receipt"></i>
@@ -1131,7 +1131,7 @@
                     </div>
                 </div>
 
-                <div class="col-md-4">
+                <div class="col-12 col-md-6 col-lg-3">
                     <div class="feature-card text-center p-4">
                         <div class="feature-icon-circle mx-auto">
                             <i class="bi bi-cash-stack"></i>
