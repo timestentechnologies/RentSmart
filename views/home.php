@@ -350,7 +350,57 @@
 
         .pricing-card.featured {
             border: 2px solid var(--primary-color);
-            transform: scale(1.05);
+            transform: scale(1.02);
+        }
+
+        .why-section {
+            background: #fff;
+        }
+
+        .why-card {
+            background: #fff;
+            border-radius: 1rem;
+            padding: 1.25rem;
+            border: 1px solid rgba(107, 62, 153, 0.10);
+            box-shadow: 0 12px 30px rgba(107, 62, 153, 0.08);
+            height: 100%;
+            transition: transform .2s ease, box-shadow .2s ease;
+        }
+
+        .why-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 18px 40px rgba(107, 62, 153, 0.12);
+        }
+
+        .why-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 14px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 138, 0, 0.14);
+            color: var(--accent-color);
+            font-size: 1.2rem;
+        }
+
+        .why-panel {
+            border-radius: 1.25rem;
+            border: 1px solid rgba(107, 62, 153, 0.10);
+            background: linear-gradient(180deg, rgba(107, 62, 153, 0.04) 0%, rgba(255, 138, 0, 0.03) 100%);
+            box-shadow: 0 18px 45px rgba(107, 62, 153, 0.10);
+        }
+
+        .why-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: .5rem;
+            padding: .45rem .8rem;
+            border-radius: 999px;
+            background: rgba(107, 62, 153, 0.10);
+            color: var(--primary-color);
+            font-weight: 600;
+            font-size: .9rem;
         }
 
         footer {
@@ -830,42 +880,110 @@
     </section>
 
     <!-- Why Choose Us Section -->
-    <section class="py-5 bg-light">
+    <section class="py-5 why-section">
         <div class="container">
             <div class="text-center mb-5">
+                <div class="why-chip mb-3">
+                    <i class="bi bi-stars"></i>
+                    <span>Why RentSmart</span>
+                </div>
                 <h2 class="display-5 fw-bold">Why Choose RentSmart for Property Management?</h2>
-                <p class="lead text-muted">The most trusted rental management software in Kenya</p>
+                <p class="lead text-muted mb-0">A modern, Kenyan-ready platform for landlords, managers, and agents—built for speed, clarity, and accurate records.</p>
             </div>
-            <div class="row g-4 align-items-center">
-                <div class="col-lg-6">
-                    <h3 class="mb-4">Built for Kenyan Landlords & Property Managers</h3>
-                    <div class="mb-4">
-                        <h5><i class="bi bi-check-circle-fill text-success me-2"></i>M-PESA Integration</h5>
-                        <p class="text-muted">Accept rent payments directly through M-PESA, Kenya's most popular mobile money platform. Automated payment reconciliation and instant notifications.</p>
-                    </div>
-                    <div class="mb-4">
-                        <h5><i class="bi bi-check-circle-fill text-success me-2"></i>Cloud-Based & Secure</h5>
-                        <p class="text-muted">Access your property data anywhere, anytime. Bank-level security with automatic backups and data encryption to protect your information.</p>
-                    </div>
-                    <div class="mb-4">
-                        <h5><i class="bi bi-check-circle-fill text-success me-2"></i>Save Time & Money</h5>
-                        <p class="text-muted">Automate repetitive tasks like rent reminders, lease renewals, and financial reports. Reduce administrative costs by up to 70%.</p>
-                    </div>
-                    <div class="mb-4">
-                        <h5><i class="bi bi-check-circle-fill text-success me-2"></i>Excellent Customer Support</h5>
-                        <p class="text-muted">Get help when you need it with our dedicated Kenyan support team. Email, phone, and live chat support available.</p>
+
+            <div class="row g-4 align-items-stretch">
+                <div class="col-lg-8">
+                    <div class="row g-4">
+                        <div class="col-md-6">
+                            <div class="why-card">
+                                <div class="d-flex align-items-start gap-3">
+                                    <div class="why-icon"><i class="bi bi-phone"></i></div>
+                                    <div>
+                                        <h5 class="mb-1">M-PESA ready</h5>
+                                        <p class="text-muted mb-0">Accept payments and keep references organized for quick verification and reporting.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="why-card">
+                                <div class="d-flex align-items-start gap-3">
+                                    <div class="why-icon"><i class="bi bi-shield-check"></i></div>
+                                    <div>
+                                        <h5 class="mb-1">Secure & reliable</h5>
+                                        <p class="text-muted mb-0">Keep your tenant and payment records safe with a cloud-ready setup and clear audit trails.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="why-card">
+                                <div class="d-flex align-items-start gap-3">
+                                    <div class="why-icon"><i class="bi bi-graph-up"></i></div>
+                                    <div>
+                                        <h5 class="mb-1">Clear dashboards</h5>
+                                        <p class="text-muted mb-0">See what is due, what was paid, and what needs action—without digging through spreadsheets.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="why-card">
+                                <div class="d-flex align-items-start gap-3">
+                                    <div class="why-icon"><i class="bi bi-receipt"></i></div>
+                                    <div>
+                                        <h5 class="mb-1">Accurate invoicing</h5>
+                                        <p class="text-muted mb-0">Rent, utilities, and maintenance are tracked separately so invoices and balances remain correct.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="col-lg-6">
-                    <div class="p-4 bg-white rounded shadow-sm">
-                        <h4 class="mb-3">Perfect for:</h4>
-                        <ul class="list-unstyled">
-                            <li class="mb-3"><i class="bi bi-building text-primary me-2"></i><strong>Individual Landlords</strong> - Manage 1-10 properties efficiently</li>
-                            <li class="mb-3"><i class="bi bi-buildings text-primary me-2"></i><strong>Property Managers</strong> - Handle multiple properties and clients</li>
-                            <li class="mb-3"><i class="bi bi-house-heart text-primary me-2"></i><strong>Real Estate Agents</strong> - Track rentals and commissions</li>
-                            <li class="mb-3"><i class="bi bi-shop text-primary me-2"></i><strong>Commercial Properties</strong> - Manage offices, shops, and warehouses</li>
-                            <li class="mb-3"><i class="bi bi-houses text-primary me-2"></i><strong>Residential Properties</strong> - Apartments, houses, and condos</li>
-                        </ul>
+
+                <div class="col-lg-4">
+                    <div class="why-panel p-4 h-100">
+                        <h4 class="fw-bold mb-3">Perfect for</h4>
+                        <div class="d-grid gap-3">
+                            <div class="d-flex gap-3">
+                                <div class="why-icon" style="background: rgba(107,62,153,.10); color: var(--primary-color);"><i class="bi bi-building"></i></div>
+                                <div>
+                                    <div class="fw-semibold">Individual Landlords</div>
+                                    <div class="text-muted small">Manage 1-10 properties efficiently.</div>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-3">
+                                <div class="why-icon" style="background: rgba(107,62,153,.10); color: var(--primary-color);"><i class="bi bi-buildings"></i></div>
+                                <div>
+                                    <div class="fw-semibold">Property Managers</div>
+                                    <div class="text-muted small">Handle multiple properties and clients.</div>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-3">
+                                <div class="why-icon" style="background: rgba(107,62,153,.10); color: var(--primary-color);"><i class="bi bi-person-badge"></i></div>
+                                <div>
+                                    <div class="fw-semibold">Real Estate Agents</div>
+                                    <div class="text-muted small">Track rentals and commissions.</div>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-3">
+                                <div class="why-icon" style="background: rgba(107,62,153,.10); color: var(--primary-color);"><i class="bi bi-shop"></i></div>
+                                <div>
+                                    <div class="fw-semibold">Commercial Properties</div>
+                                    <div class="text-muted small">Manage offices, shops, and warehouses.</div>
+                                </div>
+                            </div>
+                            <div class="d-flex gap-3">
+                                <div class="why-icon" style="background: rgba(107,62,153,.10); color: var(--primary-color);"><i class="bi bi-houses"></i></div>
+                                <div>
+                                    <div class="fw-semibold">Residential Properties</div>
+                                    <div class="text-muted small">Apartments, houses, and condos.</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="mt-4 d-grid">
+                            <a href="#" class="btn btn-gradient" data-bs-toggle="modal" data-bs-target="#registerModal">Start Free Trial</a>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -953,15 +1071,12 @@
                 });
                 foreach ($plans as $plan): 
                 ?>
-                <div class="col-md-4">
+                <div class="col-12 col-md-6 col-lg-3">
                     <div class="pricing-card <?= $plan['name'] === 'Professional' ? 'featured' : '' ?>">
-                        <h3><?= htmlspecialchars($plan['name']) ?></h3>
-                        <div class="display-6 fw-bold mb-2">
-                            <?php if (strtolower($plan['name']) === 'enterprise'): ?>
-                                Custom Pricing
-                            <?php else: ?>
-                                Ksh <?= number_format($plan['price'], 2) ?><small class="fs-6">/month</small>
-                            <?php endif; ?>
+                        <h3 class="fw-bold mb-3"><?= htmlspecialchars($plan['name']) ?></h3>
+                        <div class="d-flex align-items-baseline mb-3">
+                            <span class="h2 fw-bold">Ksh <?= number_format($plan['price']) ?></span>
+                            <span class="text-muted ms-2">/month</span>
                         </div>
                         <div class="mb-3">
                             <?php
