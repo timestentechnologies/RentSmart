@@ -8,6 +8,7 @@ use App\Database\Connection;
 use App\Models\Tenant;
 use App\Models\Property;
 use App\Models\User;
+use App\Models\ESignRequest;
 use Exception;
 
 class FileController
@@ -145,6 +146,7 @@ class FileController
     public function index()
     {
         try {
+            try { new ESignRequest(); } catch (\Throwable $e) { /* ignore */ }
             $q = isset($_GET['q']) ? trim($_GET['q']) : null;
             $entityType = isset($_GET['entity_type']) ? trim($_GET['entity_type']) : null;
             $fileType = isset($_GET['file_type']) ? trim($_GET['file_type']) : null;
@@ -383,6 +385,7 @@ class FileController
     public function search()
     {
         try {
+            try { new ESignRequest(); } catch (\Throwable $e) { /* ignore */ }
             $q = isset($_GET['q']) ? trim($_GET['q']) : null;
             $entityType = isset($_GET['entity_type']) ? trim($_GET['entity_type']) : null;
             $fileType = isset($_GET['file_type']) ? trim($_GET['file_type']) : null;
