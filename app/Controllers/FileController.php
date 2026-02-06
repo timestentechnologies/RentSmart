@@ -200,6 +200,30 @@ class FileController
             $files = $stmt->fetchAll(\PDO::FETCH_ASSOC);
             echo "Files count: " . count($files) . "\n";
 
+            $esignRows = 0;
+            foreach ($files as $r) {
+                if (($r['entity_type'] ?? null) === 'esign') { $esignRows++; }
+            }
+            echo "E-Sign rows in UNION: " . $esignRows . "\n";
+
+            // Direct esign_requests diagnostics
+            try {
+                $stmtErCount = $this->db->prepare("SELECT COUNT(*) AS c FROM esign_requests er WHERE (er.requester_user_id = ? OR (er.recipient_type='user' AND er.recipient_id = ?))");
+                $stmtErCount->execute([$meId, $meId]);
+                $cRow = $stmtErCount->fetch(\PDO::FETCH_ASSOC);
+                echo "E-Sign requests visible to user: " . (int)($cRow['c'] ?? 0) . "\n";
+
+                $stmtErDocs = $this->db->prepare("SELECT id, title, document_path, signed_document_path, requester_user_id, recipient_type, recipient_id, created_at, updated_at FROM esign_requests er WHERE (er.requester_user_id = ? OR (er.recipient_type='user' AND er.recipient_id = ?)) ORDER BY er.created_at DESC LIMIT 5");
+                $stmtErDocs->execute([$meId, $meId]);
+                $rows = $stmtErDocs->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+                echo "Recent E-Sign requests (top 5):\n";
+                foreach ($rows as $row) {
+                    echo "- id=" . (int)$row['id'] . " title=" . (string)($row['title'] ?? '') . " doc=" . (string)($row['document_path'] ?? '') . " signed=" . (string)($row['signed_document_path'] ?? '') . " recip=" . (string)($row['recipient_type'] ?? '') . ":" . (string)($row['recipient_id'] ?? '') . "\n";
+                }
+            } catch (\Throwable $e) {
+                echo "E-Sign diagnostics failed: " . $e->getMessage() . "\n";
+            }
+
             // Try building recipients too (this is where role-scoping crashes often happen)
             $tenantModel = new Tenant();
             $tenants = $tenantModel->getAll($_SESSION['user_id']) ?? [];
