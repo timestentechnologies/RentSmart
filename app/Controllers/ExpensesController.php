@@ -5,6 +5,8 @@ namespace App\Controllers;
 use App\Models\Expense;
 use App\Models\User;
 use App\Helpers\FileUploadHelper;
+use App\Models\Account;
+use App\Models\LedgerEntry;
 
 class ExpensesController
 {
@@ -56,6 +58,48 @@ class ExpensesController
                 ];
                 $expenseModel = new Expense();
                 $expenseId = $expenseModel->insertExpense($data);
+                // Auto-post expense to ledger (idempotent)
+                try {
+                    if ($expenseId) {
+                        $ledger = new LedgerEntry();
+                        if (!$ledger->referenceExists('expense', (int)$expenseId)) {
+                            $accModel = new Account();
+                            $cash = $accModel->findByCode('1000');
+                            $expAcc = $accModel->findByCode('5000');
+                            if ($cash && $expAcc) {
+                                $desc = 'Expense #' . (int)$expenseId . ' - ' . (string)($data['category'] ?? 'expense');
+                                $date = $data['expense_date'] ?? date('Y-m-d');
+                                $amount = (float)($data['amount'] ?? 0);
+                                $propertyId = $data['property_id'] ?? null;
+                                // Debit Expense, Credit Cash
+                                $ledger->post([
+                                    'entry_date' => $date,
+                                    'account_id' => (int)$expAcc['id'],
+                                    'description' => $desc,
+                                    'debit' => $amount,
+                                    'credit' => 0,
+                                    'user_id' => $this->userId,
+                                    'property_id' => $propertyId,
+                                    'reference_type' => 'expense',
+                                    'reference_id' => (int)$expenseId,
+                                ]);
+                                $ledger->post([
+                                    'entry_date' => $date,
+                                    'account_id' => (int)$cash['id'],
+                                    'description' => $desc,
+                                    'debit' => 0,
+                                    'credit' => $amount,
+                                    'user_id' => $this->userId,
+                                    'property_id' => $propertyId,
+                                    'reference_type' => 'expense',
+                                    'reference_id' => (int)$expenseId,
+                                ]);
+                            }
+                        }
+                    }
+                } catch (\Exception $le) {
+                    error_log('Expense ledger post failed: ' . $le->getMessage());
+                }
                 if ($expenseId && !empty($_FILES['expense_attachments']['name'][0])) {
                     $uploader = new FileUploadHelper();
                     $uploader->uploadFiles($_FILES['expense_attachments'], 'expense', $expenseId, 'attachment', $this->userId);

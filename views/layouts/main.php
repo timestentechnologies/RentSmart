@@ -1412,13 +1412,14 @@ ob_clean();
                         <i class="bi bi-envelope-open me-2"></i> Inquiries
                     </a>
                 </li>
+                <?php $isTenantSession = !empty($_SESSION['tenant_id']); ?>
                 <li class="nav-item">
-                    <a href="<?= BASE_URL ?>/messaging" class="nav-link <?= strpos($current_uri, 'messaging') === 0 ? 'active' : '' ?>">
+                    <a href="<?= BASE_URL ?><?= $isTenantSession ? '/tenant/messaging' : '/messaging' ?>" class="nav-link <?= strpos($current_uri, $isTenantSession ? 'tenant/messaging' : 'messaging') === 0 ? 'active' : '' ?>">
                         <i class="bi bi-chat-dots me-2"></i> Messaging
                     </a>
                 </li>
                 <li class="nav-item">
-                    <a href="<?= BASE_URL ?>/notices" class="nav-link <?= strpos($current_uri, 'notices') === 0 ? 'active' : '' ?>">
+                    <a href="<?= BASE_URL ?><?= $isTenantSession ? '/tenant/notices' : '/notices' ?>" class="nav-link <?= strpos($current_uri, $isTenantSession ? 'tenant/notices' : 'notices') === 0 ? 'active' : '' ?>">
                         <i class="bi bi-megaphone me-2"></i> Notices
                     </a>
                 </li>
@@ -1437,11 +1438,6 @@ ob_clean();
                 <li class="nav-item">
                     <a href="<?= BASE_URL ?>/vacant-units" class="nav-link" target="_blank">
                         <i class="bi bi-house-door me-2"></i> Vacant Units (Public)
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="<?= BASE_URL ?>/contact" class="nav-link <?= strpos($current_uri, 'contact') === 0 ? 'active' : '' ?>">
-                        <i class="bi bi-envelope me-2"></i> Contact Us
                     </a>
                 </li>
                 <li class="nav-item">
@@ -1490,11 +1486,27 @@ ob_clean();
                 
                 
 
-                <li class="nav-item">
-                    <a href="<?= BASE_URL ?>/activity-logs" class="nav-link <?= strpos($current_uri, 'activity-logs') === 0 ? 'active' : '' ?>">
-                        <i class="bi bi-activity me-2"></i> Activity Logs
-                    </a>
-                </li>
+                <?php
+                    $role = strtolower($_SESSION['user_role'] ?? '');
+                    $showActivityLogs = false;
+                    if (in_array($role, ['admin','administrator'], true)) {
+                        $showActivityLogs = true;
+                    } elseif ($role === 'landlord') {
+                        try {
+                            $sub = new \App\Models\Subscription();
+                            $showActivityLogs = $sub->isEnterprisePlan((int)($_SESSION['user_id'] ?? 0));
+                        } catch (\Exception $e) {
+                            $showActivityLogs = false;
+                        }
+                    }
+                ?>
+                <?php if ($showActivityLogs): ?>
+                    <li class="nav-item">
+                        <a href="<?= BASE_URL ?>/activity-logs" class="nav-link <?= strpos($current_uri, 'activity-logs') === 0 ? 'active' : '' ?>">
+                            <i class="bi bi-activity me-2"></i> Activity Logs
+                        </a>
+                    </li>
+                <?php endif; ?>
 
                 
 
@@ -1502,6 +1514,12 @@ ob_clean();
                 <!-- ADMINISTRATION Section -->
                 <li class="nav-item mt-3">
                     <small class="nav-header text-uppercase px-3">ADMINISTRATION</small>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link <?= (strpos($current_uri, 'admin/contact-messages') === 0) ? 'active' : '' ?>" 
+                       href="<?= BASE_URL ?>/admin/contact-messages">
+                        <i class="bi bi-inbox me-2"></i> Contact Messages
+                    </a>
                 </li>
                 <li class="nav-item">
                     <a class="nav-link <?= (strpos($current_uri, 'admin/users') === 0) ? 'active' : '' ?>" 

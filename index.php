@@ -254,6 +254,9 @@ $routes = [
     'reports/tenant-balances' => ['controller' => 'ReportsController', 'action' => 'tenantBalances'],
     'reports/generate' => ['controller' => 'ReportsController', 'action' => 'generateReport'],
     'admin/inquiries' => ['controller' => 'InquiriesController', 'action' => 'index'],
+    'admin/contact-messages' => ['controller' => 'ContactMessagesController', 'action' => 'index'],
+    'admin/contact-messages/show/(\d+)' => ['controller' => 'ContactMessagesController', 'action' => 'show'],
+    'admin/contact-messages/reply/(\d+)' => ['controller' => 'ContactMessagesController', 'action' => 'reply'],
     'settings' => ['controller' => 'SettingsController', 'action' => 'index'],
     'settings/email' => ['controller' => 'SettingsController', 'action' => 'email'],
     'settings/ai' => ['controller' => 'SettingsController', 'action' => 'ai'],
@@ -274,12 +277,13 @@ $routes = [
     // Accounting routes
     'accounting' => ['controller' => 'AccountingController', 'action' => 'index'],
     'accounting/accounts' => ['controller' => 'AccountingController', 'action' => 'accounts'],
-    'accounting/accounts/store' => ['controller' => 'AccountingController', 'action' => 'storeAccount'],
+    'accounting/storeAccount' => ['controller' => 'AccountingController', 'action' => 'storeAccount'],
     'accounting/ledger' => ['controller' => 'AccountingController', 'action' => 'ledger'],
-    'accounting/trial-balance' => ['controller' => 'AccountingController', 'action' => 'trialBalance'],
-    'accounting/balance-sheet' => ['controller' => 'AccountingController', 'action' => 'balanceSheet'],
-    'accounting/profit-loss' => ['controller' => 'AccountingController', 'action' => 'profitLoss'],
+    'accounting/trialBalance' => ['controller' => 'AccountingController', 'action' => 'trialBalance'],
+    'accounting/balanceSheet' => ['controller' => 'AccountingController', 'action' => 'balanceSheet'],
+    'accounting/profitLoss' => ['controller' => 'AccountingController', 'action' => 'profitLoss'],
     'accounting/statements' => ['controller' => 'AccountingController', 'action' => 'statements'],
+    'accounting/backfillLedger' => ['controller' => 'AccountingController', 'action' => 'backfillLedger'],
     // Invoices
     'invoices' => ['controller' => 'InvoicesController', 'action' => 'index'],
     'invoices/create' => ['controller' => 'InvoicesController', 'action' => 'create'],
@@ -581,6 +585,9 @@ $protectedRoutes = [
     'admin/payments/get/(\d+)',
     'admin/payments/transaction/(\d+)',
     'admin/inquiries',
+    'admin/contact-messages',
+    'admin/contact-messages/show/(\d+)',
+    'admin/contact-messages/reply/(\d+)',
     'activity-logs',
     'activity-logs/export/(csv|xlsx)'
 ];

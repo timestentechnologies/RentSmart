@@ -95,10 +95,18 @@ class LeasesController {
                 'notes' => $_POST['notes'] ?? null
             ]);
 
+            $leaseId = (int)$this->db->lastInsertId();
+
             // Update unit status
             $updateUnitQuery = "UPDATE units SET status = 'occupied' WHERE id = :unit_id";
             $stmt = $this->db->prepare($updateUnitQuery);
             $stmt->execute(['unit_id' => $_POST['unit_id']]);
+
+            // Auto-create draft invoices immediately for this lease (idempotent)
+            try {
+                $inv = new \App\Models\Invoice();
+                $inv->ensureInvoicesForLeaseMonths((int)$_POST['tenant_id'], (float)$_POST['rent_amount'], (string)$_POST['start_date'], date('Y-m-d'), (int)($_SESSION['user_id'] ?? 0), 'AUTO');
+            } catch (\Exception $e) { error_log('Auto-invoice (lease store) failed: ' . $e->getMessage()); }
 
             $this->db->commit();
 

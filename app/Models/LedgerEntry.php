@@ -12,6 +12,14 @@ class LedgerEntry extends Model
         $this->ensureTable();
     }
 
+    public function referenceExists(?string $referenceType, ?int $referenceId): bool
+    {
+        if (!$referenceType || !$referenceId) return false;
+        $stmt = $this->db->prepare("SELECT COUNT(*) FROM {$this->table} WHERE reference_type = ? AND reference_id = ?");
+        $stmt->execute([(string)$referenceType, (int)$referenceId]);
+        return (int)$stmt->fetchColumn() > 0;
+    }
+
     private function ensureTable()
     {
         $sql = "CREATE TABLE IF NOT EXISTS journal_entries (

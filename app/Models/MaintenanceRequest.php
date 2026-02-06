@@ -49,6 +49,11 @@ class MaintenanceRequest extends Model
      */
     public function getAllForAdmin($userId = null)
     {
+        return $this->getAllForAdminFiltered($userId, null, null, null);
+    }
+
+    public function getAllForAdminFiltered($userId = null, ?string $status = null, ?string $priority = null, ?string $category = null)
+    {
         $user = new User();
         $user->find($userId);
         
@@ -67,26 +72,45 @@ class MaintenanceRequest extends Model
                 LEFT JOIN tenants t2 ON l.tenant_id = t2.id";
 
         $params = [];
+
+        $where = [];
+        if (!empty($status)) {
+            $where[] = 'mr.status = ?';
+            $params[] = $status;
+        }
+        if (!empty($priority)) {
+            $where[] = 'mr.priority = ?';
+            $params[] = $priority;
+        }
+        if (!empty($category)) {
+            $where[] = 'mr.category = ?';
+            $params[] = $category;
+        }
         
         // Add role-based conditions
         if ($userId && !$user->isAdmin()) {
-            $sql .= " WHERE (1=0";
+            $roleSql = "(1=0";
             if ($user->isLandlord()) {
-                $sql .= " OR p.owner_id = ?";
+                $roleSql .= " OR p.owner_id = ?";
                 $params[] = $userId;
             }
             if ($user->isManager()) {
-                $sql .= " OR p.manager_id = ?";
+                $roleSql .= " OR p.manager_id = ?";
                 $params[] = $userId;
             }
             if ($user->isAgent()) {
-                $sql .= " OR p.agent_id = ?";
+                $roleSql .= " OR p.agent_id = ?";
                 $params[] = $userId;
             }
             // Caretaker assigned to property
-            $sql .= " OR p.caretaker_user_id = ?";
+            $roleSql .= " OR p.caretaker_user_id = ?";
             $params[] = $userId;
-            $sql .= ")";
+            $roleSql .= ")";
+            $where[] = $roleSql;
+        }
+
+        if (!empty($where)) {
+            $sql .= ' WHERE ' . implode(' AND ', $where);
         }
         
         $sql .= " ORDER BY mr.requested_date DESC";

@@ -46,6 +46,7 @@ class AuthController
             $phone = filter_input(INPUT_POST, 'phone', FILTER_SANITIZE_STRING);
             $address = filter_input(INPUT_POST, 'address', FILTER_SANITIZE_STRING);
             $password = $_POST['password'] ?? '';
+            $confirmPassword = $_POST['confirm_password'] ?? '';
             $role = filter_input(INPUT_POST, 'role', FILTER_SANITIZE_STRING);
 
             if (!$name || !$email || !$phone || !$address || !$password || !$role) {
@@ -55,6 +56,36 @@ class AuthController
                     exit;
                 }
                 $_SESSION['flash_message'] = 'All fields are required';
+                $_SESSION['flash_type'] = 'danger';
+                header('Location: ' . BASE_URL . '/register');
+                exit;
+            }
+
+            if ($confirmPassword !== '' && $password !== $confirmPassword) {
+                if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => false, 'message' => 'Passwords do not match']);
+                    exit;
+                }
+                $_SESSION['flash_message'] = 'Passwords do not match';
+                $_SESSION['flash_type'] = 'danger';
+                header('Location: ' . BASE_URL . '/register');
+                exit;
+            }
+
+            $hasMinLen = strlen($password) >= 8;
+            $hasUpper = (bool)preg_match('/[A-Z]/', $password);
+            $hasLower = (bool)preg_match('/[a-z]/', $password);
+            $hasDigit = (bool)preg_match('/\d/', $password);
+            $hasSpecial = (bool)preg_match('/[^A-Za-z0-9]/', $password);
+            if (!$hasMinLen || !$hasUpper || !$hasLower || !$hasDigit || !$hasSpecial) {
+                $msg = 'Password must be at least 8 characters and include uppercase, lowercase, number, and special character.';
+                if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => false, 'message' => $msg]);
+                    exit;
+                }
+                $_SESSION['flash_message'] = $msg;
                 $_SESSION['flash_type'] = 'danger';
                 header('Location: ' . BASE_URL . '/register');
                 exit;
