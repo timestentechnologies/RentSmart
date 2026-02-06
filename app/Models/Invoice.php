@@ -180,6 +180,12 @@ class Invoice extends Model
         }
     }
 
+    public function voidInvoice($id)
+    {
+        $stmt = $this->db->prepare("UPDATE {$this->table} SET status = 'void', updated_at = NOW() WHERE id = ?");
+        return $stmt->execute([(int)$id]);
+    }
+
     /**
      * Find an existing invoice for a tenant within the same issue month
      */

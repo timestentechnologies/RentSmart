@@ -8,6 +8,7 @@ use App\Models\LedgerEntry;
 use App\Models\Lease;
 use App\Models\Setting;
 use App\Models\Payment;
+use App\Models\User;
 
 class InvoicesController
 {
@@ -43,10 +44,14 @@ class InvoicesController
     public function index()
     {
         $inv = new Invoice();
+        $userModel = new User();
+        $userModel->find($this->userId);
+        $isAdmin = $userModel->isAdmin();
+        $scopeUserId = $isAdmin ? null : $this->userId;
         // Idempotently ensure rent invoices exist for each active lease from start month through current month
         try {
             $leaseModel = new Lease();
-            $leases = $leaseModel->getActiveLeases($this->userId);
+            $leases = $leaseModel->getActiveLeases($scopeUserId);
             $today = date('Y-m-d');
             foreach ($leases as $L) {
                 $tenantId = (int)($L['tenant_id'] ?? 0);
@@ -61,7 +66,7 @@ class InvoicesController
             // Update statuses for current month
             $inv->updateStatusesForMonth($today);
         } catch (\Exception $e) { error_log('Auto-invoice index ensure failed: ' . $e->getMessage()); }
-        $invoices = $inv->getAll($this->userId);
+        $invoices = $inv->getAll($scopeUserId);
         require 'views/invoices/index.php';
     }
 
@@ -342,8 +347,18 @@ class InvoicesController
     {
         try {
             $invModel = new Invoice();
-            $invModel->deleteInvoice((int)$id);
-            $_SESSION['flash_message'] = 'Invoice deleted';
+            $invoice = $invModel->getWithItems((int)$id);
+            $notes = is_array($invoice) ? (string)($invoice['notes'] ?? '') : '';
+            // Auto-created monthly rent invoices will be recreated immediately if deleted.
+            // Void them instead so the ensure logic finds them and does not recreate.
+            $isAuto = (stripos($notes, 'Auto-created') !== false) || (stripos($notes, 'AUTO') !== false);
+            if ($isAuto) {
+                $invModel->voidInvoice((int)$id);
+                $_SESSION['flash_message'] = 'Invoice voided';
+            } else {
+                $invModel->deleteInvoice((int)$id);
+                $_SESSION['flash_message'] = 'Invoice deleted';
+            }
             $_SESSION['flash_type'] = 'success';
         } catch (\Exception $e) {
             $_SESSION['flash_message'] = 'Delete failed';

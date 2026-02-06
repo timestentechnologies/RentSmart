@@ -1243,6 +1243,19 @@ class Payment extends Model
         $this->postPaymentToLedgerIfNeeded($id, $data);
         if (($data['payment_type'] ?? '') === 'rent') {
             $this->ensureInvoicesForAdvanceIfNeeded((int)$data['lease_id'], isset($data['user_id']) ? (int)$data['user_id'] : null);
+            try {
+                $stmt = $this->db->prepare("SELECT tenant_id FROM leases WHERE id = ? LIMIT 1");
+                $stmt->execute([(int)$data['lease_id']]);
+                $tenantId = (int)($stmt->fetch(\PDO::FETCH_ASSOC)['tenant_id'] ?? 0);
+                if ($tenantId > 0) {
+                    $inv = new Invoice();
+                    $inv->updateStatusesForMonth($data['payment_date'] ?? date('Y-m-d'));
+                    // Also update for this specific tenant/month for deterministic results
+                    $inv->updateStatusForTenantMonth($tenantId, $data['payment_date'] ?? date('Y-m-d'));
+                }
+            } catch (\Exception $e) {
+                error_log('Auto-invoice status update failed: ' . $e->getMessage());
+            }
         }
         return $id;
     }
