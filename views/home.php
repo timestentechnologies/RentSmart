@@ -348,6 +348,54 @@
             height: 100%;
         }
 
+        .pricing-section {
+            background: linear-gradient(180deg, rgba(107, 62, 153, 0.03) 0%, rgba(255, 138, 0, 0.03) 100%);
+        }
+
+        .pricing-card {
+            border: 1px solid rgba(107, 62, 153, 0.10);
+            transition: transform .2s ease, box-shadow .2s ease;
+        }
+
+        .pricing-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 18px 40px rgba(107, 62, 153, 0.14);
+        }
+
+        .pricing-card .plan-name {
+            letter-spacing: -0.02em;
+        }
+
+        .pricing-price {
+            font-size: 2rem;
+            font-weight: 800;
+            color: var(--primary-color);
+            letter-spacing: -0.02em;
+        }
+
+        .pricing-subtext {
+            color: #6b7280;
+        }
+
+        .pricing-card.featured {
+            position: relative;
+        }
+
+        .pricing-card.featured::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            border-radius: 1rem;
+            padding: 2px;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--accent-color) 100%);
+            -webkit-mask:
+                linear-gradient(#fff 0 0) content-box,
+                linear-gradient(#fff 0 0);
+            -webkit-mask-composite: xor;
+            mask-composite: exclude;
+            pointer-events: none;
+        }
+
         .pricing-card.featured {
             border: 2px solid var(--primary-color);
             transform: scale(1.02);
@@ -1052,12 +1100,52 @@
                         <p>Stay informed with automated SMS and email notifications for rent due dates, maintenance updates, lease renewals, and payment confirmations.</p>
                     </div>
                 </div>
+
+                <div class="col-md-4">
+                    <div class="feature-card text-center p-4">
+                        <div class="feature-icon-circle mx-auto">
+                            <i class="bi bi-lightning-charge"></i>
+                        </div>
+                        <h3>Utilities Management</h3>
+                        <p>Track metered and flat-rate utilities, readings, charges, and payments—so utilities are always clearly separated from rent.</p>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="feature-card text-center p-4">
+                        <div class="feature-icon-circle mx-auto">
+                            <i class="bi bi-tools"></i>
+                        </div>
+                        <h3>Maintenance Management</h3>
+                        <p>Log requests, assign work, track progress, and record maintenance costs with clear references for invoices and statements.</p>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="feature-card text-center p-4">
+                        <div class="feature-icon-circle mx-auto">
+                            <i class="bi bi-receipt"></i>
+                        </div>
+                        <h3>Invoices & Receipts</h3>
+                        <p>Generate professional invoices and receipts and keep balances accurate with automated invoice status updates.</p>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="feature-card text-center p-4">
+                        <div class="feature-icon-circle mx-auto">
+                            <i class="bi bi-cash-stack"></i>
+                        </div>
+                        <h3>Expense Tracking</h3>
+                        <p>Record property expenses and keep a clear view of profitability with statements and reports by property and time period.</p>
+                    </div>
+                </div>
             </div>
         </div>
     </section>
 
     <!-- Pricing Section -->
-    <section id="pricing" class="py-5 bg-light">
+    <section id="pricing" class="py-5 pricing-section">
         <div class="container">
             <div class="text-center mb-5">
                 <h2 class="display-5 fw-bold">Affordable Property Management Software Pricing</h2>
@@ -1073,10 +1161,17 @@
                 ?>
                 <div class="col-12 col-md-6 col-lg-3">
                     <div class="pricing-card <?= $plan['name'] === 'Professional' ? 'featured' : '' ?>">
-                        <h3 class="fw-bold mb-3"><?= htmlspecialchars($plan['name']) ?></h3>
-                        <div class="d-flex align-items-baseline mb-3">
-                            <span class="h2 fw-bold">Ksh <?= number_format($plan['price']) ?></span>
-                            <span class="text-muted ms-2">/month</span>
+                        <h3 class="fw-bold mb-3 plan-name"><?= htmlspecialchars($plan['name']) ?></h3>
+                        <div class="mb-3">
+                            <?php if (strcasecmp((string)$plan['name'], 'Enterprise') === 0): ?>
+                                <div class="pricing-price">Custom Pricing</div>
+                                <div class="pricing-subtext small">Let’s tailor a plan for your portfolio.</div>
+                            <?php else: ?>
+                                <div class="d-flex align-items-baseline">
+                                    <div class="pricing-price">Ksh <?= number_format($plan['price']) ?></div>
+                                    <div class="text-muted ms-2">/month</div>
+                                </div>
+                            <?php endif; ?>
                         </div>
                         <div class="mb-3">
                             <?php
