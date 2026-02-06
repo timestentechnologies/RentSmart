@@ -205,13 +205,22 @@ ob_start();
                                     </td>
                                     <td>
                                         <?php
-                                        $paymentType = $payment['payment_type'] ?? 'rent';
-                                        $typeClass = $paymentType === 'utility' ? 'bg-info' : 'bg-success';
-                                        $typeText = $paymentType === 'utility' ? 'Utility' : 'Rent';
-                                        
-                                        // For utility payments, show the specific utility type
-                                        if ($paymentType === 'utility' && !empty($payment['utility_type'])) {
-                                            $typeText = ucfirst($payment['utility_type']);
+                                        $rawType = strtolower((string)($payment['payment_type'] ?? 'rent'));
+                                        $notes = (string)($payment['notes'] ?? '');
+                                        $amount = (float)($payment['amount'] ?? 0);
+                                        $hasUtility = !empty($payment['utility_id']) || !empty($payment['utility_type']);
+                                        $isMaint = ($rawType === 'rent' && $amount < 0 && $notes !== '' && preg_match('/MAINT-\d+/i', $notes));
+                                        $isUtilByNotes = ($notes !== '' && preg_match('/\b(util|utility|water|electricity|gas|internet)\b/i', $notes));
+
+                                        if ($isMaint) {
+                                            $typeClass = 'bg-warning text-dark';
+                                            $typeText = 'Maintenance';
+                                        } elseif ($rawType === 'utility' || $hasUtility || $isUtilByNotes) {
+                                            $typeClass = 'bg-info';
+                                            $typeText = !empty($payment['utility_type']) ? ucfirst((string)$payment['utility_type']) : 'Utility';
+                                        } else {
+                                            $typeClass = 'bg-success';
+                                            $typeText = 'Rent';
                                         }
                                         ?>
                                         <span class="badge <?= $typeClass ?>">
