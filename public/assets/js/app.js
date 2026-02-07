@@ -67,7 +67,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Flash Message Auto-hide
 document.addEventListener('DOMContentLoaded', function() {
-    const alerts = document.querySelectorAll('.alert');
+    const alerts = document.querySelectorAll('.alert.alert-dismissible');
     alerts.forEach(alert => {
         setTimeout(() => {
             const bsAlert = new bootstrap.Alert(alert);

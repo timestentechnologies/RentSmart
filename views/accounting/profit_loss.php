@@ -5,11 +5,15 @@ ob_start();
   <div class="card page-header mb-3">
     <div class="card-body d-flex justify-content-between align-items-center">
       <h1 class="h4 mb-0"><i class="bi bi-graph-up text-primary me-2"></i>Profit & Loss</h1>
-      <form class="d-flex gap-2" method="get" action="<?= BASE_URL ?>/accounting/profit-loss">
-        <input type="date" class="form-control" name="start" value="<?= htmlspecialchars($_GET['start'] ?? date('Y-m-01')) ?>">
-        <input type="date" class="form-control" name="end" value="<?= htmlspecialchars($_GET['end'] ?? date('Y-m-d')) ?>">
-        <button class="btn btn-outline-primary" type="submit">Filter</button>
-      </form>
+      <div class="d-flex gap-2 align-items-center">
+        <a class="btn btn-outline-secondary" href="<?= BASE_URL ?>/accounting/profit-loss/export-csv?start=<?= urlencode($_GET['start'] ?? date('Y-m-01')) ?>&end=<?= urlencode($_GET['end'] ?? date('Y-m-d')) ?>">Export Excel</a>
+        <a class="btn btn-outline-secondary" href="<?= BASE_URL ?>/accounting/profit-loss/export-pdf?start=<?= urlencode($_GET['start'] ?? date('Y-m-01')) ?>&end=<?= urlencode($_GET['end'] ?? date('Y-m-d')) ?>">Export PDF</a>
+        <form class="d-flex gap-2" method="get" action="<?= BASE_URL ?>/accounting/profit-loss">
+          <input type="date" class="form-control" name="start" value="<?= htmlspecialchars($_GET['start'] ?? date('Y-m-01')) ?>">
+          <input type="date" class="form-control" name="end" value="<?= htmlspecialchars($_GET['end'] ?? date('Y-m-d')) ?>">
+          <button class="btn btn-outline-primary" type="submit">Filter</button>
+        </form>
+      </div>
     </div>
   </div>
   <div class="row g-3">

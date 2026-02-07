@@ -5,10 +5,14 @@ ob_start();
   <div class="card page-header mb-3">
     <div class="card-body d-flex justify-content-between align-items-center">
       <h1 class="h4 mb-0"><i class="bi bi-diagram-3 text-primary me-2"></i>Balance Sheet</h1>
-      <form class="d-flex gap-2" method="get" action="<?= BASE_URL ?>/accounting/balance-sheet">
-        <input type="date" class="form-control" name="end" value="<?= htmlspecialchars($_GET['end'] ?? date('Y-m-d')) ?>">
-        <button class="btn btn-outline-primary" type="submit">As of</button>
-      </form>
+      <div class="d-flex gap-2 align-items-center">
+        <a class="btn btn-outline-secondary" href="<?= BASE_URL ?>/accounting/balance-sheet/export-csv?end=<?= urlencode($_GET['end'] ?? date('Y-m-d')) ?>">Export Excel</a>
+        <a class="btn btn-outline-secondary" href="<?= BASE_URL ?>/accounting/balance-sheet/export-pdf?end=<?= urlencode($_GET['end'] ?? date('Y-m-d')) ?>">Export PDF</a>
+        <form class="d-flex gap-2" method="get" action="<?= BASE_URL ?>/accounting/balance-sheet">
+          <input type="date" class="form-control" name="end" value="<?= htmlspecialchars($_GET['end'] ?? date('Y-m-d')) ?>">
+          <button class="btn btn-outline-primary" type="submit">As of</button>
+        </form>
+      </div>
     </div>
   </div>
   <div class="row g-3">
