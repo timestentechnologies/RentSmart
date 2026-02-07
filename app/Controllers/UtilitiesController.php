@@ -20,6 +20,7 @@ class UtilitiesController
             $_SESSION['flash_type'] = 'danger';
             redirect('/home');
         }
+
     }
 
     private function ratesSupportUserScope(): bool
@@ -31,6 +32,60 @@ class UtilitiesController
         } catch (\Exception $e) {
             return false;
         }
+    }
+
+    private function ratesSupportPropertyScope(): bool
+    {
+        try {
+            $db = (new \App\Models\UtilityRate())->getDb();
+            $stmt = $db->query("SHOW COLUMNS FROM utility_rates LIKE 'property_id'");
+            return (bool)$stmt->fetch();
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
+
+    public function typesByProperty($propertyId)
+    {
+        header('Content-Type: application/json');
+
+        $userId = $_SESSION['user_id'] ?? null;
+        if (!$userId) {
+            echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+            exit;
+        }
+
+        $propertyModel = new Property();
+        $property = $propertyModel->getById((int)$propertyId, $userId);
+        if (!$property) {
+            echo json_encode(['success' => false, 'message' => 'Property not found']);
+            exit;
+        }
+
+        $rateModel = new UtilityRate();
+        if (!$this->ratesSupportPropertyScope()) {
+            echo json_encode(['success' => true, 'types' => $rateModel->getAllTypesWithMethod()]);
+            exit;
+        }
+
+        $db = $rateModel->getDb();
+        $sql = "SELECT ur.*
+            FROM utility_rates ur
+            INNER JOIN (
+                SELECT utility_type, MAX(effective_from) as max_date
+                FROM utility_rates
+                WHERE (effective_to IS NULL OR effective_to >= CURDATE())
+                  AND property_id = ?
+                GROUP BY utility_type
+            ) latest ON ur.utility_type = latest.utility_type AND ur.effective_from = latest.max_date
+            WHERE ur.property_id = ?
+            ORDER BY ur.utility_type";
+        $stmt = $db->prepare($sql);
+        $stmt->execute([(int)$propertyId, (int)$propertyId]);
+        $types = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+        echo json_encode(['success' => true, 'types' => $types]);
+        exit;
     }
 
     public function index()
@@ -139,26 +194,8 @@ class UtilitiesController
             $properties = $propertyModel->getAll($userId);
             $units = $unitModel->getAll($userId);
         }
-        $db = $rateModel->getDb();
-        if ($this->ratesSupportUserScope() && $userId) {
-            $stmt = $db->prepare("
-                SELECT ur.*
-                FROM utility_rates ur
-                INNER JOIN (
-                    SELECT utility_type, MAX(effective_from) as max_date 
-                    FROM utility_rates 
-                    WHERE (effective_to IS NULL OR effective_to >= CURDATE()) 
-                      AND (user_id = ? OR user_id IS NULL)
-                    GROUP BY utility_type
-                ) latest ON ur.utility_type = latest.utility_type AND ur.effective_from = latest.max_date
-                WHERE (ur.user_id = ? OR ur.user_id IS NULL)
-                ORDER BY ur.utility_type
-            ");
-            $stmt->execute([$userId, $userId]);
-            $utilityTypes = $stmt->fetchAll(\PDO::FETCH_ASSOC);
-        } else {
-            $utilityTypes = $rateModel->getAllTypesWithMethod();
-        }
+        // Utility types will be loaded dynamically per selected property owner
+        $utilityTypes = [];
 
         $content = view('utilities/create', [
             'title' => 'Add New Utility',
@@ -182,35 +219,53 @@ class UtilitiesController
         $utilityType = $_POST['utility_type'] ?? '';
         $userId = $_SESSION['user_id'] ?? null;
         $db = $rateModel->getDb();
-        if ($this->ratesSupportUserScope() && $userId && !(new \App\Models\User())->find($userId) && false) {
-            // no-op
-        }
-
         $userModel = new \App\Models\User();
         $userModel->find($userId);
 
-        if ($this->ratesSupportUserScope() && $userId && !$userModel->isAdmin()) {
+        // Resolve property_id (from form or from unit)
+        $propertyId = (int)($_POST['property_id'] ?? 0);
+        $unitId = (int)($_POST['unit_id'] ?? 0);
+        if (!$propertyId && $unitId) {
+            $unitModel = new \App\Models\Unit();
+            $unit = $unitModel->getById($unitId, $userId);
+            $propertyId = (int)($unit['property_id'] ?? 0);
+        }
+
+        // Access control: ensure user can access the property
+        if (!$userModel->isAdmin()) {
+            $accessible = $userModel->getAccessiblePropertyIds();
+            if ($propertyId && !in_array($propertyId, $accessible)) {
+                $_SESSION['errors'] = ['Unauthorized'];
+                redirect('/utilities/create');
+            }
+        }
+
+        // Rate lookup must be based on the property's configured rates
+        if ($this->ratesSupportPropertyScope() && $propertyId) {
             $stmt = $db->prepare("
                 SELECT *
                 FROM utility_rates
                 WHERE utility_type = ?
                   AND effective_from <= CURDATE()
                   AND (effective_to IS NULL OR effective_to >= CURDATE())
-                  AND user_id = ?
+                  AND property_id = ?
                 ORDER BY effective_from DESC
                 LIMIT 1
             ");
-            $stmt->execute([$utilityType, $userId]);
+            $stmt->execute([$utilityType, $propertyId]);
             $rateInfo = $stmt->fetch(\PDO::FETCH_ASSOC) ?: [];
-        } elseif ($this->ratesSupportUserScope() && $userId && $userModel->isAdmin()) {
-            $rateInfo = $rateModel->getCurrentRate($utilityType);
         } else {
             $rateInfo = $rateModel->getCurrentRate($utilityType);
+        }
+
+        if ($this->ratesSupportPropertyScope() && $propertyId && empty($rateInfo)) {
+            $_SESSION['errors'] = ['Utility type not configured for this property'];
+            redirect('/utilities/create');
         }
         $billingMethod = $rateInfo['billing_method'] ?? 'flat_rate';
 
         $data = [
-            'unit_id' => $_POST['unit_id'] ?? '',
+            'unit_id' => $unitId ?: ($_POST['unit_id'] ?? ''),
             'utility_type' => $utilityType,
             'is_metered' => $billingMethod === 'metered' ? 1 : 0,
             'flat_rate' => $billingMethod === 'flat_rate' ? ($rateInfo['rate_per_unit'] ?? null) : null,
