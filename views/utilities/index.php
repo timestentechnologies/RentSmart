@@ -236,14 +236,16 @@ ob_start();
                                 <th>Current Reading</th>
                                 <th>Units Used</th>
                                 <th>Cost</th>
+                                <th>Paid</th>
+                                <th>Balance Due</th>
                                 <th>Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php foreach ($utilities as $utility): ?>
                                 <tr>
-                                    <td><?= htmlspecialchars($utility['property_name']) ?></td>
-                                    <td><?= htmlspecialchars($utility['unit_number']) ?></td>
+                                    <td><?= htmlspecialchars($utility['property_name'] ?? '-') ?></td>
+                                    <td><?= htmlspecialchars($utility['unit_number'] ?? '-') ?></td>
                                     <td><?= ucfirst($utility['utility_type']) ?></td>
                                     <td><?= $utility['is_metered'] ? 'Metered' : 'Flat Rate' ?></td>
                                     <td><?= htmlspecialchars($utility['meter_number']) ?></td>
@@ -251,6 +253,8 @@ ob_start();
                                     <td><?= htmlspecialchars($utility['latest_reading']) ?></td>
                                     <td><?= htmlspecialchars($utility['units_used']) ?></td>
                                     <td><?= htmlspecialchars($utility['cost']) ?></td>
+                                    <td><?= htmlspecialchars(number_format((float)($utility['paid_amount'] ?? 0), 2)) ?></td>
+                                    <td><?= htmlspecialchars(number_format((float)($utility['balance_due'] ?? 0), 2)) ?></td>
                                     <td>
                                         <?php if (strtolower($utility['is_metered'] ? '' : 'flat rate') !== 'flat rate'): ?>
                                             <button class="btn btn-sm btn-outline-primary edit-utility-btn"

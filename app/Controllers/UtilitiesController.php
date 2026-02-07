@@ -149,7 +149,20 @@ class UtilitiesController
             }
         }
 
-        // Add readings and cost to each utility
+        $payStmt = null;
+        try {
+            $payStmt = $rateModel->getDb()->prepare(
+                "SELECT COALESCE(SUM(amount),0) AS s\n"
+                . "FROM payments\n"
+                . "WHERE utility_id = ?\n"
+                . "  AND payment_type = 'utility'\n"
+                . "  AND status IN ('completed','verified')"
+            );
+        } catch (\Exception $e) {
+            $payStmt = null;
+        }
+
+        // Add readings, cost, and paid/balance due to each utility
         foreach ($utilities as &$utility) {
             $latest = $readingModel->getLatestByUtilityId($utility['id']);
             $previous = $readingModel->getPreviousByUtilityId($utility['id']);
@@ -162,6 +175,24 @@ class UtilitiesController
                 $utility['cost'] = $utility['flat_rate'];
             }
             $utility['meter_number'] = $utility['meter_number'] ?? '';
+
+            // Fallbacks for display
+            $utility['unit_number'] = $utility['unit_number'] ?? ($utility['unit'] ?? null);
+            $utility['property_name'] = $utility['property_name'] ?? ($utility['property'] ?? null);
+
+            // Paid and balance due (for displaying paid utilities too)
+            $paid = 0.0;
+            if ($payStmt) {
+                try {
+                    $payStmt->execute([(int)$utility['id']]);
+                    $paid = (float)($payStmt->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0);
+                } catch (\Exception $e) {
+                    $paid = 0.0;
+                }
+            }
+            $cost = (float)($utility['cost'] ?? 0);
+            $utility['paid_amount'] = round($paid, 2);
+            $utility['balance_due'] = round(max($cost - $paid, 0.0), 2);
         }
         unset($utility);
 
