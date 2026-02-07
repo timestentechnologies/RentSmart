@@ -453,13 +453,6 @@ function showAlert(type, message) {
     
     // Add alert to body instead of after page-header
     $('body').append(alertHtml);
-    
-    // Auto-dismiss after 5 seconds
-    setTimeout(() => {
-        $('.alert').fadeOut(400, function() {
-            $(this).remove();
-        });
-    }, 5000);
 }
 
 $(document).ready(function() {
