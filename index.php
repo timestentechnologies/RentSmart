@@ -290,6 +290,8 @@ $routes = [
     'accounting/profit-loss' => ['controller' => 'AccountingController', 'action' => 'profitLoss'],
     'accounting/profitLoss' => ['controller' => 'AccountingController', 'action' => 'profitLoss'],
     'accounting/statements' => ['controller' => 'AccountingController', 'action' => 'statements'],
+    'accounting/statements/export-csv' => ['controller' => 'AccountingController', 'action' => 'exportStatementsCsv'],
+    'accounting/statements/export-pdf' => ['controller' => 'AccountingController', 'action' => 'exportStatementsPdf'],
     'accounting/backfillLedger' => ['controller' => 'AccountingController', 'action' => 'backfillLedger'],
     // Invoices
     'invoices' => ['controller' => 'InvoicesController', 'action' => 'index'],
