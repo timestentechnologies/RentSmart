@@ -764,14 +764,35 @@ class TenantsController
             $header = fgetcsv($handle);
             $created = 0;
             $updated = 0;
+            $assigned = 0;
             $userId = $_SESSION['user_id'];
             while (($row = fgetcsv($handle)) !== false) {
                 $data = array_combine($header, $row);
                 if (empty($data['email']) || empty($data['first_name']) || empty($data['last_name'])) continue;
                 
                 // Check if tenant exists by email
-                $existing = method_exists($this->tenant, 'findByEmail') ? 
-                    $this->tenant->findByEmail($data['email'], $userId) : null;
+                $existing = method_exists($this->tenant, 'findByEmail') ? $this->tenant->findByEmail($data['email']) : null;
+
+                // Map property and unit if provided
+                $propertyId = null;
+                $unitId = null;
+                $propertyName = trim((string)($data['property_name'] ?? ''));
+                $unitNumber = trim((string)($data['unit_number'] ?? ''));
+                if ($propertyName !== '' && $unitNumber !== '') {
+                    $property = null;
+                    foreach ($this->property->getAll($userId) as $p) {
+                        if (strcasecmp($p['name'], $propertyName) === 0) { $property = $p; break; }
+                    }
+                    if ($property && !empty($property['id'])) {
+                        $propertyId = (int)$property['id'];
+                        foreach ($this->unit->where('property_id', $propertyId, $userId) as $u) {
+                            if (strcasecmp((string)($u['unit_number'] ?? ''), $unitNumber) === 0) {
+                                $unitId = (int)$u['id'];
+                                break;
+                            }
+                        }
+                    }
+                }
                 
                 $payload = [
                     'first_name' => $data['first_name'],
@@ -779,24 +800,110 @@ class TenantsController
                     'name' => trim(($data['first_name'] ?? '') . ' ' . ($data['last_name'] ?? '')),
                     'email' => $data['email'],
                     'phone' => $data['phone'] ?? '',
-                    'registered_on' => $data['registered_on'] ?? date('Y-m-d'),
+                    'registered_on' => $data['registered_on'] ?? ($data['move_in_date'] ?? date('Y-m-d')),
                 ];
+
+                if ($propertyId) {
+                    $payload['property_id'] = $propertyId;
+                }
+                if ($unitId) {
+                    $payload['unit_id'] = $unitId;
+                }
                 
                 if ($existing) {
                     // Update existing tenant
                     if ($this->tenant->update($existing['id'], $payload)) {
                         $updated++;
                     }
+
+                    // Assign to unit + create lease if mapped and unit is not currently occupied
+                    if ($propertyId && $unitId) {
+                        $currentUnit = $this->unit->getById($unitId, $userId);
+                        if ($currentUnit) {
+                            $unitData = [
+                                'unit_number' => $currentUnit['unit_number'],
+                                'type' => $currentUnit['type'],
+                                'size' => $currentUnit['size'],
+                                'rent_amount' => $currentUnit['rent_amount'],
+                                'status' => 'occupied',
+                                'tenant_id' => (int)$existing['id'],
+                            ];
+                            $this->unit->update($unitId, $unitData);
+
+                            $leaseModel = new \App\Models\Lease();
+                            $lease = $leaseModel->getActiveLeaseByTenant((int)$existing['id']);
+                            if (!$lease) {
+                                $effectiveRent = (float)($currentUnit['rent_amount'] ?? 0);
+                                $startDate = $data['move_in_date'] ?? date('Y-m-d');
+                                $leaseData = [
+                                    'unit_id' => $unitId,
+                                    'tenant_id' => (int)$existing['id'],
+                                    'start_date' => $startDate,
+                                    'end_date' => $data['end_date'] ?? date('Y-m-d', strtotime($startDate . ' +1 year')),
+                                    'rent_amount' => $effectiveRent,
+                                    'security_deposit' => $effectiveRent,
+                                    'status' => 'active',
+                                    'payment_day' => 1,
+                                    'notes' => '',
+                                    'created_at' => date('Y-m-d H:i:s'),
+                                ];
+                                $leaseId = (int)$leaseModel->create($leaseData);
+                                if ($leaseId > 0) {
+                                    $assigned++;
+                                }
+                            } else {
+                                $assigned++;
+                            }
+                        }
+                    }
                 } else {
                     // Create new tenant
                     $tenantId = $this->tenant->create($payload);
-                    if ($tenantId) $created++;
+                    if ($tenantId) {
+                        $created++;
+
+                        if ($propertyId && $unitId) {
+                            $currentUnit = $this->unit->getById($unitId, $userId);
+                            if ($currentUnit) {
+                                $unitData = [
+                                    'unit_number' => $currentUnit['unit_number'],
+                                    'type' => $currentUnit['type'],
+                                    'size' => $currentUnit['size'],
+                                    'rent_amount' => $currentUnit['rent_amount'],
+                                    'status' => 'occupied',
+                                    'tenant_id' => (int)$tenantId,
+                                ];
+                                $this->unit->update($unitId, $unitData);
+
+                                $leaseModel = new \App\Models\Lease();
+                                $effectiveRent = (float)($currentUnit['rent_amount'] ?? 0);
+                                $startDate = $data['move_in_date'] ?? date('Y-m-d');
+                                $leaseData = [
+                                    'unit_id' => $unitId,
+                                    'tenant_id' => (int)$tenantId,
+                                    'start_date' => $startDate,
+                                    'end_date' => $data['end_date'] ?? date('Y-m-d', strtotime($startDate . ' +1 year')),
+                                    'rent_amount' => $effectiveRent,
+                                    'security_deposit' => $effectiveRent,
+                                    'status' => 'active',
+                                    'payment_day' => 1,
+                                    'notes' => '',
+                                    'created_at' => date('Y-m-d H:i:s'),
+                                ];
+                                $leaseId = (int)$leaseModel->create($leaseData);
+                                if ($leaseId > 0) {
+                                    $assigned++;
+                                }
+                            }
+                        }
+                    }
                 }
             }
             fclose($handle);
             $message = [];
             if ($created > 0) $message[] = "Created {$created}";
             if ($updated > 0) $message[] = "Updated {$updated}";
+            if ($assigned > 0) $message[] = "Assigned {$assigned}";
             $_SESSION['flash_message'] = count($message) > 0 ? implode(', ', $message) . ' tenants' : 'No tenants imported';
             $_SESSION['flash_type'] = 'success';
         } catch (\Exception $e) {

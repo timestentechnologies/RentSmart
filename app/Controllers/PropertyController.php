@@ -881,6 +881,21 @@ class PropertyController
             $created = 0;
             $userId = $_SESSION['user_id'];
             $updated = 0;
+            $skippedLimit = 0;
+
+            // Plan limits: enforce property limit per subscription plan (same logic as create/store)
+            $subModel = new Subscription();
+            $sub = $subModel->getUserSubscription($userId);
+            $planName = strtolower($sub['name'] ?? ($sub['plan_type'] ?? ''));
+            $propertyLimit = null; // null => unlimited
+            if (isset($sub['property_limit']) && $sub['property_limit'] !== null && $sub['property_limit'] !== '') {
+                $propertyLimit = (int)$sub['property_limit'];
+                if ($propertyLimit <= 0) { $propertyLimit = null; }
+            } else {
+                if ($planName === 'basic') { $propertyLimit = 10; }
+                elseif ($planName === 'professional') { $propertyLimit = 50; }
+                elseif ($planName === 'enterprise') { $propertyLimit = null; }
+            }
             while (($row = fgetcsv($handle)) !== false) {
                 $data = array_combine($header, $row);
                 if (empty($data['name'])) continue;
@@ -911,6 +926,15 @@ class PropertyController
                         $updated++;
                     }
                 } else {
+                    // Enforce limit only for new creates
+                    if ($propertyLimit !== null) {
+                        $currentProps = $this->property->getAll($userId);
+                        $propCount = is_array($currentProps) ? count($currentProps) : 0;
+                        if ($propCount >= $propertyLimit) {
+                            $skippedLimit++;
+                            continue;
+                        }
+                    }
                     // Create new property
                     if ($this->user->isLandlord()) $payload['owner_id'] = $userId;
                     if ($this->user->isManager()) $payload['manager_id'] = $userId;
@@ -923,6 +947,7 @@ class PropertyController
             $message = [];
             if ($created > 0) $message[] = "Created {$created}";
             if ($updated > 0) $message[] = "Updated {$updated}";
+            if ($skippedLimit > 0) $message[] = "Skipped {$skippedLimit} (plan limit)";
             $_SESSION['flash_message'] = count($message) > 0 ? implode(', ', $message) . ' properties' : 'No properties imported';
             $_SESSION['flash_type'] = 'success';
         } catch (\Exception $e) {
