@@ -269,14 +269,33 @@ class EmployeesController
                         $ledger = new LedgerEntry();
                         if (!$ledger->referenceExists('expense', (int)$expenseId)) {
                             $accModel = new Account();
+
+                            // Ensure core accounts exist or fallback to first by type
                             $cash = $accModel->findByCode('1000');
-                            $expAcc = $accModel->findByCode('5000');
-                            if ($cash && $expAcc) {
+                            if (!$cash) {
+                                $cash = $accModel->findFirstByType('asset');
+                            }
+                            // Prefer a dedicated payroll expense account code; otherwise use existing 5000 or first expense
+                            $payrollAcc = $accModel->findByCode('5100');
+                            if (!$payrollAcc) {
+                                $payrollAcc = $accModel->findByCode('5000');
+                            }
+                            if (!$payrollAcc) {
+                                $payrollAcc = $accModel->findFirstByType('expense');
+                            }
+                            if (!$cash) {
+                                $cash = $accModel->ensureByCode('1000', 'Cash', 'asset');
+                            }
+                            if (!$payrollAcc) {
+                                $payrollAcc = $accModel->ensureByCode('5100', 'Payroll Expense', 'expense');
+                            }
+
+                            if ($cash && $payrollAcc) {
                                 $desc = 'Expense #' . (int)$expenseId . ' - ' . 'Payroll';
                                 $propertyId = $employee['property_id'] ?? null;
                                 $ledger->post([
                                     'entry_date' => $payDate,
-                                    'account_id' => (int)$expAcc['id'],
+                                    'account_id' => (int)$payrollAcc['id'],
                                     'description' => $desc,
                                     'debit' => (float)$amount,
                                     'credit' => 0,

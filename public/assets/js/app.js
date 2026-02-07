@@ -67,11 +67,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Flash Message Auto-hide
 document.addEventListener('DOMContentLoaded', function() {
-    const alerts = document.querySelectorAll('.alert.alert-dismissible');
+    const alerts = document.querySelectorAll('.alert[data-auto-hide="1"]');
     alerts.forEach(alert => {
         setTimeout(() => {
-            const bsAlert = new bootstrap.Alert(alert);
-            bsAlert.close();
+            try {
+                const bsAlert = new bootstrap.Alert(alert);
+                bsAlert.close();
+            } catch (e) {}
         }, 5000);
     });
 });
@@ -138,7 +140,7 @@ function submitFormAjax(form, successCallback = null) {
 }
 
 // Alert Helper with SweetAlert2
-function showAlert(type, message, autoHide = true, callback = null) {
+function showAlert(type, message, autoHide = false, callback = null) {
     // Map type to SweetAlert2 icon
     const iconMap = {
         'success': 'success',
@@ -157,7 +159,8 @@ function showAlert(type, message, autoHide = true, callback = null) {
         toast: true,
         position: 'top-end',
         showConfirmButton: false,
-        timer: autoHide ? 2000 : undefined,
+        showCloseButton: true,
+        timer: autoHide ? 5000 : undefined,
         timerProgressBar: true,
         didOpen: (toast) => {
             toast.addEventListener('mouseenter', Swal.stopTimer);

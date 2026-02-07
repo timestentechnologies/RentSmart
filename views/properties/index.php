@@ -781,11 +781,7 @@ ob_start();
 // showAlert is already defined in app.js with SweetAlert2, no need to redeclare
 
 const removeLoadingAlerts = () => {
-    document.querySelectorAll('.alert').forEach(alert => {
-        if (alert.textContent.includes('Loading')) {
-            alert.remove();
-        }
-    });
+    // SweetAlert2 toasts are not regular DOM .alert elements; avoid removing page banners.
 };
 
 // Global Variables

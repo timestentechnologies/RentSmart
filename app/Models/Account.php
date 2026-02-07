@@ -67,4 +67,21 @@ class Account extends Model
         $stmt->execute([$code]);
         return $stmt->fetch(\PDO::FETCH_ASSOC);
     }
+
+    public function findFirstByType(string $type)
+    {
+        $stmt = $this->db->prepare("SELECT * FROM accounts WHERE type = ? AND is_active = 1 ORDER BY code LIMIT 1");
+        $stmt->execute([$type]);
+        return $stmt->fetch(\PDO::FETCH_ASSOC);
+    }
+
+    public function ensureByCode(string $code, string $name, string $type)
+    {
+        $existing = $this->findByCode($code);
+        if ($existing) return $existing;
+
+        $ins = $this->db->prepare("INSERT INTO accounts (code,name,type) VALUES (?,?,?)");
+        $ins->execute([$code, $name, $type]);
+        return $this->findByCode($code);
+    }
 }
