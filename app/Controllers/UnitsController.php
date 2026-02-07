@@ -751,6 +751,7 @@ class UnitsController
             $created = 0;
             $updated = 0;
             $skippedLimit = 0;
+            $processed = 0;
             $userId = $_SESSION['user_id'];
 
             // Plan limits: enforce unit limit per subscription plan (same logic as store)
@@ -767,9 +768,13 @@ class UnitsController
                 elseif ($planName === 'enterprise') { $unitLimit = null; }
             }
 
+            $currentUnits = $this->unit->getAll($userId);
+            $unitCount = is_array($currentUnits) ? count($currentUnits) : 0;
+
             while (($row = fgetcsv($handle)) !== false) {
                 $data = array_combine($header, $row);
                 if (empty($data['unit_number'])) continue;
+                $processed++;
                 // Map property by name for simplicity
                 $propertyName = $data['property_name'] ?? '';
                 $property = null;
@@ -804,24 +809,36 @@ class UnitsController
                 } else {
                     // Enforce limit only for new creates
                     if ($unitLimit !== null) {
-                        $currentUnits = $this->unit->getAll($userId);
-                        $unitCount = is_array($currentUnits) ? count($currentUnits) : 0;
                         if ($unitCount >= $unitLimit) {
                             $skippedLimit++;
                             continue;
                         }
                     }
                     // Create new unit
-                    if ($this->unit->create($payload)) $created++;
+                    if ($this->unit->create($payload)) {
+                        $created++;
+                        $unitCount++;
+                    }
                 }
             }
             fclose($handle);
-            $message = [];
-            if ($created > 0) $message[] = "Created {$created}";
-            if ($updated > 0) $message[] = "Updated {$updated}";
-            if ($skippedLimit > 0) $message[] = "Skipped {$skippedLimit} (plan limit)";
-            $_SESSION['flash_message'] = count($message) > 0 ? implode(', ', $message) . ' units' : 'No units imported';
-            $_SESSION['flash_type'] = 'success';
+
+            $lines = [];
+            $lines[] = 'Units import summary:';
+            $lines[] = "Processed: {$processed}";
+            $lines[] = "Created: {$created}";
+            $lines[] = "Updated: {$updated}";
+            $lines[] = "Not imported (plan limit): {$skippedLimit}";
+            if ($unitLimit !== null) {
+                $remaining = max(0, (int)$unitLimit - (int)$unitCount);
+                $lines[] = "Plan limit: {$unitLimit}";
+                $lines[] = "Current units: {$unitCount}";
+                $lines[] = "Remaining slots: {$remaining}";
+            } else {
+                $lines[] = 'Plan limit: Unlimited';
+            }
+            $_SESSION['flash_message'] = implode("\n", $lines);
+            $_SESSION['flash_type'] = $skippedLimit > 0 ? 'warning' : 'success';
         } catch (\Exception $e) {
             $_SESSION['flash_message'] = 'Import failed: ' . $e->getMessage();
             $_SESSION['flash_type'] = 'danger';

@@ -2025,7 +2025,7 @@ ob_clean();
         Swal.fire({
           icon: '<?= $_SESSION['flash_type'] === 'success' ? 'success' : ($_SESSION['flash_type'] === 'danger' ? 'error' : $_SESSION['flash_type']) ?>',
           title: '<?= $_SESSION['flash_type'] === 'success' ? 'Success!' : 'Notice' ?>',
-          text: '<?= addslashes($_SESSION['flash_message']) ?>',
+          html: '<?= nl2br(addslashes($_SESSION['flash_message'])) ?>',
           confirmButtonText: 'OK',
           confirmButtonColor: '<?= $_SESSION['flash_type'] === 'success' ? '#198754' : '#dc3545' ?>'
         });
