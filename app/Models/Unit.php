@@ -269,10 +269,22 @@ class Unit extends Model
         $user = new User();
         $user->find($userId);
         
-        $sql = "SELECT u.*, p.name as property_name 
+        $sql = "SELECT u.*, 
+                       p.name as property_name,
+                       p.address,
+                       p.city,
+                       p.state,
+                       p.description as property_description
                 FROM units u
                 JOIN properties p ON u.property_id = p.id
-                WHERE u.status = 'vacant'";
+                LEFT JOIN leases l ON u.id = l.unit_id AND l.status = 'active'
+                WHERE (
+                    CASE 
+                        WHEN l.id IS NOT NULL AND l.status = 'active' AND CURRENT_DATE BETWEEN l.start_date AND l.end_date 
+                        THEN 'occupied'
+                        ELSE u.status
+                    END
+                ) = 'vacant'";
 
         $params = [];
         
@@ -309,10 +321,22 @@ class Unit extends Model
      */
     public function getVacantUnitsPublic()
     {
-        $sql = "SELECT u.*, p.name as property_name 
+        $sql = "SELECT u.*, 
+                       p.name as property_name,
+                       p.address,
+                       p.city,
+                       p.state,
+                       p.description as property_description
                 FROM units u
                 JOIN properties p ON u.property_id = p.id
-                WHERE u.status = 'vacant'
+                LEFT JOIN leases l ON u.id = l.unit_id AND l.status = 'active'
+                WHERE (
+                    CASE 
+                        WHEN l.id IS NOT NULL AND l.status = 'active' AND CURRENT_DATE BETWEEN l.start_date AND l.end_date 
+                        THEN 'occupied'
+                        ELSE u.status
+                    END
+                ) = 'vacant'
                 ORDER BY p.name, u.unit_number";
         $stmt = $this->db->prepare($sql);
         $stmt->execute();
