@@ -200,11 +200,21 @@ ob_start();
                                         $utilitiesDue = max((float)($tenant['utilities_due'] ?? 0), 0.0);
                                         $maintenanceDue = max((float)($tenant['maintenance_due'] ?? 0), 0.0);
                                         $balance = $rentDue + $utilitiesDue + $maintenanceDue;
-                                        $balanceClass = $balance > 0 ? 'text-danger' : 'text-success';
+                                        $balanceClass = $balance > 0 ? 'text-danger' : 'text-muted';
                                     ?>
                                     <span class="<?= $balanceClass ?>">
-                                        Ksh<?= number_format($balance, 2) ?>
-                                        <?= $balance > 0 ? '(Due)' : '(Paid)' ?>
+                                        <?php if ($balance > 0.009): ?>
+                                            <div>
+                                                <strong>Ksh<?= number_format($balance, 2) ?></strong> (Due)
+                                            </div>
+                                            <div class="small text-muted">
+                                                Rent: Ksh<?= number_format($rentDue, 2) ?><br>
+                                                Utilities: Ksh<?= number_format($utilitiesDue, 2) ?><br>
+                                                Maintenance: Ksh<?= number_format($maintenanceDue, 2) ?>
+                                            </div>
+                                        <?php else: ?>
+                                            -
+                                        <?php endif; ?>
                                     </span>
                                 </td>
                                 <td>
