@@ -17,6 +17,17 @@ class UtilityRatesController
         }
     }
 
+    private function ratesSupportPropertyScope(): bool
+    {
+        try {
+            $db = (new \App\Models\UtilityRate())->getDb();
+            $stmt = $db->query("SHOW COLUMNS FROM utility_rates LIKE 'property_id'");
+            return (bool)$stmt->fetch();
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
+
     public function index()
     {
         $rateModel = new UtilityRate();
@@ -61,6 +72,11 @@ class UtilityRatesController
 
         if ($this->ratesSupportUserScope() && !empty($_SESSION['user_id'])) {
             $data['user_id'] = (int)$_SESSION['user_id'];
+        }
+
+        if ($this->ratesSupportPropertyScope()) {
+            $propId = isset($_POST['property_id']) ? (int)$_POST['property_id'] : 0;
+            $data['property_id'] = $propId > 0 ? $propId : null;
         }
 
         $rateModel = new UtilityRate();

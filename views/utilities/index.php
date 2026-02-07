@@ -79,6 +79,7 @@ ob_start();
                                                     data-rate="<?= $rate['rate_per_unit'] ?>"
                                                     data-effective-from="<?= $rate['effective_from'] ?>"
                                                     data-effective-to="<?= $rate['effective_to'] ?>"
+                                                    data-property-id="<?= htmlspecialchars($rate['property_id'] ?? '') ?>"
                                                     data-bs-toggle="modal" data-bs-target="#editUtilityTypeModal">
                                                 <i class="bi bi-pencil"></i> Edit
                                             </button>
@@ -103,6 +104,15 @@ ob_start();
                         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                     <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Property</label>
+                            <select class="form-select" name="property_id" required>
+                                <option value="">Select Property</option>
+                                <?php foreach (($properties ?? []) as $p): ?>
+                                    <option value="<?= (int)$p['id'] ?>"><?= htmlspecialchars($p['name']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
                         <div class="mb-3">
                             <label class="form-label">Utility Type</label>
                             <input type="text" class="form-control" name="utility_type" required placeholder="e.g. Water, Electricity">
@@ -298,6 +308,15 @@ ob_start();
                 </div>
                 <div class="modal-body">
                     <input type="hidden" name="id" id="edit_id">
+                    <div class="mb-3">
+                        <label class="form-label">Property</label>
+                        <select class="form-select" name="property_id" id="edit_property_id" required>
+                            <option value="">Select Property</option>
+                            <?php foreach (($properties ?? []) as $p): ?>
+                                <option value="<?= (int)$p['id'] ?>"><?= htmlspecialchars($p['name']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
                     <div class="mb-3">
                         <label class="form-label">Utility Type</label>
                         <input type="text" class="form-control" name="utility_type" id="edit_utility_type" required>
@@ -656,6 +675,7 @@ const editBilling = document.getElementById('edit_billing_method');
 const editRate = document.getElementById('edit_rate_per_unit');
 const editFrom = document.getElementById('edit_effective_from');
 const editTo = document.getElementById('edit_effective_to');
+const editPropertyId = document.getElementById('edit_property_id');
 
 editBtns.forEach(btn => {
     btn.addEventListener('click', function() {
@@ -665,6 +685,9 @@ editBtns.forEach(btn => {
         editRate.value = this.dataset.rate;
         editFrom.value = this.dataset.effectiveFrom;
         editTo.value = this.dataset.effectiveTo;
+        if (editPropertyId) {
+            editPropertyId.value = this.dataset.propertyId || '';
+        }
     });
 });
 </script>

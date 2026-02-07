@@ -333,6 +333,7 @@ $routes = [
     'utilities' => ['controller' => 'UtilitiesController', 'action' => 'index'],
     'utilities/create' => ['controller' => 'UtilitiesController', 'action' => 'create'],
     'utilities/store' => ['controller' => 'UtilitiesController', 'action' => 'store'],
+    'utilities/types-by-property/(\d+)' => ['controller' => 'UtilitiesController', 'action' => 'typesByProperty'],
     'utilities/edit/(\d+)' => ['controller' => 'UtilitiesController', 'action' => 'edit'],
     'utilities/update/(\d+)' => ['controller' => 'UtilitiesController', 'action' => 'update'],
     'utilities/delete/(\d+)' => [
@@ -514,6 +515,7 @@ $protectedRoutes = [
     'utilities',
     'utilities/create',
     'utilities/store',
+    'utilities/types-by-property/(\d+)',
     'utilities/edit/(\d+)',
     'utilities/update/(\d+)',
     'utilities/delete/(\d+)',

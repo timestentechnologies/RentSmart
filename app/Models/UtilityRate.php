@@ -7,8 +7,26 @@ class UtilityRate extends Model
     protected $table = 'utility_rates';
     protected $primaryKey = 'id';
     protected $fillable = [
-        'utility_type', 'rate_per_unit', 'effective_from', 'effective_to', 'billing_method'
+        'utility_type', 'rate_per_unit', 'effective_from', 'effective_to', 'billing_method', 'property_id'
     ];
+
+    public function __construct()
+    {
+        parent::__construct();
+        $this->ensurePropertyColumn();
+    }
+
+    private function ensurePropertyColumn(): void
+    {
+        try {
+            $stmt = $this->db->query("SHOW COLUMNS FROM {$this->table} LIKE 'property_id'");
+            if ($stmt->rowCount() === 0) {
+                $this->db->exec("ALTER TABLE {$this->table} ADD COLUMN property_id INT NULL AFTER user_id");
+            }
+        } catch (\Exception $e) {
+            error_log('UtilityRate::ensurePropertyColumn error: ' . $e->getMessage());
+        }
+    }
 
     public function getCurrentRate($utilityType, $date = null)
     {

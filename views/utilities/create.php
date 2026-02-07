@@ -74,7 +74,7 @@ ob_start();
     </div>
 </div>
 <script>
-const utilityRates = <?php echo json_encode($utilityTypes); ?>;
+let utilityRates = <?php echo json_encode($utilityTypes); ?>;
 function getRateAndMethod(type) {
     return utilityRates.find(t => t.utility_type === type) || null;
 }
@@ -123,6 +123,7 @@ function calculateMeteredCost() {
   try {
     const form = document.getElementById("addUtilityForm");
     const unitSelect = document.getElementById("unit_id");
+    const typeSelect = document.getElementById('utility_type');
     if (!form || !unitSelect) return;
 
     const propWrap = document.createElement("div");
@@ -168,8 +169,55 @@ function calculateMeteredCost() {
     unitSelect.appendChild(unitPlaceholder);
     unitSelect.disabled = true;
 
+    if (typeSelect) {
+      typeSelect.disabled = true;
+      // keep existing placeholder, remove other options
+      [...typeSelect.querySelectorAll('option')].forEach((opt, idx) => {
+        if (idx !== 0) opt.remove();
+      });
+    }
+
     propSelect.addEventListener("change", async function(){
       const propId = this.value;
+
+      // Load allowed utility types for property owner
+      if (typeSelect) {
+        typeSelect.disabled = true;
+        // keep existing placeholder, remove other options
+        [...typeSelect.querySelectorAll('option')].forEach((opt, idx) => {
+          if (idx !== 0) opt.remove();
+        });
+        document.getElementById('metered_fields').style.display = 'none';
+        document.getElementById('cost_group').style.display = 'none';
+        document.getElementById('cost').value = '';
+
+        if (propId) {
+          try {
+            const resTypes = await fetch('<?= BASE_URL ?>/utilities/types-by-property/' + propId, {
+              headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            const typesData = await resTypes.json();
+            if (typesData && typesData.success && Array.isArray(typesData.types)) {
+              utilityRates = typesData.types;
+              typesData.types.forEach(function(t){
+                const opt = document.createElement('option');
+                opt.value = t.utility_type;
+                opt.textContent = t.utility_type + ' (' + (t.billing_method === 'metered' ? 'Metered' : 'Flat Rate') + ')';
+                opt.dataset.billingMethod = t.billing_method;
+                typeSelect.appendChild(opt);
+              });
+              typeSelect.disabled = false;
+            } else {
+              utilityRates = [];
+            }
+          } catch (e) {
+            utilityRates = [];
+          }
+        } else {
+          utilityRates = [];
+        }
+      }
+
       unitSelect.disabled = true;
       unitSelect.innerHTML = "";
       const loading = document.createElement("option");
