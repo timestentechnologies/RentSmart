@@ -6,6 +6,26 @@ class LedgerEntry extends Model
 {
     protected $table = 'journal_entries';
 
+    private function buildScopeFilter(?int $userId, array &$joins, array &$where, array &$params): void
+    {
+        if (!$userId) return;
+
+        $user = new User();
+        $userData = $user->find($userId);
+        $isAdmin = isset($userData['role']) && in_array($userData['role'], ['admin', 'administrator'], true);
+        if ($isAdmin) return;
+
+        // Scope to user's accessible properties OR entries posted directly to the user.
+        // Note: journal_entries.property_id may be NULL for global/user-only entries.
+        $joins[] = "LEFT JOIN properties pr ON je.property_id = pr.id";
+        $where[] = "(je.user_id = ? OR pr.owner_id = ? OR pr.manager_id = ? OR pr.agent_id = ? OR pr.caretaker_user_id = ?)";
+        $params[] = $userId;
+        $params[] = $userId;
+        $params[] = $userId;
+        $params[] = $userId;
+        $params[] = $userId;
+    }
+
     public function __construct()
     {
         parent::__construct();
@@ -96,13 +116,15 @@ class LedgerEntry extends Model
     {
         $where = [];
         $params = [];
-        if ($userId) { $where[] = 'je.user_id = ?'; $params[] = $userId; }
+        $joins = [];
+        $this->buildScopeFilter($userId ? (int)$userId : null, $joins, $where, $params);
         if ($startDate) { $where[] = 'je.entry_date >= ?'; $params[] = $startDate; }
         if ($endDate) { $where[] = 'je.entry_date <= ?'; $params[] = $endDate; }
         $whereSql = $where ? ('WHERE ' . implode(' AND ', $where)) : '';
+        $joinSql = $joins ? ("\n" . implode("\n", $joins)) : '';
         $sql = "SELECT je.*, a.code, a.name, a.type
                 FROM {$this->table} je
-                JOIN accounts a ON je.account_id = a.id
+                JOIN accounts a ON je.account_id = a.id" . $joinSql . "
                 $whereSql
                 ORDER BY je.entry_date ASC, je.id ASC";
         $stmt = $this->db->prepare($sql);
@@ -114,15 +136,17 @@ class LedgerEntry extends Model
     {
         $where = [];
         $params = [];
-        if ($userId) { $where[] = 'je.user_id = ?'; $params[] = $userId; }
+        $joins = [];
+        $this->buildScopeFilter($userId ? (int)$userId : null, $joins, $where, $params);
         if ($startDate) { $where[] = 'je.entry_date >= ?'; $params[] = $startDate; }
         if ($endDate) { $where[] = 'je.entry_date <= ?'; $params[] = $endDate; }
         $whereSql = $where ? ('WHERE ' . implode(' AND ', $where)) : '';
+        $joinSql = $joins ? ("\n" . implode("\n", $joins)) : '';
         $sql = "SELECT a.id, a.code, a.name, a.type,
                        SUM(je.debit) AS total_debit,
                        SUM(je.credit) AS total_credit
                 FROM {$this->table} je
-                JOIN accounts a ON je.account_id = a.id
+                JOIN accounts a ON je.account_id = a.id" . $joinSql . "
                 $whereSql
                 GROUP BY a.id, a.code, a.name, a.type
                 ORDER BY a.type, a.code";
@@ -150,16 +174,18 @@ class LedgerEntry extends Model
     {
         $where = [];
         $params = [];
-        if ($userId) { $where[] = 'je.user_id = ?'; $params[] = $userId; }
+        $joins = [];
+        $this->buildScopeFilter($userId ? (int)$userId : null, $joins, $where, $params);
         if ($type) { $where[] = 'a.type = ?'; $params[] = $type; }
         if ($startDate) { $where[] = 'je.entry_date >= ?'; $params[] = $startDate; }
         if ($endDate) { $where[] = 'je.entry_date <= ?'; $params[] = $endDate; }
         $whereSql = $where ? ('WHERE ' . implode(' AND ', $where)) : '';
+        $joinSql = $joins ? ("\n" . implode("\n", $joins)) : '';
         $sql = "SELECT a.id, a.code, a.name, a.type,
                        SUM(je.debit) AS total_debit,
                        SUM(je.credit) AS total_credit
                 FROM {$this->table} je
-                JOIN accounts a ON je.account_id = a.id
+                JOIN accounts a ON je.account_id = a.id" . $joinSql . "
                 $whereSql
                 GROUP BY a.id, a.code, a.name, a.type
                 ORDER BY a.code";
