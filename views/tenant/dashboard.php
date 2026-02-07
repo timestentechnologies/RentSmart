@@ -422,7 +422,7 @@
                                         </div>
                                         
                                         <?php if ($totalUtilities > 0): ?>
-                                            <button type="button" class="btn btn-info btn-sm w-100" onclick="openPaymentModal('utilities', <?= htmlspecialchars(json_encode($paymentMethods)) ?>)">
+                                            <button type="button" class="btn btn-info btn-sm w-100" onclick="openPaymentModal('utility', <?= htmlspecialchars(json_encode($paymentMethods)) ?>)">
                                                 <i class="bi bi-credit-card me-1"></i>Pay Utilities
                                             </button>
                                         <?php else: ?>
@@ -560,21 +560,22 @@
                     <tbody>
                     <?php if (!empty($rentPayments)): ?>
                         <?php foreach ($rentPayments as $payment): ?>
+                            <?php
+                                $rawType = strtolower((string)($payment['payment_type'] ?? 'rent'));
+                                $notes = (string)($payment['notes'] ?? '');
+                                $amount = (float)($payment['amount'] ?? 0);
+                                $isMaintChargeRow = ($rawType === 'rent' && $amount < 0 && $notes !== '' && preg_match('/MAINT-\d+/i', $notes));
+                                if ($isMaintChargeRow) {
+                                    continue;
+                                }
+                            ?>
                             <tr>
                                 <td><?php echo htmlspecialchars($payment['payment_date']); ?></td>
                                 <td>Ksh <?php echo number_format($payment['amount'], 2); ?></td>
                                 <td>
                                     <?php 
-                                    $rawType = strtolower((string)($payment['payment_type'] ?? 'rent'));
-                                    $notes = (string)($payment['notes'] ?? '');
-                                    $amount = (float)($payment['amount'] ?? 0);
                                     $hasUtility = !empty($payment['utility_id']) || !empty($payment['utility_type']);
-                                    $isMaint = ($rawType === 'rent' && $amount < 0 && $notes !== '' && preg_match('/MAINT-\d+/i', $notes));
                                     $isUtilByNotes = ($notes !== '' && preg_match('/\b(util|utility|water|electricity|gas|internet)\b/i', $notes));
-
-                                    if ($isMaint) {
-                                        continue;
-                                    }
 
                                     // Normalize type to avoid everything showing as rent
                                     if ($rawType === 'other' && ($notes !== '' && (stripos($notes, 'Maintenance payment:') !== false || preg_match('/MAINT-\d+/i', $notes)))) {
@@ -2292,7 +2293,8 @@ function openPaymentModal(type, paymentMethods = []) {
             document.getElementById('paymentAmount').value = totalRentAmount;
             summaryAmount.textContent = 'Ksh ' + totalRentAmount.toLocaleString();
         <?php endif; ?>
-    } else if (type === 'utilities') {
+    } else if (type === 'utility' || type === 'utilities') {
+        paymentTypeField.value = 'utility';
         summaryType.textContent = 'Utilities Payment';
         <?php if (!empty($utilities)): ?>
             <?php 
