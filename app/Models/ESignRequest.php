@@ -93,6 +93,25 @@ class ESignRequest extends Model
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
 
+    public function countSentByUser($userId)
+    {
+        $stmt = $this->db->prepare("SELECT COUNT(*) FROM {$this->table} WHERE requester_user_id = ?");
+        $stmt->execute([(int)$userId]);
+        return (int)$stmt->fetchColumn();
+    }
+
+    public function countPendingToSignForUser($userId)
+    {
+        $stmt = $this->db->prepare("SELECT COUNT(*)
+            FROM {$this->table}
+            WHERE recipient_type = 'user'
+              AND recipient_id = ?
+              AND status = 'pending'
+              AND (expires_at IS NULL OR expires_at >= NOW())");
+        $stmt->execute([(int)$userId]);
+        return (int)$stmt->fetchColumn();
+    }
+
     public function markSigned($token, $name, $image, $ip = null, $ua = null, $sigType = null, $initials = null)
     {
         $stmt = $this->db->prepare("UPDATE {$this->table} 

@@ -4,7 +4,13 @@ ob_start();
 <div class="container-fluid pt-4">
   <div class="card page-header mb-3">
     <div class="card-body d-flex justify-content-between align-items-center">
-      <h1 class="h4 mb-0"><i class="bi bi-pen text-primary me-2"></i>E‑Signatures</h1>
+      <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center gap-2">
+        <h1 class="h4 mb-0"><i class="bi bi-pen text-primary me-2"></i>E‑Signatures</h1>
+        <div class="d-flex gap-2">
+          <span class="badge bg-primary">Sent: <?= (int)($sentCount ?? 0) ?></span>
+          <span class="badge bg-warning text-dark">To sign: <?= (int)($toSignCount ?? 0) ?></span>
+        </div>
+      </div>
       <a href="<?= BASE_URL ?>/esign/create" class="btn btn-primary"><i class="bi bi-plus-lg me-1"></i>New Request</a>
     </div>
   </div>
