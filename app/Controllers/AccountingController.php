@@ -6,6 +6,7 @@ use App\Models\Account;
 use App\Models\LedgerEntry;
 use App\Models\Payment;
 use App\Models\Expense;
+use App\Models\User;
 
 class AccountingController
 {
@@ -94,7 +95,122 @@ class AccountingController
 
     public function statements()
     {
-        // Simple page with quick links to BS & P&L forms
+        $start = $_GET['start'] ?? date('Y-m-01');
+        $end = $_GET['end'] ?? date('Y-m-d');
+
+        $user = new User();
+        $userData = $this->userId ? $user->find($this->userId) : null;
+        $isAdmin = isset($userData['role']) && in_array($userData['role'], ['admin', 'administrator'], true);
+
+        $paymentModel = new Payment();
+        $expenseModel = new Expense();
+
+        $transactions = [];
+
+        // Money in: completed/verified payments within date range
+        $paySql = "SELECT p.id,
+                          p.payment_date AS txn_date,
+                          p.amount,
+                          p.payment_type,
+                          p.payment_method,
+                          p.reference_number,
+                          p.status,
+                          t.name AS tenant_name,
+                          u.unit_number,
+                          pr.name AS property_name
+                   FROM payments p
+                   JOIN leases l ON p.lease_id = l.id
+                   JOIN tenants t ON l.tenant_id = t.id
+                   JOIN units u ON l.unit_id = u.id
+                   JOIN properties pr ON u.property_id = pr.id
+                   WHERE p.status IN ('completed','verified')
+                     AND p.payment_date BETWEEN ? AND ?";
+        $payParams = [$start, $end];
+        if ($this->userId && !$isAdmin) {
+            $paySql .= " AND (pr.owner_id = ? OR pr.manager_id = ? OR pr.agent_id = ? OR pr.caretaker_user_id = ?)";
+            $payParams[] = $this->userId;
+            $payParams[] = $this->userId;
+            $payParams[] = $this->userId;
+            $payParams[] = $this->userId;
+        }
+        $paySql .= " ORDER BY p.payment_date ASC, p.id ASC";
+        $payments = $paymentModel->query($paySql, $payParams) ?: [];
+
+        foreach ($payments as $p) {
+            $transactions[] = [
+                'date' => $p['txn_date'] ?? null,
+                'direction' => 'in',
+                'source' => 'payment',
+                'reference' => !empty($p['reference_number']) ? (string)$p['reference_number'] : ('PAY-' . (int)($p['id'] ?? 0)),
+                'category' => ucfirst((string)($p['payment_type'] ?? 'payment')),
+                'description' => trim((string)($p['tenant_name'] ?? '') . ' | ' . (string)($p['property_name'] ?? '') . ' | Unit ' . (string)($p['unit_number'] ?? '')),
+                'amount' => (float)($p['amount'] ?? 0),
+                'id' => (int)($p['id'] ?? 0),
+            ];
+        }
+
+        // Money out: expenses within date range
+        $expSql = "SELECT e.id,
+                          e.expense_date AS txn_date,
+                          e.amount,
+                          e.category,
+                          e.payment_method,
+                          e.source_of_funds,
+                          e.notes,
+                          p.name AS property_name
+                   FROM expenses e
+                   LEFT JOIN properties p ON e.property_id = p.id
+                   WHERE e.expense_date BETWEEN ? AND ?";
+        $expParams = [$start, $end];
+
+        if ($this->userId && !$isAdmin) {
+            $propertyIds = $user->getAccessiblePropertyIds();
+            $expSql .= " AND (e.user_id = ?";
+            $expParams[] = $this->userId;
+            if (!empty($propertyIds)) {
+                $placeholders = implode(',', array_fill(0, count($propertyIds), '?'));
+                $expSql .= " OR e.property_id IN ($placeholders)";
+                $expParams = array_merge($expParams, $propertyIds);
+            }
+            $expSql .= ")";
+        }
+
+        $expSql .= " ORDER BY e.expense_date ASC, e.id ASC";
+        $expenses = $expenseModel->query($expSql, $expParams) ?: [];
+
+        foreach ($expenses as $e) {
+            $transactions[] = [
+                'date' => $e['txn_date'] ?? null,
+                'direction' => 'out',
+                'source' => 'expense',
+                'reference' => 'EXP-' . (int)($e['id'] ?? 0),
+                'category' => (string)($e['category'] ?? 'Expense'),
+                'description' => trim((string)($e['property_name'] ?? '') . (!empty($e['notes']) ? (' | ' . (string)$e['notes']) : '')),
+                'amount' => (float)($e['amount'] ?? 0),
+                'id' => (int)($e['id'] ?? 0),
+            ];
+        }
+
+        usort($transactions, function ($a, $b) {
+            $ad = $a['date'] ?? '';
+            $bd = $b['date'] ?? '';
+            if ($ad === $bd) {
+                return ((int)($a['id'] ?? 0)) <=> ((int)($b['id'] ?? 0));
+            }
+            return strcmp($ad, $bd);
+        });
+
+        $totalIn = 0.0;
+        $totalOut = 0.0;
+        foreach ($transactions as $t) {
+            if (($t['direction'] ?? '') === 'in') {
+                $totalIn += (float)($t['amount'] ?? 0);
+            } else {
+                $totalOut += (float)($t['amount'] ?? 0);
+            }
+        }
+        $net = $totalIn - $totalOut;
+
         require 'views/accounting/statements.php';
     }
 
