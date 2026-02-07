@@ -250,7 +250,7 @@ ob_start();
                                 </td>
                                 <td>
                                 <div class="btn-group">
-                                    <?php if (in_array($_SESSION['user_role'] ?? '', ['admin', 'agent', 'landlord'])): ?>
+                                    <?php if (in_array($_SESSION['user_role'] ?? '', ['admin', 'agent', 'landlord', 'manager'])): ?>
                                     <a href="<?= BASE_URL ?>/admin/tenants/login-as/<?= $tenant['id'] ?>" 
                                     class="btn btn-sm btn-outline-info" 
                                     title="Login as this tenant">

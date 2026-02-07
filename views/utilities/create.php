@@ -121,103 +121,6 @@ function calculateMeteredCost() {
 </script> <script>
 (function(){
   try {
-    const form = document.getElementById(''addUtilityForm'');
-    const unitSelect = document.getElementById(''unit_id'');
-    if (!form || !unitSelect) return;
-
-    // Build Property field
-    const propWrap = document.createElement(''div'');
-    propWrap.className = ''mb-3'';
-    const propLabel = document.createElement(''label'');
-    propLabel.setAttribute(''for'', ''property_id'');
-    propLabel.className = ''form-label'';
-    propLabel.textContent = ''Property'';
-    const propSelect = document.createElement(''select'');
-    propSelect.id = ''property_id'';
-    propSelect.name = ''property_id'';
-    propSelect.className = ''form-select'';
-    propSelect.required = true;
-    const optDefault = document.createElement(''option'');
-    optDefault.value = '';
-    optDefault.textContent = ''Select Property'';
-    propSelect.appendChild(optDefault);
-
-    const properties = <?php echo json_encode($properties); ?>;
-    (properties || []).forEach(function(p){
-      const o = document.createElement(''option'');
-      o.value = p.id;
-      o.textContent = p.name;
-      propSelect.appendChild(o);
-    });
-
-    propWrap.appendChild(propLabel);
-    propWrap.appendChild(propSelect);
-
-    // Insert before the Unit field block
-    const unitLabel = document.querySelector(''label[for="unit_id"]'');
-    const unitBlock = unitLabel ? unitLabel.closest(''.mb-3'') : (unitSelect.closest(''.mb-3'') || form.firstChild);
-    if (unitBlock && unitBlock.parentNode) {
-      unitBlock.parentNode.insertBefore(propWrap, unitBlock);
-    } else {
-      form.insertBefore(propWrap, form.firstChild);
-    }
-
-    // Initialize unit select
-    unitSelect.innerHTML = '';
-    const unitPlaceholder = document.createElement(''option'');
-    unitPlaceholder.value = '';
-    unitPlaceholder.textContent = ''Select Property first'';
-    unitSelect.appendChild(unitPlaceholder);
-    unitSelect.disabled = true;
-
-    // Fetch units when property changes
-    propSelect.addEventListener(''change'', async function(){
-      const propId = this.value;
-      unitSelect.disabled = true;
-      unitSelect.innerHTML = '';
-      const loading = document.createElement(''option'');
-      loading.value = '';
-      loading.textContent = propId ? ''Loading'' : ''Select Property first'';
-      unitSelect.appendChild(loading);
-      if (!propId) return;
-      try {
-        const res = await fetch('<?= BASE_URL ?>/properties/' + propId + '/units');
-        const data = await res.json();
-        unitSelect.innerHTML = '';
-        if (data && data.success && Array.isArray(data.units) && data.units.length) {
-          const def = document.createElement(''option'');
-          def.value = '';
-          def.textContent = ''Select Unit'';
-          unitSelect.appendChild(def);
-          data.units.forEach(function(u){
-            const opt = document.createElement(''option'');
-            opt.value = u.id;
-            opt.textContent = u.unit_number || (''Unit #'' + u.id);
-            unitSelect.appendChild(opt);
-          });
-          unitSelect.disabled = false;
-        } else {
-          const none = document.createElement(''option'');
-          none.value = '';
-          none.textContent = ''No units available'';
-          unitSelect.appendChild(none);
-          unitSelect.disabled = true;
-        }
-      } catch (e) {
-        unitSelect.innerHTML = '';
-        const err = document.createElement(''option'');
-        err.value = '';
-        err.textContent = ''Failed to load units'';
-        unitSelect.appendChild(err);
-        unitSelect.disabled = true;
-      }
-    });
-  } catch (e) {}
-})();
-</script>
-<script>
-(function(){
-  try {
     const form = document.getElementById("addUtilityForm");
     const unitSelect = document.getElementById("unit_id");
     if (!form || !unitSelect) return;
@@ -304,6 +207,14 @@ function calculateMeteredCost() {
         err.textContent = "Failed to load units";
         unitSelect.appendChild(err);
         unitSelect.disabled = true;
+      }
+    });
+
+    // Prevent double-submit
+    form.addEventListener('submit', function() {
+      const btn = form.querySelector('button[type="submit"]');
+      if (btn) {
+        btn.disabled = true;
       }
     });
 

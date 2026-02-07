@@ -53,14 +53,19 @@ class UtilitiesController
             $propertyIds = $userModel->getAccessiblePropertyIds();
             if (!empty($propertyIds)) {
                 // Fetch only utilities for these properties
-                $utilities = [];
+                $utilitiesById = [];
                 foreach ($propertyIds as $propertyId) {
                     $units = (new \App\Models\Unit())->where('property_id', $propertyId, $userId);
                     foreach ($units as $unit) {
                         $unitUtilities = $utilityModel->getUtilitiesByUnit($unit['id']);
-                        $utilities = array_merge($utilities, $unitUtilities);
+                        foreach ($unitUtilities as $u) {
+                            if (isset($u['id'])) {
+                                $utilitiesById[$u['id']] = $u;
+                            }
+                        }
                     }
                 }
+                $utilities = array_values($utilitiesById);
             } else {
                 $utilities = [];
             }
@@ -68,14 +73,19 @@ class UtilitiesController
         $utility_types = [];
         $utility_rates = [];
         $db = $rateModel->getDb();
-        if ($this->ratesSupportUserScope() && $userId) {
-            $stmt = $db->prepare("SELECT DISTINCT utility_type FROM utility_rates WHERE (user_id = ? OR user_id IS NULL) ORDER BY utility_type");
+        if ($this->ratesSupportUserScope() && $userId && !$userModel->isAdmin()) {
+            $stmt = $db->prepare("SELECT DISTINCT utility_type FROM utility_rates WHERE user_id = ? ORDER BY utility_type");
             $stmt->execute([$userId]);
             $utility_types = $stmt->fetchAll(\PDO::FETCH_COLUMN);
             foreach ($utility_types as $type) {
-                $stmtR = $db->prepare("SELECT * FROM utility_rates WHERE utility_type = ? AND (user_id = ? OR user_id IS NULL) ORDER BY (CASE WHEN user_id = ? THEN 0 ELSE 1 END), effective_from DESC");
-                $stmtR->execute([$type, $userId, $userId]);
+                $stmtR = $db->prepare("SELECT * FROM utility_rates WHERE utility_type = ? AND user_id = ? ORDER BY effective_from DESC");
+                $stmtR->execute([$type, $userId]);
                 $utility_rates[$type] = $stmtR->fetchAll(\PDO::FETCH_ASSOC);
+            }
+        } elseif ($this->ratesSupportUserScope() && $userId && $userModel->isAdmin()) {
+            $utility_types = $rateModel->getAllTypes();
+            foreach ($utility_types as $type) {
+                $utility_rates[$type] = $rateModel->getRatesByType($type);
             }
         } else {
             $utility_types = $rateModel->getAllTypes();
@@ -172,19 +182,28 @@ class UtilitiesController
         $utilityType = $_POST['utility_type'] ?? '';
         $userId = $_SESSION['user_id'] ?? null;
         $db = $rateModel->getDb();
-        if ($this->ratesSupportUserScope() && $userId) {
+        if ($this->ratesSupportUserScope() && $userId && !(new \App\Models\User())->find($userId) && false) {
+            // no-op
+        }
+
+        $userModel = new \App\Models\User();
+        $userModel->find($userId);
+
+        if ($this->ratesSupportUserScope() && $userId && !$userModel->isAdmin()) {
             $stmt = $db->prepare("
                 SELECT *
                 FROM utility_rates
                 WHERE utility_type = ?
                   AND effective_from <= CURDATE()
                   AND (effective_to IS NULL OR effective_to >= CURDATE())
-                  AND (user_id = ? OR user_id IS NULL)
-                ORDER BY (CASE WHEN user_id = ? THEN 0 ELSE 1 END), effective_from DESC
+                  AND user_id = ?
+                ORDER BY effective_from DESC
                 LIMIT 1
             ");
-            $stmt->execute([$utilityType, $userId, $userId]);
+            $stmt->execute([$utilityType, $userId]);
             $rateInfo = $stmt->fetch(\PDO::FETCH_ASSOC) ?: [];
+        } elseif ($this->ratesSupportUserScope() && $userId && $userModel->isAdmin()) {
+            $rateInfo = $rateModel->getCurrentRate($utilityType);
         } else {
             $rateInfo = $rateModel->getCurrentRate($utilityType);
         }
