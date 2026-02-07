@@ -882,6 +882,7 @@ class PropertyController
             $userId = $_SESSION['user_id'];
             $updated = 0;
             $skippedLimit = 0;
+            $processed = 0;
 
             // Plan limits: enforce property limit per subscription plan (same logic as create/store)
             $subModel = new Subscription();
@@ -896,9 +897,13 @@ class PropertyController
                 elseif ($planName === 'professional') { $propertyLimit = 50; }
                 elseif ($planName === 'enterprise') { $propertyLimit = null; }
             }
+
+            $currentProps = $this->property->getAll($userId);
+            $propCount = is_array($currentProps) ? count($currentProps) : 0;
             while (($row = fgetcsv($handle)) !== false) {
                 $data = array_combine($header, $row);
                 if (empty($data['name'])) continue;
+                $processed++;
                 
                 // Check if property exists by name
                 $existing = null;
@@ -928,8 +933,6 @@ class PropertyController
                 } else {
                     // Enforce limit only for new creates
                     if ($propertyLimit !== null) {
-                        $currentProps = $this->property->getAll($userId);
-                        $propCount = is_array($currentProps) ? count($currentProps) : 0;
                         if ($propCount >= $propertyLimit) {
                             $skippedLimit++;
                             continue;
@@ -940,16 +943,30 @@ class PropertyController
                     if ($this->user->isManager()) $payload['manager_id'] = $userId;
                     if ($this->user->isAgent()) $payload['agent_id'] = $userId;
                     $id = $this->property->create($payload);
-                    if ($id) $created++;
+                    if ($id) {
+                        $created++;
+                        $propCount++;
+                    }
                 }
             }
             fclose($handle);
-            $message = [];
-            if ($created > 0) $message[] = "Created {$created}";
-            if ($updated > 0) $message[] = "Updated {$updated}";
-            if ($skippedLimit > 0) $message[] = "Skipped {$skippedLimit} (plan limit)";
-            $_SESSION['flash_message'] = count($message) > 0 ? implode(', ', $message) . ' properties' : 'No properties imported';
-            $_SESSION['flash_type'] = 'success';
+
+            $lines = [];
+            $lines[] = 'Properties import summary:';
+            $lines[] = "Processed: {$processed}";
+            $lines[] = "Created: {$created}";
+            $lines[] = "Updated: {$updated}";
+            $lines[] = "Not imported (plan limit): {$skippedLimit}";
+            if ($propertyLimit !== null) {
+                $remaining = max(0, (int)$propertyLimit - (int)$propCount);
+                $lines[] = "Plan limit: {$propertyLimit}";
+                $lines[] = "Current properties: {$propCount}";
+                $lines[] = "Remaining slots: {$remaining}";
+            } else {
+                $lines[] = 'Plan limit: Unlimited';
+            }
+            $_SESSION['flash_message'] = implode("\n", $lines);
+            $_SESSION['flash_type'] = $skippedLimit > 0 ? 'warning' : 'success';
         } catch (\Exception $e) {
             $_SESSION['flash_message'] = 'Import failed: ' . $e->getMessage();
             $_SESSION['flash_type'] = 'danger';
