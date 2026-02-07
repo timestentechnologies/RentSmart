@@ -287,6 +287,7 @@ $routes = [
     'accounting/trialBalance' => ['controller' => 'AccountingController', 'action' => 'trialBalance'],
     'accounting/balance-sheet' => ['controller' => 'AccountingController', 'action' => 'balanceSheet'],
     'accounting/balanceSheet' => ['controller' => 'AccountingController', 'action' => 'balanceSheet'],
+    'accounting/profit-loss' => ['controller' => 'AccountingController', 'action' => 'profitLoss'],
     'accounting/profitLoss' => ['controller' => 'AccountingController', 'action' => 'profitLoss'],
     'accounting/statements' => ['controller' => 'AccountingController', 'action' => 'statements'],
     'accounting/backfillLedger' => ['controller' => 'AccountingController', 'action' => 'backfillLedger'],
