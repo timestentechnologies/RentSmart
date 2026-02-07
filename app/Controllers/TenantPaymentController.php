@@ -42,7 +42,10 @@ class TenantPaymentController
             $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
             
             $tenantId = $_SESSION['tenant_id'];
-            $paymentType = isset($_POST['payment_type']) ? trim($_POST['payment_type']) : '';
+            $paymentType = isset($_POST['payment_type']) ? strtolower(trim($_POST['payment_type'])) : '';
+            if ($paymentType === 'utilities') {
+                $paymentType = 'utility';
+            }
             $amount = isset($_POST['amount']) ? floatval($_POST['amount']) : 0;
             $paymentMethodId = isset($_POST['payment_method_id']) ? intval($_POST['payment_method_id']) : 0;
             
