@@ -281,7 +281,7 @@
                 <div class="card-body">
                     <div class="row g-3">
                         <!-- Rent Payment -->
-                        <div class="col-lg-6 col-md-12">
+                        <div class="col-lg-4 col-md-6 mb-3">
                             <div class="card h-100 payment-card" style="border-left: 4px solid #28a745 !important;">
                                 <div class="card-body">
                                     <div class="d-flex justify-content-between align-items-start mb-3">
