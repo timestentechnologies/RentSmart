@@ -2022,10 +2022,11 @@ ob_clean();
       
       // Flash message handler - Show SweetAlert2 modal for import success/error
       <?php if (isset($_SESSION['flash_message'])): ?>
+        const __flashHtml = <?= json_encode(nl2br((string)$_SESSION['flash_message'])) ?>;
         Swal.fire({
           icon: '<?= $_SESSION['flash_type'] === 'success' ? 'success' : ($_SESSION['flash_type'] === 'danger' ? 'error' : $_SESSION['flash_type']) ?>',
           title: '<?= $_SESSION['flash_type'] === 'success' ? 'Success!' : 'Notice' ?>',
-          html: '<?= nl2br(addslashes($_SESSION['flash_message'])) ?>',
+          html: __flashHtml,
           confirmButtonText: 'OK',
           confirmButtonColor: '<?= $_SESSION['flash_type'] === 'success' ? '#198754' : '#dc3545' ?>'
         });
