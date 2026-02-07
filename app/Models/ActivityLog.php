@@ -92,4 +92,30 @@ class ActivityLog extends Model
         $stmt->execute($params);
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
+
+    public function clearAll()
+    {
+        $stmt = $this->db->prepare("DELETE FROM {$this->table}");
+        $stmt->execute();
+        return (int)$stmt->rowCount();
+    }
+
+    public function clearForUserScope($userId)
+    {
+        $properties = (new Property())->getAll($userId);
+        $propertyIds = array_map(function ($p) { return (int)$p['id']; }, $properties);
+
+        if (!empty($propertyIds)) {
+            $in = implode(',', array_fill(0, count($propertyIds), '?'));
+            $sql = "DELETE FROM {$this->table} WHERE (property_id IN ($in) OR user_id = ?)";
+            $params = array_merge($propertyIds, [(int)$userId]);
+        } else {
+            $sql = "DELETE FROM {$this->table} WHERE user_id = ?";
+            $params = [(int)$userId];
+        }
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return (int)$stmt->rowCount();
+    }
 }

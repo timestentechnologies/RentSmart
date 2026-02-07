@@ -170,4 +170,39 @@ class LogsController
         }
         exit;
     }
+
+    public function clearAll()
+    {
+        try {
+            if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
+                throw new Exception('Invalid request');
+            }
+            if (!function_exists('verify_csrf_token') || !verify_csrf_token()) {
+                throw new Exception('Invalid CSRF token');
+            }
+
+            $userId = $_SESSION['user_id'];
+            $role = strtolower($_SESSION['user_role'] ?? '');
+            $isAdmin = in_array($role, ['admin','administrator']);
+
+            if (!$isAdmin) {
+                $isLandlord = ($role === 'landlord');
+                $sub = new Subscription();
+                $isEnterprise = $sub->isEnterprisePlan($userId);
+                if (!$isLandlord || !$isEnterprise) {
+                    $_SESSION['flash_message'] = 'Access denied';
+                    $_SESSION['flash_type'] = 'danger';
+                    redirect('/dashboard');
+                }
+            }
+
+            $deleted = $isAdmin ? $this->activityLog->clearAll() : $this->activityLog->clearForUserScope($userId);
+            $_SESSION['flash_message'] = "Deleted {$deleted} log entries";
+            $_SESSION['flash_type'] = 'success';
+        } catch (Exception $e) {
+            $_SESSION['flash_message'] = 'Failed to clear logs: ' . $e->getMessage();
+            $_SESSION['flash_type'] = 'danger';
+        }
+        redirect('/activity-logs');
+    }
 }

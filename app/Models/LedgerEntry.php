@@ -133,15 +133,14 @@ class LedgerEntry extends Model
             $debit = (float)($r['total_debit'] ?? 0);
             $credit = (float)($r['total_credit'] ?? 0);
             // Normal balances by account type
-            switch ($r['type']) {
-                case 'asset':
-                case 'expense':
-                    $r['balance_debit'] = max($debit - $credit, 0);
-                    $r['balance_credit'] = max($credit - $debit, 0);
-                    break;
-                default:
-                    $r['balance_debit'] = max($credit - $debit, 0) > 0 ? 0 : max($debit - $credit, 0);
-                    $r['balance_credit'] = max($credit - $debit, 0);
+            if (in_array(($r['type'] ?? ''), ['asset','expense'], true)) {
+                $net = $debit - $credit;
+                $r['balance_debit'] = max($net, 0);
+                $r['balance_credit'] = max(-$net, 0);
+            } else {
+                $net = $credit - $debit;
+                $r['balance_credit'] = max($net, 0);
+                $r['balance_debit'] = max(-$net, 0);
             }
         }
         return $rows;

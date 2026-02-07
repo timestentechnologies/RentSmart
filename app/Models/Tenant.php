@@ -426,8 +426,8 @@ class Tenant extends Model
             $sql = "SELECT 
                         t.*,
                         l.id as lease_id,
-                        l.start_date,
-                        l.end_date,
+                        l.start_date as lease_start,
+                        l.end_date as lease_end,
                         l.rent_amount,
                         l.status as lease_status,
                         u.unit_number,
@@ -444,8 +444,8 @@ class Tenant extends Model
             $sql = "SELECT 
                         t.*,
                         l.id as lease_id,
-                        l.start_date,
-                        l.end_date,
+                        l.start_date as lease_start,
+                        l.end_date as lease_end,
                         l.rent_amount,
                         l.status as lease_status,
                         u.unit_number,

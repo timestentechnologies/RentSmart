@@ -136,8 +136,20 @@ ob_start();
                                         <td><?= htmlspecialchars($tenant['name']) ?></td>
                                         <td><?= htmlspecialchars($tenant['property_name']) ?></td>
                                         <td><?= htmlspecialchars($tenant['unit_number']) ?></td>
-                                        <td><?= date('M j, Y', strtotime($tenant['lease_start'])) ?></td>
-                                        <td><?= date('M j, Y', strtotime($tenant['lease_end'])) ?></td>
+                                        <td>
+                                            <?php if (!empty($tenant['lease_start'])): ?>
+                                                <?= date('M j, Y', strtotime($tenant['lease_start'])) ?>
+                                            <?php else: ?>
+                                                -
+                                            <?php endif; ?>
+                                        </td>
+                                        <td>
+                                            <?php if (!empty($tenant['lease_end'])): ?>
+                                                <?= date('M j, Y', strtotime($tenant['lease_end'])) ?>
+                                            <?php else: ?>
+                                                -
+                                            <?php endif; ?>
+                                        </td>
                                         <td>Ksh<?= number_format($tenant['rent_amount'], 2) ?></td>
                                         <td>
                                             <?php if ($tenant['payment_status'] === 'paid'): ?>
