@@ -8,6 +8,8 @@ use App\Models\Property;
 use App\Models\Unit;
 use App\Models\Expense;
 use App\Models\Payment;
+use App\Models\Account;
+use App\Models\LedgerEntry;
 
 class MaintenanceController
 {
@@ -148,10 +150,55 @@ class MaintenanceController
                     'reference_id' => (int)$id,
                 ];
 
+                $expenseId = null;
                 if ($existing) {
                     $expenseModel->updateExpense((int)$existing['id'], $expenseData);
+                    $expenseId = (int)$existing['id'];
                 } else {
-                    $expenseModel->insertExpense($expenseData);
+                    $expenseId = (int)$expenseModel->insertExpense($expenseData);
+                }
+
+                // Auto-post expense to ledger (idempotent)
+                try {
+                    if ($expenseId) {
+                        $ledger = new LedgerEntry();
+                        if (!$ledger->referenceExists('expense', (int)$expenseId)) {
+                            $accModel = new Account();
+                            $cash = $accModel->findByCode('1000');
+                            $expAcc = $accModel->findByCode('5000');
+                            if ($cash && $expAcc) {
+                                $desc = 'Expense #' . (int)$expenseId . ' - ' . (string)($expenseData['category'] ?? 'expense');
+                                $date = $expenseData['expense_date'] ?? date('Y-m-d');
+                                $amount = (float)($expenseData['amount'] ?? 0);
+                                $propertyId = $expenseData['property_id'] ?? null;
+                                // Debit Expense, Credit Cash
+                                $ledger->post([
+                                    'entry_date' => $date,
+                                    'account_id' => (int)$expAcc['id'],
+                                    'description' => $desc,
+                                    'debit' => $amount,
+                                    'credit' => 0,
+                                    'user_id' => $userId,
+                                    'property_id' => $propertyId,
+                                    'reference_type' => 'expense',
+                                    'reference_id' => (int)$expenseId,
+                                ]);
+                                $ledger->post([
+                                    'entry_date' => $date,
+                                    'account_id' => (int)$cash['id'],
+                                    'description' => $desc,
+                                    'debit' => 0,
+                                    'credit' => $amount,
+                                    'user_id' => $userId,
+                                    'property_id' => $propertyId,
+                                    'reference_type' => 'expense',
+                                    'reference_id' => (int)$expenseId,
+                                ]);
+                            }
+                        }
+                    }
+                } catch (\Exception $le) {
+                    error_log('Maintenance expense ledger post failed: ' . $le->getMessage());
                 }
 
                 // 2) Handle tenant charge only: create a negative payment to increase tenant balance
