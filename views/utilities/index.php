@@ -83,6 +83,13 @@ ob_start();
                                                     data-bs-toggle="modal" data-bs-target="#editUtilityTypeModal">
                                                 <i class="bi bi-pencil"></i> Edit
                                             </button>
+
+                                            <form method="POST" action="<?= BASE_URL ?>/utility-rates/delete/<?= (int)$rate['id'] ?>" style="display:inline;">
+                                                <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+                                                <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this utility type/rate?');">
+                                                    <i class="bi bi-trash"></i> Delete
+                                                </button>
+                                            </form>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>

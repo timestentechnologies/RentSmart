@@ -88,4 +88,59 @@ class UtilityRatesController
         $_SESSION['success'] = 'Utility type/rate saved successfully';
         redirect('/utilities');
     }
-} 
+
+    public function delete($id)
+    {
+        if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
+            redirect('/utilities');
+        }
+
+        if (!function_exists('verify_csrf_token') || !verify_csrf_token()) {
+            $_SESSION['flash_message'] = 'Invalid security token';
+            $_SESSION['flash_type'] = 'danger';
+            redirect('/utilities');
+        }
+
+        $userId = $_SESSION['user_id'] ?? null;
+        if (!$userId) {
+            $_SESSION['flash_message'] = 'Unauthorized';
+            $_SESSION['flash_type'] = 'danger';
+            redirect('/login');
+        }
+
+        $userModel = new \App\Models\User();
+        $userModel->find($userId);
+
+        $rateModel = new UtilityRate();
+        $rate = $rateModel->find((int)$id);
+        if (!$rate) {
+            $_SESSION['flash_message'] = 'Utility type/rate not found';
+            $_SESSION['flash_type'] = 'danger';
+            redirect('/utilities');
+        }
+
+        // Access control
+        if (!$userModel->isAdmin()) {
+            // If user scoping exists, enforce ownership
+            if ($this->ratesSupportUserScope() && isset($rate['user_id']) && (int)$rate['user_id'] !== (int)$userId) {
+                $_SESSION['flash_message'] = 'Unauthorized';
+                $_SESSION['flash_type'] = 'danger';
+                redirect('/utilities');
+            }
+
+            // If property scoping exists, ensure property is accessible
+            if ($this->ratesSupportPropertyScope() && !empty($rate['property_id'])) {
+                $accessible = $userModel->getAccessiblePropertyIds();
+                if (!in_array((int)$rate['property_id'], $accessible)) {
+                    $_SESSION['flash_message'] = 'Unauthorized';
+                    $_SESSION['flash_type'] = 'danger';
+                    redirect('/utilities');
+                }
+            }
+        }
+
+        $rateModel->delete((int)$id);
+        $_SESSION['success'] = 'Utility type/rate deleted successfully';
+        redirect('/utilities');
+    }
+}
