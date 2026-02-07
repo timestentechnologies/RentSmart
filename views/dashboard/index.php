@@ -40,56 +40,59 @@ ob_start();
         </div>
     <?php endif; ?>
 
-    <!-- Stats Row -->
+    <!-- Money Summary -->
     <div class="row g-3 mb-4">
-        <!-- Total Revenue (net of rent-balance expenses) -->
-        <div class="col-md-3">
+        <div class="col-md-4">
             <div class="stat-card revenue">
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
-                        <h6 class="card-title">Total Revenue</h6>
-                        <h2 class="mt-3 mb-2">Ksh<?= number_format($totalRevenue, 2) ?></h2>
-                        <p class="mb-0">
-                            <?php if ($revenueGrowth > 0): ?>
-                                <i class="bi bi-arrow-up text-success"></i>
-                                <span class="text-success"><?= number_format($revenueGrowth, 1) ?>% from last month</span>
-                            <?php else: ?>
-                                <i class="bi bi-arrow-down text-danger"></i>
-                                <span class="text-danger"><?= number_format(abs($revenueGrowth), 1) ?>% from last month</span>
-                            <?php endif; ?>
-                        </p>
+                        <h6 class="card-title">Rent Balance Wallet</h6>
+                        <h2 class="mt-3 mb-2">Ksh<?= number_format($walletTotal ?? 0, 2) ?></h2>
+                        <div class="small text-muted">
+                            Received: Ksh<?= number_format($receivedTotal ?? 0, 2) ?><br>
+                            Deductions: Ksh<?= number_format($rentBalanceExpenses ?? 0, 2) ?><br>
+                            Rent: Ksh<?= number_format($rentReceived ?? 0, 2) ?><br>
+                            Utilities: Ksh<?= number_format($utilityReceived ?? 0, 2) ?><br>
+                            Maintenance: Ksh<?= number_format($maintenanceReceived ?? 0, 2) ?>
+                        </div>
                     </div>
                     <div class="stats-icon">
-                        <i class="bi bi-cash-stack fs-1 text-success opacity-25"></i>
+                        <i class="bi bi-wallet2 fs-1 text-success opacity-25"></i>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Occupancy Rate -->
-        <div class="col-md-3">
+        <div class="col-md-4">
             <div class="stat-card occupancy">
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
-                        <h6 class="card-title">Occupancy Rate</h6>
-                        <h2 class="mt-3 mb-2"><?= number_format($occupancyStats['occupancy_rate'], 1) ?>%</h2>
-                        <p class="mb-0"><?= $occupancyStats['occupied_units'] ?> of <?= $occupancyStats['total_units'] ?> units occupied</p>
+                        <h6 class="card-title">Expected to Receive</h6>
+                        <h2 class="mt-3 mb-2">Ksh<?= number_format($expectedTotal ?? 0, 2) ?></h2>
+                        <div class="small text-muted">
+                            Rent: Ksh<?= number_format($rentExpected ?? 0, 2) ?><br>
+                            Utilities: Ksh<?= number_format($utilityExpected ?? 0, 2) ?><br>
+                            Maintenance: Ksh<?= number_format($maintenanceExpected ?? 0, 2) ?>
+                        </div>
                     </div>
                     <div class="stats-icon">
-                        <i class="bi bi-person-check fs-1 text-primary opacity-25"></i>
+                        <i class="bi bi-graph-up-arrow fs-1 text-primary opacity-25"></i>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Outstanding Balance -->
-        <div class="col-md-3">
+        <div class="col-md-4">
             <div class="stat-card outstanding">
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
-                        <h6 class="card-title">Outstanding Balance</h6>
-                        <h2 class="mt-3 mb-2">Ksh<?= number_format($outstandingBalance, 2) ?></h2>
-                        <p class="mb-0">From <?= $outstandingTenants ?> tenants</p>
+                        <h6 class="card-title">Money Not Received</h6>
+                        <h2 class="mt-3 mb-2">Ksh<?= number_format($notReceivedTotal ?? 0, 2) ?></h2>
+                        <div class="small text-muted">
+                            Rent: Ksh<?= number_format($notReceivedRent ?? 0, 2) ?><br>
+                            Utilities: Ksh<?= number_format($notReceivedUtility ?? 0, 2) ?><br>
+                            Maintenance: Ksh<?= number_format($notReceivedMaintenance ?? 0, 2) ?>
+                        </div>
                     </div>
                     <div class="stats-icon">
                         <i class="bi bi-exclamation-circle fs-1 text-warning opacity-25"></i>
@@ -97,18 +100,65 @@ ob_start();
                 </div>
             </div>
         </div>
+    </div>
 
-        <!-- Total Expenses (This Month) -->
+    <!-- Quick Totals -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="stat-card occupancy">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="card-title">Total Properties</h6>
+                        <h2 class="mt-3 mb-2"><?= (int)($totalProperties ?? 0) ?></h2>
+                        <p class="mb-0 text-muted">Tracked properties</p>
+                    </div>
+                    <div class="stats-icon">
+                        <i class="bi bi-buildings fs-1 text-primary opacity-25"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="stat-card revenue">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="card-title">Total Tenants</h6>
+                        <h2 class="mt-3 mb-2"><?= (int)($totalTenants ?? 0) ?></h2>
+                        <p class="mb-0 text-muted">All tenants</p>
+                    </div>
+                    <div class="stats-icon">
+                        <i class="bi bi-people fs-1 text-success opacity-25"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="col-md-3">
             <div class="stat-card expenses">
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
-                        <h6 class="card-title">Total Expenses</h6>
-                        <h2 class="mt-3 mb-2 text-danger">Ksh<?= number_format($totalExpenses ?? 0, 2) ?></h2>
-                        <p class="mb-0">This month</p>
+                        <h6 class="card-title">Total Units</h6>
+                        <h2 class="mt-3 mb-2"><?= (int)($totalUnits ?? 0) ?></h2>
+                        <p class="mb-0 text-muted">All units</p>
                     </div>
                     <div class="stats-icon">
-                        <i class="bi bi-receipt fs-1 text-danger opacity-25"></i>
+                        <i class="bi bi-door-open fs-1 text-danger opacity-25"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="stat-card outstanding">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="card-title">Expiring (30 days)</h6>
+                        <h2 class="mt-3 mb-2"><?= (int)($totalExpiringLeases ?? 0) ?></h2>
+                        <p class="mb-0 text-muted">Leases ending soon</p>
+                    </div>
+                    <div class="stats-icon">
+                        <i class="bi bi-calendar-event fs-1 text-warning opacity-25"></i>
                     </div>
                 </div>
             </div>
