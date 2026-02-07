@@ -2,6 +2,12 @@
 ob_start();
 ?>
 <div class="container-fluid pt-4">
+    <div id="importLoadingOverlay" style="display:none; position:fixed; inset:0; background:rgba(255,255,255,0.85); z-index:2000;">
+        <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center;">
+            <div class="spinner-border text-primary" role="status" style="width:3rem; height:3rem;"></div>
+            <div class="mt-3 fw-semibold">Importing... Please wait</div>
+        </div>
+    </div>
     <!-- Page Header -->
     <div class="card page-header mb-4">
         <div class="card-body">
@@ -23,9 +29,9 @@ ob_start();
                         <i class="bi bi-file-earmark-pdf me-1"></i>PDF
                     </a>
                     <div class="vr d-none d-md-block"></div>
-                    <form action="<?= BASE_URL ?>/tenants/import" method="POST" enctype="multipart/form-data" class="d-flex align-items-center gap-2">
+                    <form action="<?= BASE_URL ?>/tenants/import" method="POST" enctype="multipart/form-data" class="d-flex align-items-center gap-2 import-form">
                         <input type="file" name="file" accept=".csv" class="form-control form-control-sm" required style="max-width: 200px;">
-                        <button type="submit" class="btn btn-sm btn-dark">
+                        <button type="submit" class="btn btn-sm btn-dark import-submit-btn">
                             <i class="bi bi-upload me-1"></i>Import
                         </button>
                     </form>
@@ -865,6 +871,17 @@ document.getElementById('confirmDeleteTenantBtn').onclick = function() {
         });
     });
 };
+
+document.querySelectorAll('form.import-form').forEach((form) => {
+    form.addEventListener('submit', () => {
+        const overlay = document.getElementById('importLoadingOverlay');
+        if (overlay) overlay.style.display = 'block';
+        const btn = form.querySelector('.import-submit-btn');
+        if (btn) {
+            btn.disabled = true;
+        }
+    });
+});
 </script>
 <?php
 $content = ob_get_clean();
