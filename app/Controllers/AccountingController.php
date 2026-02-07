@@ -789,13 +789,11 @@ class AccountingController
             }
             $userId = (int)($_SESSION['user_id'] ?? 0);
             $acc = new Account();
-            $cash = $acc->findByCode('1000');
-            $ar = $acc->findByCode('1100');
-            $rev = $acc->findByCode('4000');
-            $expAcc = $acc->findByCode('5000');
-            if (!$cash || !$rev || !$expAcc || !$ar) {
-                throw new \Exception('Missing default accounts. Ensure accounts 1000, 1100, 4000, 5000 exist.');
-            }
+            $cash = $acc->findByCode('1000') ?: $acc->ensureByCode('1000', 'Cash', 'asset');
+            $ar = $acc->findByCode('1100') ?: $acc->ensureByCode('1100', 'Accounts Receivable', 'asset');
+            $rev = $acc->findByCode('4000') ?: $acc->ensureByCode('4000', 'Rental Income', 'revenue');
+            $maintExpAcc = $acc->findByCode('5000') ?: $acc->ensureByCode('5000', 'Maintenance Expense', 'expense');
+            $payrollExpAcc = $acc->findByCode('5100') ?: $acc->ensureByCode('5100', 'Payroll Expense', 'expense');
 
             $ledger = new LedgerEntry();
             $pay = new Payment();
@@ -861,6 +859,8 @@ class AccountingController
                 $date = $e['expense_date'] ?? date('Y-m-d');
                 $desc = 'Expense #' . $eid . ' - ' . (string)($e['category'] ?? 'expense');
                 $propertyId = !empty($e['property_id']) ? (int)$e['property_id'] : null;
+                $category = strtolower(trim((string)($e['category'] ?? '')));
+                $expAcc = ($category === 'payroll') ? $payrollExpAcc : $maintExpAcc;
                 // Debit Expense, Credit Cash
                 $ledger->post([
                     'entry_date' => $date,
@@ -885,6 +885,15 @@ class AccountingController
                     'reference_id' => $eid,
                 ]);
                 $countExp++;
+            }
+
+            // Reclass: payroll expenses previously posted to maintenance expense account
+            try {
+                $db = $ledger->getDb();
+                $sql = "UPDATE journal_entries je\n                        JOIN expenses e ON je.reference_type = 'expense' AND je.reference_id = e.id\n                        SET je.account_id = ?\n                        WHERE LOWER(TRIM(e.category)) = 'payroll'\n                          AND je.debit > 0\n                          AND je.account_id = ?";
+                $stmt = $db->prepare($sql);
+                $stmt->execute([(int)$payrollExpAcc['id'], (int)$maintExpAcc['id']]);
+            } catch (\Exception $reclassErr) {
             }
 
             $_SESSION['flash_message'] = 'Ledger backfill complete. Posted ' . $countPay . ' payment(s) and ' . $countExp . ' expense(s).';

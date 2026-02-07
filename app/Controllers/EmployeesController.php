@@ -275,19 +275,13 @@ class EmployeesController
                             if (!$cash) {
                                 $cash = $accModel->findFirstByType('asset');
                             }
-                            // Prefer a dedicated payroll expense account code; otherwise use existing 5000 or first expense
+                            // Prefer a dedicated payroll expense account code
                             $payrollAcc = $accModel->findByCode('5100');
                             if (!$payrollAcc) {
-                                $payrollAcc = $accModel->findByCode('5000');
-                            }
-                            if (!$payrollAcc) {
-                                $payrollAcc = $accModel->findFirstByType('expense');
+                                $payrollAcc = $accModel->ensureByCode('5100', 'Payroll Expense', 'expense');
                             }
                             if (!$cash) {
                                 $cash = $accModel->ensureByCode('1000', 'Cash', 'asset');
-                            }
-                            if (!$payrollAcc) {
-                                $payrollAcc = $accModel->ensureByCode('5100', 'Payroll Expense', 'expense');
                             }
 
                             if ($cash && $payrollAcc) {
