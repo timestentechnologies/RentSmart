@@ -5,11 +5,15 @@ ob_start();
   <div class="card page-header mb-3">
     <div class="card-body d-flex justify-content-between align-items-center">
       <h1 class="h4 mb-0"><i class="bi bi-journal-check text-primary me-2"></i>General Ledger</h1>
-      <form class="d-flex gap-2" method="get" action="<?= BASE_URL ?>/accounting/ledger">
-        <input type="date" class="form-control" name="start" value="<?= htmlspecialchars($_GET['start'] ?? '') ?>" placeholder="Start">
-        <input type="date" class="form-control" name="end" value="<?= htmlspecialchars($_GET['end'] ?? '') ?>" placeholder="End">
-        <button class="btn btn-outline-primary" type="submit">Filter</button>
-      </form>
+      <div class="d-flex gap-2 align-items-center">
+        <a class="btn btn-outline-secondary" href="<?= BASE_URL ?>/accounting/ledger/export-csv?start=<?= urlencode($_GET['start'] ?? '') ?>&end=<?= urlencode($_GET['end'] ?? '') ?>">Export Excel</a>
+        <a class="btn btn-outline-secondary" href="<?= BASE_URL ?>/accounting/ledger/export-pdf?start=<?= urlencode($_GET['start'] ?? '') ?>&end=<?= urlencode($_GET['end'] ?? '') ?>">Export PDF</a>
+        <form class="d-flex gap-2" method="get" action="<?= BASE_URL ?>/accounting/ledger">
+          <input type="date" class="form-control" name="start" value="<?= htmlspecialchars($_GET['start'] ?? '') ?>" placeholder="Start">
+          <input type="date" class="form-control" name="end" value="<?= htmlspecialchars($_GET['end'] ?? '') ?>" placeholder="End">
+          <button class="btn btn-outline-primary" type="submit">Filter</button>
+        </form>
+      </div>
     </div>
   </div>
   <div class="card">

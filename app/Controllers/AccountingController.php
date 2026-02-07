@@ -7,12 +7,54 @@ use App\Models\LedgerEntry;
 use App\Models\Payment;
 use App\Models\Expense;
 use App\Models\User;
+use App\Models\Setting;
 use Dompdf\Dompdf;
 use Dompdf\Options;
 
 class AccountingController
 {
     private $userId;
+
+    private function getLogoDataUri(): ?string
+    {
+        try {
+            $settingsModel = new Setting();
+            $settings = $settingsModel->getAllAsAssoc();
+            $logo = $settings['site_logo'] ?? '';
+
+            $publicPath = realpath(__DIR__ . '/../../public');
+            if (!$publicPath) return null;
+
+            $path = null;
+            if (!empty($logo)) {
+                $candidate = $publicPath . DIRECTORY_SEPARATOR . 'assets' . DIRECTORY_SEPARATOR . 'images' . DIRECTORY_SEPARATOR . $logo;
+                if (is_file($candidate)) {
+                    $path = $candidate;
+                }
+            }
+            if (!$path) {
+                $fallbackSvg = $publicPath . DIRECTORY_SEPARATOR . 'assets' . DIRECTORY_SEPARATOR . 'images' . DIRECTORY_SEPARATOR . 'logo.svg';
+                if (is_file($fallbackSvg)) {
+                    $path = $fallbackSvg;
+                }
+            }
+            if (!$path) return null;
+
+            $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+            $mime = 'image/png';
+            if ($ext === 'jpg' || $ext === 'jpeg') $mime = 'image/jpeg';
+            if ($ext === 'gif') $mime = 'image/gif';
+            if ($ext === 'webp') $mime = 'image/webp';
+            if ($ext === 'svg') $mime = 'image/svg+xml';
+
+            $bytes = @file_get_contents($path);
+            if ($bytes === false) return null;
+
+            return 'data:' . $mime . ';base64,' . base64_encode($bytes);
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
 
     private function buildStatementData(string $start, string $end): array
     {
@@ -273,6 +315,8 @@ class AccountingController
         $end = $_GET['end'] ?? date('Y-m-d');
         $data = $this->buildStatementData($start, $end);
 
+        $logoDataUri = $this->getLogoDataUri();
+
         $rowsHtml = '';
         foreach (($data['transactions'] ?? []) as $t) {
             $in = ($t['direction'] ?? '') === 'in' ? (float)($t['amount'] ?? 0) : 0.0;
@@ -287,6 +331,14 @@ class AccountingController
                 . '</tr>';
         }
 
+        $headerHtml = '';
+        if ($logoDataUri) {
+            $headerHtml = '<div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">'
+                . '<img src="' . $logoDataUri . '" style="height:40px;" />'
+                . '<div style="font-size:16px; font-weight:bold;">Statement</div>'
+                . '</div>';
+        }
+
         $html = '<html><head><meta charset="utf-8">'
             . '<style>'
             . 'body{font-family: DejaVu Sans, sans-serif; font-size:12px; color:#111;}'
@@ -298,6 +350,7 @@ class AccountingController
             . '.totals td{font-weight:bold; background:#fafafa;}'
             . '</style>'
             . '</head><body>'
+            . $headerHtml
             . '<h2>Statement of Money In / Money Out</h2>'
             . '<div class="meta">Period: ' . htmlspecialchars($data['start']) . ' to ' . htmlspecialchars($data['end']) . '</div>'
             . '<div class="meta">Money In: ' . number_format((float)($data['totalIn'] ?? 0), 2) . ' | Money Out: ' . number_format((float)($data['totalOut'] ?? 0), 2) . ' | Net: ' . number_format((float)($data['net'] ?? 0), 2) . '</div>'
@@ -329,6 +382,397 @@ class AccountingController
         $dompdf->render();
 
         $filename = 'statements_' . $data['start'] . '_to_' . $data['end'] . '.pdf';
+        $dompdf->stream($filename, ['Attachment' => true]);
+        exit;
+    }
+
+    public function exportLedgerCsv()
+    {
+        $start = $_GET['start'] ?? null;
+        $end = $_GET['end'] ?? null;
+        $ledger = new LedgerEntry();
+        $rows = $ledger->getGeneralLedger($this->userId, $start ?: null, $end ?: null);
+
+        $filename = 'general_ledger' . ($start ? ('_' . $start) : '') . ($end ? ('_to_' . $end) : '') . '.csv';
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+
+        $out = fopen('php://output', 'w');
+        fputcsv($out, ['Date', 'Account', 'Description', 'Debit', 'Credit']);
+        foreach (($rows ?? []) as $r) {
+            fputcsv($out, [
+                $r['entry_date'] ?? '',
+                trim((string)($r['code'] ?? '') . ' - ' . (string)($r['name'] ?? '')),
+                $r['description'] ?? '',
+                number_format((float)($r['debit'] ?? 0), 2, '.', ''),
+                number_format((float)($r['credit'] ?? 0), 2, '.', ''),
+            ]);
+        }
+        fclose($out);
+        exit;
+    }
+
+    public function exportLedgerPdf()
+    {
+        $start = $_GET['start'] ?? null;
+        $end = $_GET['end'] ?? null;
+        $ledger = new LedgerEntry();
+        $rows = $ledger->getGeneralLedger($this->userId, $start ?: null, $end ?: null);
+
+        $logoDataUri = $this->getLogoDataUri();
+        $headerHtml = $logoDataUri
+            ? '<div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">'
+                . '<img src="' . $logoDataUri . '" style="height:40px;" />'
+                . '<div style="font-size:16px; font-weight:bold;">General Ledger</div>'
+                . '</div>'
+            : '<div style="font-size:16px; font-weight:bold; margin-bottom:10px;">General Ledger</div>';
+
+        $period = '';
+        if ($start || $end) {
+            $period = '<div style="color:#555; margin-bottom:10px;">Period: ' . htmlspecialchars((string)$start) . ' to ' . htmlspecialchars((string)$end) . '</div>';
+        }
+
+        $bodyRows = '';
+        foreach (($rows ?? []) as $r) {
+            $bodyRows .= '<tr>'
+                . '<td>' . htmlspecialchars((string)($r['entry_date'] ?? '')) . '</td>'
+                . '<td>' . htmlspecialchars(trim((string)($r['code'] ?? '') . ' - ' . (string)($r['name'] ?? ''))) . '</td>'
+                . '<td>' . htmlspecialchars((string)($r['description'] ?? '')) . '</td>'
+                . '<td style="text-align:right">' . number_format((float)($r['debit'] ?? 0), 2) . '</td>'
+                . '<td style="text-align:right">' . number_format((float)($r['credit'] ?? 0), 2) . '</td>'
+                . '</tr>';
+        }
+
+        $html = '<html><head><meta charset="utf-8">'
+            . '<style>'
+            . 'body{font-family: DejaVu Sans, sans-serif; font-size:11px; color:#111;}'
+            . 'table{width:100%; border-collapse:collapse;}'
+            . 'th,td{border:1px solid #ddd; padding:6px; vertical-align:top;}'
+            . 'th{background:#f3f5f7; text-align:left;}'
+            . '</style>'
+            . '</head><body>'
+            . $headerHtml
+            . $period
+            . '<table>'
+            . '<thead><tr>'
+            . '<th style="width:12%">Date</th>'
+            . '<th style="width:22%">Account</th>'
+            . '<th>Description</th>'
+            . '<th style="width:12%; text-align:right">Debit</th>'
+            . '<th style="width:12%; text-align:right">Credit</th>'
+            . '</tr></thead>'
+            . '<tbody>'
+            . ($bodyRows !== '' ? $bodyRows : '<tr><td colspan="5" style="text-align:center; color:#777; padding:14px;">No entries</td></tr>')
+            . '</tbody>'
+            . '</table>'
+            . '</body></html>';
+
+        $options = new Options();
+        $options->set('isRemoteEnabled', true);
+        $dompdf = new Dompdf($options);
+        $dompdf->setPaper('A4', 'landscape');
+        $dompdf->loadHtml($html);
+        $dompdf->render();
+        $filename = 'general_ledger.pdf';
+        $dompdf->stream($filename, ['Attachment' => true]);
+        exit;
+    }
+
+    public function exportTrialBalanceCsv()
+    {
+        $start = $_GET['start'] ?? null;
+        $end = $_GET['end'] ?? null;
+        $ledger = new LedgerEntry();
+        $rows = $ledger->getTrialBalance($this->userId, $start ?: null, $end ?: null);
+
+        $filename = 'trial_balance' . ($start ? ('_' . $start) : '') . ($end ? ('_to_' . $end) : '') . '.csv';
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+
+        $out = fopen('php://output', 'w');
+        fputcsv($out, ['Code', 'Name', 'Type', 'Total Debit', 'Total Credit', 'Balance (Dr)', 'Balance (Cr)']);
+        foreach (($rows ?? []) as $r) {
+            fputcsv($out, [
+                $r['code'] ?? '',
+                $r['name'] ?? '',
+                $r['type'] ?? '',
+                number_format((float)($r['total_debit'] ?? 0), 2, '.', ''),
+                number_format((float)($r['total_credit'] ?? 0), 2, '.', ''),
+                number_format((float)($r['balance_debit'] ?? 0), 2, '.', ''),
+                number_format((float)($r['balance_credit'] ?? 0), 2, '.', ''),
+            ]);
+        }
+        fclose($out);
+        exit;
+    }
+
+    public function exportTrialBalancePdf()
+    {
+        $start = $_GET['start'] ?? null;
+        $end = $_GET['end'] ?? null;
+        $ledger = new LedgerEntry();
+        $rows = $ledger->getTrialBalance($this->userId, $start ?: null, $end ?: null);
+
+        $logoDataUri = $this->getLogoDataUri();
+        $headerHtml = $logoDataUri
+            ? '<div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">'
+                . '<img src="' . $logoDataUri . '" style="height:40px;" />'
+                . '<div style="font-size:16px; font-weight:bold;">Trial Balance</div>'
+                . '</div>'
+            : '<div style="font-size:16px; font-weight:bold; margin-bottom:10px;">Trial Balance</div>';
+
+        $period = '';
+        if ($start || $end) {
+            $period = '<div style="color:#555; margin-bottom:10px;">Period: ' . htmlspecialchars((string)$start) . ' to ' . htmlspecialchars((string)$end) . '</div>';
+        }
+
+        $bodyRows = '';
+        foreach (($rows ?? []) as $r) {
+            $bodyRows .= '<tr>'
+                . '<td>' . htmlspecialchars((string)($r['code'] ?? '')) . '</td>'
+                . '<td>' . htmlspecialchars((string)($r['name'] ?? '')) . '</td>'
+                . '<td>' . htmlspecialchars((string)($r['type'] ?? '')) . '</td>'
+                . '<td style="text-align:right">' . number_format((float)($r['total_debit'] ?? 0), 2) . '</td>'
+                . '<td style="text-align:right">' . number_format((float)($r['total_credit'] ?? 0), 2) . '</td>'
+                . '<td style="text-align:right">' . number_format((float)($r['balance_debit'] ?? 0), 2) . '</td>'
+                . '<td style="text-align:right">' . number_format((float)($r['balance_credit'] ?? 0), 2) . '</td>'
+                . '</tr>';
+        }
+
+        $html = '<html><head><meta charset="utf-8">'
+            . '<style>'
+            . 'body{font-family: DejaVu Sans, sans-serif; font-size:11px; color:#111;}'
+            . 'table{width:100%; border-collapse:collapse;}'
+            . 'th,td{border:1px solid #ddd; padding:6px; vertical-align:top;}'
+            . 'th{background:#f3f5f7; text-align:left;}'
+            . '</style>'
+            . '</head><body>'
+            . $headerHtml
+            . $period
+            . '<table>'
+            . '<thead><tr>'
+            . '<th style="width:8%">Code</th>'
+            . '<th style="width:22%">Name</th>'
+            . '<th style="width:12%">Type</th>'
+            . '<th style="width:14%; text-align:right">Total Debit</th>'
+            . '<th style="width:14%; text-align:right">Total Credit</th>'
+            . '<th style="width:15%; text-align:right">Balance (Dr)</th>'
+            . '<th style="width:15%; text-align:right">Balance (Cr)</th>'
+            . '</tr></thead>'
+            . '<tbody>'
+            . ($bodyRows !== '' ? $bodyRows : '<tr><td colspan="7" style="text-align:center; color:#777; padding:14px;">No data</td></tr>')
+            . '</tbody>'
+            . '</table>'
+            . '</body></html>';
+
+        $options = new Options();
+        $options->set('isRemoteEnabled', true);
+        $dompdf = new Dompdf($options);
+        $dompdf->setPaper('A4', 'landscape');
+        $dompdf->loadHtml($html);
+        $dompdf->render();
+        $filename = 'trial_balance.pdf';
+        $dompdf->stream($filename, ['Attachment' => true]);
+        exit;
+    }
+
+    public function exportProfitLossCsv()
+    {
+        $start = $_GET['start'] ?? date('Y-m-01');
+        $end = $_GET['end'] ?? date('Y-m-d');
+        $ledger = new LedgerEntry();
+        $revenue = $ledger->getBalancesByType($this->userId, 'revenue', $start, $end);
+        $expenses = $ledger->getBalancesByType($this->userId, 'expense', $start, $end);
+        $net = (float)($revenue['total'] ?? 0) - (float)($expenses['total'] ?? 0);
+
+        $filename = 'profit_loss_' . $start . '_to_' . $end . '.csv';
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+
+        $out = fopen('php://output', 'w');
+        fputcsv($out, ['Profit & Loss']);
+        fputcsv($out, ['Period', $start . ' to ' . $end]);
+        fputcsv($out, []);
+        fputcsv($out, ['Revenue']);
+        fputcsv($out, ['Code', 'Name', 'Amount']);
+        foreach (($revenue['rows'] ?? []) as $r) {
+            fputcsv($out, [$r['code'] ?? '', $r['name'] ?? '', number_format((float)($r['balance'] ?? 0), 2, '.', '')]);
+        }
+        fputcsv($out, ['', 'Total Revenue', number_format((float)($revenue['total'] ?? 0), 2, '.', '')]);
+        fputcsv($out, []);
+        fputcsv($out, ['Expenses']);
+        fputcsv($out, ['Code', 'Name', 'Amount']);
+        foreach (($expenses['rows'] ?? []) as $r) {
+            fputcsv($out, [$r['code'] ?? '', $r['name'] ?? '', number_format((float)($r['balance'] ?? 0), 2, '.', '')]);
+        }
+        fputcsv($out, ['', 'Total Expenses', number_format((float)($expenses['total'] ?? 0), 2, '.', '')]);
+        fputcsv($out, []);
+        fputcsv($out, ['', 'Net Income', number_format((float)$net, 2, '.', '')]);
+        fclose($out);
+        exit;
+    }
+
+    public function exportProfitLossPdf()
+    {
+        $start = $_GET['start'] ?? date('Y-m-01');
+        $end = $_GET['end'] ?? date('Y-m-d');
+        $ledger = new LedgerEntry();
+        $revenue = $ledger->getBalancesByType($this->userId, 'revenue', $start, $end);
+        $expenses = $ledger->getBalancesByType($this->userId, 'expense', $start, $end);
+        $net = (float)($revenue['total'] ?? 0) - (float)($expenses['total'] ?? 0);
+
+        $logoDataUri = $this->getLogoDataUri();
+        $headerHtml = $logoDataUri
+            ? '<div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">'
+                . '<img src="' . $logoDataUri . '" style="height:40px;" />'
+                . '<div style="font-size:16px; font-weight:bold;">Profit &amp; Loss</div>'
+                . '</div>'
+            : '<div style="font-size:16px; font-weight:bold; margin-bottom:10px;">Profit &amp; Loss</div>';
+
+        $revRows = '';
+        foreach (($revenue['rows'] ?? []) as $r) {
+            $revRows .= '<tr><td>' . htmlspecialchars($r['code'] . ' - ' . $r['name']) . '</td><td style="text-align:right">' . number_format((float)$r['balance'], 2) . '</td></tr>';
+        }
+        $expRows = '';
+        foreach (($expenses['rows'] ?? []) as $r) {
+            $expRows .= '<tr><td>' . htmlspecialchars($r['code'] . ' - ' . $r['name']) . '</td><td style="text-align:right">' . number_format((float)$r['balance'], 2) . '</td></tr>';
+        }
+
+        $html = '<html><head><meta charset="utf-8">'
+            . '<style>'
+            . 'body{font-family: DejaVu Sans, sans-serif; font-size:12px; color:#111;}'
+            . '.meta{color:#555; margin-bottom:10px;}'
+            . 'table{width:100%; border-collapse:collapse; margin-bottom:12px;}'
+            . 'th,td{border:1px solid #ddd; padding:6px; vertical-align:top;}'
+            . 'th{background:#f3f5f7; text-align:left;}'
+            . '.tot td{font-weight:bold; background:#fafafa;}'
+            . '</style>'
+            . '</head><body>'
+            . $headerHtml
+            . '<div class="meta">Period: ' . htmlspecialchars($start) . ' to ' . htmlspecialchars($end) . '</div>'
+            . '<table><thead><tr><th>Revenue</th><th style="text-align:right">Amount</th></tr></thead><tbody>'
+            . ($revRows !== '' ? $revRows : '<tr><td colspan="2" style="text-align:center; color:#777; padding:14px;">No revenue</td></tr>')
+            . '<tr class="tot"><td>Total Revenue</td><td style="text-align:right">' . number_format((float)($revenue['total'] ?? 0), 2) . '</td></tr>'
+            . '</tbody></table>'
+            . '<table><thead><tr><th>Expenses</th><th style="text-align:right">Amount</th></tr></thead><tbody>'
+            . ($expRows !== '' ? $expRows : '<tr><td colspan="2" style="text-align:center; color:#777; padding:14px;">No expenses</td></tr>')
+            . '<tr class="tot"><td>Total Expenses</td><td style="text-align:right">' . number_format((float)($expenses['total'] ?? 0), 2) . '</td></tr>'
+            . '</tbody></table>'
+            . '<div style="padding:10px; border:1px solid #ddd; background:#f8f9fa; font-weight:bold;">Net Income: ' . number_format((float)$net, 2) . '</div>'
+            . '</body></html>';
+
+        $options = new Options();
+        $options->set('isRemoteEnabled', true);
+        $dompdf = new Dompdf($options);
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->loadHtml($html);
+        $dompdf->render();
+        $filename = 'profit_loss_' . $start . '_to_' . $end . '.pdf';
+        $dompdf->stream($filename, ['Attachment' => true]);
+        exit;
+    }
+
+    public function exportBalanceSheetCsv()
+    {
+        $end = $_GET['end'] ?? date('Y-m-d');
+        $ledger = new LedgerEntry();
+        $assets = $ledger->getBalancesByType($this->userId, 'asset', null, $end);
+        $liabilities = $ledger->getBalancesByType($this->userId, 'liability', null, $end);
+        $equity = $ledger->getBalancesByType($this->userId, 'equity', null, $end);
+
+        $filename = 'balance_sheet_as_of_' . $end . '.csv';
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="' . $filename . '"');
+
+        $out = fopen('php://output', 'w');
+        fputcsv($out, ['Balance Sheet']);
+        fputcsv($out, ['As of', $end]);
+        fputcsv($out, []);
+
+        fputcsv($out, ['Assets']);
+        fputcsv($out, ['Code', 'Name', 'Amount']);
+        foreach (($assets['rows'] ?? []) as $r) {
+            fputcsv($out, [$r['code'] ?? '', $r['name'] ?? '', number_format((float)($r['balance'] ?? 0), 2, '.', '')]);
+        }
+        fputcsv($out, ['', 'Total Assets', number_format((float)($assets['total'] ?? 0), 2, '.', '')]);
+        fputcsv($out, []);
+
+        fputcsv($out, ['Liabilities']);
+        fputcsv($out, ['Code', 'Name', 'Amount']);
+        foreach (($liabilities['rows'] ?? []) as $r) {
+            fputcsv($out, [$r['code'] ?? '', $r['name'] ?? '', number_format((float)($r['balance'] ?? 0), 2, '.', '')]);
+        }
+        fputcsv($out, ['', 'Total Liabilities', number_format((float)($liabilities['total'] ?? 0), 2, '.', '')]);
+        fputcsv($out, []);
+
+        fputcsv($out, ['Equity']);
+        fputcsv($out, ['Code', 'Name', 'Amount']);
+        foreach (($equity['rows'] ?? []) as $r) {
+            fputcsv($out, [$r['code'] ?? '', $r['name'] ?? '', number_format((float)($r['balance'] ?? 0), 2, '.', '')]);
+        }
+        fputcsv($out, ['', 'Total Equity', number_format((float)($equity['total'] ?? 0), 2, '.', '')]);
+
+        fclose($out);
+        exit;
+    }
+
+    public function exportBalanceSheetPdf()
+    {
+        $end = $_GET['end'] ?? date('Y-m-d');
+        $ledger = new LedgerEntry();
+        $assets = $ledger->getBalancesByType($this->userId, 'asset', null, $end);
+        $liabilities = $ledger->getBalancesByType($this->userId, 'liability', null, $end);
+        $equity = $ledger->getBalancesByType($this->userId, 'equity', null, $end);
+
+        $logoDataUri = $this->getLogoDataUri();
+        $headerHtml = $logoDataUri
+            ? '<div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">'
+                . '<img src="' . $logoDataUri . '" style="height:40px;" />'
+                . '<div style="font-size:16px; font-weight:bold;">Balance Sheet</div>'
+                . '</div>'
+            : '<div style="font-size:16px; font-weight:bold; margin-bottom:10px;">Balance Sheet</div>';
+
+        $buildRows = function ($rows) {
+            $out = '';
+            foreach (($rows ?? []) as $r) {
+                $out .= '<tr><td>' . htmlspecialchars($r['code'] . ' - ' . $r['name']) . '</td><td style="text-align:right">' . number_format((float)$r['balance'], 2) . '</td></tr>';
+            }
+            return $out;
+        };
+
+        $html = '<html><head><meta charset="utf-8">'
+            . '<style>'
+            . 'body{font-family: DejaVu Sans, sans-serif; font-size:12px; color:#111;}'
+            . '.meta{color:#555; margin-bottom:10px;}'
+            . 'table{width:100%; border-collapse:collapse; margin-bottom:12px;}'
+            . 'th,td{border:1px solid #ddd; padding:6px; vertical-align:top;}'
+            . 'th{background:#f3f5f7; text-align:left;}'
+            . '.tot td{font-weight:bold; background:#fafafa;}'
+            . '</style>'
+            . '</head><body>'
+            . $headerHtml
+            . '<div class="meta">As of: ' . htmlspecialchars($end) . '</div>'
+            . '<table><thead><tr><th>Assets</th><th style="text-align:right">Amount</th></tr></thead><tbody>'
+            . ($buildRows($assets['rows'] ?? []) ?: '<tr><td colspan="2" style="text-align:center; color:#777; padding:14px;">No assets</td></tr>')
+            . '<tr class="tot"><td>Total Assets</td><td style="text-align:right">' . number_format((float)($assets['total'] ?? 0), 2) . '</td></tr>'
+            . '</tbody></table>'
+            . '<table><thead><tr><th>Liabilities</th><th style="text-align:right">Amount</th></tr></thead><tbody>'
+            . ($buildRows($liabilities['rows'] ?? []) ?: '<tr><td colspan="2" style="text-align:center; color:#777; padding:14px;">No liabilities</td></tr>')
+            . '<tr class="tot"><td>Total Liabilities</td><td style="text-align:right">' . number_format((float)($liabilities['total'] ?? 0), 2) . '</td></tr>'
+            . '</tbody></table>'
+            . '<table><thead><tr><th>Equity</th><th style="text-align:right">Amount</th></tr></thead><tbody>'
+            . ($buildRows($equity['rows'] ?? []) ?: '<tr><td colspan="2" style="text-align:center; color:#777; padding:14px;">No equity</td></tr>')
+            . '<tr class="tot"><td>Total Equity</td><td style="text-align:right">' . number_format((float)($equity['total'] ?? 0), 2) . '</td></tr>'
+            . '</tbody></table>'
+            . '</body></html>';
+
+        $options = new Options();
+        $options->set('isRemoteEnabled', true);
+        $dompdf = new Dompdf($options);
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->loadHtml($html);
+        $dompdf->render();
+        $filename = 'balance_sheet_as_of_' . $end . '.pdf';
         $dompdf->stream($filename, ['Attachment' => true]);
         exit;
     }

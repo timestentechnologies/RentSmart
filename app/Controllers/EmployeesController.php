@@ -5,6 +5,8 @@ namespace App\Controllers;
 use App\Models\Employee;
 use App\Models\EmployeePayment;
 use App\Models\Expense;
+use App\Models\Account;
+use App\Models\LedgerEntry;
 use App\Models\User;
 
 class EmployeesController
@@ -250,6 +252,56 @@ class EmployeesController
                     'reference_type' => 'employee_payment',
                     'reference_id' => $paymentId
                 ]);
+
+                // Link expense_id to employee payment record if column exists
+                try {
+                    if (!empty($paymentId) && !empty($expenseId)) {
+                        $db = $paymentModel->getDb();
+                        $upd = $db->prepare("UPDATE employee_payments SET expense_id = ? WHERE id = ?");
+                        $upd->execute([(int)$expenseId, (int)$paymentId]);
+                    }
+                } catch (\Exception $e) {
+                }
+
+                // Auto-post payroll expense to ledger (idempotent)
+                try {
+                    if (!empty($expenseId)) {
+                        $ledger = new LedgerEntry();
+                        if (!$ledger->referenceExists('expense', (int)$expenseId)) {
+                            $accModel = new Account();
+                            $cash = $accModel->findByCode('1000');
+                            $expAcc = $accModel->findByCode('5000');
+                            if ($cash && $expAcc) {
+                                $desc = 'Expense #' . (int)$expenseId . ' - ' . 'Payroll';
+                                $propertyId = $employee['property_id'] ?? null;
+                                $ledger->post([
+                                    'entry_date' => $payDate,
+                                    'account_id' => (int)$expAcc['id'],
+                                    'description' => $desc,
+                                    'debit' => (float)$amount,
+                                    'credit' => 0,
+                                    'user_id' => $this->userId,
+                                    'property_id' => $propertyId,
+                                    'reference_type' => 'expense',
+                                    'reference_id' => (int)$expenseId,
+                                ]);
+                                $ledger->post([
+                                    'entry_date' => $payDate,
+                                    'account_id' => (int)$cash['id'],
+                                    'description' => $desc,
+                                    'debit' => 0,
+                                    'credit' => (float)$amount,
+                                    'user_id' => $this->userId,
+                                    'property_id' => $propertyId,
+                                    'reference_type' => 'expense',
+                                    'reference_id' => (int)$expenseId,
+                                ]);
+                            }
+                        }
+                    }
+                } catch (\Exception $le) {
+                    error_log('Payroll expense ledger post failed: ' . $le->getMessage());
+                }
                 if ($isAjax) {
                     echo json_encode(['success' => true, 'message' => 'Payment recorded', 'expense_id' => $expenseId]);
                     exit;
