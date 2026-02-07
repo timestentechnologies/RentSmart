@@ -43,14 +43,7 @@ class FacebookMarketplaceController
             if ($isAdmin) {
                 $units = $unitModel->getVacantUnitsPublic();
             } else {
-                $sql = "SELECT u.*, p.name as property_name, p.address, p.city, p.state
-                        FROM units u
-                        INNER JOIN properties p ON u.property_id = p.id
-                        WHERE u.status = 'vacant' AND p.owner_id = ?
-                        ORDER BY p.name, u.unit_number";
-                $stmt = $this->db->prepare($sql);
-                $stmt->execute([$userId]);
-                $units = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+                $units = $unitModel->getVacantUnits($userId);
             }
 
             // Get Facebook posting status for each unit
