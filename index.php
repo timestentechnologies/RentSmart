@@ -330,6 +330,9 @@ $routes = [
     'leases/delete/(\d+)' => ['controller' => 'LeasesController', 'action' => 'delete'],
     'leases/units/(\d+)' => ['controller' => 'LeasesController', 'action' => 'getUnitsByProperty'],
     'utility-rates/store' => ['controller' => 'UtilityRatesController', 'action' => 'store'],
+    'utility-rates/delete/(\d+)' => [
+        'POST' => ['controller' => 'UtilityRatesController', 'action' => 'delete'],
+    ],
     'utilities' => ['controller' => 'UtilitiesController', 'action' => 'index'],
     'utilities/create' => ['controller' => 'UtilitiesController', 'action' => 'create'],
     'utilities/store' => ['controller' => 'UtilitiesController', 'action' => 'store'],
@@ -512,6 +515,7 @@ $protectedRoutes = [
     'leases/template',
     'leases/import',
     'utility-rates/store',
+    'utility-rates/delete/(\d+)',
     'utilities',
     'utilities/create',
     'utilities/store',
