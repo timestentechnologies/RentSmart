@@ -227,6 +227,36 @@ class Payment extends Model
         $sumPrev = $this->db->prepare("SELECT COALESCE(SUM(amount),0) AS s FROM payments WHERE lease_id = ? AND payment_type = 'rent' AND status IN ('completed','verified') AND payment_date < ?");
         $sumMonth = $this->db->prepare("SELECT COALESCE(SUM(amount),0) AS s FROM payments WHERE lease_id = ? AND payment_type = 'rent' AND status IN ('completed','verified') AND payment_date BETWEEN ? AND ?");
 
+        $unitsUtilitiesStmt = $this->db->prepare("SELECT id, is_metered, flat_rate FROM utilities WHERE unit_id = ?");
+        $utilityChargeMeteredStmt = $this->db->prepare("SELECT COALESCE(cost,0) AS c
+            FROM utility_readings
+            WHERE utility_id = ?
+              AND reading_date BETWEEN ? AND ?
+            ORDER BY reading_date DESC, id DESC
+            LIMIT 1");
+        $utilityPaidStmt = $this->db->prepare("SELECT COALESCE(SUM(amount),0) AS s
+            FROM payments
+            WHERE utility_id = ?
+              AND payment_type = 'utility'
+              AND status IN ('completed','verified')
+              AND payment_date BETWEEN ? AND ?");
+
+        $maintChargesStmt = $this->db->prepare("SELECT COALESCE(SUM(ABS(amount)),0) AS s
+            FROM payments
+            WHERE lease_id = ?
+              AND payment_type = 'rent'
+              AND amount < 0
+              AND notes LIKE '%MAINT-%'
+              AND status IN ('completed','verified')
+              AND payment_date BETWEEN ? AND ?");
+        $maintPaidStmt = $this->db->prepare("SELECT COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END),0) AS s
+            FROM payments
+            WHERE lease_id = ?
+              AND payment_type = 'other'
+              AND status IN ('completed','verified')
+              AND payment_date BETWEEN ? AND ?
+              AND (notes LIKE 'Maintenance payment:%' OR notes LIKE '%MAINT-%')");
+
         $startMonthDt = new \DateTime($startOfMonth);
         $rows = [];
         foreach ($leases as $L) {
@@ -258,17 +288,52 @@ class Payment extends Model
                 // Previous payments fully cover this month, but tenant-billed charges may still exist.
                 // Maintenance charges are recorded as negative rent adjustments, so if net paid in this month is negative,
                 // show it as an additional balance due.
-                $balance = max(-$paidInMonth, 0.0);
+                $rentBalance = max(-$paidInMonth, 0.0);
             } else {
-                $balance = max($rent - $applied, 0.0);
+                $rentBalance = max($rent - $applied, 0.0);
             }
+
+            // Utilities due for this unit within selected month
+            $utilitiesDue = 0.0;
+            try {
+                $unitsUtilitiesStmt->execute([(int)$L['unit_id']]);
+                $utils = $unitsUtilitiesStmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+                foreach ($utils as $ut) {
+                    $charge = 0.0;
+                    if ((int)($ut['is_metered'] ?? 0) === 1) {
+                        $utilityChargeMeteredStmt->execute([(int)$ut['id'], $startOfMonth, $endOfMonth]);
+                        $charge = (float)($utilityChargeMeteredStmt->fetch(\PDO::FETCH_ASSOC)['c'] ?? 0);
+                    } else {
+                        $charge = (float)($ut['flat_rate'] ?? 0);
+                    }
+                    $utilityPaidStmt->execute([(int)$ut['id'], $startOfMonth, $endOfMonth]);
+                    $paidU = (float)($utilityPaidStmt->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0);
+                    $utilitiesDue += max($charge - $paidU, 0.0);
+                }
+            } catch (\Throwable $ex) {
+                $utilitiesDue = 0.0;
+            }
+
+            // Maintenance due for this lease within selected month
+            $maintenanceDue = 0.0;
+            try {
+                $maintChargesStmt->execute([(int)$L['lease_id'], $startOfMonth, $endOfMonth]);
+                $mCharged = (float)($maintChargesStmt->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0);
+                $maintPaidStmt->execute([(int)$L['lease_id'], $startOfMonth, $endOfMonth]);
+                $mPaid = (float)($maintPaidStmt->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0);
+                $maintenanceDue = max($mCharged - $mPaid, 0.0);
+            } catch (\Throwable $ex) {
+                $maintenanceDue = 0.0;
+            }
+
+            $totalBalance = $rentBalance + $utilitiesDue + $maintenanceDue;
 
             $totalToEnd = $paidPrev + $paidInMonth;
             $monthsPaidTotal = (int)floor($totalToEnd / $rent + 1e-6);
             $prepaidMonths = max(0, $monthsPaidTotal - $monthsElapsed);
 
             $status = 'paid';
-            if ($balance > 0.009) {
+            if ($totalBalance > 0.009) {
                 $status = 'due';
             } else if ($prepaidMonths > 0) {
                 $status = 'advance';
@@ -289,7 +354,10 @@ class Payment extends Model
                 'unit_number' => $L['unit_number'],
                 'rent_amount' => round($rent, 2),
                 'paid_in_month' => round($paidInMonth, 2),
-                'balance' => round($balance, 2),
+                'rent_balance' => round($rentBalance, 2),
+                'utilities_due' => round($utilitiesDue, 2),
+                'maintenance_due' => round($maintenanceDue, 2),
+                'balance' => round($totalBalance, 2),
                 'status' => $status,
                 'prepaid_months' => $prepaidMonths,
                 'year' => (int)$year,

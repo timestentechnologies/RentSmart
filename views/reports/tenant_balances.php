@@ -58,6 +58,8 @@ ob_start();
                             <th>Month</th>
                             <th class="text-end">Rent</th>
                             <th class="text-end">Paid In Month</th>
+                            <th class="text-end">Utilities</th>
+                            <th class="text-end">Maintenance</th>
                             <th class="text-end">Balance</th>
                             <th>Status</th>
                             <th class="text-center">Prepaid Months</th>
@@ -72,6 +74,8 @@ ob_start();
                             <td><?= htmlspecialchars($r['month_label']) ?></td>
                             <td class="text-end"><?= number_format((float)$r['rent_amount'], 2) ?></td>
                             <td class="text-end"><?= number_format((float)$r['paid_in_month'], 2) ?></td>
+                            <td class="text-end"><?= number_format((float)($r['utilities_due'] ?? 0), 2) ?></td>
+                            <td class="text-end"><?= number_format((float)($r['maintenance_due'] ?? 0), 2) ?></td>
                             <td class="text-end fw-semibold <?= ($r['balance'] ?? 0) > 0 ? 'text-danger' : 'text-success' ?>">
                                 <?= number_format((float)$r['balance'], 2) ?>
                             </td>
