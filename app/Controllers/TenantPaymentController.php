@@ -172,38 +172,8 @@ class TenantPaymentController
                 } catch (\Exception $e) {
                     error_log('Auto-invoice (tenant utility) failed: ' . $e->getMessage());
                 }
-            } else if ($paymentType === 'maintenance') {
-                $maintenanceOutstanding = $this->payment->getMaintenanceOutstandingByLeaseId((int)$lease['id']);
-                if ($maintenanceOutstanding <= 0.0) {
-                    throw new \Exception('No outstanding maintenance charges found');
-                }
-                if (abs($amount - $maintenanceOutstanding) > 0.01) {
-                    throw new \Exception('Payment amount does not match maintenance total');
-                }
-
-                $maintenancePaymentData = [
-                    'lease_id' => $lease['id'],
-                    'amount' => $maintenanceOutstanding,
-                    'payment_date' => date('Y-m-d'),
-                    'payment_type' => 'other',
-                    'payment_method' => $paymentMethodData['type'],
-                    'notes' => 'Maintenance payment: Payment via ' . $paymentMethodData['name'] . ' - ' . ($paymentDetails['mpesa_notes'] ?? ''),
-                    'status' => $paymentStatus
-                ];
-                $paymentId = $this->payment->createRentPayment($maintenancePaymentData);
-
-                if ($paymentMethodData['type'] === 'mpesa_manual' || $paymentMethodData['type'] === 'mpesa_stk') {
-                    $maintDetails = $paymentDetails;
-                    if (!empty($maintDetails['mpesa_transaction_code'])) {
-                        $maintDetails['mpesa_transaction_code'] = $maintDetails['mpesa_transaction_code'] . '-M';
-                    }
-                    $this->saveMpesaTransaction($paymentId, $maintDetails, $maintenanceOutstanding);
-                }
-
-            } else if ($paymentType === 'both' || $paymentType === 'all') {
-                // Combined payment:
-                // both = rent + utilities
-                // all  = rent + utilities + maintenance
+            } else if ($paymentType === 'both') {
+                // Combined payment: rent + all outstanding utilities
                 // 1) Calculate rent due now using missed months and coverage
                 $missedMonths = $this->payment->getTenantMissedRentMonths($tenantId);
                 $overdueAmount = 0.0;
@@ -213,11 +183,6 @@ class TenantPaymentController
                 $coverage = $this->payment->getTenantRentCoverage($tenantId);
                 $dueNow = is_array($coverage) && isset($coverage['due_now']) ? (bool)$coverage['due_now'] : true;
                 $totalRentAmount = $dueNow ? max(0.0, $overdueAmount) : 0.0;
-
-                $maintenanceOutstanding = 0.0;
-                if ($paymentType === 'all') {
-                    $maintenanceOutstanding = $this->payment->getMaintenanceOutstandingByLeaseId((int)$lease['id']);
-                }
 
                 // 2) Calculate utilities due
                 $utilities = $this->utility->getTenantUtilities($tenantId);
@@ -234,34 +199,13 @@ class TenantPaymentController
                     }
                 }
 
-                // 3) Validate combined amount
-                $expectedTotal = $totalRentAmount + $totalUtilityAmount + $maintenanceOutstanding;
+                // 3) Validate combined amount (rent due now + utilities due)
+                $expectedTotal = $totalRentAmount + $totalUtilityAmount;
                 if (abs($amount - $expectedTotal) > 0.01) {
-                    throw new \Exception('Payment amount does not match total due');
+                    throw new \Exception('Payment amount does not match combined rent and utilities total');
                 }
 
-                // 4) Create maintenance payment first (all)
-                if ($maintenanceOutstanding > 0.0) {
-                    $maintenancePaymentData = [
-                        'lease_id' => $lease['id'],
-                        'amount' => $maintenanceOutstanding,
-                        'payment_date' => date('Y-m-d'),
-                        'payment_type' => 'other',
-                        'payment_method' => $paymentMethodData['type'],
-                        'notes' => 'Maintenance payment: Payment via ' . $paymentMethodData['name'] . ' - ' . ($paymentDetails['mpesa_notes'] ?? ''),
-                        'status' => $paymentStatus
-                    ];
-                    $maintPaymentId = $this->payment->createRentPayment($maintenancePaymentData);
-                    if ($paymentMethodData['type'] === 'mpesa_manual') {
-                        $maintDetails = $paymentDetails;
-                        if (!empty($maintDetails['mpesa_transaction_code'])) {
-                            $maintDetails['mpesa_transaction_code'] = $maintDetails['mpesa_transaction_code'] . '-M';
-                        }
-                        $this->saveMpesaTransaction($maintPaymentId, $maintDetails, $maintenanceOutstanding);
-                    }
-                }
-
-                // 5) Create rent payment only if there is rent due now
+                // 4) Create rent payment only if there is rent due now
                 $rentPaymentId = null;
                 if ($totalRentAmount > 0.0) {
                     $rentPaymentData = [
@@ -285,7 +229,7 @@ class TenantPaymentController
                     }
                 }
 
-                // 6) Create utility payments
+                // 5) Create utility payments
                 $firstUtilityPaymentId = null;
                 foreach ($utilityPayments as $idx => $utilityPayment) {
                     $paymentData = [
