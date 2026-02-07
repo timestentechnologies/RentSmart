@@ -68,7 +68,13 @@ class MaintenanceRequest extends Model
                 LEFT JOIN tenants t ON mr.tenant_id = t.id
                 LEFT JOIN units u ON mr.unit_id = u.id
                 LEFT JOIN properties p ON mr.property_id = p.id
-                LEFT JOIN leases l ON mr.unit_id = l.unit_id AND l.status = 'active'
+                LEFT JOIN leases l ON l.id = (
+                    SELECT l2.id
+                    FROM leases l2
+                    WHERE l2.unit_id = mr.unit_id AND l2.status = 'active'
+                    ORDER BY l2.id DESC
+                    LIMIT 1
+                )
                 LEFT JOIN tenants t2 ON l.tenant_id = t2.id";
 
         $params = [];
@@ -139,7 +145,13 @@ class MaintenanceRequest extends Model
                 LEFT JOIN tenants t ON mr.tenant_id = t.id
                 LEFT JOIN units u ON mr.unit_id = u.id
                 LEFT JOIN properties p ON mr.property_id = p.id
-                LEFT JOIN leases l ON mr.unit_id = l.unit_id AND l.status = 'active'
+                LEFT JOIN leases l ON l.id = (
+                    SELECT l2.id
+                    FROM leases l2
+                    WHERE l2.unit_id = mr.unit_id AND l2.status = 'active'
+                    ORDER BY l2.id DESC
+                    LIMIT 1
+                )
                 LEFT JOIN tenants t2 ON l.tenant_id = t2.id
                 WHERE mr.id = ?";
 

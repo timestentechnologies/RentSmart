@@ -71,7 +71,7 @@ class TenantAuthController
         session_start();
         
         // Check if user is logged in as admin/agent/landlord
-        if (!isset($_SESSION['user_id']) || !in_array($_SESSION['user_role'], ['admin', 'agent', 'landlord'])) {
+        if (!isset($_SESSION['user_id']) || !in_array($_SESSION['user_role'], ['admin', 'agent', 'landlord', 'manager'])) {
             if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
                 header('Content-Type: application/json');
                 echo json_encode(['success' => false, 'message' => 'Unauthorized']);
@@ -82,7 +82,8 @@ class TenantAuthController
         }
 
         $tenantModel = new Tenant();
-        $tenant = $tenantModel->find($tenantId);
+        // Enforce role-based scoping: only allow impersonation of tenants this user can access
+        $tenant = $tenantModel->getById($tenantId, $_SESSION['user_id']);
 
         if ($tenant) {
             // Store original user info in session for switching back
