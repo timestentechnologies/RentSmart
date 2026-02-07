@@ -29,6 +29,7 @@ ob_start();
           <thead class="bg-light">
             <tr>
               <th>Title</th>
+              <th>Type</th>
               <th>Recipient</th>
               <th>Status</th>
               <th>Created</th>
@@ -39,6 +40,16 @@ ob_start();
             <?php foreach (($requests ?? []) as $r): ?>
               <tr>
                 <td><?= htmlspecialchars($r['title']) ?></td>
+                <td>
+                  <?php
+                    $isSent = ((int)($r['requester_user_id'] ?? 0) === (int)($_SESSION['user_id'] ?? 0));
+                  ?>
+                  <?php if ($isSent): ?>
+                    <span class="badge bg-primary">Sent</span>
+                  <?php else: ?>
+                    <span class="badge bg-success">Received</span>
+                  <?php endif; ?>
+                </td>
                 <td><?= htmlspecialchars($r['recipient_name'] ?? '-') ?></td>
                 <td><span class="badge bg-secondary"><?= htmlspecialchars(ucfirst($r['status'])) ?></span></td>
                 <td><?= htmlspecialchars(date('Y-m-d H:i', strtotime($r['created_at'] ?? 'now'))) ?></td>
@@ -48,7 +59,7 @@ ob_start();
               </tr>
             <?php endforeach; ?>
             <?php if (empty($requests)): ?>
-              <tr><td colspan="5" class="text-center py-4 text-muted">No requests</td></tr>
+              <tr><td colspan="6" class="text-center py-4 text-muted">No requests</td></tr>
             <?php endif; ?>
           </tbody>
         </table>
