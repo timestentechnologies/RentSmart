@@ -9,6 +9,7 @@ use App\Models\Payment;
 use App\Models\User;
 use App\Models\Subscription;
 use App\Models\Expense;
+use App\Models\Unit;
 
 class DashboardController
 {
@@ -19,6 +20,7 @@ class DashboardController
     private $user;
     private $subscription;
     private $expense;
+    private $unit;
 
     public function __construct()
     {
@@ -29,6 +31,7 @@ class DashboardController
         $this->user = new User();
         $this->subscription = new Subscription();
         $this->expense = new Expense();
+        $this->unit = new Unit();
         
         // Check if user is logged in
         if (!isset($_SESSION['user_id'])) {
@@ -129,9 +132,146 @@ class DashboardController
 
             // Net revenue: payments minus expenses that draw from rent balance
             $totalRevenue = $currentMonthRevenue - $rentBalanceExpenses;
-            
+
+            $db = $this->payment->getDb();
+
+            $roleUser = new User();
+            $roleUser->find($userId);
+            $isAdmin = $roleUser->isAdmin();
+
+            $accessWhere = '';
+            $accessParams = [];
+            if (!$isAdmin) {
+                $accessWhere = " AND (pr.owner_id = ? OR pr.manager_id = ? OR pr.agent_id = ? OR pr.caretaker_user_id = ?)";
+                $accessParams = [$userId, $userId, $userId, $userId];
+            }
+
+            // Received amounts (current month)
+            $stmtRentReceived = $db->prepare(
+                "SELECT COALESCE(SUM(CASE WHEN p.amount > 0 THEN p.amount ELSE 0 END),0) AS s\n"
+                . "FROM payments p\n"
+                . "JOIN leases l ON p.lease_id = l.id\n"
+                . "JOIN units u ON l.unit_id = u.id\n"
+                . "JOIN properties pr ON u.property_id = pr.id\n"
+                . "WHERE p.payment_type = 'rent'\n"
+                . "  AND p.status IN ('completed','verified')\n"
+                . "  AND p.payment_date BETWEEN ? AND ?" . $accessWhere
+            );
+            $stmtRentReceived->execute(array_merge([$startOfMonth, $endOfMonth], $accessParams));
+            $rentReceived = (float)($stmtRentReceived->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0);
+
+            $stmtUtilityReceived = $db->prepare(
+                "SELECT COALESCE(SUM(CASE WHEN p.amount > 0 THEN p.amount ELSE 0 END),0) AS s\n"
+                . "FROM payments p\n"
+                . "JOIN leases l ON p.lease_id = l.id\n"
+                . "JOIN units u ON l.unit_id = u.id\n"
+                . "JOIN properties pr ON u.property_id = pr.id\n"
+                . "WHERE p.payment_type = 'utility'\n"
+                . "  AND p.status IN ('completed','verified')\n"
+                . "  AND p.payment_date BETWEEN ? AND ?" . $accessWhere
+            );
+            $stmtUtilityReceived->execute(array_merge([$startOfMonth, $endOfMonth], $accessParams));
+            $utilityReceived = (float)($stmtUtilityReceived->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0);
+
+            $stmtMaintenanceReceived = $db->prepare(
+                "SELECT COALESCE(SUM(CASE WHEN p.amount > 0 THEN p.amount ELSE 0 END),0) AS s\n"
+                . "FROM payments p\n"
+                . "JOIN leases l ON p.lease_id = l.id\n"
+                . "JOIN units u ON l.unit_id = u.id\n"
+                . "JOIN properties pr ON u.property_id = pr.id\n"
+                . "WHERE p.payment_type = 'other'\n"
+                . "  AND p.status IN ('completed','verified')\n"
+                . "  AND p.payment_date BETWEEN ? AND ?\n"
+                . "  AND (p.notes LIKE 'Maintenance payment:%' OR p.notes LIKE '%MAINT-%')" . $accessWhere
+            );
+            $stmtMaintenanceReceived->execute(array_merge([$startOfMonth, $endOfMonth], $accessParams));
+            $maintenanceReceived = (float)($stmtMaintenanceReceived->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0);
+
+            $receivedTotal = $rentReceived + $utilityReceived + $maintenanceReceived;
+
+            // Expected (billed) for current month
+            $stmtRentExpected = $db->prepare(
+                "SELECT COALESCE(SUM(l.rent_amount),0) AS s\n"
+                . "FROM leases l\n"
+                . "JOIN units u ON l.unit_id = u.id\n"
+                . "JOIN properties pr ON u.property_id = pr.id\n"
+                . "WHERE l.status = 'active'" . $accessWhere
+            );
+            $stmtRentExpected->execute($accessParams);
+            $rentExpected = (float)($stmtRentExpected->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0);
+
+            // Maintenance billed is stored as negative rent adjustments tagged MAINT-
+            $stmtMaintenanceExpected = $db->prepare(
+                "SELECT COALESCE(SUM(ABS(p.amount)),0) AS s\n"
+                . "FROM payments p\n"
+                . "JOIN leases l ON p.lease_id = l.id\n"
+                . "JOIN units u ON l.unit_id = u.id\n"
+                . "JOIN properties pr ON u.property_id = pr.id\n"
+                . "WHERE p.payment_type = 'rent'\n"
+                . "  AND p.amount < 0\n"
+                . "  AND p.notes LIKE '%MAINT-%'\n"
+                . "  AND p.status IN ('completed','verified')\n"
+                . "  AND p.payment_date BETWEEN ? AND ?" . $accessWhere
+            );
+            $stmtMaintenanceExpected->execute(array_merge([$startOfMonth, $endOfMonth], $accessParams));
+            $maintenanceExpected = (float)($stmtMaintenanceExpected->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0);
+
+            // Utilities expected for current month = latest reading cost within month (metered) or flat rate (flat)
+            $utilityExpected = 0.0;
+            try {
+                $sqlUtilities = "SELECT ut.id, ut.is_metered, ut.flat_rate\n"
+                    . "FROM utilities ut\n"
+                    . "JOIN units un ON ut.unit_id = un.id\n"
+                    . "JOIN leases l ON l.unit_id = un.id AND l.status = 'active'\n"
+                    . "JOIN properties pr ON un.property_id = pr.id\n"
+                    . "WHERE 1=1";
+                $uParams = [];
+                if (!$isAdmin) {
+                    $sqlUtilities .= " AND (pr.owner_id = ? OR pr.manager_id = ? OR pr.agent_id = ? OR pr.caretaker_user_id = ?)";
+                    $uParams = [$userId, $userId, $userId, $userId];
+                }
+                $sqlUtilities .= " GROUP BY ut.id ORDER BY ut.id";
+                $stmtUtilities = $db->prepare($sqlUtilities);
+                $stmtUtilities->execute($uParams);
+                $utilitiesRows = $stmtUtilities->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+
+                $stmtReadingCost = $db->prepare(
+                    "SELECT ur.cost\n"
+                    . "FROM utility_readings ur\n"
+                    . "WHERE ur.utility_id = ?\n"
+                    . "  AND ur.reading_date BETWEEN ? AND ?\n"
+                    . "ORDER BY ur.reading_date DESC, ur.id DESC LIMIT 1"
+                );
+
+                foreach ($utilitiesRows as $rowU) {
+                    if (!empty($rowU['is_metered'])) {
+                        $stmtReadingCost->execute([(int)$rowU['id'], $startOfMonth, $endOfMonth]);
+                        $costRow = $stmtReadingCost->fetch(\PDO::FETCH_ASSOC) ?: [];
+                        $utilityExpected += (float)($costRow['cost'] ?? 0);
+                    } else {
+                        $utilityExpected += (float)($rowU['flat_rate'] ?? 0);
+                    }
+                }
+            } catch (\Exception $e) {
+                $utilityExpected = 0.0;
+            }
+
+            $expectedTotal = $rentExpected + $utilityExpected + $maintenanceExpected;
+
+            $notReceivedRent = max($rentExpected - $rentReceived, 0.0);
+            $notReceivedUtility = max($utilityExpected - $utilityReceived, 0.0);
+            $notReceivedMaintenance = max($maintenanceExpected - $maintenanceReceived, 0.0);
+            $notReceivedTotal = $notReceivedRent + $notReceivedUtility + $notReceivedMaintenance;
+
+            // Wallet: all received money less rent-balance deductions
+            $walletTotal = max($receivedTotal - (float)$rentBalanceExpenses, 0.0);
+
             // Calculate total properties
             $totalProperties = count($this->property->getAll($userId));
+
+            $totalTenants = count($this->tenant->getAll($userId));
+            $totalUnits = count($this->unit->getAll($userId));
+            $totalExpiringLeases = is_array($expiringLeases) ? count($expiringLeases) : 0;
             
             // Calculate total active leases
             $totalActiveLeases = count($activeLeases);
