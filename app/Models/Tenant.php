@@ -23,6 +23,56 @@ class Tenant extends Model
                  AND payment_type = 'rent'
                  AND status IN ('completed','verified')
                  AND payment_date >= DATE_FORMAT(NOW() ,'%Y-%m-01')) as current_month_payment,
+                (
+                    SELECT COALESCE(SUM(
+                        GREATEST(
+                            (
+                                CASE 
+                                    WHEN ut.is_metered = 1 THEN IFNULL((
+                                        SELECT ur.cost
+                                        FROM utility_readings ur
+                                        WHERE ur.utility_id = ut.id
+                                        ORDER BY ur.reading_date DESC, ur.id DESC
+                                        LIMIT 1
+                                    ), 0)
+                                    ELSE IFNULL(ut.flat_rate, 0)
+                                END
+                            )
+                            - IFNULL((
+                                SELECT SUM(p3.amount)
+                                FROM payments p3
+                                WHERE p3.utility_id = ut.id
+                                  AND p3.payment_type = 'utility'
+                                  AND p3.status IN ('completed','verified')
+                            ), 0)
+                        , 0)
+                    ), 0)
+                    FROM utilities ut
+                    WHERE ut.unit_id = COALESCE(u.id, u2.id)
+                ) as utilities_due,
+                (
+                    SELECT GREATEST(
+                        (
+                            SELECT COALESCE(SUM(ABS(p1.amount)),0)
+                            FROM payments p1
+                            WHERE p1.lease_id = l.id
+                              AND p1.payment_type = 'rent'
+                              AND p1.amount < 0
+                              AND p1.notes LIKE '%MAINT-%'
+                              AND p1.status IN ('completed','verified')
+                              AND p1.payment_date BETWEEN DATE_FORMAT(NOW() ,'%Y-%m-01') AND LAST_DAY(NOW())
+                        )
+                        - (
+                            SELECT COALESCE(SUM(CASE WHEN p2x.amount > 0 THEN p2x.amount ELSE 0 END),0)
+                            FROM payments p2x
+                            WHERE p2x.lease_id = l.id
+                              AND p2x.payment_type = 'other'
+                              AND p2x.status IN ('completed','verified')
+                              AND p2x.payment_date BETWEEN DATE_FORMAT(NOW() ,'%Y-%m-01') AND LAST_DAY(NOW())
+                              AND (p2x.notes LIKE 'Maintenance payment:%' OR p2x.notes LIKE '%MAINT-%')
+                        )
+                    , 0)
+                ) as maintenance_due,
                 (SELECT GROUP_CONCAT(
                     CONCAT(ut.utility_type, ': ', 
                         COALESCE(

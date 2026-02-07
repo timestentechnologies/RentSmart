@@ -196,11 +196,14 @@ ob_start();
                                 </td>
                                 <td>
                                     <?php
-                                        $balance = ($tenant['rent_amount'] ?? 0) - ($tenant['current_month_payment'] ?? 0);
+                                        $rentDue = max((float)($tenant['rent_amount'] ?? 0) - (float)($tenant['current_month_payment'] ?? 0), 0.0);
+                                        $utilitiesDue = max((float)($tenant['utilities_due'] ?? 0), 0.0);
+                                        $maintenanceDue = max((float)($tenant['maintenance_due'] ?? 0), 0.0);
+                                        $balance = $rentDue + $utilitiesDue + $maintenanceDue;
                                         $balanceClass = $balance > 0 ? 'text-danger' : 'text-success';
                                     ?>
                                     <span class="<?= $balanceClass ?>">
-                                        Ksh<?= number_format(abs($balance), 2) ?>
+                                        Ksh<?= number_format($balance, 2) ?>
                                         <?= $balance > 0 ? '(Due)' : '(Paid)' ?>
                                     </span>
                                 </td>
