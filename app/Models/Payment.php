@@ -1548,6 +1548,51 @@ class Payment extends Model
         ];
     }
 
+    public function getTenantMaintenanceOutstanding($tenantId)
+    {
+        $leaseStmt = $this->db->prepare("SELECT * FROM leases WHERE tenant_id = ? AND status = 'active' LIMIT 1");
+        $leaseStmt->execute([(int)$tenantId]);
+        $lease = $leaseStmt->fetch(\PDO::FETCH_ASSOC);
+        if (!$lease) {
+            return 0.0;
+        }
+
+        $today = date('Y-m-d');
+        $monthStart = date('Y-m-01', strtotime($today));
+        $monthEnd = date('Y-m-t', strtotime($today));
+
+        try {
+            $maintChargesStmt = $this->db->prepare(
+                "SELECT COALESCE(SUM(ABS(amount)),0) AS s\n"
+                . "FROM payments\n"
+                . "WHERE lease_id = ?\n"
+                . "  AND payment_type = 'rent'\n"
+                . "  AND amount < 0\n"
+                . "  AND notes LIKE ?\n"
+                . "  AND status IN ('completed','verified')\n"
+                . "  AND payment_date BETWEEN ? AND ?"
+            );
+            $maintChargesStmt->execute([(int)$lease['id'], '%MAINT-%', $monthStart, $monthEnd]);
+            $charged = (float)($maintChargesStmt->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0);
+
+            $maintPaidStmt = $this->db->prepare(
+                "SELECT COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END),0) AS s\n"
+                . "FROM payments\n"
+                . "WHERE lease_id = ?\n"
+                . "  AND payment_type = 'other'\n"
+                . "  AND status IN ('completed','verified')\n"
+                . "  AND payment_date BETWEEN ? AND ?\n"
+                . "  AND (notes LIKE 'Maintenance payment:%' OR notes LIKE '%MAINT-%')"
+            );
+            $maintPaidStmt->execute([(int)$lease['id'], $monthStart, $monthEnd]);
+            $paid = (float)($maintPaidStmt->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0);
+
+            return round(max(0.0, $charged - $paid), 2);
+        } catch (\Exception $e) {
+            return 0.0;
+        }
+    }
+
     /**
      * Delete a payment by ID
      */

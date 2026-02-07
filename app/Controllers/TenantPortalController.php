@@ -40,6 +40,7 @@ class TenantPortalController
         $overdueRent = $paymentModel->getTenantOverdueRent($tenantId);
         $missedRentMonths = $paymentModel->getTenantMissedRentMonths($tenantId);
         $rentCoverage = $paymentModel->getTenantRentCoverage($tenantId);
+        $maintenanceOutstanding = $paymentModel->getTenantMaintenanceOutstanding($tenantId);
         $utilityModel = new Utility();
         $utilities = $utilityModel->getTenantUtilities($tenantId);
         

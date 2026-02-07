@@ -475,11 +475,34 @@
                                 <strong class="fs-6">Ksh <?= number_format($grandTotalCombined, 2) ?></strong>
                             </div>
                         </div>
-                        <button type="button" class="btn btn-warning btn-sm w-100" <?= $grandTotalCombined > 0 ? '' : 'disabled' ?>
-                                onclick="openPaymentModal('both', <?= htmlspecialchars(json_encode($paymentMethods)) ?>)">
-                            <i class="bi bi-credit-card me-1"></i>Pay Both
+                        <?php $grandTotalAll = $grandTotalCombined + (float)($maintenanceOutstanding ?? 0); ?>
+                        <button type="button" class="btn btn-warning btn-sm w-100" <?= $grandTotalAll > 0 ? '' : 'disabled' ?>
+                                onclick="openPaymentModal('all', <?= htmlspecialchars(json_encode($paymentMethods)) ?>)">
+                            <i class="bi bi-credit-card me-1"></i>Pay All
                         </button>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Maintenance Due Card -->
+    <div class="row mb-4">
+        <div class="col-lg-4 col-md-6 mb-3">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-tools me-2"></i>Maintenance Due</h5>
+                </div>
+                <div class="card-body">
+                    <?php $maintDue = (float)($maintenanceOutstanding ?? 0); ?>
+                    <div class="d-flex justify-content-between align-items-center mb-3 p-2 rounded" style="background-color:#fff3cd;">
+                        <span class="text-muted small">Total Due:</span>
+                        <strong class="text-dark">Ksh <?= number_format($maintDue, 2) ?></strong>
+                    </div>
+                    <button type="button" class="btn btn-warning btn-sm w-100" <?= $maintDue > 0 ? '' : 'disabled' ?>
+                            onclick="openPaymentModal('maintenance', <?= htmlspecialchars(json_encode($paymentMethods)) ?>)">
+                        <i class="bi bi-credit-card me-1"></i>Pay Maintenance
+                    </button>
                 </div>
             </div>
         </div>
@@ -541,8 +564,12 @@
                                     $isMaint = ($rawType === 'rent' && $amount < 0 && $notes !== '' && preg_match('/MAINT-\d+/i', $notes));
                                     $isUtilByNotes = ($notes !== '' && preg_match('/\b(util|utility|water|electricity|gas|internet)\b/i', $notes));
 
-                                    // Normalize type to avoid everything showing as rent
                                     if ($isMaint) {
+                                        continue;
+                                    }
+
+                                    // Normalize type to avoid everything showing as rent
+                                    if ($rawType === 'other' && ($notes !== '' && (stripos($notes, 'Maintenance payment:') !== false || preg_match('/MAINT-\d+/i', $notes)))) {
                                         $typeClass = 'bg-warning text-dark';
                                         $typeText = 'Maintenance';
                                     } elseif ($rawType === 'utility' || $hasUtility || $isUtilByNotes) {
@@ -2271,8 +2298,13 @@ function openPaymentModal(type, paymentMethods = []) {
             document.getElementById('paymentAmount').value = utilitiesAmount;
             summaryAmount.textContent = 'Ksh ' + utilitiesAmount.toLocaleString();
         <?php endif; ?>
-    } else if (type === 'both') {
-        summaryType.textContent = 'Rent + Utilities Payment';
+    } else if (type === 'maintenance') {
+        summaryType.textContent = 'Maintenance Payment';
+        const maintAmount = <?= (float)($maintenanceOutstanding ?? 0) ?>;
+        document.getElementById('paymentAmount').value = maintAmount;
+        summaryAmount.textContent = 'Ksh ' + maintAmount.toLocaleString();
+    } else if (type === 'all') {
+        summaryType.textContent = 'Rent + Utilities + Maintenance Payment';
         <?php if (isset($lease) && $lease): ?>
             <?php 
             $missedTotalJsBoth = 0; 
@@ -2286,6 +2318,7 @@ function openPaymentModal(type, paymentMethods = []) {
         <?php else: ?>
             const totalRentAmountBoth = 0;
         <?php endif; ?>
+        const maintenanceAmountAll = <?= (float)($maintenanceOutstanding ?? 0) ?>;
         <?php 
         $totalUtilitiesBoth = 0; 
         if (!empty($utilities)) {
@@ -2296,7 +2329,7 @@ function openPaymentModal(type, paymentMethods = []) {
         }
         ?>
         const utilitiesAmountBoth = <?= $totalUtilitiesBoth ?>;
-        const grandAmount = (totalRentAmountBoth + utilitiesAmountBoth);
+        const grandAmount = (maintenanceAmountAll + totalRentAmountBoth + utilitiesAmountBoth);
         document.getElementById('paymentAmount').value = grandAmount;
         summaryAmount.textContent = 'Ksh ' + grandAmount.toLocaleString();
     } else if (type === 'rent_advance') {
@@ -2376,8 +2409,8 @@ function submitPayment() {
     // Check if this is an STK push payment
     if (methodType === 'mpesa_stk') {
         // Combined payments are not supported via STK push in this flow
-        if (formData.get('payment_type') === 'both') {
-            showAlert('error', 'Pay Both is not available with STK Push. Please use a different payment method.');
+        if (formData.get('payment_type') === 'all') {
+            showAlert('error', 'Pay All is not available with STK Push. Please use a different payment method.');
             return;
         }
         // Handle STK push differently
