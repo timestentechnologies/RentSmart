@@ -30,55 +30,6 @@ class Payment extends Model
         return null;
     }
 
-    public function getTenantMaintenanceOutstanding($tenantId): float
-    {
-        try {
-            $leaseStmt = $this->db->prepare("SELECT * FROM leases WHERE tenant_id = ? AND status = 'active' LIMIT 1");
-            $leaseStmt->execute([(int)$tenantId]);
-            $lease = $leaseStmt->fetch(\PDO::FETCH_ASSOC);
-            if (!$lease || empty($lease['id'])) {
-                return 0.0;
-            }
-
-            return $this->getMaintenanceOutstandingByLeaseId((int)$lease['id']);
-        } catch (\Exception $e) {
-            return 0.0;
-        }
-    }
-
-    public function getMaintenanceOutstandingByLeaseId($leaseId): float
-    {
-        try {
-            $db = $this->db;
-            $chargesStmt = $db->prepare(
-                "SELECT COALESCE(SUM(ABS(amount)),0) AS s\n"
-                . "FROM payments\n"
-                . "WHERE lease_id = ?\n"
-                . "  AND payment_type = 'rent'\n"
-                . "  AND amount < 0\n"
-                . "  AND notes LIKE ?\n"
-                . "  AND status IN ('completed','verified')"
-            );
-            $chargesStmt->execute([(int)$leaseId, '%MAINT-%']);
-            $charged = (float)($chargesStmt->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0);
-
-            $paidStmt = $db->prepare(
-                "SELECT COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END),0) AS s\n"
-                . "FROM payments\n"
-                . "WHERE lease_id = ?\n"
-                . "  AND payment_type = 'other'\n"
-                . "  AND status IN ('completed','verified')\n"
-                . "  AND (notes LIKE 'Maintenance payment:%' OR notes LIKE '%MAINT-%')"
-            );
-            $paidStmt->execute([(int)$leaseId]);
-            $paid = (float)($paidStmt->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0);
-
-            return max(0.0, round($charged - $paid, 2));
-        } catch (\Exception $e) {
-            return 0.0;
-        }
-    }
-
     private function resolvePropertyIdForLease(int $leaseId): ?int
     {
         try {
