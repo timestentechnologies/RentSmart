@@ -45,6 +45,121 @@ class Payment extends Model
         }
     }
 
+    public function getOutstandingBalanceForProperty($propertyId, $userId = null)
+    {
+        try {
+            $propertyId = (int)$propertyId;
+            if ($propertyId <= 0) {
+                return 0.0;
+            }
+
+            $user = new User();
+            $isAdmin = false;
+            $userData = null;
+            if ($userId) {
+                $userData = $user->find($userId);
+                if (!$userData) {
+                    return 0.0;
+                }
+                $isAdmin = ($userData['role'] === 'admin' || $userData['role'] === 'administrator');
+            }
+
+            $sql = "SELECT
+                    l.id as lease_id,
+                    l.rent_amount,
+                    l.start_date,
+                    l.end_date,
+                    u.id as unit_id
+                FROM leases l
+                JOIN units u ON l.unit_id = u.id
+                JOIN properties pr ON u.property_id = pr.id
+                WHERE l.status = 'active'
+                  AND pr.id = ?";
+            $params = [$propertyId];
+
+            if ($userId && !$isAdmin) {
+                $sql .= " AND (";
+                $conditions = [];
+
+                if (($userData['role'] ?? '') === 'landlord') { $conditions[] = "pr.owner_id = ?"; $params[] = $userId; }
+                if (($userData['role'] ?? '') === 'manager') { $conditions[] = "pr.manager_id = ?"; $params[] = $userId; }
+                if (($userData['role'] ?? '') === 'agent') { $conditions[] = "pr.agent_id = ?"; $params[] = $userId; }
+                if (($userData['role'] ?? '') === 'caretaker') { $conditions[] = "pr.caretaker_user_id = ?"; $params[] = $userId; }
+
+                if (empty($conditions)) { $conditions[] = "1=0"; }
+                $sql .= implode(' OR ', $conditions) . ")";
+            }
+
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute($params);
+            $leases = $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+
+            $rentStmt = $this->db->prepare("SELECT COALESCE(SUM(amount),0) as total_paid
+                FROM payments
+                WHERE lease_id = ? AND payment_type = 'rent' AND status IN ('completed','verified')");
+
+            $utilityStmt = $this->db->prepare("SELECT u.*,
+                       CASE
+                           WHEN u.is_metered = 1 THEN IFNULL(ur.cost, 0)
+                           ELSE IFNULL(u.flat_rate, 0)
+                       END as amount
+                FROM utilities u
+                LEFT JOIN (
+                    SELECT ur1.*
+                    FROM utility_readings ur1
+                    INNER JOIN (
+                        SELECT utility_id, MAX(id) as max_id
+                        FROM utility_readings
+                        GROUP BY utility_id
+                    ) ur2 ON ur1.utility_id = ur2.utility_id AND ur1.id = ur2.max_id
+                ) ur ON u.id = ur.utility_id
+                WHERE u.unit_id = ?");
+
+            $utilityPayStmt = $this->db->prepare("SELECT COALESCE(SUM(amount),0) as total_paid
+                FROM payments
+                WHERE lease_id = ? AND utility_id = ? AND payment_type = 'utility' AND status IN ('completed','verified')");
+
+            $totalOutstanding = 0.0;
+            foreach ($leases as $lease) {
+                $monthlyRent = (float)($lease['rent_amount'] ?? 0);
+                if ($monthlyRent <= 0) {
+                    continue;
+                }
+                try {
+                    $leaseStart = new \DateTime($lease['start_date']);
+                } catch (\Exception $e) {
+                    continue;
+                }
+                $startMonth = new \DateTime($leaseStart->format('Y-m-01'));
+                $currentMonth = new \DateTime(date('Y-m-01'));
+                if ($currentMonth < $startMonth) {
+                    continue;
+                }
+                $monthsElapsed = ((int)$currentMonth->format('Y') - (int)$startMonth->format('Y')) * 12
+                    + ((int)$currentMonth->format('n') - (int)$startMonth->format('n')) + 1;
+                $expectedRent = $monthsElapsed * $monthlyRent;
+
+                $rentStmt->execute([(int)$lease['lease_id']]);
+                $rentPaid = (float)($rentStmt->fetch(\PDO::FETCH_ASSOC)['total_paid'] ?? 0);
+                $totalOutstanding += max(0.0, $expectedRent - $rentPaid);
+
+                $utilityStmt->execute([(int)$lease['unit_id']]);
+                $utilities = $utilityStmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+                foreach ($utilities as $util) {
+                    $charge = (float)($util['amount'] ?? 0);
+                    $utilityPayStmt->execute([(int)$lease['lease_id'], (int)$util['id']]);
+                    $paid = (float)($utilityPayStmt->fetch(\PDO::FETCH_ASSOC)['total_paid'] ?? 0);
+                    $totalOutstanding += max(0.0, $charge - $paid);
+                }
+            }
+
+            return $totalOutstanding;
+        } catch (\Throwable $e) {
+            error_log('Error in getOutstandingBalanceForProperty: ' . $e->getMessage());
+            return 0.0;
+        }
+    }
+
     private function shouldPostToLedger(?string $status): bool
     {
         return in_array((string)$status, ['completed','verified'], true);
@@ -749,20 +864,34 @@ class Payment extends Model
             $totalOutstanding = 0;
             
             foreach ($leases as $lease) {
-                // Calculate rent outstanding (simplified - just current month)
-                $monthlyRent = $lease['rent_amount'];
-                
-                // Get rent payments for this lease
-                $rentStmt = $this->db->prepare("
-                    SELECT SUM(amount) as total_paid
-                    FROM payments 
-                    WHERE lease_id = ? AND payment_type = 'rent' AND status = 'completed'
-                ");
+                $monthlyRent = (float)($lease['rent_amount'] ?? 0);
+                if ($monthlyRent <= 0) {
+                    continue;
+                }
+
+                // Expected rent from lease start up to current month (inclusive)
+                try {
+                    $leaseStart = new \DateTime($lease['start_date']);
+                } catch (\Exception $e) {
+                    continue;
+                }
+                $startMonth = new \DateTime($leaseStart->format('Y-m-01'));
+                $currentMonth = new \DateTime(date('Y-m-01'));
+                if ($currentMonth < $startMonth) {
+                    continue;
+                }
+                $monthsElapsed = ((int)$currentMonth->format('Y') - (int)$startMonth->format('Y')) * 12
+                    + ((int)$currentMonth->format('n') - (int)$startMonth->format('n')) + 1;
+                $expectedRent = $monthsElapsed * $monthlyRent;
+
+                // All rent payments made for this lease
+                $rentStmt = $this->db->prepare("SELECT COALESCE(SUM(amount),0) as total_paid
+                    FROM payments
+                    WHERE lease_id = ? AND payment_type = 'rent' AND status IN ('completed','verified')");
                 $rentStmt->execute([$lease['lease_id']]);
-                $rentPaid = $rentStmt->fetch(\PDO::FETCH_ASSOC);
-                $rentPaidAmount = $rentPaid['total_paid'] ?? 0;
-                
-                $rentOutstanding = max(0, $monthlyRent - $rentPaidAmount);
+                $rentPaidAmount = (float)($rentStmt->fetch(\PDO::FETCH_ASSOC)['total_paid'] ?? 0);
+
+                $rentOutstanding = max(0.0, $expectedRent - $rentPaidAmount);
                 $totalOutstanding += $rentOutstanding;
                 
                 // Calculate utility outstanding
@@ -788,19 +917,19 @@ class Payment extends Model
                 $utilities = $utilityStmt->fetchAll(\PDO::FETCH_ASSOC);
                 
                 foreach ($utilities as $utility) {
-                    $utilityAmount = $utility['amount'];
+                    $utilityAmount = (float)($utility['amount'] ?? 0);
                     
                     // Get utility payments for this specific utility
                     $utilityPaymentStmt = $this->db->prepare("
                         SELECT SUM(amount) as total_paid
                         FROM payments 
-                        WHERE lease_id = ? AND utility_id = ? AND payment_type = 'utility' AND status = 'completed'
+                        WHERE lease_id = ? AND utility_id = ? AND payment_type = 'utility' AND status IN ('completed','verified')
                     ");
                     $utilityPaymentStmt->execute([$lease['lease_id'], $utility['id']]);
                     $utilityPaid = $utilityPaymentStmt->fetch(\PDO::FETCH_ASSOC);
-                    $utilityPaidAmount = $utilityPaid['total_paid'] ?? 0;
+                    $utilityPaidAmount = (float)($utilityPaid['total_paid'] ?? 0);
                     
-                    $utilityOutstanding = max(0, $utilityAmount - $utilityPaidAmount);
+                    $utilityOutstanding = max(0.0, $utilityAmount - $utilityPaidAmount);
                     $totalOutstanding += $utilityOutstanding;
                 }
             }
@@ -2019,95 +2148,61 @@ class Payment extends Model
             return [];
         }
 
-        // For admin users
-        if ($userData['role'] === 'admin') {
-            $sql = "SELECT 
-                        pr.id,
-                        pr.name,
-                        COALESCE(SUM(CASE 
-                            WHEN p.status IN ('completed', 'verified') 
-                            AND p.payment_date BETWEEN ? AND ?
-                            THEN p.amount 
-                            ELSE 0 
-                        END), 0) as revenue,
-                        COALESCE(SUM(CASE 
-                            WHEN l.status = 'active'
-                            THEN l.rent_amount - COALESCE((
-                                SELECT SUM(amount) 
-                                FROM payments 
-                                WHERE lease_id = l.id 
-                                AND status IN ('completed', 'verified')
-                                AND MONTH(payment_date) = MONTH(CURRENT_DATE())
-                                AND YEAR(payment_date) = YEAR(CURRENT_DATE())
-                            ), 0)
-                            ELSE 0 
-                        END), 0) as outstanding,
-                        CASE 
-                            WHEN SUM(CASE WHEN l.status = 'active' THEN l.rent_amount ELSE 0 END) > 0
-                            THEN (SUM(CASE 
-                                WHEN p.status IN ('completed', 'verified') 
-                                AND MONTH(p.payment_date) = MONTH(CURRENT_DATE())
-                                AND YEAR(p.payment_date) = YEAR(CURRENT_DATE())
-                                THEN p.amount 
-                                ELSE 0 
-                            END) / SUM(CASE WHEN l.status = 'active' THEN l.rent_amount ELSE 0 END)) * 100
-                            ELSE 0
-                        END as collection_rate
-                    FROM properties pr
-                    LEFT JOIN units u ON pr.id = u.property_id
-                    LEFT JOIN leases l ON u.id = l.unit_id
-                    LEFT JOIN payments p ON l.id = p.lease_id
-                    GROUP BY pr.id, pr.name
-                    HAVING revenue > 0 OR outstanding > 0
-                    ORDER BY revenue DESC";
-            $stmt = $this->db->prepare($sql);
-            $stmt->execute([$startDate, $endDate]);
-        } else {
-            // For regular users
-            $sql = "SELECT 
-                        pr.id,
-                        pr.name,
-                        COALESCE(SUM(CASE 
-                            WHEN p.status IN ('completed', 'verified') 
-                            AND p.payment_date BETWEEN ? AND ?
-                            THEN p.amount 
-                            ELSE 0 
-                        END), 0) as revenue,
-                        COALESCE(SUM(CASE 
-                            WHEN l.status = 'active'
-                            THEN l.rent_amount - COALESCE((
-                                SELECT SUM(amount) 
-                                FROM payments 
-                                WHERE lease_id = l.id 
-                                AND status IN ('completed', 'verified')
-                                AND MONTH(payment_date) = MONTH(CURRENT_DATE())
-                                AND YEAR(payment_date) = YEAR(CURRENT_DATE())
-                            ), 0)
-                            ELSE 0 
-                        END), 0) as outstanding,
-                        CASE 
-                            WHEN SUM(CASE WHEN l.status = 'active' THEN l.rent_amount ELSE 0 END) > 0
-                            THEN (SUM(CASE 
-                                WHEN p.status IN ('completed', 'verified') 
-                                AND MONTH(p.payment_date) = MONTH(CURRENT_DATE())
-                                AND YEAR(p.payment_date) = YEAR(CURRENT_DATE())
-                                THEN p.amount 
-                                ELSE 0 
-                            END) / SUM(CASE WHEN l.status = 'active' THEN l.rent_amount ELSE 0 END)) * 100
-                            ELSE 0
-                        END as collection_rate
-                    FROM properties pr
-                    LEFT JOIN units u ON pr.id = u.property_id
-                    LEFT JOIN leases l ON u.id = l.unit_id
-                    LEFT JOIN payments p ON l.id = p.lease_id
-                    WHERE (pr.owner_id = ? OR pr.manager_id = ? OR pr.agent_id = ? OR pr.caretaker_user_id = ?)
-                    GROUP BY pr.id, pr.name
-                    HAVING revenue > 0 OR outstanding > 0
-                    ORDER BY revenue DESC";
-            $stmt = $this->db->prepare($sql);
-            $stmt->execute([$startDate, $endDate, $userId, $userId, $userId, $userId]);
+        $isAdmin = ($userData['role'] ?? '') === 'admin' || ($userData['role'] ?? '') === 'administrator';
+
+        $sql = "SELECT
+                    pr.id,
+                    pr.name,
+                    COALESCE(SUM(CASE
+                        WHEN p.status IN ('completed', 'verified')
+                        AND p.payment_date BETWEEN ? AND ?
+                        THEN p.amount
+                        ELSE 0
+                    END), 0) as revenue
+                FROM properties pr
+                LEFT JOIN units u ON pr.id = u.property_id
+                LEFT JOIN leases l ON u.id = l.unit_id
+                LEFT JOIN payments p ON l.id = p.lease_id";
+        $params = [$startDate, $endDate];
+        if (!$isAdmin) {
+            $sql .= " WHERE (pr.owner_id = ? OR pr.manager_id = ? OR pr.agent_id = ? OR pr.caretaker_user_id = ?)";
+            $params[] = $userId; $params[] = $userId; $params[] = $userId; $params[] = $userId;
         }
-        
-        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        $sql .= " GROUP BY pr.id, pr.name ORDER BY revenue DESC";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+
+        // Compute outstanding and collection rate consistently
+        $rentSumStmt = $this->db->prepare("SELECT COALESCE(SUM(l.rent_amount),0) AS s
+            FROM leases l
+            JOIN units u ON l.unit_id = u.id
+            WHERE l.status='active' AND u.property_id = ?");
+        $paidThisMonthStmt = $this->db->prepare("SELECT COALESCE(SUM(p.amount),0) AS s
+            FROM payments p
+            JOIN leases l ON p.lease_id = l.id
+            JOIN units u ON l.unit_id = u.id
+            WHERE u.property_id = ?
+              AND p.status IN ('completed','verified')
+              AND MONTH(p.payment_date) = MONTH(CURRENT_DATE())
+              AND YEAR(p.payment_date) = YEAR(CURRENT_DATE())");
+
+        foreach ($rows as &$r) {
+            $pid = (int)($r['id'] ?? 0);
+            $r['outstanding'] = $pid > 0 ? $this->getOutstandingBalanceForProperty($pid, $userId) : 0.0;
+            $rentSumStmt->execute([$pid]);
+            $activeRent = (float)($rentSumStmt->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0);
+            $paidThisMonthStmt->execute([$pid]);
+            $paidThisMonth = (float)($paidThisMonthStmt->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0);
+            $r['collection_rate'] = $activeRent > 0 ? (($paidThisMonth / $activeRent) * 100.0) : 0.0;
+        }
+
+        // Keep only rows that have something meaningful
+        $rows = array_values(array_filter($rows, function($r){
+            return ((float)($r['revenue'] ?? 0) > 0.0001) || ((float)($r['outstanding'] ?? 0) > 0.0001);
+        }));
+
+        return $rows;
     }
 } 

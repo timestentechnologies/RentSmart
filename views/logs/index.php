@@ -12,6 +12,12 @@ ob_start();
             </div>
             <?php $qs = http_build_query($_GET ?? []); ?>
             <div class="d-flex gap-2 ms-md-auto">
+                <form method="POST" action="<?= BASE_URL ?>/activity-logs/clear" class="d-inline" id="clearLogsForm">
+                    <?= function_exists('csrf_field') ? csrf_field() : '' ?>
+                    <button type="button" class="btn btn-outline-danger btn-sm" id="clearLogsBtn">
+                        <i class="bi bi-trash me-1"></i>Delete All
+                    </button>
+                </form>
                 <a href="<?= BASE_URL ?>/activity-logs/export/csv<?= $qs ? ('?' . $qs) : '' ?>" class="btn btn-outline-secondary btn-sm">
                     <i class="bi bi-filetype-csv me-1"></i>Export CSV
                 </a>
@@ -117,3 +123,26 @@ ob_start();
 $content = ob_get_clean();
 require_once __DIR__ . '/../layouts/main.php';
 ?>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const btn = document.getElementById('clearLogsBtn');
+    const form = document.getElementById('clearLogsForm');
+    if (!btn || !form || !window.Swal) return;
+    btn.addEventListener('click', function() {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Delete all logs?',
+            text: 'This will remove all activity logs you can see. This action cannot be undone.',
+            showCancelButton: true,
+            confirmButtonText: 'Yes, delete all',
+            cancelButtonText: 'Cancel',
+            confirmButtonColor: '#dc3545'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                form.submit();
+            }
+        });
+    });
+});
+</script>

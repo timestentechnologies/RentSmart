@@ -154,6 +154,9 @@ $routes = [
     'subscription/invoice/current' => ['controller' => 'SubscriptionController', 'action' => 'invoiceCurrent'],
     'activity-logs' => ['controller' => 'LogsController', 'action' => 'index'],
     'activity-logs/export/(csv|xlsx)' => ['controller' => 'LogsController', 'action' => 'export'],
+    'activity-logs/clear' => [
+        'POST' => ['controller' => 'LogsController', 'action' => 'clearAll'],
+    ],
     
     // Admin routes
     'admin/users' => ['controller' => 'AdminController', 'action' => 'users'],
@@ -280,7 +283,9 @@ $routes = [
     'accounting/accounts' => ['controller' => 'AccountingController', 'action' => 'accounts'],
     'accounting/storeAccount' => ['controller' => 'AccountingController', 'action' => 'storeAccount'],
     'accounting/ledger' => ['controller' => 'AccountingController', 'action' => 'ledger'],
+    'accounting/trial-balance' => ['controller' => 'AccountingController', 'action' => 'trialBalance'],
     'accounting/trialBalance' => ['controller' => 'AccountingController', 'action' => 'trialBalance'],
+    'accounting/balance-sheet' => ['controller' => 'AccountingController', 'action' => 'balanceSheet'],
     'accounting/balanceSheet' => ['controller' => 'AccountingController', 'action' => 'balanceSheet'],
     'accounting/profitLoss' => ['controller' => 'AccountingController', 'action' => 'profitLoss'],
     'accounting/statements' => ['controller' => 'AccountingController', 'action' => 'statements'],
