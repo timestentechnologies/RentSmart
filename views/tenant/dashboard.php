@@ -360,7 +360,7 @@
                         </div>
                         
                         <!-- Utilities Payment -->
-                        <div class="col-lg-6 col-md-12">
+                        <div class="col-lg-4 col-md-6 mb-3">
                             <div class="card h-100 payment-card" style="border-left: 4px solid #17a2b8 !important;">
                                 <div class="card-body">
                                     <div class="d-flex justify-content-between align-items-start mb-3">
@@ -444,6 +444,36 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Maintenance Due -->
+                        <div class="col-lg-4 col-md-6 mb-3">
+                            <div class="card h-100 payment-card" style="border-left: 4px solid #ffc107 !important;">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start mb-3">
+                                        <div>
+                                            <h6 class="card-title text-dark mb-1">Maintenance Due</h6>
+                                            <small class="text-muted">Cost billed to you</small>
+                                        </div>
+                                        <div class="text-warning">
+                                            <i class="bi bi-tools fs-4"></i>
+                                        </div>
+                                    </div>
+
+                                    <?php $maintDue = (float)($maintenanceOutstanding ?? 0); ?>
+                                    <div class="mb-3">
+                                        <div class="d-flex justify-content-between align-items-center p-2 rounded" style="background-color:#fff3cd;">
+                                            <span class="text-muted small">Total Due:</span>
+                                            <strong class="text-dark fs-6">Ksh <?= number_format($maintDue, 2) ?></strong>
+                                        </div>
+                                    </div>
+
+                                    <button type="button" class="btn btn-warning btn-sm w-100" <?= $maintDue > 0 ? '' : 'disabled' ?>
+                                            onclick="openPaymentModal('maintenance', <?= htmlspecialchars(json_encode($paymentMethods)) ?>)">
+                                        <i class="bi bi-credit-card me-1"></i>Pay Maintenance
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     <?php 
                     // Combined totals for Rent + Utilities using missed months and coverage
@@ -481,28 +511,6 @@
                             <i class="bi bi-credit-card me-1"></i>Pay All
                         </button>
                     </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Maintenance Due Card -->
-    <div class="row mb-4">
-        <div class="col-lg-4 col-md-6 mb-3">
-            <div class="card h-100">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0"><i class="bi bi-tools me-2"></i>Maintenance Due</h5>
-                </div>
-                <div class="card-body">
-                    <?php $maintDue = (float)($maintenanceOutstanding ?? 0); ?>
-                    <div class="d-flex justify-content-between align-items-center mb-3 p-2 rounded" style="background-color:#fff3cd;">
-                        <span class="text-muted small">Total Due:</span>
-                        <strong class="text-dark">Ksh <?= number_format($maintDue, 2) ?></strong>
-                    </div>
-                    <button type="button" class="btn btn-warning btn-sm w-100" <?= $maintDue > 0 ? '' : 'disabled' ?>
-                            onclick="openPaymentModal('maintenance', <?= htmlspecialchars(json_encode($paymentMethods)) ?>)">
-                        <i class="bi bi-credit-card me-1"></i>Pay Maintenance
-                    </button>
                 </div>
             </div>
         </div>
