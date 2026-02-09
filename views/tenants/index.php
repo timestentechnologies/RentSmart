@@ -358,13 +358,6 @@ ob_start();
                                 </select>
                             </div>
                             <div class="mb-3">
-                                <label for="rent_amount" class="form-label">Monthly Rent (Optional)</label>
-                                <div class="input-group">
-                                    <span class="input-group-text">Ksh</span>
-                                    <input type="number" step="0.01" class="form-control" id="rent_amount" name="rent_amount">
-                                </div>
-                            </div>
-                            <div class="mb-3">
                                 <label for="notes" class="form-label">Notes</label>
                                 <textarea class="form-control" id="notes" name="notes" rows="3"></textarea>
                             </div>
@@ -447,10 +440,6 @@ ob_start();
                         <select id="edit_unit_id" name="unit_id" class="form-select">
                             <option value="">Select Unit</option>
                         </select>
-                    </div>
-                    <div class="mb-3">
-                        <label for="edit_rent_amount" class="form-label">Rent Amount</label>
-                        <input type="number" id="edit_rent_amount" name="rent_amount" class="form-control" step="0.01" min="0">
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -598,12 +587,10 @@ document.addEventListener('DOMContentLoaded', function() {
     // Property-Unit Dynamic Loading
     const propertySelect = document.getElementById('property_id');
     const unitSelect = document.getElementById('unit_id');
-    const rentInput = document.getElementById('rent_amount');
 
     propertySelect.addEventListener('change', function() {
         unitSelect.disabled = true;
         unitSelect.innerHTML = '<option value="">Select Unit (Optional)</option>';
-        rentInput.value = '';
 
         if (this.value) {
             fetch(`${BASE_URL}/properties/${this.value}/units`)
@@ -616,7 +603,6 @@ document.addEventListener('DOMContentLoaded', function() {
                                 const option = document.createElement('option');
                                 option.value = unit.id;
                                 option.textContent = `Unit ${unit.unit_number}`;
-                                option.dataset.rent = unit.rent_amount;
                                 unitSelect.appendChild(option);
                                 vacantFound = true;
                             }
@@ -638,12 +624,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Update rent amount when unit is selected
     unitSelect.addEventListener('change', function() {
-        const selectedOption = this.options[this.selectedIndex];
-        if (selectedOption && selectedOption.dataset.rent) {
-            rentInput.value = selectedOption.dataset.rent;
-        } else {
-            rentInput.value = '';
-        }
+        return;
     });
 
     // Add Tenant Form Handling
@@ -750,7 +731,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         document.getElementById('edit_name').value = data.tenant.name || '';
                         document.getElementById('edit_email').value = data.tenant.email || '';
                         document.getElementById('edit_phone').value = data.tenant.phone || '';
-                        document.getElementById('edit_rent_amount').value = data.tenant.rent_amount || '';
                         document.getElementById('editTenantForm').dataset.tenantId = data.tenant.id;
                         // Set property and load units
                         const propertySelect = document.getElementById('edit_property_id');
