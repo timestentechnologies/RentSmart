@@ -180,7 +180,12 @@ class TenantsController
             }
 
             // Start transaction
-            $this->db->beginTransaction();
+            $txStarted = false;
+            try {
+                $txStarted = (bool)$this->db->beginTransaction();
+            } catch (\Throwable $e) {
+                $txStarted = false;
+            }
 
             try {
                 // Create tenant
@@ -419,7 +424,7 @@ class TenantsController
                     }
                 }
 
-                if ($this->db->inTransaction()) {
+                if ($txStarted && $this->db->inTransaction()) {
                     $this->db->commit();
                 }
                 if ($isAjax) {
@@ -436,7 +441,7 @@ class TenantsController
                 $_SESSION['flash_message'] = 'Tenant added successfully';
                 $_SESSION['flash_type'] = 'success';
             } catch (\Exception $e) {
-                if ($this->db->inTransaction()) {
+                if ($txStarted && $this->db->inTransaction()) {
                     $this->db->rollBack();
                 }
                 error_log('TenantsController::store transaction error: ' . $e->getMessage());
@@ -499,7 +504,12 @@ class TenantsController
             }
 
             // Start transaction
-            $this->db->beginTransaction();
+            $txStarted = false;
+            try {
+                $txStarted = (bool)$this->db->beginTransaction();
+            } catch (\Throwable $e) {
+                $txStarted = false;
+            }
 
             try {
                 // Update tenant
@@ -597,7 +607,9 @@ class TenantsController
                     }
                 }
 
-                $this->db->commit();
+                if ($txStarted && $this->db->inTransaction()) {
+                    $this->db->commit();
+                }
 
                 if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest') {
                     $updatedTenant = $this->tenant->getById($id, $_SESSION['user_id']);
@@ -614,7 +626,7 @@ class TenantsController
                 $_SESSION['flash_type'] = 'success';
                 redirect('/tenants');
             } catch (\Exception $e) {
-                if ($this->db->inTransaction()) {
+                if ($txStarted && $this->db->inTransaction()) {
                     $this->db->rollBack();
                 }
                 throw $e;
