@@ -41,6 +41,7 @@ class TenantPortalController
         $missedRentMonths = $paymentModel->getTenantMissedRentMonths($tenantId);
         $rentCoverage = $paymentModel->getTenantRentCoverage($tenantId);
         $maintenanceOutstanding = $paymentModel->getTenantMaintenanceOutstanding($tenantId);
+        $paidRentMonths = $lease ? $paymentModel->getFullyPaidRentMonthsByLease((int)$lease['id']) : [];
         $utilityModel = new Utility();
         $utilities = $utilityModel->getTenantUtilities($tenantId);
         

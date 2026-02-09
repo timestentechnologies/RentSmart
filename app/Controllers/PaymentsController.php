@@ -216,6 +216,17 @@ class PaymentsController
         
         // Get tenants with active leases (with role-based access)
         $tenants = $tenantModel->getActiveLeases($this->userId);
+
+        // Attach fully-paid rent months per lease for UI validation
+        try {
+            foreach ($tenants as &$t) {
+                $leaseId = (int)($t['lease_id'] ?? 0);
+                $t['paid_rent_months'] = $leaseId > 0 ? $paymentModel->getFullyPaidRentMonthsByLease($leaseId) : [];
+            }
+            unset($t);
+        } catch (\Throwable $e) {
+            // ignore
+        }
         
         // Enhance tenant data with payment and utility information
         foreach ($tenants as &$tenant) {
@@ -336,6 +347,16 @@ class PaymentsController
 
                 $paymentTypes = $_POST['payment_types'] ?? [];
                 $successMessages = [];
+
+                // Prevent recording rent against a month already fully paid
+                if (in_array('rent', $paymentTypes, true) && $appliesToMonth !== null) {
+                    if ($paymentModel->isRentMonthFullyPaidByLease((int)$lease['id'], $appliesToMonth)) {
+                        $_SESSION['flash_message'] = 'Selected month is already fully paid. Please select another month.';
+                        $_SESSION['flash_type'] = 'warning';
+                        header('Location: ' . BASE_URL . '/payments');
+                        exit;
+                    }
+                }
 
                 // Process rent payment if selected
                 if (in_array('rent', $paymentTypes) && !empty($_POST['rent_amount'])) {

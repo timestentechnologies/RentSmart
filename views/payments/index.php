@@ -353,6 +353,7 @@ ob_start();
                                 ?>
                                 <option value="<?= $tenant['id'] ?>" 
                                         data-due="<?= htmlspecialchars($tenant['due_amount'] ?? 0) ?>"
+                                        data-paid-months='<?= htmlspecialchars(json_encode(array_values(array_unique($tenant['paid_rent_months'] ?? []))), ENT_QUOTES, 'UTF-8') ?>'
                                         data-utilities='<?= htmlspecialchars(json_encode($utilityData, JSON_HEX_APOS | JSON_HEX_TAG | JSON_HEX_AMP), ENT_NOQUOTES, 'UTF-8') ?>'>
                                     <?= htmlspecialchars($tenant['name']) ?> 
                                     (Lease #<?= $tenant['lease_id'] ?>)
@@ -436,6 +437,7 @@ ob_start();
                     <div class="mb-3">
                         <label for="applies_to_month" class="form-label">Payment For Month</label>
                         <input type="month" class="form-control" id="applies_to_month" name="applies_to_month" value="<?= date('Y-m') ?>">
+                        <div id="adminPaidMonthWarning" class="text-danger small mt-1" style="display:none;"></div>
                     </div>
 
                     <div class="mb-3">
@@ -503,7 +505,7 @@ ob_start();
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Add Payment</button>
+                    <button type="submit" class="btn btn-primary" id="addPaymentSubmitBtn">Add Payment</button>
                 </div>
             </form>
         </div>
@@ -1232,6 +1234,12 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('tenant_id').addEventListener('change', function() {
         const selectedOption = this.options[this.selectedIndex];
         const dueAmount = selectedOption.getAttribute('data-due');
+        let paidMonths = [];
+        try {
+            paidMonths = JSON.parse(selectedOption.getAttribute('data-paid-months') || '[]');
+        } catch (e) {
+            paidMonths = [];
+        }
         let utilities = [];
         try {
             utilities = JSON.parse(selectedOption.getAttribute('data-utilities') || '[]');
@@ -1240,15 +1248,41 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         // Default applies_to_month to current month
-        const appliesToMonth = document.getElementById('applies_to_month');
-        if (appliesToMonth && !appliesToMonth.value) {
-            appliesToMonth.value = new Date().toISOString().slice(0, 7);
+        const appliesToMonthInput = document.getElementById('applies_to_month');
+        if (appliesToMonthInput && !appliesToMonthInput.value) {
+            appliesToMonthInput.value = new Date().toISOString().slice(0, 7);
         }
         
         // Set rent amount
         if (dueAmount) {
             rentAmountInput.value = dueAmount;
         }
+
+        // Validate month selection vs paid months
+        const appliesToMonth = appliesToMonthInput;
+        const warningEl = document.getElementById('adminPaidMonthWarning');
+        const submitBtn = document.getElementById('addPaymentSubmitBtn');
+        const rentChk = document.getElementById('rent_payment');
+
+        const validatePaidMonth = () => {
+            if (!appliesToMonth || !warningEl || !submitBtn) return;
+            const ym = (appliesToMonth.value || '').trim();
+            const rentSelected = !!(rentChk && rentChk.checked);
+            const isPaid = rentSelected && ym !== '' && Array.isArray(paidMonths) && paidMonths.indexOf(ym) !== -1;
+            if (isPaid) {
+                warningEl.textContent = 'This month is already fully paid. Please select another month.';
+                warningEl.style.display = 'block';
+                submitBtn.disabled = true;
+            } else {
+                warningEl.textContent = '';
+                warningEl.style.display = 'none';
+                submitBtn.disabled = false;
+            }
+        };
+
+        appliesToMonth && appliesToMonth.addEventListener('change', validatePaidMonth);
+        rentChk && rentChk.addEventListener('change', validatePaidMonth);
+        validatePaidMonth();
 
         // Update utility type options
         utilityTypeSelect.innerHTML = '<option value="">Select Utility</option>';
