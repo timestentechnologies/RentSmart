@@ -52,7 +52,7 @@ ob_start();
                     <thead>
                         <tr>
                             <th>Property</th>
-                            <th>Type</th>
+                            <th>Utility Name</th>
                             <th>Billing Method</th>
                             <th>Rate Per Unit (KES)</th>
                             <th>Effective From</th>
@@ -133,7 +133,7 @@ ob_start();
                             </select>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Utility Type</label>
+                            <label class="form-label">Utility Name</label>
                             <input type="text" class="form-control" name="utility_type" required placeholder="e.g. Water, Electricity">
                         </div>
                         <div class="mb-3">
@@ -263,7 +263,7 @@ ob_start();
                                     <td>
                                         <?php
                                             $uname = trim((string)($utility['utility_type'] ?? ($utility['type'] ?? '')));
-                                            echo $uname !== '' ? htmlspecialchars(ucfirst($uname)) : '-';
+                                            echo $uname !== '' ? htmlspecialchars(ucfirst($uname)) : ('Utility #' . (int)($utility['id'] ?? 0));
                                         ?>
                                     </td>
                                     <td><?= $utility['is_metered'] ? 'Metered' : 'Flat Rate' ?></td>
@@ -275,24 +275,22 @@ ob_start();
                                     <td><?= htmlspecialchars(number_format((float)($utility['paid_amount'] ?? 0), 2)) ?></td>
                                     <td><?= htmlspecialchars(number_format((float)($utility['balance_due'] ?? 0), 2)) ?></td>
                                     <td>
-                                        <?php if (strtolower($utility['is_metered'] ? '' : 'flat rate') !== 'flat rate'): ?>
-                                            <button class="btn btn-sm btn-outline-primary edit-utility-btn"
-                                                    data-id="<?= $utility['id'] ?>"
-                                                    data-unit_id="<?= $utility['unit_id'] ?>"
-                                                    data-unit_number="<?= htmlspecialchars($utility['unit_number']) ?>"
-                                                    data-property_name="<?= htmlspecialchars($utility['property_name']) ?>"
-                                                    data-utility_type="<?= htmlspecialchars($utility['utility_type']) ?>"
-                                                    data-utility_type_label="<?= htmlspecialchars(ucfirst($utility['utility_type'])) ?>"
-                                                    data-meter_number="<?= htmlspecialchars($utility['meter_number']) ?>"
-                                                    data-is_metered="<?= $utility['is_metered'] ?>"
-                                                    data-previous_reading="<?= htmlspecialchars($utility['previous_reading']) ?>"
-                                                    data-latest_reading="<?= htmlspecialchars($utility['latest_reading']) ?>"
-                                                    data-units_used="<?= htmlspecialchars($utility['units_used']) ?>"
-                                                    data-cost="<?= htmlspecialchars($utility['cost']) ?>"
-                                                    data-bs-toggle="modal" data-bs-target="#editUtilityModal">
-                                                Edit
-                                            </button>
-                                        <?php endif; ?>
+                                        <button class="btn btn-sm btn-outline-primary edit-utility-btn"
+                                                data-id="<?= $utility['id'] ?>"
+                                                data-unit_id="<?= $utility['unit_id'] ?>"
+                                                data-unit_number="<?= htmlspecialchars($utility['unit_number']) ?>"
+                                                data-property_name="<?= htmlspecialchars($utility['property_name']) ?>"
+                                                data-utility_type="<?= htmlspecialchars($utility['utility_type']) ?>"
+                                                data-utility_type_label="<?= htmlspecialchars(ucfirst($utility['utility_type'])) ?>"
+                                                data-meter_number="<?= htmlspecialchars($utility['meter_number']) ?>"
+                                                data-is_metered="<?= $utility['is_metered'] ?>"
+                                                data-previous_reading="<?= htmlspecialchars($utility['previous_reading']) ?>"
+                                                data-latest_reading="<?= htmlspecialchars($utility['latest_reading']) ?>"
+                                                data-units_used="<?= htmlspecialchars($utility['units_used']) ?>"
+                                                data-cost="<?= htmlspecialchars($utility['cost']) ?>"
+                                                data-bs-toggle="modal" data-bs-target="#editUtilityModal">
+                                            Edit
+                                        </button>
                                         <form method="POST" action="<?= BASE_URL ?>/utilities/delete/<?= $utility['id'] ?>" style="display:inline;">
                                             <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
                                             <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this utility?');">Delete</button>
@@ -348,7 +346,7 @@ ob_start();
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="form-label">Utility Type</label>
+                        <label class="form-label">Utility Name</label>
                         <input type="text" class="form-control" name="utility_type" id="edit_utility_type" required>
                     </div>
                     <div class="mb-3">
@@ -397,9 +395,8 @@ ob_start();
             <input type="hidden" name="unit_id" id="edit_unit_id">
           </div>
           <div class="mb-3">
-            <label class="form-label">Utility Type</label>
-            <input type="text" class="form-control" id="edit_utility_type_display" readonly>
-                        <input type="hidden" name="utility_type" id="edit_utility_type_hidden">
+            <label class="form-label">Utility Name</label>
+            <input type="text" class="form-control" name="utility_type" id="edit_utility_name">
           </div>
           <div class="mb-3">
             <label class="form-label">Meter Number</label>
@@ -652,8 +649,7 @@ $(document).ready(function() {
         
         $('#edit_unit_display').val(data.unit_number + ' - ' + data.property_name);
         $('#edit_unit_id').val(data.unit_id);
-        $('#edit_utility_type_display').val(data.utility_type_label || data.utility_type);
-        $('#edit_utility_type_hidden').val(data.utility_type);
+        $('#edit_utility_name').val(data.utility_type_label || data.utility_type || '');
         $('#edit_meter_number').val(data.meter_number);
         $('#edit_is_metered').val(data.is_metered);
         $('#edit_previous_reading').val(data.previous_reading || '');
@@ -676,7 +672,7 @@ $(document).ready(function() {
         
         // Calculate cost if metered
         if ($('#edit_is_metered').val() === '1') {
-            const utilityType = $('#edit_utility_type_hidden').val().toLowerCase();
+            const utilityType = String($('#edit_utility_name').val() || '').toLowerCase();
             const rate = utilityRates[utilityType] || 0;
             const cost = unitsUsed * rate;
             $('#edit_cost').val(cost.toFixed(2));

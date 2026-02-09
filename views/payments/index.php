@@ -333,23 +333,23 @@ ob_start();
                             <option value="">Select Tenant</option>
                             <?php foreach ($tenants as $tenant): ?>
                                 <?php
-                                    $utilityData = [];
-                                    if (!empty($tenant['utility_readings'])) {
-                                        foreach ($tenant['utility_readings'] as $reading) {
-                                            $utilityData[] = [
-                                                'id' => $reading['utility_id'],
-                                                'type' => $reading['utility_type'],
-                                                'label' => !empty($reading['utility_type']) ? ucfirst((string)$reading['utility_type']) : ('Utility #' . (int)$reading['utility_id']),
-                                                'current_reading' => $reading['current_reading'],
-                                                'current_reading_date' => $reading['current_reading_date'],
-                                                'previous_reading' => $reading['previous_reading'],
-                                                'previous_reading_date' => $reading['previous_reading_date'],
-                                                'cost' => $reading['cost'],
-                                                'rate' => $reading['rate'],
-                                                'is_metered' => $reading['is_metered']
-                                            ];
-                                        }
+                                $utilityData = [];
+                                if (!empty($tenant['utility_readings'])) {
+                                    foreach ($tenant['utility_readings'] as $reading) {
+                                        $utilityData[] = [
+                                            'id' => $reading['utility_id'],
+                                            'type' => $reading['utility_type'],
+                                            'label' => !empty($reading['utility_type']) ? ucfirst((string)$reading['utility_type']) : ('Utility #' . (int)$reading['utility_id']),
+                                            'current_reading' => $reading['current_reading'],
+                                            'current_reading_date' => $reading['current_reading_date'],
+                                            'previous_reading' => $reading['previous_reading'],
+                                            'previous_reading_date' => $reading['previous_reading_date'],
+                                            'cost' => $reading['cost'],
+                                            'rate' => $reading['rate'],
+                                            'is_metered' => $reading['is_metered']
+                                        ];
                                     }
+                                }
                                 ?>
                                 <option value="<?= $tenant['id'] ?>" 
                                         data-due="<?= htmlspecialchars($tenant['due_amount'] ?? 0) ?>"
@@ -390,9 +390,9 @@ ob_start();
                             <input type="number" step="0.01" class="form-control" id="rent_amount" name="rent_amount">
                         </div>
                     </div>
-id
+
                     <div id="utility_payment_section" class="mb-3" style="display: none;">
-                        <label for="utility_type" class="form-label">Utility Type</label>
+                        <label for="utility_id" class="form-label">Utility</label>
                         <select class="form-select" id="utility_id" name="utility_id">
                             <option value="">Select Utility</option>
                         </select>
@@ -400,9 +400,11 @@ id
                             <div class="card bg-light">
                                 <div class="card-body">
                                     <div class="small">
-                                        <div><strong>Previous Reading:</strong> <span id="previous_reading">0</span> (<span id="previous_reading_date"></span>)</div>
-                                        <div><strong>Current Reading:</strong> <span id="current_reading">0</span> (<span id="current_reading_date"></span>)</div>
-                                        <div><strong>Rate:</strong> Ksh<span id="rate">0</span></div>
+                                        <div id="meter_reading_rows">
+                                            <div><strong>Previous Reading:</strong> <span id="previous_reading">0</span> (<span id="previous_reading_date"></span>)</div>
+                                            <div><strong>Current Reading:</strong> <span id="current_reading">0</span> (<span id="current_reading_date"></span>)</div>
+                                        </div>
+                                        <div id="rate_row"><strong>Rate:</strong> Ksh<span id="rate">0</span></div>
                                         <div><strong>Amount Due:</strong> Ksh<span id="amount_due">0</span></div>
                                     </div>
                                 </div>
@@ -1253,7 +1255,9 @@ document.addEventListener('DOMContentLoaded', function() {
         utilities.forEach(utility => {
             const option = document.createElement('option');
             option.value = utility.id;
-            option.textContent = utility.label || (utility.type ? (utility.type.charAt(0).toUpperCase() + utility.type.slice(1)) : ('Utility #' + String(utility.id)));
+            const baseLabel = utility.label || (utility.type ? (utility.type.charAt(0).toUpperCase() + utility.type.slice(1)) : ('Utility #' + String(utility.id)));
+            const methodLabel = (String(utility.is_metered) === '1' || utility.is_metered === 1) ? 'Metered' : 'Flat Rate';
+            option.textContent = `${baseLabel} (${methodLabel})`;
             option.setAttribute('data-details', JSON.stringify(utility));
             utilityTypeSelect.appendChild(option);
         });
@@ -1270,11 +1274,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 utilityDetails = null;
             }
             if (utilityDetails) {
-                document.getElementById('previous_reading').textContent = utilityDetails.previous_reading;
-                document.getElementById('previous_reading_date').textContent = formatDate(utilityDetails.previous_reading_date);
-                document.getElementById('current_reading').textContent = utilityDetails.current_reading;
-                document.getElementById('current_reading_date').textContent = formatDate(utilityDetails.current_reading_date);
-                document.getElementById('rate').textContent = utilityDetails.rate;
+                const isMetered = (String(utilityDetails.is_metered) === '1' || utilityDetails.is_metered === 1);
+                const meterRows = document.getElementById('meter_reading_rows');
+                const rateRow = document.getElementById('rate_row');
+
+                if (meterRows) meterRows.style.display = isMetered ? 'block' : 'none';
+
+                if (isMetered) {
+                    document.getElementById('previous_reading').textContent = utilityDetails.previous_reading;
+                    document.getElementById('previous_reading_date').textContent = formatDate(utilityDetails.previous_reading_date);
+                    document.getElementById('current_reading').textContent = utilityDetails.current_reading;
+                    document.getElementById('current_reading_date').textContent = formatDate(utilityDetails.current_reading_date);
+                    if (rateRow) rateRow.style.display = 'block';
+                    document.getElementById('rate').textContent = utilityDetails.rate;
+                } else {
+                    if (rateRow) rateRow.style.display = 'none';
+                }
+
                 document.getElementById('amount_due').textContent = utilityDetails.cost;
                 utilityAmountInput.value = utilityDetails.cost;
                 document.getElementById('utility_details').style.display = 'block';
