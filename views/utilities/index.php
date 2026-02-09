@@ -243,7 +243,7 @@ ob_start();
                                 <th>Unit</th>
                                 <th>Tenant</th>
                                 <th>Utility Name</th>
-                                <th>Type</th>
+                                <th>Billing Method</th>
                                 <th>Meter</th>
                                 <th>Previous Reading</th>
                                 <th>Current Reading</th>
