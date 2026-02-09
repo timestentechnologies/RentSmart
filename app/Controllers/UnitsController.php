@@ -354,11 +354,57 @@ class UnitsController
 
             error_log("UnitsController::update - Final data for update: " . print_r($data, true));
 
+            $oldRent = isset($unit['rent_amount']) ? (float)$unit['rent_amount'] : null;
+            $newRent = ($data['rent_amount'] === false || $data['rent_amount'] === null) ? null : (float)$data['rent_amount'];
+
             // Update unit
             $updateResult = $this->unit->update($id, $data);
             error_log("UnitsController::update - Update result: " . ($updateResult ? 'true' : 'false'));
 
             if ($updateResult) {
+                // If rent changed on unit form, sync to active lease for this unit
+                try {
+                    if (($data['status'] ?? '') !== 'vacant' && $newRent !== null && $oldRent !== null) {
+                        if (abs($newRent - $oldRent) > 0.0001) {
+                            $stmt = $this->db->prepare("SELECT id, rent_amount FROM leases WHERE unit_id = ? AND status = 'active' ORDER BY id DESC LIMIT 1");
+                            $stmt->execute([(int)$id]);
+                            $lease = $stmt->fetch(\PDO::FETCH_ASSOC);
+                            if ($lease && isset($lease['id'])) {
+                                $stmt = $this->db->prepare("UPDATE leases SET rent_amount = ?, updated_at = NOW() WHERE id = ?");
+                                $stmt->execute([$newRent, (int)$lease['id']]);
+                            }
+                        }
+                    }
+                } catch (\Exception $e) {
+                    error_log('UnitsController::update rent->lease sync failed: ' . $e->getMessage());
+                }
+
+                // If unit is marked vacant, ensure tenant/lease are unassigned as well
+                try {
+                    if (($data['status'] ?? '') === 'vacant') {
+                        // Deactivate any active lease for this unit
+                        $stmt = $this->db->prepare("UPDATE leases SET status = 'inactive', updated_at = NOW() WHERE unit_id = ? AND status = 'active'");
+                        $stmt->execute([(int)$id]);
+
+                        // If unit had a tenant assigned, clear tenant linkage (keep tenant record as pending)
+                        $stmt = $this->db->prepare("SELECT tenant_id, property_id FROM units WHERE id = ? LIMIT 1");
+                        $stmt->execute([(int)$id]);
+                        $urow = $stmt->fetch(\PDO::FETCH_ASSOC) ?: [];
+                        $tenantId = (int)($urow['tenant_id'] ?? 0);
+                        if ($tenantId > 0) {
+                            $stmt = $this->db->prepare("UPDATE tenants SET unit_id = NULL WHERE id = ? AND unit_id = ?");
+                            $stmt->execute([(int)$tenantId, (int)$id]);
+                        }
+
+                        // Clear unit tenant_id regardless
+                        $this->unit->update($id, [
+                            'tenant_id' => null
+                        ]);
+                    }
+                } catch (\Exception $e) {
+                    error_log('UnitsController::update vacancy sync failed: ' . $e->getMessage());
+                }
+
                 // Handle file uploads
                 $fileUploadHelper = new FileUploadHelper();
                 $uploadErrors = [];
@@ -773,7 +819,8 @@ class UnitsController
 
             while (($row = fgetcsv($handle)) !== false) {
                 $data = array_combine($header, $row);
-                if (empty($data['unit_number'])) continue;
+                $unitNumber = trim((string)($data['unit_number'] ?? ''));
+                if ($unitNumber === '') continue;
                 $processed++;
                 // Map property by name for simplicity
                 $propertyName = $data['property_name'] ?? '';
@@ -794,11 +841,11 @@ class UnitsController
                 
                 $payload = [
                     'property_id' => $property['id'],
-                    'unit_number' => $data['unit_number'] ?? '',
-                    'type' => $data['type'] ?? 'other',
+                    'unit_number' => $unitNumber,
+                    'type' => ($data['type'] ?? 'other') ?: 'other',
                     'size' => $data['size'] !== '' ? (float)$data['size'] : null,
                     'rent_amount' => $data['rent_amount'] !== '' ? (float)$data['rent_amount'] : null,
-                    'status' => $data['status'] ?? 'vacant'
+                    'status' => ($data['status'] ?? 'vacant') ?: 'vacant'
                 ];
                 
                 if ($existing) {

@@ -18,7 +18,21 @@ class Invoice extends Model
     public function ensureInvoicesForLeaseMonths(int $tenantId, float $rentAmount, string $startDate, ?string $endDate = null, ?int $userId = null, ?string $noteTag = 'AUTO')
     {
         if (empty($tenantId) || $rentAmount <= 0 || empty($startDate)) return;
-        $start = new \DateTime(date('Y-m-01', strtotime($startDate)));
+
+        $startDate = trim((string)$startDate);
+        $startTs = strtotime($startDate);
+        if ($startDate === '' || $startTs === false) {
+            $startTs = time();
+        }
+
+        // Prevent accidental backfilling from epoch/ancient dates due to empty strings.
+        // Only clamp clearly-invalid/ancient timestamps (e.g. 1970-01-01).
+        $minTs = strtotime('1980-01-01');
+        if ($startTs !== false && $startTs < $minTs) {
+            $startTs = time();
+        }
+
+        $start = new \DateTime(date('Y-m-01', $startTs));
         $endBoundary = $endDate ? new \DateTime($endDate) : new \DateTime();
         // Use the month of end boundary
         $end = new \DateTime(date('Y-m-01', $endBoundary->getTimestamp()));
@@ -494,8 +508,18 @@ class Invoice extends Model
 
             $monthStart = date('Y-m-01', strtotime($inv['issue_date']));
             $monthEnd = date('Y-m-t', strtotime($inv['issue_date']));
-            $utilStmt = $this->db->prepare("SELECT COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END),0) AS s FROM payments WHERE lease_id = ? AND payment_type = 'utility' AND status IN ('completed','verified') AND payment_date BETWEEN ? AND ?");
-            $utilStmt->execute([(int)$lease['id'], $monthStart, $monthEnd]);
+            $utilStmt = $this->db->prepare(
+                "SELECT COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END),0) AS s\n"
+                . "FROM payments\n"
+                . "WHERE lease_id = ?\n"
+                . "  AND payment_type = 'utility'\n"
+                . "  AND status IN ('completed','verified')\n"
+                . "  AND (\n"
+                . "        (applies_to_month IS NOT NULL AND applies_to_month BETWEEN ? AND ?)\n"
+                . "     OR (applies_to_month IS NULL AND payment_date BETWEEN ? AND ?)\n"
+                . "  )"
+            );
+            $utilStmt->execute([(int)$lease['id'], $monthStart, $monthEnd, $monthStart, $monthEnd]);
             $utilityPaidInMonth = (float)(($utilStmt->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0));
 
             // Maintenance payments are captured as payment_type='other' and should count towards settling invoice items.
@@ -505,10 +529,13 @@ class Invoice extends Model
                 . "WHERE lease_id = ?\n"
                 . "  AND payment_type = 'other'\n"
                 . "  AND status IN ('completed','verified')\n"
-                . "  AND payment_date BETWEEN ? AND ?\n"
+                . "  AND (\n"
+                . "        (applies_to_month IS NOT NULL AND applies_to_month BETWEEN ? AND ?)\n"
+                . "     OR (applies_to_month IS NULL AND payment_date BETWEEN ? AND ?)\n"
+                . "  )\n"
                 . "  AND (notes LIKE 'Maintenance payment:%' OR notes LIKE '%MAINT-%')"
             );
-            $maintStmt->execute([(int)$lease['id'], $monthStart, $monthEnd]);
+            $maintStmt->execute([(int)$lease['id'], $monthStart, $monthEnd, $monthStart, $monthEnd]);
             $maintenancePaidInMonth = (float)((($maintStmt->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0)));
 
             $remainingForThisMonth = $paidTotal - ($monthIndex * $rent);

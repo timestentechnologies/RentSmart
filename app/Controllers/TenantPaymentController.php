@@ -48,6 +48,16 @@ class TenantPaymentController
             }
             $amount = isset($_POST['amount']) ? floatval($_POST['amount']) : 0;
             $paymentMethodId = isset($_POST['payment_method_id']) ? intval($_POST['payment_method_id']) : 0;
+
+            $appliesToMonthRaw = trim((string)($_POST['applies_to_month'] ?? ''));
+            $appliesToMonth = null;
+            if ($appliesToMonthRaw !== '') {
+                if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $appliesToMonthRaw)) {
+                    $appliesToMonth = substr($appliesToMonthRaw, 0, 7) . '-01';
+                } else if (preg_match('/^\d{4}-\d{2}$/', $appliesToMonthRaw)) {
+                    $appliesToMonth = $appliesToMonthRaw . '-01';
+                }
+            }
             
             if (!$paymentType || !$amount || !$paymentMethodId) {
                 throw new \Exception('Missing required payment information');
@@ -124,14 +134,15 @@ class TenantPaymentController
                 if ($maintenanceOutstanding <= 0.0) {
                     throw new \Exception('No outstanding maintenance charges found');
                 }
-                if (abs($amount - $maintenanceOutstanding) > 0.01) {
-                    throw new \Exception('Payment amount does not match maintenance amount due');
+                if ($amount <= 0.0) {
+                    throw new \Exception('Invalid amount');
                 }
 
                 $maintenancePaymentData = [
                     'lease_id' => $lease['id'],
                     'amount' => $amount,
                     'payment_date' => $today,
+                    'applies_to_month' => $appliesToMonth,
                     'payment_type' => 'other',
                     'payment_method' => $paymentMethodData['type'],
                     'notes' => 'Maintenance payment: Payment via ' . $paymentMethodData['name'] . ' - ' . ($paymentDetails['mpesa_notes'] ?? ''),
@@ -175,18 +186,23 @@ class TenantPaymentController
                     throw new \Exception('No outstanding utility payments found');
                 }
                 
-                if (abs($amount - $totalUtilityAmount) > 0.01) {
-                    throw new \Exception('Payment amount does not match total utility amount due');
+                if ($amount <= 0.0) {
+                    throw new \Exception('Invalid amount');
                 }
-                
+
                 // Create payment records for each utility
                 $paymentIds = [];
+                $remaining = $amount;
                 foreach ($utilityPayments as $utilityPayment) {
+                    if ($remaining <= 0.0) break;
+                    $payAmount = min((float)$utilityPayment['amount'], $remaining);
+                    if ($payAmount <= 0.0) continue;
                     $paymentData = [
                         'lease_id' => $lease['id'],
                         'utility_id' => $utilityPayment['utility']['id'],
-                        'amount' => $utilityPayment['amount'],
+                        'amount' => $payAmount,
                         'payment_date' => date('Y-m-d'),
+                        'applies_to_month' => $appliesToMonth,
                         'payment_type' => 'utility',
                         'payment_method' => $paymentMethodData['type'], // Use 'type' instead of 'name' to match enum values
                         'notes' => 'Payment via ' . $paymentMethodData['name'] . ' - ' . ucfirst($utilityPayment['utility']['utility_type']) . ' - ' . ($paymentDetails['mpesa_notes'] ?? ''),
@@ -198,8 +214,14 @@ class TenantPaymentController
                     
                     // If it's an M-Pesa payment, save to manual_mpesa_payments table
                     if ($paymentMethodData['type'] === 'mpesa_manual' || $paymentMethodData['type'] === 'mpesa_stk') {
-                        $this->saveMpesaTransaction($paymentId, $paymentDetails, $utilityPayment['amount']);
+                        $this->saveMpesaTransaction($paymentId, $paymentDetails, $payAmount);
                     }
+
+                    $remaining -= $payAmount;
+                }
+
+                if (empty($paymentIds)) {
+                    throw new \Exception('No payable utility items found');
                 }
                 
                 $paymentId = $paymentIds[0]; // Use first payment ID for response
@@ -242,19 +264,21 @@ class TenantPaymentController
                     }
                 }
 
-                // 4) Validate combined amount (maintenance + rent due now + utilities due)
-                $expectedTotal = $maintenanceOutstanding + $totalRentAmount + $totalUtilityAmount;
-                if (abs($amount - $expectedTotal) > 0.01) {
-                    throw new \Exception('Payment amount does not match combined total');
+                // 4) Allow partial combined payments
+                if ($amount <= 0.0) {
+                    throw new \Exception('Invalid amount');
                 }
 
                 // 5) Create maintenance payment first
                 $createdPaymentId = null;
-                if ($maintenanceOutstanding > 0.0) {
+                $remaining = $amount;
+                if ($maintenanceOutstanding > 0.0 && $remaining > 0.0) {
+                    $payMaint = min($maintenanceOutstanding, $remaining);
                     $maintenancePaymentData = [
                         'lease_id' => $lease['id'],
-                        'amount' => $maintenanceOutstanding,
+                        'amount' => $payMaint,
                         'payment_date' => date('Y-m-d'),
+                        'applies_to_month' => $appliesToMonth,
                         'payment_type' => 'other',
                         'payment_method' => $paymentMethodData['type'],
                         'notes' => 'Maintenance payment: Payment via ' . $paymentMethodData['name'] . ' - ' . ($paymentDetails['mpesa_notes'] ?? ''),
@@ -266,17 +290,21 @@ class TenantPaymentController
                         if (!empty($maintDetails['mpesa_transaction_code'])) {
                             $maintDetails['mpesa_transaction_code'] = $maintDetails['mpesa_transaction_code'] . '-M';
                         }
-                        $this->saveMpesaTransaction($createdPaymentId, $maintDetails, $maintenanceOutstanding);
+                        $this->saveMpesaTransaction($createdPaymentId, $maintDetails, $payMaint);
                     }
+
+                    $remaining -= $payMaint;
                 }
 
                 // 6) Create rent payment only if there is rent due now
                 $rentPaymentId = null;
-                if ($totalRentAmount > 0.0) {
+                if ($totalRentAmount > 0.0 && $remaining > 0.0) {
+                    $payRent = min($totalRentAmount, $remaining);
                     $rentPaymentData = [
                         'lease_id' => $lease['id'],
-                        'amount' => $totalRentAmount,
+                        'amount' => $payRent,
                         'payment_date' => date('Y-m-d'),
+                        'applies_to_month' => $appliesToMonth,
                         'payment_type' => 'rent',
                         // Use enum value for method
                         'payment_method' => $paymentMethodData['type'],
@@ -290,18 +318,24 @@ class TenantPaymentController
                         $invModel->ensureMonthlyRentInvoice((int)$lease['tenant_id'], $rentPaymentData['payment_date'], (float)$lease['rent_amount'], null, 'AUTO');
                     } catch (\Exception $e) { error_log('Auto-invoice (both) failed: ' . $e->getMessage()); }
                     if ($paymentMethodData['type'] === 'mpesa_manual') {
-                        $this->saveMpesaTransaction($rentPaymentId, $paymentDetails, $totalRentAmount);
+                        $this->saveMpesaTransaction($rentPaymentId, $paymentDetails, $payRent);
                     }
+
+                    $remaining -= $payRent;
                 }
 
                 // 7) Create utility payments
                 $firstUtilityPaymentId = null;
                 foreach ($utilityPayments as $idx => $utilityPayment) {
+                    if ($remaining <= 0.0) break;
+                    $payUtil = min((float)$utilityPayment['amount'], $remaining);
+                    if ($payUtil <= 0.0) continue;
                     $paymentData = [
                         'lease_id' => $lease['id'],
                         'utility_id' => $utilityPayment['utility']['id'],
-                        'amount' => $utilityPayment['amount'],
+                        'amount' => $payUtil,
                         'payment_date' => date('Y-m-d'),
+                        'applies_to_month' => $appliesToMonth,
                         'payment_type' => 'utility',
                         'payment_method' => $paymentMethodData['type'], // keep consistent with utility branch
                         'notes' => 'Combined via ' . $paymentMethodData['name'] . ' - ' . ucfirst($utilityPayment['utility']['utility_type']) . ' - ' . ($paymentDetails['mpesa_notes'] ?? ''),
@@ -315,8 +349,10 @@ class TenantPaymentController
                         if (!empty($utilDetails['mpesa_transaction_code'])) {
                             $utilDetails['mpesa_transaction_code'] = $utilDetails['mpesa_transaction_code'] . '-U' . ($idx + 1);
                         }
-                        $this->saveMpesaTransaction($utilPaymentId, $utilDetails, $utilityPayment['amount']);
+                        $this->saveMpesaTransaction($utilPaymentId, $utilDetails, $payUtil);
                     }
+
+                    $remaining -= $payUtil;
                 }
 
                 // Use the first created payment ID for response
@@ -388,6 +424,7 @@ class TenantPaymentController
                             'lease_id' => $lease['id'],
                             'amount' => $maintPayAmount,
                             'payment_date' => $today,
+                            'applies_to_month' => $appliesToMonth,
                             'payment_type' => 'other',
                             'payment_method' => $paymentMethodData['type'],
                             'notes' => 'Maintenance payment: Payment via ' . $paymentMethodData['name'] . ' - ' . ($paymentDetails['mpesa_notes'] ?? ''),
@@ -412,6 +449,7 @@ class TenantPaymentController
                         'lease_id' => $lease['id'],
                         'amount' => $remainingAmount,
                         'payment_date' => $today,
+                        'applies_to_month' => $appliesToMonth,
                         'payment_type' => $paymentType,
                         'payment_method' => $paymentMethodData['type'],
                         'notes' => 'Payment via ' . $paymentMethodData['name'] . ' - ' . ($paymentDetails['mpesa_notes'] ?? ''),
@@ -613,7 +651,17 @@ class TenantPaymentController
             $tenantId = $_SESSION['tenant_id'];
             $phoneNumber = isset($_POST['phone_number']) ? trim($_POST['phone_number']) : '';
             $amount = isset($_POST['amount']) ? floatval($_POST['amount']) : 0;
-            $paymentType = isset($_POST['payment_type']) ? trim($_POST['payment_type']) : '';
+
+            $appliesToMonthRaw = trim((string)($_POST['applies_to_month'] ?? ''));
+            $appliesToMonth = null;
+            if ($appliesToMonthRaw !== '') {
+                if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $appliesToMonthRaw)) {
+                    $appliesToMonth = substr($appliesToMonthRaw, 0, 7) . '-01';
+                } else if (preg_match('/^\d{4}-\d{2}$/', $appliesToMonthRaw)) {
+                    $appliesToMonth = $appliesToMonthRaw . '-01';
+                }
+            }$paymentType = isset($_POST['payment_type']) ? trim($_POST['payment_type']) : '';
+            
             $paymentMethodId = isset($_POST['payment_method_id']) ? intval($_POST['payment_method_id']) : 0;
             
             if (!$phoneNumber || !$amount || !$paymentType || !$paymentMethodId) {
@@ -656,7 +704,8 @@ class TenantPaymentController
             
             // Create a pending payment record
             $paymentData = [
-                'lease_id' => $lease['id'],
+                'lease_id' => $lease['id'],,
+                'applies_to_month' => $appliesToMonth
                 'amount' => $amount,
                 'payment_date' => date('Y-m-d'),
                 'payment_type' => $paymentType,
@@ -1034,6 +1083,13 @@ class TenantPaymentController
                 $updateSql = "UPDATE payments SET status = 'completed', notes = CONCAT(notes, ' - M-Pesa Receipt: ', ?) WHERE id = ?";
                 $updateStmt = $this->payment->getDb()->prepare($updateSql);
                 $updateStmt->execute([$mpesaReceiptNumber, $paymentId]);
+
+                // Post to ledger now that it's completed
+                try {
+                    $this->payment->postExistingPaymentToLedger((int)$paymentId);
+                } catch (\Exception $e) {
+                    error_log('Ledger post after STK completion failed: ' . $e->getMessage());
+                }
                 
                 // Update M-Pesa transaction
                 $updateTxnSql = "UPDATE mpesa_transactions SET status = 'completed', mpesa_receipt_number = ?, transaction_date = ?, result_code = '0', result_description = 'Success', updated_at = NOW() WHERE checkout_request_id = ?";

@@ -209,7 +209,11 @@ ob_start();
                                         $notes = (string)($payment['notes'] ?? '');
                                         $amount = (float)($payment['amount'] ?? 0);
                                         $hasUtility = !empty($payment['utility_id']) || !empty($payment['utility_type']);
-                                        $isMaint = ($rawType === 'rent' && $amount < 0 && $notes !== '' && preg_match('/MAINT-\d+/i', $notes));
+                                        $isMaint = ($notes !== '' && (
+                                            $rawType === 'other'
+                                            || stripos($notes, 'maintenance payment:') !== false
+                                            || preg_match('/MAINT-\d+/i', $notes)
+                                        ));
                                         $isUtilByNotes = ($notes !== '' && preg_match('/\b(util|utility|water|electricity|gas|internet)\b/i', $notes));
 
                                         if ($isMaint) {
@@ -347,7 +351,7 @@ ob_start();
                                 ?>
                                 <option value="<?= $tenant['id'] ?>" 
                                         data-due="<?= htmlspecialchars($tenant['due_amount'] ?? 0) ?>"
-                                        data-utilities='<?= htmlspecialchars(json_encode($utilityData)) ?>'>
+                                        data-utilities='<?= htmlspecialchars(json_encode($utilityData, JSON_HEX_APOS | JSON_HEX_TAG | JSON_HEX_AMP), ENT_NOQUOTES, 'UTF-8') ?>'>
                                     <?= htmlspecialchars($tenant['name']) ?> 
                                     (Lease #<?= $tenant['lease_id'] ?>)
                                 </option>
@@ -423,6 +427,11 @@ ob_start();
                     <div class="mb-3">
                         <label for="payment_date" class="form-label">Payment Date</label>
                         <input type="date" class="form-control" id="payment_date" name="payment_date" value="<?= date('Y-m-d') ?>" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="applies_to_month" class="form-label">Payment For Month</label>
+                        <input type="month" class="form-control" id="applies_to_month" name="applies_to_month" value="<?= date('Y-m') ?>">
                     </div>
 
                     <div class="mb-3">
@@ -1214,7 +1223,18 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('tenant_id').addEventListener('change', function() {
         const selectedOption = this.options[this.selectedIndex];
         const dueAmount = selectedOption.getAttribute('data-due');
-        const utilities = JSON.parse(selectedOption.getAttribute('data-utilities') || '[]');
+        let utilities = [];
+        try {
+            utilities = JSON.parse(selectedOption.getAttribute('data-utilities') || '[]');
+        } catch (e) {
+            utilities = [];
+        }
+
+        // Default applies_to_month to current month
+        const appliesToMonth = document.getElementById('applies_to_month');
+        if (appliesToMonth && !appliesToMonth.value) {
+            appliesToMonth.value = new Date().toISOString().slice(0, 7);
+        }
         
         // Set rent amount
         if (dueAmount) {

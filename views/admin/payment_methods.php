@@ -615,6 +615,8 @@ function deletePaymentMethod(id) {
 <script>
 // Payment Methods: property filter integrated with DataTables
 document.addEventListener('DOMContentLoaded', function(){
+    if (!window.jQuery || !jQuery.fn || !jQuery.fn.dataTable) return;
+    const $ = window.jQuery;
     const tableEl = document.getElementById('paymentMethodsTable');
     const filterEl = document.getElementById('pmFilterProperty');
     if (!tableEl || !filterEl) return;
@@ -624,7 +626,9 @@ document.addEventListener('DOMContentLoaded', function(){
         if (!settings.nTable || settings.nTable.id !== 'paymentMethodsTable') return true;
         const selected = filterEl.value || 'all';
         if (selected === 'all') return true;
-        const row = settings.aoData[dataIndex].nTr;
+        const rowObj = (settings.aoData && settings.aoData[dataIndex]) ? settings.aoData[dataIndex] : null;
+        const row = rowObj && rowObj.nTr ? rowObj.nTr : null;
+        if (!row) return true;
         const ids = (row.getAttribute('data-prop-ids') || '').split(',').filter(Boolean);
         return ids.indexOf(String(selected)) !== -1;
     });
@@ -634,9 +638,6 @@ document.addEventListener('DOMContentLoaded', function(){
         try {
             if ($.fn.DataTable.isDataTable(tableEl)) {
                 $(tableEl).DataTable().draw();
-            } else if (window.DataTable) {
-                // Fallback if not yet initialized
-                new DataTable(tableEl).draw();
             }
         } catch (e) {
             // no-op

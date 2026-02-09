@@ -98,9 +98,13 @@ class LeasesController {
             $leaseId = (int)$this->db->lastInsertId();
 
             // Update unit status
-            $updateUnitQuery = "UPDATE units SET status = 'occupied' WHERE id = :unit_id";
+            $updateUnitQuery = "UPDATE units SET status = 'occupied', tenant_id = :tenant_id, rent_amount = :rent_amount WHERE id = :unit_id";
             $stmt = $this->db->prepare($updateUnitQuery);
-            $stmt->execute(['unit_id' => $_POST['unit_id']]);
+            $stmt->execute([
+                'unit_id' => $_POST['unit_id'],
+                'tenant_id' => $_POST['tenant_id'],
+                'rent_amount' => $_POST['rent_amount']
+            ]);
 
             // Auto-create draft invoices immediately for this lease (idempotent)
             try {
@@ -222,14 +226,26 @@ class LeasesController {
 
             // Update old unit status if unit changed
             if ($currentLease['unit_id'] != $_POST['unit_id']) {
-                $updateOldUnitQuery = "UPDATE units SET status = 'vacant' WHERE id = :unit_id";
+                $updateOldUnitQuery = "UPDATE units SET status = 'vacant', tenant_id = NULL WHERE id = :unit_id";
                 $stmt = $this->db->prepare($updateOldUnitQuery);
                 $stmt->execute(['unit_id' => $currentLease['unit_id']]);
 
                 // Update new unit status
-                $updateNewUnitQuery = "UPDATE units SET status = 'occupied' WHERE id = :unit_id";
+                $updateNewUnitQuery = "UPDATE units SET status = 'occupied', tenant_id = :tenant_id, rent_amount = :rent_amount WHERE id = :unit_id";
                 $stmt = $this->db->prepare($updateNewUnitQuery);
-                $stmt->execute(['unit_id' => $_POST['unit_id']]);
+                $stmt->execute([
+                    'unit_id' => $_POST['unit_id'],
+                    'tenant_id' => $_POST['tenant_id'],
+                    'rent_amount' => $_POST['rent_amount']
+                ]);
+            } else {
+                // Unit unchanged: still sync rent and tenant link
+                $stmt = $this->db->prepare("UPDATE units SET tenant_id = :tenant_id, rent_amount = :rent_amount, status = 'occupied' WHERE id = :unit_id");
+                $stmt->execute([
+                    'unit_id' => $_POST['unit_id'],
+                    'tenant_id' => $_POST['tenant_id'],
+                    'rent_amount' => $_POST['rent_amount']
+                ]);
             }
 
             $this->db->commit();
@@ -270,7 +286,7 @@ class LeasesController {
             $stmt->execute(['id' => $id]);
 
             // Update unit status
-            $updateUnitQuery = "UPDATE units SET status = 'vacant' WHERE id = :unit_id";
+            $updateUnitQuery = "UPDATE units SET status = 'vacant', tenant_id = NULL WHERE id = :unit_id";
             $stmt = $this->db->prepare($updateUnitQuery);
             $stmt->execute(['unit_id' => $lease['unit_id']]);
 
