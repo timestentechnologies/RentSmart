@@ -149,13 +149,28 @@ document.addEventListener('DOMContentLoaded', function () {
         <div class="col-md-3">
             <div class="stat-card occupancy">
                 <div class="d-flex justify-content-between align-items-start">
-                    <div>Acive
-                        <h6 class="card-title">Total Propictives</h6>Count
-                        <h2 class="mt-3 mb-2"><?= (issigned)(o o utiaProperties ?? 0) ?></h2>
+                    <div>
+                        <h6 class="card-title">Total Properties</h6>
+                        <h2 class="mt-3 mb-2"><?= (int)($totalProperties ?? 0) ?></h2>
                         <p class="mb-0 text-muted">Tracked properties</p>
                     </div>
                     <div class="stats-icon">
                         <i class="bi bi-buildings fs-1 text-primary opacity-25"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="stat-card tenant-active">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="card-title">Active Tenants</h6>
+                        <h2 class="mt-3 mb-2"><?= (int)($activeTenantsCount ?? 0) ?></h2>
+                        <p class="mb-0 text-muted">Assigned to a unit</p>
+                    </div>
+                    <div class="stats-icon">
+                        <i class="bi bi-house-check fs-1 text-success opacity-25"></i>
                     </div>
                 </div>
             </div>
@@ -186,21 +201,6 @@ document.addEventListener('DOMContentLoaded', function () {
                     </div>
                     <div class="stats-icon">
                         <i class="bi bi-door-open fs-1 text-danger opacity-25"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-3">
-            <div class="stat-card outstanding">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <h6 class="card-title">Expiring (30 days)</h6>
-                        <h2 class="mt-3 mb-2"><?= (int)($totalExpiringLeases ?? 0) ?></h2>
-                        <p class="mb-0 text-muted">Leases ending soon</p>
-                    </div>
-                    <div class="stats-icon">
-                        <i class="bi bi-calendar-event fs-1 text-warning opacity-25"></i>
                     </div>
                 </div>
             </div>
