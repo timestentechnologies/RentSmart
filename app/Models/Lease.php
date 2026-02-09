@@ -358,7 +358,7 @@ class Lease extends Model
 
     public function getLatestInactiveLeaseByTenant($tenantId)
     {
-        $sql = "SELECT * FROM leases WHERE tenant_id = ? AND status = 'inactive' ORDER BY updated_at DESC, id DESC LIMIT 1";
+        $sql = "SELECT * FROM leases WHERE tenant_id = ? AND status = 'inactive' ORDER BY id DESC LIMIT 1";
         $stmt = $this->db->prepare($sql);
         $stmt->execute([$tenantId]);
         return $stmt->fetch(\PDO::FETCH_ASSOC);

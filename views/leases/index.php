@@ -193,6 +193,7 @@ ob_start();
                                         <?php
                                         $statusClasses = [
                                             'active' => 'bg-success',
+                                            'inactive' => 'bg-secondary',
                                             'expired' => 'bg-danger',
                                             'terminated' => 'bg-secondary'
                                         ];
