@@ -548,7 +548,7 @@ class TenantsController
                             if (!empty($idsToInactivate)) {
                                 $in = implode(',', array_fill(0, count($idsToInactivate), '?'));
                                 $params = array_merge([date('Y-m-d H:i:s')], $idsToInactivate);
-                                $this->db->prepare("UPDATE leases SET status = 'inactive', updated_at = ? WHERE id IN ($in)")->execute($params);
+                                $this->db->prepare("UPDATE leases SET status = 'terminated', updated_at = ? WHERE id IN ($in)")->execute($params);
                             }
                             foreach ($unitsToVacate as $uId) {
                                 if ((int)$uId !== (int)$unitId) {
@@ -651,7 +651,7 @@ class TenantsController
                         $stmtUnits->execute([(int)$id]);
                         $units = $stmtUnits->fetchAll(\PDO::FETCH_ASSOC) ?: [];
 
-                        $this->db->prepare("UPDATE leases SET status = 'inactive', updated_at = ? WHERE tenant_id = ? AND status = 'active'")
+                        $this->db->prepare("UPDATE leases SET status = 'terminated', updated_at = ? WHERE tenant_id = ? AND status = 'active'")
                             ->execute([date('Y-m-d H:i:s'), (int)$id]);
 
                         foreach ($units as $row) {
@@ -665,7 +665,7 @@ class TenantsController
                         $existingLease = $leaseModel->getActiveLeaseByTenant($id);
                         if ($existingLease) {
                             $leaseModel->update($existingLease['id'], [
-                                'status' => 'inactive',
+                                'status' => 'terminated',
                                 'updated_at' => date('Y-m-d H:i:s')
                             ]);
                             $this->unit->update($existingLease['unit_id'], [

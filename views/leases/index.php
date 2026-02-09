@@ -193,14 +193,14 @@ ob_start();
                                         <?php
                                         $statusClasses = [
                                             'active' => 'bg-success',
-                                            'inactive' => 'bg-secondary',
                                             'expired' => 'bg-danger',
                                             'terminated' => 'bg-secondary'
                                         ];
                                         $statusClass = $statusClasses[$lease['status']] ?? 'bg-secondary';
+                                        $statusLabel = ($lease['status'] ?? '') === 'terminated' ? 'Inactive' : ucfirst((string)($lease['status'] ?? ''));
                                         ?>
                                         <span class="badge <?= $statusClass ?>">
-                                            <?= ucfirst($lease['status']) ?>
+                                            <?= $statusLabel ?>
                                         </span>
                                     </td>
                                     <td>
