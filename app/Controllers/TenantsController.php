@@ -552,41 +552,65 @@ class TenantsController
                             ]);
                         }
                     } else {
-                        // Create new lease (security deposit equals rent)
-                        $currentUnit = $this->unit->getById($unitId, $_SESSION['user_id']);
-                        $effectiveRent = (float)($currentUnit['rent_amount'] ?? 0);
+                        // No active lease: reactivate most recent inactive lease if exists (avoid duplicates)
+                        $inactiveLease = $leaseModel->getLatestInactiveLeaseByTenant($id);
+                        if ($inactiveLease) {
+                            $leaseModel->update($inactiveLease['id'], [
+                                'unit_id' => $unitId,
+                                'status' => 'active',
+                                'updated_at' => date('Y-m-d H:i:s')
+                            ]);
 
-                        // Default lease start date to tenant registration date (or today)
-                        $tenantRow = $this->tenant->getById($id, $_SESSION['user_id']);
-                        $leaseStartDate = trim((string)($tenantRow['registered_on'] ?? ''));
-                        if ($leaseStartDate === '' || strtotime($leaseStartDate) === false) {
-                            $leaseStartDate = date('Y-m-d');
+                            // Update unit status
+                            $this->unit->update($unitId, [
+                                'status' => 'occupied',
+                                'tenant_id' => $id
+                            ]);
+
+                            // Vacate previous unit if different
+                            if (!empty($inactiveLease['unit_id']) && (int)$inactiveLease['unit_id'] !== (int)$unitId) {
+                                $this->unit->update((int)$inactiveLease['unit_id'], [
+                                    'status' => 'vacant',
+                                    'tenant_id' => null
+                                ]);
+                            }
+                        } else {
+                            // Create new lease (security deposit equals rent)
+                            $currentUnit = $this->unit->getById($unitId, $_SESSION['user_id']);
+                            $effectiveRent = (float)($currentUnit['rent_amount'] ?? 0);
+
+                            // Default lease start date to tenant registration date (or today)
+                            $tenantRow = $this->tenant->getById($id, $_SESSION['user_id']);
+                            $leaseStartDate = trim((string)($tenantRow['registered_on'] ?? ''));
+                            if ($leaseStartDate === '' || strtotime($leaseStartDate) === false) {
+                                $leaseStartDate = date('Y-m-d');
+                            }
+                            $leaseData = [
+                                'unit_id' => $unitId,
+                                'tenant_id' => $id,
+                                'start_date' => $leaseStartDate,
+                                'end_date' => date('Y-m-d', strtotime($leaseStartDate . ' +1 year')),
+                                'rent_amount' => $effectiveRent,
+                                'security_deposit' => $effectiveRent,
+                                'status' => 'active',
+                                'payment_day' => 1,
+                                'notes' => '',
+                                'created_at' => date('Y-m-d H:i:s')
+                            ];
+                            $leaseId = (int)$leaseModel->create($leaseData);
+
+                            // Auto-create draft invoices immediately for this lease (idempotent)
+                            try {
+                                $inv = new \App\Models\Invoice();
+                                $inv->ensureInvoicesForLeaseMonths((int)$id, (float)$effectiveRent, (string)$leaseData['start_date'], date('Y-m-d'), (int)($_SESSION['user_id'] ?? 0), 'AUTO');
+                            } catch (\Exception $e) { error_log('Auto-invoice (tenant update assign) failed: ' . $e->getMessage()); }
+                            
+                            // Update unit status
+                            $this->unit->update($unitId, [
+                                'status' => 'occupied',
+                                'tenant_id' => $id
+                            ]);
                         }
-                        $leaseData = [
-                            'unit_id' => $unitId,
-                            'tenant_id' => $id,
-                            'start_date' => $leaseStartDate,
-                            'end_date' => date('Y-m-d', strtotime($leaseStartDate . ' +1 year')),
-                            'rent_amount' => $effectiveRent,
-                            'security_deposit' => $effectiveRent,
-                            'status' => 'active',
-                            'payment_day' => 1,
-                            'notes' => '',
-                            'created_at' => date('Y-m-d H:i:s')
-                        ];
-                        $leaseId = (int)$leaseModel->create($leaseData);
-
-                        // Auto-create draft invoices immediately for this lease (idempotent)
-                        try {
-                            $inv = new \App\Models\Invoice();
-                            $inv->ensureInvoicesForLeaseMonths((int)$id, (float)$effectiveRent, (string)$leaseData['start_date'], date('Y-m-d'), (int)($_SESSION['user_id'] ?? 0), 'AUTO');
-                        } catch (\Exception $e) { error_log('Auto-invoice (tenant update assign) failed: ' . $e->getMessage()); }
-                        
-                        // Update unit status
-                        $this->unit->update($unitId, [
-                            'status' => 'occupied',
-                            'tenant_id' => $id
-                        ]);
                     }
                 } else {
                     // If no unit assigned, deactivate any existing lease
