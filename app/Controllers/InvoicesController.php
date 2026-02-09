@@ -335,6 +335,9 @@ class InvoicesController
             $dompdf->render();
             $pdfData = $dompdf->output();
             $filename = 'invoice_' . ($invoice['number'] ?? $invoice['id']) . '.pdf';
+            if (!is_string($pdfData) || strlen($pdfData) < 100) {
+                throw new \Exception('Failed to generate invoice PDF');
+            }
 
             // Send email
             $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
@@ -368,8 +371,24 @@ class InvoicesController
                 '</div>';
             $mail->Body = $html;
             $mail->AltBody = $plain;
-            $mail->addStringAttachment($pdfData, $filename, 'base64', 'application/pdf');
+
+            $tmpFile = tempnam(sys_get_temp_dir(), 'inv_');
+            if (!$tmpFile) {
+                $mail->addStringAttachment($pdfData, $filename, 'base64', 'application/pdf');
+            } else {
+                $pdfPath = $tmpFile . '.pdf';
+                @rename($tmpFile, $pdfPath);
+                file_put_contents($pdfPath, $pdfData);
+                $mail->addAttachment($pdfPath, $filename, 'base64', 'application/pdf');
+            }
+
             $mail->send();
+
+            if (isset($pdfPath) && is_string($pdfPath) && file_exists($pdfPath)) {
+                @unlink($pdfPath);
+            } else if (isset($tmpFile) && is_string($tmpFile) && file_exists($tmpFile)) {
+                @unlink($tmpFile);
+            }
 
             $_SESSION['flash_message'] = 'Invoice emailed to tenant';
             $_SESSION['flash_type'] = 'success';

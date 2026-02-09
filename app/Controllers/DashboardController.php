@@ -76,6 +76,23 @@ class DashboardController
             
             // Get user data
             $user = $this->user->find($userId);
+
+            $selectedMonth = isset($_GET['month']) ? trim((string)$_GET['month']) : date('Y-m');
+            if (!preg_match('/^\d{4}-\d{2}$/', $selectedMonth)) {
+                $selectedMonth = date('Y-m');
+            }
+            $selectedPropertyId = isset($_GET['property_id']) && $_GET['property_id'] !== '' ? (int)$_GET['property_id'] : null;
+
+            $properties = $this->property->getAll($userId);
+            $selectedPropertyName = null;
+            if ($selectedPropertyId) {
+                foreach ($properties as $pp) {
+                    if ((int)($pp['id'] ?? 0) === (int)$selectedPropertyId) {
+                        $selectedPropertyName = (string)($pp['name'] ?? '');
+                        break;
+                    }
+                }
+            }
             
             // Get recent properties
             $recentProperties = $this->property->getRecent(5, $userId);
@@ -123,10 +140,25 @@ class DashboardController
             
             // Get recent payments
             $recentPayments = $this->payment->getRecent(5, $userId);
+
+            if ($selectedPropertyName !== null && $selectedPropertyName !== '') {
+                $recentProperties = array_values(array_filter($recentProperties, function ($p) use ($selectedPropertyName) {
+                    return isset($p['name']) && (string)$p['name'] === $selectedPropertyName;
+                }));
+                $activeLeases = array_values(array_filter($activeLeases, function ($l) use ($selectedPropertyName) {
+                    return isset($l['property_name']) && (string)$l['property_name'] === $selectedPropertyName;
+                }));
+                $expiringLeases = array_values(array_filter($expiringLeases, function ($l) use ($selectedPropertyName) {
+                    return isset($l['property_name']) && (string)$l['property_name'] === $selectedPropertyName;
+                }));
+                $recentPayments = array_values(array_filter($recentPayments, function ($p) use ($selectedPropertyName) {
+                    return isset($p['property_name']) && (string)$p['property_name'] === $selectedPropertyName;
+                }));
+            }
             
-            // Calculate total expenses (current month) and adjust revenue by rent-balance-funded expenses
-            $startOfMonth = date('Y-m-01');
-            $endOfMonth = date('Y-m-t');
+            // Calculate total expenses (selected month) and adjust revenue by rent-balance-funded expenses
+            $startOfMonth = $selectedMonth . '-01';
+            $endOfMonth = date('Y-m-t', strtotime($startOfMonth));
             $totalExpenses = $this->expense->getTotalForPeriod($userId, $startOfMonth, $endOfMonth);
             $rentBalanceExpenses = $this->expense->getTotalForPeriod($userId, $startOfMonth, $endOfMonth, 'rent_balance');
 
@@ -146,6 +178,13 @@ class DashboardController
                 $accessParams = [$userId, $userId, $userId, $userId];
             }
 
+            $propertyWhere = '';
+            $propertyParams = [];
+            if ($selectedPropertyId) {
+                $propertyWhere = " AND pr.id = ?";
+                $propertyParams[] = $selectedPropertyId;
+            }
+
             // Received amounts (current month)
             $stmtRentReceived = $db->prepare(
                 "SELECT COALESCE(SUM(CASE WHEN p.amount > 0 THEN p.amount ELSE 0 END),0) AS s\n"
@@ -155,9 +194,9 @@ class DashboardController
                 . "JOIN properties pr ON u.property_id = pr.id\n"
                 . "WHERE p.payment_type = 'rent'\n"
                 . "  AND p.status IN ('completed','verified')\n"
-                . "  AND p.payment_date BETWEEN ? AND ?" . $accessWhere
+                . "  AND p.payment_date BETWEEN ? AND ?" . $accessWhere . $propertyWhere
             );
-            $stmtRentReceived->execute(array_merge([$startOfMonth, $endOfMonth], $accessParams));
+            $stmtRentReceived->execute(array_merge([$startOfMonth, $endOfMonth], $accessParams, $propertyParams));
             $rentReceived = (float)($stmtRentReceived->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0);
 
             $stmtUtilityReceived = $db->prepare(
@@ -168,9 +207,9 @@ class DashboardController
                 . "JOIN properties pr ON u.property_id = pr.id\n"
                 . "WHERE p.payment_type = 'utility'\n"
                 . "  AND p.status IN ('completed','verified')\n"
-                . "  AND p.payment_date BETWEEN ? AND ?" . $accessWhere
+                . "  AND p.payment_date BETWEEN ? AND ?" . $accessWhere . $propertyWhere
             );
-            $stmtUtilityReceived->execute(array_merge([$startOfMonth, $endOfMonth], $accessParams));
+            $stmtUtilityReceived->execute(array_merge([$startOfMonth, $endOfMonth], $accessParams, $propertyParams));
             $utilityReceived = (float)($stmtUtilityReceived->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0);
 
             $stmtMaintenanceReceived = $db->prepare(
@@ -182,9 +221,9 @@ class DashboardController
                 . "WHERE p.payment_type = 'other'\n"
                 . "  AND p.status IN ('completed','verified')\n"
                 . "  AND p.payment_date BETWEEN ? AND ?\n"
-                . "  AND (p.notes LIKE 'Maintenance payment:%' OR p.notes LIKE '%MAINT-%')" . $accessWhere
+                . "  AND (p.notes LIKE 'Maintenance payment:%' OR p.notes LIKE '%MAINT-%')" . $accessWhere . $propertyWhere
             );
-            $stmtMaintenanceReceived->execute(array_merge([$startOfMonth, $endOfMonth], $accessParams));
+            $stmtMaintenanceReceived->execute(array_merge([$startOfMonth, $endOfMonth], $accessParams, $propertyParams));
             $maintenanceReceived = (float)($stmtMaintenanceReceived->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0);
 
             $receivedTotal = $rentReceived + $utilityReceived + $maintenanceReceived;
@@ -200,9 +239,9 @@ class DashboardController
                     . "FROM leases l\n"
                     . "JOIN units u ON l.unit_id = u.id\n"
                     . "JOIN properties pr ON u.property_id = pr.id\n"
-                    . "WHERE l.status = 'active'" . $accessWhere
+                    . "WHERE l.status = 'active'" . $accessWhere . $propertyWhere
                 );
-                $stmtLeases->execute($accessParams);
+                $stmtLeases->execute(array_merge($accessParams, $propertyParams));
                 $leasesRows = $stmtLeases->fetchAll(\PDO::FETCH_ASSOC) ?: [];
 
                 $sumRentPaidStmt = $db->prepare(
@@ -261,7 +300,7 @@ class DashboardController
                         continue;
                     }
                     $startMonth = new \DateTime($leaseStart->format('Y-m-01'));
-                    $currentMonth = new \DateTime(date('Y-m-01'));
+                    $currentMonth = new \DateTime($startOfMonth);
                     if ($currentMonth < $startMonth) {
                         continue;
                     }
