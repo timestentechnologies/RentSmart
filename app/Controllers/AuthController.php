@@ -405,6 +405,9 @@ class AuthController
             $_SESSION['user_role'] = strtolower($user['role']);
             $_SESSION['is_admin'] = ($user['role'] === 'admin' || $user['role'] === 'administrator');
 
+            // Clear any stale flash messages from previous redirects (e.g. auth-required messages)
+            unset($_SESSION['flash_message'], $_SESSION['flash_type']);
+
             // Activity Log: auth.login
             try {
                 $ip = $_SERVER['REMOTE_ADDR'] ?? null;
