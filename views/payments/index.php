@@ -337,7 +337,9 @@ ob_start();
                                     if (!empty($tenant['utility_readings'])) {
                                         foreach ($tenant['utility_readings'] as $reading) {
                                             $utilityData[] = [
+                                                'id' => $reading['utility_id'],
                                                 'type' => $reading['utility_type'],
+                                                'label' => !empty($reading['utility_type']) ? ucfirst((string)$reading['utility_type']) : ('Utility #' . (int)$reading['utility_id']),
                                                 'current_reading' => $reading['current_reading'],
                                                 'current_reading_date' => $reading['current_reading_date'],
                                                 'previous_reading' => $reading['previous_reading'],
@@ -388,10 +390,10 @@ ob_start();
                             <input type="number" step="0.01" class="form-control" id="rent_amount" name="rent_amount">
                         </div>
                     </div>
-
+id
                     <div id="utility_payment_section" class="mb-3" style="display: none;">
                         <label for="utility_type" class="form-label">Utility Type</label>
-                        <select class="form-select" id="utility_type" name="utility_type">
+                        <select class="form-select" id="utility_id" name="utility_id">
                             <option value="">Select Utility</option>
                         </select>
                         <div class="mt-2" id="utility_details" style="display: none;">
@@ -1162,7 +1164,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const rentAmountInput = document.getElementById('rent_amount');
     const utilityAmountInput = document.getElementById('utility_amount');
     const maintenanceAmountInput = document.getElementById('maintenance_amount');
-    const utilityTypeSelect = document.getElementById('utility_type');
+    const utilityTypeSelect = document.getElementById('utility_id');
     const utilityDetails = document.getElementById('utility_details');
 
     // Handle payment type checkbox changes
@@ -1250,8 +1252,8 @@ document.addEventListener('DOMContentLoaded', function() {
         utilityTypeSelect.innerHTML = '<option value="">Select Utility</option>';
         utilities.forEach(utility => {
             const option = document.createElement('option');
-            option.value = utility.type;
-            option.textContent = utility.type.charAt(0).toUpperCase() + utility.type.slice(1);
+            option.value = utility.id;
+            option.textContent = utility.label || (utility.type ? (utility.type.charAt(0).toUpperCase() + utility.type.slice(1)) : ('Utility #' + String(utility.id)));
             option.setAttribute('data-details', JSON.stringify(utility));
             utilityTypeSelect.appendChild(option);
         });
@@ -1261,15 +1263,22 @@ document.addEventListener('DOMContentLoaded', function() {
     utilityTypeSelect.addEventListener('change', function() {
         const selectedOption = this.options[this.selectedIndex];
         if (selectedOption.value) {
-            const utilityDetails = JSON.parse(selectedOption.getAttribute('data-details'));
-            document.getElementById('previous_reading').textContent = utilityDetails.previous_reading;
-            document.getElementById('previous_reading_date').textContent = formatDate(utilityDetails.previous_reading_date);
-            document.getElementById('current_reading').textContent = utilityDetails.current_reading;
-            document.getElementById('current_reading_date').textContent = formatDate(utilityDetails.current_reading_date);
-            document.getElementById('rate').textContent = utilityDetails.rate;
-            document.getElementById('amount_due').textContent = utilityDetails.cost;
-            utilityAmountInput.value = utilityDetails.cost;
-            document.getElementById('utility_details').style.display = 'block';
+            let utilityDetails = null;
+            try {
+                utilityDetails = JSON.parse(selectedOption.getAttribute('data-details') || '{}');
+            } catch (e) {
+                utilityDetails = null;
+            }
+            if (utilityDetails) {
+                document.getElementById('previous_reading').textContent = utilityDetails.previous_reading;
+                document.getElementById('previous_reading_date').textContent = formatDate(utilityDetails.previous_reading_date);
+                document.getElementById('current_reading').textContent = utilityDetails.current_reading;
+                document.getElementById('current_reading_date').textContent = formatDate(utilityDetails.current_reading_date);
+                document.getElementById('rate').textContent = utilityDetails.rate;
+                document.getElementById('amount_due').textContent = utilityDetails.cost;
+                utilityAmountInput.value = utilityDetails.cost;
+                document.getElementById('utility_details').style.display = 'block';
+            }
         } else {
             document.getElementById('utility_details').style.display = 'none';
             utilityAmountInput.value = '';

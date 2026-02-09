@@ -579,14 +579,8 @@ class PaymentsController
                             $successMessages[] = 'Utility payments added successfully!';
                         } else {
                             // If amounts don't match, create a single payment for the specified utility type
-                            if (!empty($_POST['utility_type'])) {
-                                $utilityId = null;
-                                foreach ($utilities as $utility) {
-                                    if ($utility['utility_type'] === $_POST['utility_type']) {
-                                        $utilityId = $utility['id'];
-                                        break;
-                                    }
-                                }
+                            if (!empty($_POST['utility_id'])) {
+                                $utilityId = (int)$_POST['utility_id'];
                                 
                                 $utilityData = [
                                     'lease_id' => $lease['id'],
@@ -596,7 +590,7 @@ class PaymentsController
                                     'applies_to_month' => $appliesToMonth,
                                     'payment_type' => 'utility',
                                     'payment_method' => $_POST['payment_method'],
-                                    'notes' => ucfirst($_POST['utility_type']) . ' utility payment: ' . ($_POST['notes'] ?? '')
+                                    'notes' => 'Utility payment: ' . ($_POST['notes'] ?? '')
                                 ];
                                 $utilityPaymentId = $paymentModel->createUtilityPayment($utilityData);
                                 // Activity log: payment.create (utility single)
@@ -616,7 +610,7 @@ class PaymentsController
                                             'payment_date' => $_POST['payment_date'],
                                             'payment_type' => 'utility',
                                             'payment_method' => $_POST['payment_method'],
-                                            'utility_type' => $_POST['utility_type'] ?? null
+                                            'utility_id' => $utilityId
                                         ]),
                                         $ip,
                                         $agent
