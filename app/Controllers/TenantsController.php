@@ -909,6 +909,40 @@ class TenantsController
                                     $assigned++;
                                 }
                             } else {
+                                $moveInRaw = trim((string)($data['move_in_date'] ?? ''));
+                                $endRaw = trim((string)($data['end_date'] ?? ''));
+
+                                $hasMoveIn = $moveInRaw !== '';
+                                $hasEnd = $endRaw !== '';
+
+                                $updates = [];
+                                if ($hasMoveIn) {
+                                    $updates['start_date'] = $normalizeDate($moveInRaw, (string)($lease['start_date'] ?? $payload['registered_on']))
+                                        ?? (string)($lease['start_date'] ?? $payload['registered_on']);
+                                }
+
+                                if ($hasEnd) {
+                                    $updates['end_date'] = $normalizeDate($endRaw, (string)($lease['end_date'] ?? null))
+                                        ?? (string)($lease['end_date'] ?? null);
+                                }
+
+                                // If previously-imported lease dates were invalid/empty, force-correct them.
+                                $existingStart = trim((string)($lease['start_date'] ?? ''));
+                                if (!$hasMoveIn && ($existingStart === '' || $existingStart === '0000-00-00' || strtotime($existingStart) === false)) {
+                                    $fixedStart = $normalizeDate($data['move_in_date'] ?? null, (string)$payload['registered_on']) ?? (string)$payload['registered_on'];
+                                    $updates['start_date'] = $fixedStart;
+                                }
+
+                                $existingEnd = trim((string)($lease['end_date'] ?? ''));
+                                if (!$hasEnd && ($existingEnd === '' || $existingEnd === '0000-00-00' || strtotime($existingEnd) === false)) {
+                                    $baseStart = (string)($updates['start_date'] ?? ($existingStart !== '' ? $existingStart : $payload['registered_on']));
+                                    $updates['end_date'] = date('Y-m-d', strtotime($baseStart . ' +1 year'));
+                                }
+
+                                if (!empty($updates)) {
+                                    $leaseModel->update((int)$lease['id'], $updates);
+                                }
+
                                 $assigned++;
                             }
                         }
