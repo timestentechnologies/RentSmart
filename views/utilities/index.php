@@ -51,6 +51,7 @@ ob_start();
                 <table class="table table-bordered mb-0">
                     <thead>
                         <tr>
+                            <th>Property</th>
                             <th>Type</th>
                             <th>Billing Method</th>
                             <th>Rate Per Unit (KES)</th>
@@ -61,11 +62,22 @@ ob_start();
                     </thead>
                     <tbody>
                         <?php if (empty($utility_rates)): ?>
-                            <tr><td colspan="6" class="text-center">No utility types/rates found.</td></tr>
+                            <tr><td colspan="7" class="text-center">No utility types/rates found.</td></tr>
                         <?php else: ?>
                             <?php foreach ($utility_rates as $type => $rateList): ?>
                                 <?php foreach ($rateList as $rate): ?>
                                     <tr>
+                                        <td>
+                                            <?php
+                                                $pname = $rate['property_name'] ?? null;
+                                                if ($pname) {
+                                                    echo htmlspecialchars($pname);
+                                                } else {
+                                                    $pid = $rate['property_id'] ?? null;
+                                                    echo $pid ? ('Property #' . (int)$pid) : '';
+                                                }
+                                            ?>
+                                        </td>
                                         <td><?= htmlspecialchars($type) ?></td>
                                         <td><?= htmlspecialchars($rate['billing_method']) === 'metered' ? 'Metered' : 'Flat Rate' ?></td>
                                         <td><?= number_format($rate['rate_per_unit'], 2) ?></td>
