@@ -11,14 +11,14 @@ ob_start();
 
     <div class="card mt-4 mb-4">
         <div class="card-body">
-            <form method="GET" class="row g-3 align-items-end">
+            <form method="GET" id="dashboardFilters" class="row g-3 align-items-end">
                 <div class="col-12 col-md-3">
                     <label class="form-label">Month</label>
-                    <input type="month" name="month" class="form-control" value="<?= htmlspecialchars($selectedMonth ?? date('Y-m')) ?>">
+                    <input type="month" id="dashboardMonth" name="month" class="form-control" value="<?= htmlspecialchars($selectedMonth ?? date('Y-m')) ?>">
                 </div>
                 <div class="col-12 col-md-5">
                     <label class="form-label">Property</label>
-                    <select name="property_id" class="form-select">
+                    <select id="dashboardProperty" name="property_id" class="form-select">
                         <option value="">All Properties</option>
                         <?php foreach (($properties ?? []) as $p): ?>
                             <option value="<?= (int)$p['id'] ?>" <?= (isset($selectedPropertyId) && (int)$selectedPropertyId === (int)$p['id']) ? 'selected' : '' ?>>
@@ -28,12 +28,28 @@ ob_start();
                     </select>
                 </div>
                 <div class="col-12 col-md-4">
-                    <button type="submit" class="btn btn-primary">Apply</button>
                     <a href="<?= BASE_URL ?>/dashboard" class="btn btn-outline-secondary">Reset</a>
                 </div>
             </form>
         </div>
     </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('dashboardFilters');
+    const month = document.getElementById('dashboardMonth');
+    const property = document.getElementById('dashboardProperty');
+    if (!form || !month || !property) return;
+
+    const submit = () => {
+        if (form.requestSubmit) form.requestSubmit();
+        else form.submit();
+    };
+
+    month.addEventListener('change', submit);
+    property.addEventListener('change', submit);
+});
+</script>
 
     <!-- Welcome Message -->
     <div class="card mt-4 mb-4 bg-info bg-opacity-25">
@@ -133,9 +149,9 @@ ob_start();
         <div class="col-md-3">
             <div class="stat-card occupancy">
                 <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <h6 class="card-title">Total Properties</h6>
-                        <h2 class="mt-3 mb-2"><?= (int)($totalProperties ?? 0) ?></h2>
+                    <div>Acive
+                        <h6 class="card-title">Total Propictives</h6>Count
+                        <h2 class="mt-3 mb-2"><?= (issigned)(o o utiaProperties ?? 0) ?></h2>
                         <p class="mb-0 text-muted">Tracked properties</p>
                     </div>
                     <div class="stats-icon">

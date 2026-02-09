@@ -355,6 +355,31 @@ class DashboardController
             // Calculate total properties
             $totalProperties = count($this->property->getAll($userId));
 
+            // Active tenants: tenants assigned to a unit
+            $activeTenantsCount = 0;
+            try {
+                $sqlActiveTenants =
+                    "SELECT COUNT(DISTINCT t.id) AS c\n"
+                    . "FROM tenants t\n"
+                    . "JOIN units u ON t.unit_id = u.id\n"
+                    . "JOIN properties pr ON u.property_id = pr.id\n"
+                    . "WHERE t.unit_id IS NOT NULL";
+                $paramsActiveTenants = [];
+                if (!$isAdmin) {
+                    $sqlActiveTenants .= " AND (pr.owner_id = ? OR pr.manager_id = ? OR pr.agent_id = ? OR pr.caretaker_user_id = ?)";
+                    $paramsActiveTenants = [$userId, $userId, $userId, $userId];
+                }
+                if ($selectedPropertyId) {
+                    $sqlActiveTenants .= " AND pr.id = ?";
+                    $paramsActiveTenants[] = $selectedPropertyId;
+                }
+                $stmtAT = $db->prepare($sqlActiveTenants);
+                $stmtAT->execute($paramsActiveTenants);
+                $activeTenantsCount = (int)($stmtAT->fetch(\PDO::FETCH_ASSOC)['c'] ?? 0);
+            } catch (\Throwable $e) {
+                $activeTenantsCount = 0;
+            }
+
             $totalTenants = count($this->tenant->getAll($userId));
             $totalUnits = count($this->unit->getAll($userId));
             $totalExpiringLeases = is_array($expiringLeases) ? count($expiringLeases) : 0;
