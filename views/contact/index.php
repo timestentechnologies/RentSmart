@@ -77,8 +77,8 @@
         <div class="card contact-card">
           <div class="card-body p-4">
             <h5 class="mb-3">Contact Details</h5>
-            <p class="mb-2"><i class="bi bi-telephone me-2"></i>+254 718 883 983</p>
-            <p class="mb-2"><i class="bi bi-envelope me-2"></i>timestentechnologies@gmail.com</p>
+            <p class="mb-2"><i class="bi bi-telephone me-2"></i>+254 795 155 230</p>
+            <p class="mb-2"><i class="bi bi-envelope me-2"></i>rentsmart@timestentechnologies.co.ke</p>
             <p class="mb-0"><i class="bi bi-geo-alt me-2"></i>Nairobi, Kenya</p>
           </div>
         </div>

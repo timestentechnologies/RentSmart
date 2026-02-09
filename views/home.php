@@ -520,7 +520,7 @@
             border-radius: 1.25rem;
             overflow: hidden;
             box-shadow: 0 18px 45px rgba(107, 62, 153, 0.16);
-            background: #fff;
+            background:red;
             border: 1px solid rgba(107, 62, 153, 0.10);
         }
 
@@ -763,6 +763,11 @@
                             <a class="nav-link" href="#faq">FAQs</a>
                     </li>
                     <li class="nav-item">
+                        <a href="<?= BASE_URL ?>/contact" class="nav-link <?= (strpos($current_uri, 'contact') === 0) ? 'active' : '' ?>">
+                             Contact Us
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link" href="<?= BASE_URL ?>/docs">Documentation</a>
                     </li>
                     <li class="nav-item">
@@ -876,7 +881,7 @@
             <div class="row g-4">
                 <div class="col-md-3">
                     <div class="stats-card">
-                        <div class="stats-number">1000+</div>
+                        <div class="stats-number">500+</div>
                         <div class="stats-label">Properties Managed</div>
                     </div>
                 </div>
@@ -906,9 +911,10 @@
         <div class="container">
             <div class="row align-items-center g-4">
                 <div class="col-lg-6">
-                    <div class="split-media">
-                        <img src="<?= asset('images/dashboard.png') ?>" alt="RentSmart" class="img-fluid">
-                    </div>
+                    <div style="background: transparent !important;">
+                    <img src="<?= asset('images/new.png') ?>" alt="RentSmart" class="img-fluid">
+                </div>
+
                 </div>
                 <div class="col-lg-6">
                     <div class="split-badge mb-3">
@@ -1369,7 +1375,7 @@
                             </h3>
                             <div id="faq8" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
                                 <div class="accordion-body">
-                                    Yes! We provide excellent customer support through email at <a href="mailto:timestentechnologies@gmail.com">timestentechnologies@gmail.com</a> and phone at <a href="tel:+254718883983">+254 718 883 983</a>. Our Kenyan support team is ready to help you with setup, training, and any questions you may have. We also offer video tutorials and documentation to help you get started.
+                                    Yes! We provide excellent customer support through email at <a href="mailto:rentsmart@timestentechnologies.co.ke">rentsmart@timestentechnologies.co.ke</a> and phone at <a href="tel:+254795155230">+254 795 155 230</a>. Our Kenyan support team is ready to help you with setup, training, and any questions you may have. We also offer video tutorials and documentation to help you get started.
                                 </div>
                             </div>
                         </div>
@@ -1402,7 +1408,7 @@
                     <div class="social-links">
                         <a href="https://www.facebook.com/RentSmartKE" target="_blank" class="text-white mx-2" aria-label="Facebook"><i class="bi bi-facebook"></i></a>
                         <a href="https://twitter.com/RentSmartKE" target="_blank" class="text-white mx-2" aria-label="Twitter"><i class="bi bi-twitter"></i></a>
-                        <a href="https://www.linkedin.com/company/rentsmart-kenya" target="_blank" class="text-white mx-2" aria-label="LinkedIn"><i class="bi bi-linkedin"></i></a>
+                        <a href="https://www.linkedin.com/posts/timestentechnologies_proptech-propertymanagement-rentsmart-activity-7413190378020925440-JRdI?utm_source=share&utm_medium=member_desktop&rcm=ACoAADXDMdEBsC18bIJ4cOHS2WbzS9hlKU1YxY4" target="_blank" class="text-white mx-2" aria-label="LinkedIn"><i class="bi bi-linkedin"></i></a>
                         <a href="https://www.instagram.com/rentsmartke" target="_blank" class="text-white mx-2" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
                     </div>
                 </div>
@@ -1431,13 +1437,18 @@
                 <div class="col-md-3">
                     <h5 class="mb-3">Contact Us</h5>
                     <ul class="list-unstyled">
-                        <li class="mb-2"><i class="bi bi-envelope me-2"></i><a href="mailto:timestentechnologies@gmail.com" class="text-white-50">timestentechnologies@gmail.com</a></li>
-                        <li class="mb-2"><i class="bi bi-telephone me-2"></i><a href="tel:+254718883983" class="text-white-50">+254 718 883 983</a></li>
+                        <li class="mb-2"><i class="bi bi-envelope me-2"></i><a href="mailto:rentsmart@timestentechnologies.co.ke" class="text-white-50">rentsmart@timestentechnologies.co.ke</a></li>
+                        <li class="mb-2"><i class="bi bi-telephone me-2"></i><a href="tel:+254795155230" class="text-white-50">+254 795 155 230</a></li>
                         <li class="mb-2"><i class="bi bi-geo-alt me-2"></i>Nairobi, Kenya</li>
                     </ul>
                     <div class="mt-3">
                         <a href="<?= BASE_URL ?>/privacy-policy" class="text-white-50 d-block mb-2">Privacy Policy</a>
                         <a href="<?= BASE_URL ?>/terms" class="text-white-50 d-block mb-2">Terms of Service</a>
+    
+                        <a href="<?= BASE_URL ?>/contact" class="text-white-50 d-block mb-2">
+                             Contact Us
+                        </a>
+                 
                     </div>
                 </div>
             </div>
