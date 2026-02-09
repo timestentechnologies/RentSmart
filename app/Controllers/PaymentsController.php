@@ -226,26 +226,30 @@ class PaymentsController
             }
             $tenant['due_amount'] = $dueAmount;
 
-            // Get utility readings for the tenant's unit
-            if (!empty($tenant['unit_id'])) {
-                $utilities = $utilityModel->getUtilitiesByUnit($tenant['unit_id']);
+            // Get utilities with balances due for this tenant (for manual utility payments dropdown)
+            try {
+                $tenantUtilities = $utilityModel->getTenantUtilities((int)($tenant['id'] ?? 0));
                 $utilityReadings = [];
-                foreach ($utilities as $utility) {
-                    if ($utility['latest_reading'] !== null) {
-                        $utilityReadings[] = [
-                            'utility_id' => $utility['id'],
-                            'utility_type' => $utility['utility_type'],
-                            'current_reading' => $utility['latest_reading'],
-                            'current_reading_date' => $utility['latest_reading_date'],
-                            'previous_reading' => $utility['previous_reading'],
-                            'previous_reading_date' => $utility['previous_reading_date'],
-                            'cost' => $utility['latest_cost'] ?? 0,
-                            'rate' => $utility['flat_rate'],
-                            'is_metered' => $utility['is_metered']
-                        ];
+                foreach (($tenantUtilities ?: []) as $ut) {
+                    $net = (float)($ut['net_amount'] ?? 0);
+                    if ($net <= 0.009) {
+                        continue;
                     }
+                    $utilityReadings[] = [
+                        'utility_id' => (int)($ut['id'] ?? 0),
+                        'utility_type' => $ut['utility_type'] ?? '',
+                        'current_reading' => $ut['reading_value'] ?? null,
+                        'current_reading_date' => $ut['reading_date'] ?? null,
+                        'previous_reading' => $ut['previous_reading_value'] ?? null,
+                        'previous_reading_date' => $ut['previous_reading_date'] ?? null,
+                        'cost' => $net,
+                        'rate' => (float)($ut['flat_rate'] ?? 0),
+                        'is_metered' => (int)($ut['is_metered'] ?? 0)
+                    ];
                 }
                 $tenant['utility_readings'] = $utilityReadings;
+            } catch (\Exception $e) {
+                $tenant['utility_readings'] = [];
             }
         }
         unset($tenant);
