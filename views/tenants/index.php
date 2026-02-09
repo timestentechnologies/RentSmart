@@ -207,6 +207,9 @@ ob_start();
                                         $maintenanceDue = max((float)($tenant['maintenance_due'] ?? 0), 0.0);
                                         $balance = $rentDue + $utilitiesDue + $maintenanceDue;
                                         $balanceClass = $balance > 0 ? 'text-danger' : 'text-muted';
+                                        $totalPaid = (float)($tenant['total_payments'] ?? 0);
+                                        $monthlyRent = (float)($tenant['rent_amount'] ?? 0);
+                                        $isAdvance = ($monthlyRent > 0.0 && $totalPaid > ($monthlyRent + 0.009));
                                     ?>
                                     <span class="<?= $balanceClass ?>">
                                         <?php if ($balance > 0.009): ?>
@@ -219,7 +222,10 @@ ob_start();
                                                 Maintenance: Ksh<?= number_format($maintenanceDue, 2) ?>
                                             </div>
                                         <?php else: ?>
-                                            -
+                                            <div>
+                                                <strong>Ksh<?= number_format(0, 2) ?></strong>
+                                                <?= $isAdvance ? '(Advance (Paid))' : '(All Paid)' ?>
+                                            </div>
                                         <?php endif; ?>
                                     </span>
                                 </td>
