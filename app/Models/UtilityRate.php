@@ -61,7 +61,11 @@ class UtilityRate extends Model
 
     public function getRatesByType($utilityType)
     {
-        $sql = "SELECT * FROM utility_rates WHERE utility_type = ? ORDER BY effective_from DESC";
+        $sql = "SELECT ur.*, p.name as property_name
+                FROM utility_rates ur
+                LEFT JOIN properties p ON ur.property_id = p.id
+                WHERE ur.utility_type = ?
+                ORDER BY ur.effective_from DESC";
         $stmt = $this->db->prepare($sql);
         $stmt->execute([$utilityType]);
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
