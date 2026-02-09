@@ -434,25 +434,27 @@ class Unit extends Model
     {
         try {
             error_log("Unit::update - Updating unit {$id} with data: " . print_r($data, true));
-            $sql = "UPDATE {$this->table} SET 
-                unit_number = :unit_number,
-                type = :type,
-                size = :size,
-                rent_amount = :rent_amount,
-                status = :status
-                WHERE id = :id";
+            $allowed = ['unit_number', 'type', 'size', 'rent_amount', 'status', 'tenant_id', 'lease_start', 'lease_end'];
+            $sets = [];
+            $params = ['id' => (int)$id];
+            foreach ($allowed as $col) {
+                if (array_key_exists($col, $data)) {
+                    $sets[] = "{$col} = :{$col}";
+                    $params[$col] = $data[$col];
+                }
+            }
+
+            if (empty($sets)) {
+                error_log("Unit::update - No fields to update for unit {$id}");
+                return false;
+            }
+
+            $sql = "UPDATE {$this->table} SET " . implode(', ', $sets) . " WHERE id = :id";
 
             error_log("Unit::update - SQL: " . $sql);
 
             $stmt = $this->db->prepare($sql);
-            $result = $stmt->execute([
-                'id' => $id,
-                'unit_number' => $data['unit_number'],
-                'type' => $data['type'],
-                'size' => $data['size'],
-                'rent_amount' => $data['rent_amount'],
-                'status' => $data['status']
-            ]);
+            $result = $stmt->execute($params);
 
             error_log("Unit::update - Result: " . ($result ? 'success' : 'failure'));
             return $result;
