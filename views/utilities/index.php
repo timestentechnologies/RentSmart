@@ -279,6 +279,7 @@ ob_start();
                                                 data-id="<?= $utility['id'] ?>"
                                                 data-unit_id="<?= $utility['unit_id'] ?>"
                                                 data-unit_number="<?= htmlspecialchars($utility['unit_number']) ?>"
+                                                data-property_id="<?= (int)($utility['property_id'] ?? 0) ?>"
                                                 data-property_name="<?= htmlspecialchars($utility['property_name']) ?>"
                                                 data-utility_type="<?= htmlspecialchars($utility['utility_type']) ?>"
                                                 data-utility_type_label="<?= htmlspecialchars(ucfirst($utility['utility_type'])) ?>"
@@ -396,38 +397,36 @@ ob_start();
           </div>
           <div class="mb-3">
             <label class="form-label">Utility Name</label>
-            <input type="text" class="form-control" name="utility_type" id="edit_utility_name">
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Meter Number</label>
-            <input type="text" class="form-control" name="meter_number" id="edit_meter_number">
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Is Metered?</label>
-            <select class="form-select" name="is_metered" id="edit_is_metered">
-              <option value="1">Yes</option>
-              <option value="0">No</option>
+            <select class="form-select" name="utility_type" id="edit_utility_type_select" required>
+              <option value="">Select Utility</option>
             </select>
           </div>
-          <div class="mb-3">
-            <label class="form-label">Previous Reading</label>
-            <input type="number" class="form-control" name="previous_reading" id="edit_previous_reading" step="0.01" min="0">
+
+          <div id="edit_metered_fields">
+            <div class="mb-3">
+              <label class="form-label">Meter Number</label>
+              <input type="text" class="form-control" name="meter_number" id="edit_meter_number">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Previous Reading</label>
+              <input type="number" class="form-control" name="previous_reading" id="edit_previous_reading" step="0.01" min="0">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Current Reading</label>
+              <input type="number" class="form-control" name="current_reading" id="edit_current_reading" step="0.01" min="0">
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Units Used</label>
+              <input type="number" class="form-control" name="units_used" id="edit_units_used" step="0.01" min="0" readonly>
+            </div>
+            <div class="mb-3">
+              <label class="form-label">Reading Date</label>
+              <input type="date" class="form-control" name="reading_date" id="edit_reading_date" value="<?= date('Y-m-d') ?>">
+            </div>
           </div>
-          <div class="mb-3">
-            <label class="form-label">Current Reading</label>
-            <input type="number" class="form-control" name="current_reading" id="edit_current_reading" step="0.01" min="0">
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Units Used</label>
-            <input type="number" class="form-control" name="units_used" id="edit_units_used" step="0.01" min="0" readonly>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Cost</label>
-                        <input type="text" class="form-control" name="cost" id="edit_cost">
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Reading Date</label>
-                        <input type="date" class="form-control" name="reading_date" id="edit_reading_date" value="<?= date('Y-m-d') ?>">
+          <div class="mb-3" id="edit_cost_group">
+            <label class="form-label">Amount Due</label>
+            <input type="text" class="form-control" name="cost" id="edit_cost" readonly>
           </div>
         </div>
         <div class="modal-footer">
@@ -646,22 +645,95 @@ $(document).ready(function() {
     $('.edit-utility-btn').on('click', function() {
         const data = $(this).data();
         console.log('Edit button clicked, data:', data);
-        
+
         $('#edit_unit_display').val(data.unit_number + ' - ' + data.property_name);
         $('#edit_unit_id').val(data.unit_id);
-        $('#edit_utility_name').val(data.utility_type_label || data.utility_type || '');
-        $('#edit_meter_number').val(data.meter_number);
-        $('#edit_is_metered').val(data.is_metered);
+        $('#edit_meter_number').val(data.meter_number || '');
         $('#edit_previous_reading').val(data.previous_reading || '');
         $('#edit_current_reading').val(data.latest_reading || '');
         $('#edit_units_used').val(data.units_used || '');
         $('#edit_cost').val(data.cost || '');
-        
+
+        const propId = parseInt(data.property_id || '0', 10);
+        const currentType = (data.utility_type || '').toString();
+
+        // Load utility types for property and populate select
+        const typeSelect = document.getElementById('edit_utility_type_select');
+        if (typeSelect) {
+          typeSelect.innerHTML = '<option value="">Select Utility</option>';
+          if (propId) {
+            fetch(`${BASE_URL}/utilities/types-by-property/${propId}`, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+              .then(r => r.json())
+              .then(payload => {
+                const types = (payload && payload.success && Array.isArray(payload.types)) ? payload.types : [];
+                types.forEach(t => {
+                  const opt = document.createElement('option');
+                  opt.value = t.utility_type;
+                  opt.textContent = `${t.utility_type} (${t.billing_method === 'metered' ? 'Metered' : 'Flat Rate'})`;
+                  opt.dataset.billingMethod = t.billing_method;
+                  opt.dataset.rate = t.rate_per_unit;
+                  typeSelect.appendChild(opt);
+                });
+                if (currentType) typeSelect.value = currentType;
+                toggleEditUtilityFields();
+              })
+              .catch(() => {
+                if (currentType) {
+                  const opt = document.createElement('option');
+                  opt.value = currentType;
+                  opt.textContent = currentType;
+                  typeSelect.appendChild(opt);
+                  typeSelect.value = currentType;
+                }
+                toggleEditUtilityFields();
+              });
+          } else {
+            if (currentType) {
+              const opt = document.createElement('option');
+              opt.value = currentType;
+              opt.textContent = currentType;
+              typeSelect.appendChild(opt);
+              typeSelect.value = currentType;
+            }
+            toggleEditUtilityFields();
+          }
+        }
+
         // Set form action
         const formAction = `${BASE_URL}/utilities/update/${data.id}`;
         $('#editUtilityForm').attr('action', formAction);
         console.log('Form action set to:', formAction);
     });
+
+    function toggleEditUtilityFields() {
+      const typeSelect = document.getElementById('edit_utility_type_select');
+      const selected = typeSelect ? typeSelect.options[typeSelect.selectedIndex] : null;
+      const billingMethod = selected ? (selected.dataset.billingMethod || '') : '';
+      const meteredFields = document.getElementById('edit_metered_fields');
+      const costInput = document.getElementById('edit_cost');
+      const costGroup = document.getElementById('edit_cost_group');
+
+      if (billingMethod === 'metered') {
+        if (meteredFields) meteredFields.style.display = '';
+        if (costGroup) costGroup.style.display = '';
+        if (costInput) costInput.readOnly = true;
+        // trigger recalculation
+        $('#edit_previous_reading').trigger('input');
+      } else if (billingMethod === 'flat_rate') {
+        if (meteredFields) meteredFields.style.display = 'none';
+        if (costGroup) costGroup.style.display = '';
+        if (costInput) {
+          costInput.readOnly = true;
+          const rate = parseFloat(selected ? (selected.dataset.rate || '0') : '0') || 0;
+          costInput.value = rate.toFixed(2);
+        }
+      } else {
+        if (meteredFields) meteredFields.style.display = 'none';
+        if (costGroup) costGroup.style.display = '';
+      }
+    }
+
+    document.getElementById('edit_utility_type_select') && document.getElementById('edit_utility_type_select').addEventListener('change', toggleEditUtilityFields);
 
     // Calculate units used and cost when readings change
     $('#edit_previous_reading, #edit_current_reading').on('input', function() {
@@ -671,8 +743,11 @@ $(document).ready(function() {
         $('#edit_units_used').val(unitsUsed.toFixed(2));
         
         // Calculate cost if metered
-        if ($('#edit_is_metered').val() === '1') {
-            const utilityType = String($('#edit_utility_name').val() || '').toLowerCase();
+        const typeSelect = document.getElementById('edit_utility_type_select');
+        const selected = typeSelect ? typeSelect.options[typeSelect.selectedIndex] : null;
+        const billingMethod = selected ? (selected.dataset.billingMethod || '') : '';
+        if (billingMethod === 'metered') {
+            const utilityType = String(typeSelect && typeSelect.value ? typeSelect.value : '').toLowerCase();
             const rate = utilityRates[utilityType] || 0;
             const cost = unitsUsed * rate;
             $('#edit_cost').val(cost.toFixed(2));

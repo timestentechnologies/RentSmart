@@ -98,7 +98,7 @@ class Utility extends Model
     public function getAll($userId = null)
     {
         try {
-            $sql = "SELECT u.*, un.unit_number, p.name as property_name, t.name as tenant_name
+            $sql = "SELECT u.*, un.unit_number, p.id as property_id, p.name as property_name, t.name as tenant_name
                     FROM utilities u
                     JOIN units un ON u.unit_id = un.id
                     JOIN properties p ON un.property_id = p.id
@@ -131,7 +131,7 @@ class Utility extends Model
 
     public function getUtilitiesByUnit($unitId)
     {
-        $sql = "SELECT ut.*, un.unit_number, p.name as property_name, t.name as tenant_name,
+        $sql = "SELECT ut.*, un.unit_number, p.id as property_id, p.name as property_name, t.name as tenant_name,
                    lr.reading_value as latest_reading, lr.reading_date as latest_reading_date,
                    lr.cost as latest_cost,
                    pr.reading_value as previous_reading,

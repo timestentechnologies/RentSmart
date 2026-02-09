@@ -375,6 +375,7 @@ class UtilitiesController
         try {
             $utilityModel = new Utility();
             $readingModel = new \App\Models\UtilityReading();
+            $rateModel = new \App\Models\UtilityRate();
             
             // Start transaction
             $utilityModel->beginTransaction();
@@ -385,17 +386,65 @@ class UtilitiesController
                 throw new \Exception('Utility not found');
             }
 
+            // Resolve property_id from unit
+            $unitId = (int)($_POST['unit_id'] ?? 0);
+            if (!$unitId) {
+                throw new \Exception('Unit is required');
+            }
+            $unitModel = new \App\Models\Unit();
+            $userId = $_SESSION['user_id'] ?? null;
+            $unit = $unitModel->getById($unitId, $userId);
+            $propertyId = (int)($unit['property_id'] ?? 0);
+
+            $utilityType = trim((string)($_POST['utility_type'] ?? ''));
+            if ($utilityType === '') {
+                throw new \Exception('Utility type is required');
+            }
+
+            // Lookup current rate + billing method for this property/type
+            $db = $rateModel->getDb();
+            $billingMethod = 'flat_rate';
+            $ratePerUnit = null;
+
+            if ($this->ratesSupportPropertyScope() && $propertyId) {
+                $stmt = $db->prepare(
+                    "SELECT * FROM utility_rates\n"
+                    ."WHERE utility_type = ?\n"
+                    ."  AND effective_from <= CURDATE()\n"
+                    ."  AND (effective_to IS NULL OR effective_to >= CURDATE())\n"
+                    ."  AND property_id = ?\n"
+                    ."ORDER BY effective_from DESC\n"
+                    ."LIMIT 1"
+                );
+                $stmt->execute([$utilityType, $propertyId]);
+                $rateInfo = $stmt->fetch(\PDO::FETCH_ASSOC) ?: [];
+                if (!empty($rateInfo)) {
+                    $billingMethod = $rateInfo['billing_method'] ?? 'flat_rate';
+                    $ratePerUnit = $rateInfo['rate_per_unit'] ?? null;
+                }
+            } else {
+                $rateInfo = $rateModel->getCurrentRate($utilityType);
+                if (!empty($rateInfo)) {
+                    $billingMethod = $rateInfo['billing_method'] ?? 'flat_rate';
+                    $ratePerUnit = $rateInfo['rate_per_unit'] ?? null;
+                }
+            }
+
+            $isMetered = ($billingMethod === 'metered');
+            $flatRate = (!$isMetered && $ratePerUnit !== null) ? $ratePerUnit : null;
+
             $utilityData = [
-                'unit_id' => $_POST['unit_id'],
-                'utility_type' => $_POST['utility_type'],
-                'meter_number' => $_POST['meter_number'],
-                'is_metered' => isset($_POST['is_metered']) ? 1 : 0
+                'unit_id' => $unitId,
+                'utility_type' => $utilityType,
+                'is_metered' => $isMetered ? 1 : 0,
+                'flat_rate' => $flatRate,
+                'meter_number' => $isMetered ? ($_POST['meter_number'] ?? null) : null,
             ];
 
             $utilityModel->update($id, $utilityData);
 
             // 2. Add new reading if provided
-            if (isset($_POST['current_reading']) && isset($_POST['reading_date'])) {
+            if ($isMetered && isset($_POST['current_reading']) && isset($_POST['reading_date'])) {
                 $readingData = [
                     'utility_id' => $id,
                     'reading_date' => $_POST['reading_date'],

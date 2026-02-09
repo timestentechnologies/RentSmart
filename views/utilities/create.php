@@ -26,7 +26,7 @@ ob_start();
                 </div>
 
                 <div class="mb-3">
-                    <label for="utility_type" class="form-label">Utility Type</label>
+                    <label for="utility_type" class="form-label">Utility Name</label>
                     <select class="form-select" id="utility_type" name="utility_type" required>
                         <option value="">Select Utility Type</option>
                         <?php foreach ($utilityTypes as $type): ?>
