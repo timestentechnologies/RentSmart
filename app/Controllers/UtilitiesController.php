@@ -133,7 +133,7 @@ class UtilitiesController
             $stmt->execute([$userId]);
             $utility_types = $stmt->fetchAll(\PDO::FETCH_COLUMN);
             foreach ($utility_types as $type) {
-                $stmtR = $db->prepare("SELECT * FROM utility_rates WHERE utility_type = ? AND user_id = ? ORDER BY effective_from DESC");
+                $stmtR = $db->prepare("SELECT ur.*, p.name as property_name FROM utility_rates ur LEFT JOIN properties p ON ur.property_id = p.id WHERE ur.utility_type = ? AND ur.user_id = ? ORDER BY ur.effective_from DESC");
                 $stmtR->execute([$type, $userId]);
                 $utility_rates[$type] = $stmtR->fetchAll(\PDO::FETCH_ASSOC);
             }
