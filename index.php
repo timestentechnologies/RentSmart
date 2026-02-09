@@ -754,13 +754,25 @@ try {
         header("HTTP/1.0 404 Not Found");
         echo view('errors/404', ['title' => '404 Not Found']);
     }
-} catch (Exception $e) {
+} catch (\Throwable $e) {
     error_log("Error in routing: " . $e->getMessage());
     error_log("Error trace: " . $e->getTraceAsString());
     if (getenv('APP_ENV') === 'development') {
         throw $e;
     }
     // 500 Internal Server Error
+    $acceptHeader = strtolower((string)($_SERVER['HTTP_ACCEPT'] ?? ''));
+    $isAjax = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')
+        || (strpos($acceptHeader, 'application/json') !== false);
+    if ($isAjax) {
+        header('Content-Type: application/json');
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Server error: ' . $e->getMessage()
+        ]);
+        exit;
+    }
     header("HTTP/1.0 500 Internal Server Error");
     echo view('errors/500', ['title' => '500 Internal Server Error']);
 }
