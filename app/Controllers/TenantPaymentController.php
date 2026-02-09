@@ -91,6 +91,13 @@ class TenantPaymentController
             if (!$lease) {
                 throw new \Exception('No active lease found for this tenant');
             }
+
+            // Block selecting a month that is already fully paid (rent only; applies_to_month is stored as YYYY-MM-01)
+            if ($appliesToMonth !== null && in_array($paymentType, ['rent', 'both', 'all'], true)) {
+                if ($this->payment->isRentMonthFullyPaidByLease((int)$lease['id'], $appliesToMonth)) {
+                    throw new \Exception('Selected month is already fully paid. Please select another month.');
+                }
+            }
             
             // Authorize payment method against property's owner/manager/agent and linkage to property
             try {

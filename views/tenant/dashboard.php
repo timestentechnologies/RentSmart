@@ -1064,6 +1064,7 @@
                                     <label for="appliesToMonth" class="form-label mb-0"><strong>Pay For Month</strong></label>
                                     <input type="month" id="appliesToMonth" class="form-control form-control-sm mt-1" value="<?= date('Y-m') ?>" />
                                     <small class="text-muted">Choose the month you are settling</small>
+                                    <div id="paidMonthWarning" class="text-danger small mt-1" style="display:none;"></div>
                                 </div>
                                 <div class="col-6">
                                     <label for="customAmount" class="form-label mb-0"><strong>Amount to Pay</strong></label>
@@ -1959,24 +1960,43 @@ function showPaymentSuccessModal(paymentDetails) {
 document.addEventListener('DOMContentLoaded', function() {
     const appliesToMonth = document.getElementById('appliesToMonth');
     const appliesToMonthHidden = document.getElementById('appliesToMonthHidden');
+    const submitBtn = document.getElementById('submitPaymentBtn');
+    const paidWarning = document.getElementById('paidMonthWarning');
+    const paidMonths = <?= json_encode(array_values(array_unique($paidRentMonths ?? []))) ?>;
     const customAmount = document.getElementById('customAmount');
     const paymentAmount = document.getElementById('paymentAmount');
     const summaryAmount = document.getElementById('summaryAmount');
 
+    const checkPaidMonth = () => {
+        if (!appliesToMonth || !submitBtn || !paidWarning) return;
+        const ym = (appliesToMonth.value || '').trim();
+        const isPaid = ym !== '' && Array.isArray(paidMonths) && paidMonths.indexOf(ym) !== -1;
+        if (isPaid) {
+            paidWarning.textContent = 'This month is already fully paid. Please select another month.';
+            paidWarning.style.display = 'block';
+            submitBtn.disabled = true;
+        } else {
+            paidWarning.textContent = '';
+            paidWarning.style.display = 'none';
+            submitBtn.disabled = false;
+        }
+    };
+
     if (appliesToMonth && appliesToMonthHidden) {
         appliesToMonth.addEventListener('change', function() {
             appliesToMonthHidden.value = (this.value && this.value.match(/^\d{4}-\d{2}$/)) ? (this.value + '-01') : '';
+            checkPaidMonth();
         });
         appliesToMonthHidden.value = (appliesToMonth.value && appliesToMonth.value.match(/^\d{4}-\d{2}$/)) ? (appliesToMonth.value + '-01') : '';
     }
 
+    checkPaidMonth();
+
     if (customAmount && paymentAmount) {
         customAmount.addEventListener('input', function() {
-            paymentAmount.value = this.value;
-            if (summaryAmount) {
-                const v = parseFloat(this.value || '0') || 0;
-                summaryAmount.textContent = 'Ksh ' + v.toLocaleString();
-            }
+            const v = parseFloat(this.value || '0');
+            paymentAmount.value = isNaN(v) ? 0 : v;
+            summaryAmount.textContent = 'Ksh ' + (isNaN(v) ? 0 : v).toLocaleString();
         });
     }
 });

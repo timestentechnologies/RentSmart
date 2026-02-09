@@ -29,6 +29,137 @@ class Payment extends Model
         }
     }
 
+    public function getFullyPaidRentMonthsByLease($leaseId): array
+    {
+        $leaseId = (int)$leaseId;
+        if ($leaseId <= 0) {
+            return [];
+        }
+
+        $leaseStmt = $this->db->prepare("SELECT start_date, rent_amount FROM leases WHERE id = ? AND status = 'active' LIMIT 1");
+        $leaseStmt->execute([$leaseId]);
+        $lease = $leaseStmt->fetch(\PDO::FETCH_ASSOC) ?: [];
+        $rentAmount = (float)($lease['rent_amount'] ?? 0);
+        if (empty($lease['start_date']) || $rentAmount <= 0.0) {
+            return [];
+        }
+
+        try {
+            $leaseStart = new \DateTime((string)$lease['start_date']);
+        } catch (\Exception $e) {
+            return [];
+        }
+
+        $startMonth = new \DateTime($leaseStart->format('Y-m-01'));
+        $today = new \DateTime();
+        $endMonth = new \DateTime($today->format('Y-m-01'));
+
+        try {
+            $maxStmt = $this->db->prepare("SELECT MAX(applies_to_month) AS m FROM payments WHERE lease_id = ? AND payment_type = 'rent' AND status IN ('completed','verified') AND applies_to_month IS NOT NULL");
+            $maxStmt->execute([$leaseId]);
+            $maxRaw = (string)($maxStmt->fetch(\PDO::FETCH_ASSOC)['m'] ?? '');
+            if ($maxRaw !== '') {
+                $maxTagged = new \DateTime(substr($maxRaw, 0, 7) . '-01');
+                if ($maxTagged > $endMonth) {
+                    $endMonth = $maxTagged;
+                }
+            }
+        } catch (\Exception $e) {
+        }
+
+        // Tagged totals by month
+        $tagStmt = $this->db->prepare(
+            "SELECT DATE_FORMAT(applies_to_month, '%Y-%m-01') AS m, COALESCE(SUM(amount),0) AS s\n"
+            . "FROM payments\n"
+            . "WHERE lease_id = ? AND payment_type = 'rent' AND status IN ('completed','verified') AND applies_to_month IS NOT NULL\n"
+            . "GROUP BY DATE_FORMAT(applies_to_month, '%Y-%m-01')"
+        );
+        $tagStmt->execute([$leaseId]);
+        $tagRows = $tagStmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+        $tagged = [];
+        foreach ($tagRows as $r) {
+            $k = (string)($r['m'] ?? '');
+            if ($k !== '') {
+                $tagged[$k] = (float)($r['s'] ?? 0);
+            }
+        }
+
+        // Untagged totals
+        $untagStmt = $this->db->prepare(
+            "SELECT COALESCE(SUM(amount),0) AS s FROM payments\n"
+            . "WHERE lease_id = ? AND payment_type = 'rent' AND status IN ('completed','verified') AND applies_to_month IS NULL"
+        );
+        $untagStmt->execute([$leaseId]);
+        $untaggedTotal = (float)($untagStmt->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0);
+
+        // Build month keys from start to end
+        $monthKeys = [];
+        $cursor = clone $startMonth;
+        while ($cursor <= $endMonth) {
+            $monthKeys[] = $cursor->format('Y-m-01');
+            $cursor->modify('+1 month');
+        }
+
+        $outstandingByMonth = [];
+        $excess = 0.0;
+        foreach ($monthKeys as $k) {
+            $out = $rentAmount;
+            $paid = (float)($tagged[$k] ?? 0);
+            $apply = min($out, max(0.0, $paid));
+            $out -= $apply;
+            $excess += max(0.0, $paid - $apply);
+            $outstandingByMonth[$k] = max(0.0, $out);
+        }
+
+        $remaining = max(0.0, $untaggedTotal) + $excess;
+        foreach ($monthKeys as $k) {
+            if ($remaining <= 0.0) {
+                break;
+            }
+            $apply = min((float)$outstandingByMonth[$k], $remaining);
+            $outstandingByMonth[$k] = max(0.0, (float)$outstandingByMonth[$k] - $apply);
+            $remaining -= $apply;
+        }
+
+        $fullyPaid = [];
+        foreach ($monthKeys as $k) {
+            if (((float)($outstandingByMonth[$k] ?? $rentAmount)) <= 0.0001) {
+                $fullyPaid[] = substr($k, 0, 7);
+            }
+        }
+
+        return array_values(array_unique($fullyPaid));
+    }
+
+    public function isRentMonthFullyPaidByLease($leaseId, $appliesToMonth): bool
+    {
+        $leaseId = (int)$leaseId;
+        if ($leaseId <= 0) {
+            return false;
+        }
+
+        $m = null;
+        if ($appliesToMonth instanceof \DateTimeInterface) {
+            $m = $appliesToMonth->format('Y-m');
+        } else {
+            $raw = trim((string)$appliesToMonth);
+            if ($raw !== '') {
+                if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $raw)) {
+                    $m = substr($raw, 0, 7);
+                } else if (preg_match('/^\d{4}-\d{2}$/', $raw)) {
+                    $m = $raw;
+                }
+            }
+        }
+
+        if ($m === null) {
+            return false;
+        }
+
+        $paid = $this->getFullyPaidRentMonthsByLease($leaseId);
+        return in_array($m, $paid, true);
+    }
+
     public function postExistingPaymentToLedger(int $paymentId): void
     {
         try {
