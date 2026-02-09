@@ -319,6 +319,14 @@ class UnitsController
                 'status' => trim((string)filter_input(INPUT_POST, 'status'))
             ];
 
+            // Default missing fields to current DB values to avoid wiping on status-only updates
+            if ($data['unit_number'] === '' || $data['unit_number'] === null) {
+                $data['unit_number'] = $unit['unit_number'] ?? '';
+            }
+            if ($data['rent_amount'] === false || $data['rent_amount'] === null) {
+                $data['rent_amount'] = isset($unit['rent_amount']) ? (float)$unit['rent_amount'] : 0.0;
+            }
+
             error_log("UnitsController::update - Sanitized data: " . print_r($data, true));
 
             // Validate required fields (only unit_number and rent_amount strictly required)
@@ -398,7 +406,8 @@ class UnitsController
 
                         // Clear unit tenant_id regardless
                         $this->unit->update($id, [
-                            'tenant_id' => null
+                            'tenant_id' => null,
+                            'status' => 'vacant'
                         ]);
                     }
                 } catch (\Exception $e) {
