@@ -131,7 +131,7 @@ class Utility extends Model
 
     public function getUtilitiesByUnit($unitId)
     {
-        $sql = "SELECT ut.*, un.unit_number, p.name as property_name,
+        $sql = "SELECT ut.*, un.unit_number, p.name as property_name, t.name as tenant_name,
                    lr.reading_value as latest_reading, lr.reading_date as latest_reading_date,
                    lr.cost as latest_cost,
                    pr.reading_value as previous_reading,
@@ -139,6 +139,8 @@ class Utility extends Model
             FROM utilities ut
             JOIN units un ON ut.unit_id = un.id
             JOIN properties p ON un.property_id = p.id
+            LEFT JOIN leases l ON l.unit_id = un.id AND l.status = 'active'
+            LEFT JOIN tenants t ON t.id = l.tenant_id
             LEFT JOIN (
                 SELECT ur1.*
                 FROM utility_readings ur1

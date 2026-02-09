@@ -1185,6 +1185,11 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             utilityAmountInput.setAttribute('required', '');
             utilityTypeSelect.setAttribute('required', '');
+
+            // If tenant is already selected, ensure utilities are populated
+            if (tenantSelect && tenantSelect.value) {
+                tenantSelect.dispatchEvent(new Event('change'));
+            }
         } else {
             utilityAmountInput.removeAttribute('required');
             utilityTypeSelect.removeAttribute('required');

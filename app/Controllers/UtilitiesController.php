@@ -247,7 +247,11 @@ class UtilitiesController
         }
 
         $rateModel = new \App\Models\UtilityRate();
-        $utilityType = $_POST['utility_type'] ?? '';
+        $utilityType = trim((string)($_POST['utility_type'] ?? ''));
+        if ($utilityType === '') {
+            $_SESSION['errors'] = ['Utility type is required'];
+            redirect('/utilities/create');
+        }
         $userId = $_SESSION['user_id'] ?? null;
         $db = $rateModel->getDb();
         $userModel = new \App\Models\User();
