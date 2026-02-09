@@ -221,16 +221,26 @@ class PaymentsController
         foreach ($tenants as &$tenant) {
             $leaseId = $tenant['lease_id'] ?? null;
             $dueAmount = 0;
-            if ($leaseId) {
-                $dueAmount = $paymentModel->getDueAmountForLease($leaseId);
+            $lease = null;
+            try {
+                $lease = $paymentModel->getActiveLease((int)($tenant['id'] ?? 0), $this->userId);
+            } catch (\Exception $e) {
+                $lease = null;
+            }
+
+            $resolvedLeaseId = (int)($lease['id'] ?? ($leaseId ?? 0));
+            $resolvedUnitId = (int)($lease['unit_id'] ?? ($tenant['unit_id'] ?? 0));
+
+            if ($resolvedLeaseId) {
+                $dueAmount = $paymentModel->getDueAmountForLease($resolvedLeaseId);
             }
             $tenant['due_amount'] = $dueAmount;
 
             // Get utilities with balances due for this lease/unit (for manual utility payments dropdown)
             $tenant['utility_readings'] = [];
             try {
-                if (!empty($tenant['unit_id']) && !empty($tenant['lease_id'])) {
-                    $utilities = $utilityModel->getUtilitiesByUnit((int)$tenant['unit_id']);
+                if ($resolvedUnitId > 0 && $resolvedLeaseId > 0) {
+                    $utilities = $utilityModel->getUtilitiesByUnit($resolvedUnitId);
                     $paidStmt = $paymentModel->getDb()->prepare(
                         "SELECT COALESCE(SUM(amount),0) AS s\n"
                         . "FROM payments\n"
@@ -251,7 +261,7 @@ class PaymentsController
 
                         $paid = 0.0;
                         try {
-                            $paidStmt->execute([(int)$tenant['lease_id'], (int)$u['id']]);
+                            $paidStmt->execute([$resolvedLeaseId, (int)$u['id']]);
                             $paid = (float)($paidStmt->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0);
                         } catch (\Exception $e) {
                             $paid = 0.0;
