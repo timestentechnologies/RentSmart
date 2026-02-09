@@ -661,6 +661,16 @@ $(document).ready(function() {
         const typeSelect = document.getElementById('edit_utility_type_select');
         if (typeSelect) {
           typeSelect.innerHTML = '<option value="">Select Utility</option>';
+
+          // Always show current selection immediately (even before API loads)
+          if (currentType) {
+            const curOpt = document.createElement('option');
+            curOpt.value = currentType;
+            curOpt.textContent = currentType;
+            curOpt.selected = true;
+            typeSelect.appendChild(curOpt);
+          }
+
           if (propId) {
             fetch(`${BASE_URL}/utilities/types-by-property/${propId}`, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
               .then(r => r.json())
@@ -674,27 +684,17 @@ $(document).ready(function() {
                   opt.dataset.rate = t.rate_per_unit;
                   typeSelect.appendChild(opt);
                 });
-                if (currentType) typeSelect.value = currentType;
-                toggleEditUtilityFields();
-              })
-              .catch(() => {
                 if (currentType) {
-                  const opt = document.createElement('option');
-                  opt.value = currentType;
-                  opt.textContent = currentType;
-                  typeSelect.appendChild(opt);
                   typeSelect.value = currentType;
                 }
                 toggleEditUtilityFields();
+              })
+              .catch(() => {
+                if (currentType) typeSelect.value = currentType;
+                toggleEditUtilityFields();
               });
           } else {
-            if (currentType) {
-              const opt = document.createElement('option');
-              opt.value = currentType;
-              opt.textContent = currentType;
-              typeSelect.appendChild(opt);
-              typeSelect.value = currentType;
-            }
+            if (currentType) typeSelect.value = currentType;
             toggleEditUtilityFields();
           }
         }

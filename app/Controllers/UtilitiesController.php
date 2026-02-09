@@ -176,6 +176,26 @@ class UtilitiesController
             }
             $utility['meter_number'] = $utility['meter_number'] ?? '';
 
+            // Infer missing utility name for flat rate utilities by matching rate per unit
+            $ut = trim((string)($utility['utility_type'] ?? ''));
+            if ($ut === '' && empty($utility['is_metered'])) {
+                $pid = (int)($utility['property_id'] ?? 0);
+                $fr = isset($utility['flat_rate']) ? (float)$utility['flat_rate'] : null;
+                if ($pid && $fr !== null) {
+                    foreach (($utility_rates ?? []) as $type => $rateList) {
+                        foreach (($rateList ?? []) as $r) {
+                            if ((int)($r['property_id'] ?? 0) !== $pid) continue;
+                            if (($r['billing_method'] ?? '') !== 'flat_rate') continue;
+                            $rp = isset($r['rate_per_unit']) ? (float)$r['rate_per_unit'] : null;
+                            if ($rp !== null && abs($rp - $fr) < 0.0001) {
+                                $utility['utility_type'] = $type;
+                                break 2;
+                            }
+                        }
+                    }
+                }
+            }
+
             // Fallbacks for display
             $utility['unit_number'] = $utility['unit_number'] ?? ($utility['unit'] ?? null);
             $utility['property_name'] = $utility['property_name'] ?? ($utility['property'] ?? null);
