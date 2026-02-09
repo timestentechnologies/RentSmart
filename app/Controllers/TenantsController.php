@@ -775,6 +775,39 @@ class TenantsController
                 echo 'No file uploaded';
                 return;
             }
+
+            $normalizeDate = function ($value, $fallback = null) {
+                $raw = trim((string)($value ?? ''));
+                if ($raw === '') {
+                    return $fallback;
+                }
+
+                if (is_numeric($raw)) {
+                    $days = (int)$raw;
+                    if ($days > 0) {
+                        $dt = (new \DateTime('1899-12-30'))->modify('+' . $days . ' days');
+                        return $dt->format('Y-m-d');
+                    }
+                }
+
+                $dt = \DateTime::createFromFormat('Y-m-d', $raw) ?: null;
+                if (!$dt) {
+                    $dt = \DateTime::createFromFormat('m/d/Y', $raw) ?: null;
+                }
+                if (!$dt) {
+                    $dt = \DateTime::createFromFormat('d/m/Y', $raw) ?: null;
+                }
+                if (!$dt) {
+                    $ts = strtotime($raw);
+                    if ($ts !== false) {
+                        return date('Y-m-d', $ts);
+                    }
+                    return $fallback;
+                }
+
+                return $dt->format('Y-m-d');
+            };
+
             $tmp = $_FILES['file']['tmp_name'];
             if (!is_uploaded_file($tmp)) {
                 throw new \Exception('Invalid upload');
@@ -824,10 +857,7 @@ class TenantsController
                     'registered_on' => $data['registered_on'] ?? ($data['move_in_date'] ?? $importedOn),
                 ];
 
-                $payload['registered_on'] = trim((string)$payload['registered_on']);
-                if ($payload['registered_on'] === '' || strtotime($payload['registered_on']) === false) {
-                    $payload['registered_on'] = $importedOn;
-                }
+                $payload['registered_on'] = $normalizeDate($payload['registered_on'], $importedOn) ?? $importedOn;
 
                 if ($propertyId) {
                     $payload['property_id'] = $propertyId;
@@ -860,15 +890,13 @@ class TenantsController
                             $lease = $leaseModel->getActiveLeaseByTenant((int)$existing['id']);
                             if (!$lease) {
                                 $effectiveRent = (float)($currentUnit['rent_amount'] ?? 0);
-                                $startDate = trim((string)($data['move_in_date'] ?? ''));
-                                if ($startDate === '' || strtotime($startDate) === false) {
-                                    $startDate = (string)$payload['registered_on'];
-                                }
+                                $startDate = $normalizeDate($data['move_in_date'] ?? null, (string)$payload['registered_on']) ?? (string)$payload['registered_on'];
+                                $endDate = $normalizeDate($data['end_date'] ?? null, date('Y-m-d', strtotime($startDate . ' +1 year'))) ?? date('Y-m-d', strtotime($startDate . ' +1 year'));
                                 $leaseData = [
                                     'unit_id' => $unitId,
                                     'tenant_id' => (int)$existing['id'],
                                     'start_date' => $startDate,
-                                    'end_date' => $data['end_date'] ?? date('Y-m-d', strtotime($startDate . ' +1 year')),
+                                    'end_date' => $endDate,
                                     'rent_amount' => $effectiveRent,
                                     'security_deposit' => $effectiveRent,
                                     'status' => 'active',
@@ -906,15 +934,13 @@ class TenantsController
 
                                 $leaseModel = new \App\Models\Lease();
                                 $effectiveRent = (float)($currentUnit['rent_amount'] ?? 0);
-                                $startDate = trim((string)($data['move_in_date'] ?? ''));
-                                if ($startDate === '' || strtotime($startDate) === false) {
-                                    $startDate = (string)$payload['registered_on'];
-                                }
+                                $startDate = $normalizeDate($data['move_in_date'] ?? null, (string)$payload['registered_on']) ?? (string)$payload['registered_on'];
+                                $endDate = $normalizeDate($data['end_date'] ?? null, date('Y-m-d', strtotime($startDate . ' +1 year'))) ?? date('Y-m-d', strtotime($startDate . ' +1 year'));
                                 $leaseData = [
                                     'unit_id' => $unitId,
                                     'tenant_id' => (int)$tenantId,
                                     'start_date' => $startDate,
-                                    'end_date' => $data['end_date'] ?? date('Y-m-d', strtotime($startDate . ' +1 year')),
+                                    'end_date' => $endDate,
                                     'rent_amount' => $effectiveRent,
                                     'security_deposit' => $effectiveRent,
                                     'status' => 'active',
