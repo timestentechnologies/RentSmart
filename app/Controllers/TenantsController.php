@@ -5,6 +5,7 @@ namespace App\Controllers;
 use App\Models\Tenant;
 use App\Models\Property;
 use App\Models\Unit;
+use App\Models\Payment;
 use App\Database\Connection;
 
 class TenantsController
@@ -30,6 +31,32 @@ class TenantsController
             $userId = $_SESSION['user_id'];
             $tenants = $this->tenant->getAll($userId);
             error_log("TenantsController::index - Loaded " . count($tenants) . " tenants");
+
+            // Align rent due calculation with tenant portal (sum missed rent months)
+            try {
+                $paymentModel = new Payment();
+                foreach ($tenants as &$tenant) {
+                    $tenantId = isset($tenant['id']) ? (int)$tenant['id'] : 0;
+                    if ($tenantId <= 0) {
+                        $tenant['rent_due_total'] = 0.0;
+                        $tenant['rent_due_months'] = 0;
+                        continue;
+                    }
+
+                    $missed = $paymentModel->getTenantMissedRentMonths($tenantId);
+                    $due = 0.0;
+                    if (is_array($missed)) {
+                        foreach ($missed as $mm) {
+                            $due += isset($mm['amount']) ? (float)$mm['amount'] : 0.0;
+                        }
+                    }
+                    $tenant['rent_due_total'] = round(max(0.0, $due), 2);
+                    $tenant['rent_due_months'] = is_array($missed) ? count($missed) : 0;
+                }
+                unset($tenant);
+            } catch (\Throwable $e) {
+                // Fail safe: keep old one-month computation in view
+            }
             
             $properties = $this->property->getAll($userId);
             error_log("TenantsController::index - Loaded " . count($properties) . " properties");
