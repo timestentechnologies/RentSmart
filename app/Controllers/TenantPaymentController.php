@@ -33,8 +33,17 @@ class TenantPaymentController
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
-        $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+        $acceptHeader = strtolower((string)($_SERVER['HTTP_ACCEPT'] ?? ''));
+        $isAjax = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')
+            || (strpos($acceptHeader, 'application/json') !== false)
+            || (isset($_POST['payment_type']) && isset($_POST['payment_method_id']));
         if (!isset($_SESSION['tenant_id'])) {
+            if ($isAjax) {
+                header('Content-Type: application/json');
+                http_response_code(401);
+                echo json_encode(['success' => false, 'message' => 'Unauthorized']);
+                exit;
+            }
             header('Location: ' . BASE_URL . '/');
             exit;
         }

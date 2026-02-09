@@ -2161,6 +2161,25 @@ function ucwords(str) {
 }
 
 // Payment Modal Functions
+function parseJsonResponse(response) {
+    return response.text().then(text => {
+        if (!text) {
+            return {
+                success: false,
+                message: `Request failed (${response.status}). Empty response from server.`
+            };
+        }
+        try {
+            return JSON.parse(text);
+        } catch (e) {
+            return {
+                success: false,
+                message: `Request failed (${response.status}). Invalid JSON response.`
+            };
+        }
+    });
+}
+
 function populatePaymentMethods(paymentMethods) {
     const paymentMethodsList = document.getElementById('payment_methods_list');
     
@@ -2536,10 +2555,11 @@ function submitPayment() {
             method: 'POST',
             body: stkData,
             headers: {
+                'Accept': 'application/json',
                 'X-Requested-With': 'XMLHttpRequest'
             }
         })
-        .then(response => response.json())
+        .then(response => parseJsonResponse(response))
         .then(data => {
             // Reset button state
             submitBtn.innerHTML = originalText;
@@ -2589,10 +2609,11 @@ function submitPayment() {
         method: 'POST',
         body: formData,
         headers: {
+            'Accept': 'application/json',
             'X-Requested-With': 'XMLHttpRequest'
         }
     })
-    .then(response => response.json())
+    .then(response => parseJsonResponse(response))
     .then(data => {
         // Reset button state
         submitBtn.innerHTML = originalText;
