@@ -529,6 +529,37 @@ class TenantsController
                     // Check if there's already an active lease for this tenant
                     $leaseModel = new \App\Models\Lease();
                     $existingLease = $leaseModel->getActiveLeaseByTenant($id);
+
+                    // If duplicates already exist (multiple active leases), inactivate all but latest
+                    try {
+                        $stmtActives = $this->db->prepare("SELECT id, unit_id FROM leases WHERE tenant_id = ? AND status = 'active' ORDER BY id DESC");
+                        $stmtActives->execute([(int)$id]);
+                        $activeRows = $stmtActives->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+                        if (count($activeRows) > 1) {
+                            $keep = $activeRows[0];
+                            $idsToInactivate = [];
+                            $unitsToVacate = [];
+                            foreach (array_slice($activeRows, 1) as $r) {
+                                $idsToInactivate[] = (int)$r['id'];
+                                if (!empty($r['unit_id'])) {
+                                    $unitsToVacate[] = (int)$r['unit_id'];
+                                }
+                            }
+                            if (!empty($idsToInactivate)) {
+                                $in = implode(',', array_fill(0, count($idsToInactivate), '?'));
+                                $params = array_merge([date('Y-m-d H:i:s')], $idsToInactivate);
+                                $this->db->prepare("UPDATE leases SET status = 'inactive', updated_at = ? WHERE id IN ($in)")->execute($params);
+                            }
+                            foreach ($unitsToVacate as $uId) {
+                                if ((int)$uId !== (int)$unitId) {
+                                    $this->unit->update((int)$uId, ['status' => 'vacant', 'tenant_id' => null]);
+                                }
+                            }
+                            $existingLease = $leaseModel->getActiveLeaseByTenant($id);
+                        }
+                    } catch (\Throwable $e) {
+                        // ignore cleanup failure
+                    }
                     
                     if ($existingLease) {
                         // Update existing lease with new unit
@@ -613,21 +644,35 @@ class TenantsController
                         }
                     }
                 } else {
-                    // If no unit assigned, deactivate any existing lease
+                    // If no unit assigned, deactivate ALL active leases (handles duplicates)
                     $leaseModel = new \App\Models\Lease();
-                    $existingLease = $leaseModel->getActiveLeaseByTenant($id);
-                    
-                    if ($existingLease) {
-                        $leaseModel->update($existingLease['id'], [
-                            'status' => 'inactive',
-                            'updated_at' => date('Y-m-d H:i:s')
-                        ]);
-                        
-                        // Set unit to vacant
-                        $this->unit->update($existingLease['unit_id'], [
-                            'status' => 'vacant',
-                            'tenant_id' => null
-                        ]);
+                    try {
+                        $stmtUnits = $this->db->prepare("SELECT DISTINCT unit_id FROM leases WHERE tenant_id = ? AND status = 'active' AND unit_id IS NOT NULL");
+                        $stmtUnits->execute([(int)$id]);
+                        $units = $stmtUnits->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+
+                        $this->db->prepare("UPDATE leases SET status = 'inactive', updated_at = ? WHERE tenant_id = ? AND status = 'active'")
+                            ->execute([date('Y-m-d H:i:s'), (int)$id]);
+
+                        foreach ($units as $row) {
+                            $uId = (int)($row['unit_id'] ?? 0);
+                            if ($uId > 0) {
+                                $this->unit->update($uId, ['status' => 'vacant', 'tenant_id' => null]);
+                            }
+                        }
+                    } catch (\Throwable $e) {
+                        // fallback to previous behavior
+                        $existingLease = $leaseModel->getActiveLeaseByTenant($id);
+                        if ($existingLease) {
+                            $leaseModel->update($existingLease['id'], [
+                                'status' => 'inactive',
+                                'updated_at' => date('Y-m-d H:i:s')
+                            ]);
+                            $this->unit->update($existingLease['unit_id'], [
+                                'status' => 'vacant',
+                                'tenant_id' => null
+                            ]);
+                        }
                     }
                 }
 
