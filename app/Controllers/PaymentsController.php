@@ -226,28 +226,56 @@ class PaymentsController
             }
             $tenant['due_amount'] = $dueAmount;
 
-            // Get utilities with balances due for this tenant (for manual utility payments dropdown)
+            // Get utilities with balances due for this lease/unit (for manual utility payments dropdown)
+            $tenant['utility_readings'] = [];
             try {
-                $tenantUtilities = $utilityModel->getTenantUtilities((int)($tenant['id'] ?? 0));
-                $utilityReadings = [];
-                foreach (($tenantUtilities ?: []) as $ut) {
-                    $net = (float)($ut['net_amount'] ?? 0);
-                    if ($net <= 0.009) {
-                        continue;
+                if (!empty($tenant['unit_id']) && !empty($tenant['lease_id'])) {
+                    $utilities = $utilityModel->getUtilitiesByUnit((int)$tenant['unit_id']);
+                    $paidStmt = $paymentModel->getDb()->prepare(
+                        "SELECT COALESCE(SUM(amount),0) AS s\n"
+                        . "FROM payments\n"
+                        . "WHERE lease_id = ?\n"
+                        . "  AND utility_id = ?\n"
+                        . "  AND payment_type = 'utility'\n"
+                        . "  AND status IN ('completed','verified')"
+                    );
+
+                    $utilityReadings = [];
+                    foreach (($utilities ?: []) as $u) {
+                        $cost = 0.0;
+                        if (!empty($u['is_metered'])) {
+                            $cost = (float)($u['latest_cost'] ?? 0);
+                        } else {
+                            $cost = (float)($u['flat_rate'] ?? 0);
+                        }
+
+                        $paid = 0.0;
+                        try {
+                            $paidStmt->execute([(int)$tenant['lease_id'], (int)$u['id']]);
+                            $paid = (float)($paidStmt->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0);
+                        } catch (\Exception $e) {
+                            $paid = 0.0;
+                        }
+
+                        $net = max($cost - $paid, 0.0);
+                        if ($net <= 0.009) {
+                            continue;
+                        }
+
+                        $utilityReadings[] = [
+                            'utility_id' => (int)($u['id'] ?? 0),
+                            'utility_type' => $u['utility_type'] ?? '',
+                            'current_reading' => $u['latest_reading'] ?? null,
+                            'current_reading_date' => $u['latest_reading_date'] ?? null,
+                            'previous_reading' => $u['previous_reading'] ?? null,
+                            'previous_reading_date' => $u['previous_reading_date'] ?? null,
+                            'cost' => $net,
+                            'rate' => (float)($u['flat_rate'] ?? 0),
+                            'is_metered' => (int)($u['is_metered'] ?? 0)
+                        ];
                     }
-                    $utilityReadings[] = [
-                        'utility_id' => (int)($ut['id'] ?? 0),
-                        'utility_type' => $ut['utility_type'] ?? '',
-                        'current_reading' => $ut['reading_value'] ?? null,
-                        'current_reading_date' => $ut['reading_date'] ?? null,
-                        'previous_reading' => $ut['previous_reading_value'] ?? null,
-                        'previous_reading_date' => $ut['previous_reading_date'] ?? null,
-                        'cost' => $net,
-                        'rate' => (float)($ut['flat_rate'] ?? 0),
-                        'is_metered' => (int)($ut['is_metered'] ?? 0)
-                    ];
+                    $tenant['utility_readings'] = $utilityReadings;
                 }
-                $tenant['utility_readings'] = $utilityReadings;
             } catch (\Exception $e) {
                 $tenant['utility_readings'] = [];
             }

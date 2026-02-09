@@ -207,6 +207,7 @@ class Tenant extends Model
                 l.rent_amount,
                 l.start_date,
                 l.end_date,
+                u.id as unit_id,
                 u.unit_number,
                 p.name as property_name
                 FROM tenants t

@@ -98,10 +98,12 @@ class Utility extends Model
     public function getAll($userId = null)
     {
         try {
-            $sql = "SELECT u.*, un.unit_number, p.name as property_name
+            $sql = "SELECT u.*, un.unit_number, p.name as property_name, t.name as tenant_name
                     FROM utilities u
                     JOIN units un ON u.unit_id = un.id
                     JOIN properties p ON un.property_id = p.id
+                    LEFT JOIN leases l ON l.unit_id = un.id AND l.status = 'active'
+                    LEFT JOIN tenants t ON t.id = l.tenant_id
                     ORDER BY p.name, un.unit_number, u.utility_type";
             
             $stmt = $this->db->prepare($sql);
