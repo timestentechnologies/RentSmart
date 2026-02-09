@@ -189,78 +189,125 @@ class DashboardController
 
             $receivedTotal = $rentReceived + $utilityReceived + $maintenanceReceived;
 
-            // Expected (billed) for current month
-            $stmtRentExpected = $db->prepare(
-                "SELECT COALESCE(SUM(l.rent_amount),0) AS s\n"
-                . "FROM leases l\n"
-                . "JOIN units u ON l.unit_id = u.id\n"
-                . "JOIN properties pr ON u.property_id = pr.id\n"
-                . "WHERE l.status = 'active'" . $accessWhere
-            );
-            $stmtRentExpected->execute($accessParams);
-            $rentExpected = (float)($stmtRentExpected->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0);
-
-            // Maintenance billed is stored as negative rent adjustments tagged MAINT-
-            $stmtMaintenanceExpected = $db->prepare(
-                "SELECT COALESCE(SUM(ABS(p.amount)),0) AS s\n"
-                . "FROM payments p\n"
-                . "JOIN leases l ON p.lease_id = l.id\n"
-                . "JOIN units u ON l.unit_id = u.id\n"
-                . "JOIN properties pr ON u.property_id = pr.id\n"
-                . "WHERE p.payment_type = 'rent'\n"
-                . "  AND p.amount < 0\n"
-                . "  AND p.notes LIKE '%MAINT-%'\n"
-                . "  AND p.status IN ('completed','verified')\n"
-                . "  AND p.payment_date BETWEEN ? AND ?" . $accessWhere
-            );
-            $stmtMaintenanceExpected->execute(array_merge([$startOfMonth, $endOfMonth], $accessParams));
-            $maintenanceExpected = (float)($stmtMaintenanceExpected->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0);
-
-            // Utilities expected for current month = latest reading cost within month (metered) or flat rate (flat)
+            // Outstanding (arrears) totals (align with tenant balances / tenant portal logic)
+            $rentExpected = 0.0;
             $utilityExpected = 0.0;
-            try {
-                $sqlUtilities = "SELECT ut.id, ut.is_metered, ut.flat_rate\n"
-                    . "FROM utilities ut\n"
-                    . "JOIN units un ON ut.unit_id = un.id\n"
-                    . "JOIN leases l ON l.unit_id = un.id AND l.status = 'active'\n"
-                    . "JOIN properties pr ON un.property_id = pr.id\n"
-                    . "WHERE 1=1";
-                $uParams = [];
-                if (!$isAdmin) {
-                    $sqlUtilities .= " AND (pr.owner_id = ? OR pr.manager_id = ? OR pr.agent_id = ? OR pr.caretaker_user_id = ?)";
-                    $uParams = [$userId, $userId, $userId, $userId];
-                }
-                $sqlUtilities .= " GROUP BY ut.id ORDER BY ut.id";
-                $stmtUtilities = $db->prepare($sqlUtilities);
-                $stmtUtilities->execute($uParams);
-                $utilitiesRows = $stmtUtilities->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+            $maintenanceExpected = 0.0;
 
-                $stmtReadingCost = $db->prepare(
-                    "SELECT ur.cost\n"
-                    . "FROM utility_readings ur\n"
-                    . "WHERE ur.utility_id = ?\n"
-                    . "  AND ur.reading_date BETWEEN ? AND ?\n"
-                    . "ORDER BY ur.reading_date DESC, ur.id DESC LIMIT 1"
+            try {
+                $stmtLeases = $db->prepare(
+                    "SELECT l.id AS lease_id, l.rent_amount, l.start_date, u.id AS unit_id\n"
+                    . "FROM leases l\n"
+                    . "JOIN units u ON l.unit_id = u.id\n"
+                    . "JOIN properties pr ON u.property_id = pr.id\n"
+                    . "WHERE l.status = 'active'" . $accessWhere
+                );
+                $stmtLeases->execute($accessParams);
+                $leasesRows = $stmtLeases->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+
+                $sumRentPaidStmt = $db->prepare(
+                    "SELECT COALESCE(SUM(amount),0) AS s\n"
+                    . "FROM payments\n"
+                    . "WHERE lease_id = ?\n"
+                    . "  AND payment_type = 'rent'\n"
+                    . "  AND status IN ('completed','verified')"
                 );
 
-                foreach ($utilitiesRows as $rowU) {
-                    if (!empty($rowU['is_metered'])) {
-                        $stmtReadingCost->execute([(int)$rowU['id'], $startOfMonth, $endOfMonth]);
-                        $costRow = $stmtReadingCost->fetch(\PDO::FETCH_ASSOC) ?: [];
-                        $utilityExpected += (float)($costRow['cost'] ?? 0);
-                    } else {
-                        $utilityExpected += (float)($rowU['flat_rate'] ?? 0);
+                $unitsUtilitiesStmt = $db->prepare("SELECT id, is_metered, flat_rate FROM utilities WHERE unit_id = ?");
+                $utilityChargeMeteredStmt = $db->prepare(
+                    "SELECT COALESCE(cost,0) AS c\n"
+                    . "FROM utility_readings\n"
+                    . "WHERE utility_id = ?\n"
+                    . "ORDER BY reading_date DESC, id DESC\n"
+                    . "LIMIT 1"
+                );
+                $utilityPaidStmt = $db->prepare(
+                    "SELECT COALESCE(SUM(amount),0) AS s\n"
+                    . "FROM payments\n"
+                    . "WHERE utility_id = ?\n"
+                    . "  AND payment_type = 'utility'\n"
+                    . "  AND status IN ('completed','verified')"
+                );
+
+                $maintChargesStmt = $db->prepare(
+                    "SELECT COALESCE(SUM(ABS(amount)),0) AS s\n"
+                    . "FROM payments\n"
+                    . "WHERE lease_id = ?\n"
+                    . "  AND payment_type = 'rent'\n"
+                    . "  AND amount < 0\n"
+                    . "  AND notes LIKE '%MAINT-%'\n"
+                    . "  AND status IN ('completed','verified')\n"
+                    . "  AND payment_date BETWEEN ? AND ?"
+                );
+                $maintPaidStmt = $db->prepare(
+                    "SELECT COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END),0) AS s\n"
+                    . "FROM payments\n"
+                    . "WHERE lease_id = ?\n"
+                    . "  AND payment_type = 'other'\n"
+                    . "  AND status IN ('completed','verified')\n"
+                    . "  AND payment_date BETWEEN ? AND ?\n"
+                    . "  AND (notes LIKE 'Maintenance payment:%' OR notes LIKE '%MAINT-%')"
+                );
+
+                foreach ($leasesRows as $L) {
+                    $rent = (float)($L['rent_amount'] ?? 0);
+                    if ($rent <= 0) {
+                        continue;
                     }
+
+                    try {
+                        $leaseStart = new \DateTime((string)$L['start_date']);
+                    } catch (\Exception $e) {
+                        continue;
+                    }
+                    $startMonth = new \DateTime($leaseStart->format('Y-m-01'));
+                    $currentMonth = new \DateTime(date('Y-m-01'));
+                    if ($currentMonth < $startMonth) {
+                        continue;
+                    }
+                    $monthsElapsed = ((int)$currentMonth->format('Y') - (int)$startMonth->format('Y')) * 12
+                        + ((int)$currentMonth->format('n') - (int)$startMonth->format('n')) + 1;
+                    $expectedRent = $monthsElapsed * $rent;
+
+                    $sumRentPaidStmt->execute([(int)$L['lease_id']]);
+                    $paidRent = (float)($sumRentPaidStmt->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0);
+                    $rentExpected += max(0.0, $expectedRent - $paidRent);
+
+                    // Utility outstanding (per utility: latest charge/flat - all payments)
+                    $unitsUtilitiesStmt->execute([(int)$L['unit_id']]);
+                    $utils = $unitsUtilitiesStmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+                    foreach ($utils as $ut) {
+                        $charge = 0.0;
+                        if ((int)($ut['is_metered'] ?? 0) === 1) {
+                            $utilityChargeMeteredStmt->execute([(int)$ut['id']]);
+                            $charge = (float)($utilityChargeMeteredStmt->fetch(\PDO::FETCH_ASSOC)['c'] ?? 0);
+                        } else {
+                            $charge = (float)($ut['flat_rate'] ?? 0);
+                        }
+                        $utilityPaidStmt->execute([(int)$ut['id']]);
+                        $paidU = (float)($utilityPaidStmt->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0);
+                        $utilityExpected += max(0.0, $charge - $paidU);
+                    }
+
+                    // Maintenance outstanding (current month)
+                    $maintChargesStmt->execute([(int)$L['lease_id'], $startOfMonth, $endOfMonth]);
+                    $mCharged = (float)($maintChargesStmt->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0);
+                    $maintPaidStmt->execute([(int)$L['lease_id'], $startOfMonth, $endOfMonth]);
+                    $mPaid = (float)($maintPaidStmt->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0);
+                    $maintenanceExpected += max(0.0, $mCharged - $mPaid);
                 }
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
+                $rentExpected = 0.0;
                 $utilityExpected = 0.0;
+                $maintenanceExpected = 0.0;
             }
 
             $expectedTotal = $rentExpected + $utilityExpected + $maintenanceExpected;
 
-            $notReceivedRent = max($rentExpected - $rentReceived, 0.0);
-            $notReceivedUtility = max($utilityExpected - $utilityReceived, 0.0);
-            $notReceivedMaintenance = max($maintenanceExpected - $maintenanceReceived, 0.0);
+            // Not received equals outstanding for this dashboard definition
+            $notReceivedRent = max($rentExpected, 0.0);
+            $notReceivedUtility = max($utilityExpected, 0.0);
+            $notReceivedMaintenance = max($maintenanceExpected, 0.0);
             $notReceivedTotal = $notReceivedRent + $notReceivedUtility + $notReceivedMaintenance;
 
             // Wallet: all received money less rent-balance deductions
