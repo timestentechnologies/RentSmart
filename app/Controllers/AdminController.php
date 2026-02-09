@@ -310,6 +310,12 @@ class AdminController
             try {
                 // Delete related records in correct order
                 error_log("Starting user deletion for user ID: {$id}, role: {$user['role']}");
+
+                // Remove accounting entries authored by this user (for properties they owned, property deletion below also removes by property_id)
+                error_log("Deleting journal entries for user...");
+                $stmt = $db->prepare("DELETE FROM journal_entries WHERE user_id = ?");
+                $stmt->execute([(int)$id]);
+                error_log("Journal entries deleted successfully");
                 
                 // 1. Delete subscription payment logs first (foreign key to subscription_payments)
                 error_log("Deleting subscription payment logs...");
@@ -336,13 +342,95 @@ class AdminController
                 $subscriptionModel = new \App\Models\Subscription();
                 $subscriptionModel->deleteByUserId($id);
                 error_log("Subscriptions deleted successfully");
-                
-                // 4. If landlord, delete properties (cascades to units, leases, payments, mpesa transactions)
-                if ($user['role'] === 'landlord') {
-                    error_log("Deleting properties for landlord...");
+
+                // Delete employee-related records
+                error_log("Deleting employees and employee payments...");
+                try {
+                    $stmt = $db->prepare("DELETE FROM employee_payments WHERE employee_id IN (SELECT id FROM employees WHERE user_id = ?)");
+                    $stmt->execute([(int)$id]);
+                } catch (\Exception $e) {
+                }
+                try {
+                    $stmt = $db->prepare("DELETE FROM employees WHERE user_id = ?");
+                    $stmt->execute([(int)$id]);
+                } catch (\Exception $e) {
+                }
+                error_log("Employees deleted successfully");
+
+                // Delete expenses created by this user
+                error_log("Deleting expenses...");
+                try {
+                    $stmt = $db->prepare("DELETE FROM expenses WHERE user_id = ?");
+                    $stmt->execute([(int)$id]);
+                } catch (\Exception $e) {
+                }
+                error_log("Expenses deleted successfully");
+
+                // Delete notices/messages created by this user
+                error_log("Deleting notices/messages...");
+                try {
+                    $stmt = $db->prepare("DELETE FROM notices WHERE user_id = ?");
+                    $stmt->execute([(int)$id]);
+                } catch (\Exception $e) {
+                }
+                try {
+                    $stmt = $db->prepare("DELETE FROM messages WHERE sender_type = 'user' AND sender_id = ?");
+                    $stmt->execute([(int)$id]);
+                } catch (\Exception $e) {
+                }
+                try {
+                    $stmt = $db->prepare("DELETE FROM contact_message_replies WHERE user_id = ?");
+                    $stmt->execute([(int)$id]);
+                } catch (\Exception $e) {
+                }
+                error_log("Notices/messages deleted successfully");
+
+                // Delete payment methods owned by user and property links
+                error_log("Deleting payment methods...");
+                try {
+                    $stmt = $db->prepare("DELETE FROM payment_method_properties WHERE payment_method_id IN (SELECT id FROM payment_methods WHERE owner_user_id = ?)");
+                    $stmt->execute([(int)$id]);
+                } catch (\Exception $e) {
+                }
+                try {
+                    $stmt = $db->prepare("DELETE FROM payment_methods WHERE owner_user_id = ?");
+                    $stmt->execute([(int)$id]);
+                } catch (\Exception $e) {
+                }
+                error_log("Payment methods deleted successfully");
+
+                // Treat landlord/manager/agent as property owners: delete all their property data.
+                // For caretakers/other staff: only unlink assignments.
+                $isPropertyOwnerRole = in_array((string)($user['role'] ?? ''), ['landlord', 'manager', 'agent'], true);
+
+                if ($isPropertyOwnerRole) {
+                    error_log("Deleting properties for property-owner role (owner/manager/agent)...");
                     $propertyModel = new \App\Models\Property();
-                    $propertyModel->deleteByOwnerId($id);
+                    $stmt = $db->prepare("SELECT id FROM properties WHERE owner_id = ? OR manager_id = ? OR agent_id = ?");
+                    $stmt->execute([(int)$id, (int)$id, (int)$id]);
+                    $propIds = $stmt->fetchAll(\PDO::FETCH_COLUMN) ?: [];
+                    foreach ($propIds as $pid) {
+                        $propertyModel->delete((int)$pid);
+                    }
                     error_log("Properties deleted successfully");
+                } else {
+                    error_log("Unlinking user from managed/assigned properties...");
+                    try {
+                        $stmt = $db->prepare("UPDATE properties SET manager_id = NULL WHERE manager_id = ?");
+                        $stmt->execute([(int)$id]);
+                    } catch (\Exception $e) {
+                    }
+                    try {
+                        $stmt = $db->prepare("UPDATE properties SET agent_id = NULL WHERE agent_id = ?");
+                        $stmt->execute([(int)$id]);
+                    } catch (\Exception $e) {
+                    }
+                    try {
+                        $stmt = $db->prepare("UPDATE properties SET caretaker_user_id = NULL WHERE caretaker_user_id = ?");
+                        $stmt->execute([(int)$id]);
+                    } catch (\Exception $e) {
+                    }
+                    error_log("Property links updated successfully");
                 }
 
                 // 6. Delete file uploads (has CASCADE, but let's be explicit)

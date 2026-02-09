@@ -563,18 +563,95 @@ class Property extends Model
             $stmt = $this->db->prepare($sql);
             $stmt->execute([$id]);
             $units = $stmt->fetchAll(\PDO::FETCH_COLUMN);
-            
+
+            // Remove property-scoped records that may not be protected by FK cascades
+            try {
+                // Journal entries (general ledger) scoped by property
+                $stmt = $this->db->prepare("DELETE FROM journal_entries WHERE property_id = ?");
+                $stmt->execute([(int)$id]);
+            } catch (\Exception $e) {
+            }
+
+            try {
+                // Utility rates linked to property
+                $stmt = $this->db->prepare("DELETE FROM utility_rates WHERE property_id = ?");
+                $stmt->execute([(int)$id]);
+            } catch (\Exception $e) {
+            }
+
+            try {
+                // Payment method links to this property
+                $stmt = $this->db->prepare("DELETE FROM payment_method_properties WHERE property_id = ?");
+                $stmt->execute([(int)$id]);
+            } catch (\Exception $e) {
+            }
+
             // Get all leases for these units
             if (!empty($units)) {
                 $placeholders = str_repeat('?,', count($units) - 1) . '?';
+
+                // Maintenance requests by unit/property
+                try {
+                    $stmt = $this->db->prepare("DELETE FROM maintenance_requests WHERE property_id = ? OR unit_id IN ($placeholders)");
+                    $stmt->execute(array_merge([(int)$id], $units));
+                } catch (\Exception $e) {
+                }
+
+                // Utilities + readings by unit
+                try {
+                    $stmt = $this->db->prepare("SELECT id FROM utilities WHERE unit_id IN ($placeholders)");
+                    $stmt->execute($units);
+                    $utilityIds = $stmt->fetchAll(\PDO::FETCH_COLUMN);
+                    if (!empty($utilityIds)) {
+                        $uph = str_repeat('?,', count($utilityIds) - 1) . '?';
+                        $stmt = $this->db->prepare("DELETE FROM utility_readings WHERE utility_id IN ($uph)");
+                        $stmt->execute($utilityIds);
+                    }
+                    $stmt = $this->db->prepare("DELETE FROM utilities WHERE unit_id IN ($placeholders)");
+                    $stmt->execute($units);
+                } catch (\Exception $e) {
+                }
+
                 $sql = "SELECT id FROM leases WHERE unit_id IN ($placeholders)";
                 $stmt = $this->db->prepare($sql);
                 $stmt->execute($units);
                 $leases = $stmt->fetchAll(\PDO::FETCH_COLUMN);
+
+                $tenantIdsToDelete = [];
+                try {
+                    $stmt = $this->db->prepare("SELECT DISTINCT tenant_id FROM leases WHERE unit_id IN ($placeholders)");
+                    $stmt->execute($units);
+                    $tenantIdsToDelete = array_values(array_filter(array_map('intval', $stmt->fetchAll(\PDO::FETCH_COLUMN) ?: [])));
+                } catch (\Exception $e) {
+                    $tenantIdsToDelete = [];
+                }
+
+                // Invoices/items for tenants that ever had leases in this property
+                try {
+                    $stmt = $this->db->prepare("SELECT DISTINCT tenant_id FROM leases WHERE unit_id IN ($placeholders)");
+                    $stmt->execute($units);
+                    $tenantIds = array_values(array_filter(array_map('intval', $stmt->fetchAll(\PDO::FETCH_COLUMN) ?: [])));
+                    if (!empty($tenantIds)) {
+                        $tph = implode(',', array_fill(0, count($tenantIds), '?'));
+                        $stmt = $this->db->prepare("DELETE FROM invoice_items WHERE invoice_id IN (SELECT id FROM invoices WHERE tenant_id IN ($tph))");
+                        $stmt->execute($tenantIds);
+                        $stmt = $this->db->prepare("DELETE FROM invoices WHERE tenant_id IN ($tph)");
+                        $stmt->execute($tenantIds);
+                    }
+                } catch (\Exception $e) {
+                }
                 
                 // Get all payments for these leases
                 if (!empty($leases)) {
                     $placeholders = str_repeat('?,', count($leases) - 1) . '?';
+
+                    // Delete manual mpesa payments first (FK to payments)
+                    try {
+                        $sql = "DELETE FROM manual_mpesa_payments WHERE payment_id IN (SELECT id FROM payments WHERE lease_id IN ($placeholders))";
+                        $stmt = $this->db->prepare($sql);
+                        $stmt->execute($leases);
+                    } catch (\Exception $e) {
+                    }
                     
                     // Delete mpesa transactions first (due to foreign key)
                     $sql = "DELETE FROM mpesa_transactions WHERE payment_id IN (
@@ -592,6 +669,16 @@ class Property extends Model
                     $sql = "DELETE FROM leases WHERE id IN ($placeholders)";
                     $stmt = $this->db->prepare($sql);
                     $stmt->execute($leases);
+                }
+
+                // Delete tenants that were attached to these leases (property owners want all tenant data removed)
+                try {
+                    if (!empty($tenantIdsToDelete)) {
+                        $tph = implode(',', array_fill(0, count($tenantIdsToDelete), '?'));
+                        $stmt = $this->db->prepare("DELETE FROM tenants WHERE id IN ($tph)");
+                        $stmt->execute($tenantIdsToDelete);
+                    }
+                } catch (\Exception $e) {
                 }
                 
                 // Delete units

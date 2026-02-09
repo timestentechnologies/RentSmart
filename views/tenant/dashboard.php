@@ -1033,6 +1033,7 @@
                 <form id="paymentForm">
                     <input type="hidden" id="paymentType" name="payment_type">
                     <input type="hidden" id="paymentAmount" name="amount">
+                    <input type="hidden" id="appliesToMonthHidden" name="applies_to_month" value="">
                     <input type="hidden" id="advanceMonthsHidden" value="0">
                     
                     <!-- Payment Summary -->
@@ -1055,6 +1056,19 @@
                                 </div>
                                 <div class="col-6" id="summaryAmount">
                                     -
+                                </div>
+                            </div>
+
+                            <div class="row mt-2" id="applyMonthRow" style="display:none;">
+                                <div class="col-6">
+                                    <label for="appliesToMonth" class="form-label mb-0"><strong>Pay For Month</strong></label>
+                                    <input type="month" id="appliesToMonth" class="form-control form-control-sm mt-1" value="<?= date('Y-m') ?>" />
+                                    <small class="text-muted">Choose the month you are settling</small>
+                                </div>
+                                <div class="col-6">
+                                    <label for="customAmount" class="form-label mb-0"><strong>Amount to Pay</strong></label>
+                                    <input type="number" step="0.01" min="0" id="customAmount" class="form-control form-control-sm mt-1" value="" />
+                                    <small class="text-muted">Partial payments allowed</small>
                                 </div>
                             </div>
                             <div class="row" id="advanceControls" style="display:none;">
@@ -1941,6 +1955,32 @@ function showPaymentSuccessModal(paymentDetails) {
     modal.show();
 }
 
+// Keep hidden fields in sync
+document.addEventListener('DOMContentLoaded', function() {
+    const appliesToMonth = document.getElementById('appliesToMonth');
+    const appliesToMonthHidden = document.getElementById('appliesToMonthHidden');
+    const customAmount = document.getElementById('customAmount');
+    const paymentAmount = document.getElementById('paymentAmount');
+    const summaryAmount = document.getElementById('summaryAmount');
+
+    if (appliesToMonth && appliesToMonthHidden) {
+        appliesToMonth.addEventListener('change', function() {
+            appliesToMonthHidden.value = (this.value && this.value.match(/^\d{4}-\d{2}$/)) ? (this.value + '-01') : '';
+        });
+        appliesToMonthHidden.value = (appliesToMonth.value && appliesToMonth.value.match(/^\d{4}-\d{2}$/)) ? (appliesToMonth.value + '-01') : '';
+    }
+
+    if (customAmount && paymentAmount) {
+        customAmount.addEventListener('input', function() {
+            paymentAmount.value = this.value;
+            if (summaryAmount) {
+                const v = parseFloat(this.value || '0') || 0;
+                summaryAmount.textContent = 'Ksh ' + v.toLocaleString();
+            }
+        });
+    }
+});
+
 function recalculateAdvanceAmount() {
     const paymentTypeField = document.getElementById('paymentType');
     if (paymentTypeField.value !== 'rent' && paymentTypeField.value !== 'rent_advance') {
@@ -2272,11 +2312,21 @@ function openPaymentModal(type, paymentMethods = []) {
     const paymentTypeField = document.getElementById('paymentType');
     const summaryType = document.getElementById('summaryType');
     const summaryAmount = document.getElementById('summaryAmount');
+    const applyMonthRow = document.getElementById('applyMonthRow');
+    const appliesToMonth = document.getElementById('appliesToMonth');
+    const appliesToMonthHidden = document.getElementById('appliesToMonthHidden');
+    const customAmount = document.getElementById('customAmount');
     const paymentMethodsList = document.getElementById('payment_methods_list');
     
     // Set payment type
     paymentTypeField.value = type;
     
+    // Show month/partial controls for normal payments (not advance)
+    if (applyMonthRow) applyMonthRow.style.display = 'none';
+    if (customAmount) customAmount.value = '';
+    if (appliesToMonth) appliesToMonth.value = new Date().toISOString().slice(0, 7);
+    if (appliesToMonthHidden) appliesToMonthHidden.value = '';
+
     // Update summary
     // Hide advance controls by default
     document.getElementById('advanceControls').style.display = 'none';
@@ -2292,6 +2342,15 @@ function openPaymentModal(type, paymentMethods = []) {
             const totalRentAmount = <?= $missedTotalJs ?>;
             document.getElementById('paymentAmount').value = totalRentAmount;
             summaryAmount.textContent = 'Ksh ' + totalRentAmount.toLocaleString();
+
+            // Default: pay for earliest missed month if any
+            <?php if (!empty($missedRentMonths)): ?>
+                const firstMissed = <?= json_encode($missedRentMonths[0]['year'] . '-' . str_pad((string)$missedRentMonths[0]['month'], 2, '0', STR_PAD_LEFT)) ?>;
+                if (appliesToMonth) appliesToMonth.value = firstMissed;
+            <?php endif; ?>
+
+            if (applyMonthRow) applyMonthRow.style.display = 'flex';
+            if (customAmount) customAmount.value = totalRentAmount;
         <?php endif; ?>
     } else if (type === 'utility' || type === 'utilities') {
         paymentTypeField.value = 'utility';
@@ -2307,12 +2366,18 @@ function openPaymentModal(type, paymentMethods = []) {
             const utilitiesAmount = <?= $totalUtilities ?>;
             document.getElementById('paymentAmount').value = utilitiesAmount;
             summaryAmount.textContent = 'Ksh ' + utilitiesAmount.toLocaleString();
+
+            if (applyMonthRow) applyMonthRow.style.display = 'flex';
+            if (customAmount) customAmount.value = utilitiesAmount;
         <?php endif; ?>
     } else if (type === 'maintenance') {
         summaryType.textContent = 'Maintenance Payment';
         const maintAmount = <?= (float)($maintenanceOutstanding ?? 0) ?>;
         document.getElementById('paymentAmount').value = maintAmount;
         summaryAmount.textContent = 'Ksh ' + maintAmount.toLocaleString();
+
+        if (applyMonthRow) applyMonthRow.style.display = 'flex';
+        if (customAmount) customAmount.value = maintAmount;
     } else if (type === 'all') {
         summaryType.textContent = 'Rent + Utilities + Maintenance Payment';
         <?php if (isset($lease) && $lease): ?>
@@ -2342,6 +2407,9 @@ function openPaymentModal(type, paymentMethods = []) {
         const grandAmount = (maintenanceAmountAll + totalRentAmountBoth + utilitiesAmountBoth);
         document.getElementById('paymentAmount').value = grandAmount;
         summaryAmount.textContent = 'Ksh ' + grandAmount.toLocaleString();
+
+        if (applyMonthRow) applyMonthRow.style.display = 'flex';
+        if (customAmount) customAmount.value = grandAmount;
     } else if (type === 'rent_advance') {
         // Treat as a rent payment under the hood
         paymentTypeField.value = 'rent';
@@ -2359,6 +2427,7 @@ function openPaymentModal(type, paymentMethods = []) {
         const advAmount = Math.max(0, months * advanceBaseRent);
         document.getElementById('paymentAmount').value = advAmount;
         summaryAmount.textContent = 'Ksh ' + advAmount.toLocaleString();
+        if (applyMonthRow) applyMonthRow.style.display = 'none';
     }
     
     // Hide all payment method details

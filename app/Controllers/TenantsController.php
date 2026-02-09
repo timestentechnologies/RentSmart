@@ -174,6 +174,13 @@ class TenantsController
                     'unit_id' => $unitId ? $unitId : null
                 ];
 
+                // Normalize registration date for downstream defaults
+                $registeredOnNormalized = trim((string)$registeredOn);
+                if ($registeredOnNormalized === '' || strtotime($registeredOnNormalized) === false) {
+                    $registeredOnNormalized = date('Y-m-d');
+                }
+                $data['registered_on'] = $registeredOnNormalized;
+
                 // Generate random password for tenant portal
                 $plainPassword = bin2hex(random_bytes(4));
                 $data['password'] = password_hash($plainPassword, PASSWORD_DEFAULT);
@@ -244,11 +251,17 @@ class TenantsController
                     // Create lease (security deposit equals rent)
                     $leaseModel = new \App\Models\Lease();
                     $effectiveRent = $rentAmount ?: ($currentUnit['rent_amount'] ?? 0);
+
+                    // Lease start date defaults to tenant registration date (or today) if not explicitly provided
+                    $leaseStartDate = $registeredOnNormalized;
+                    if ($leaseStartDate === '' || strtotime($leaseStartDate) === false) {
+                        $leaseStartDate = date('Y-m-d');
+                    }
                     $leaseData = [
                         'unit_id' => $unitId,
                         'tenant_id' => $tenantId,
-                        'start_date' => date('Y-m-d'),
-                        'end_date' => date('Y-m-d', strtotime('+1 year')),
+                        'start_date' => $leaseStartDate,
+                        'end_date' => date('Y-m-d', strtotime($leaseStartDate . ' +1 year')),
                         'rent_amount' => $effectiveRent,
                         'security_deposit' => $effectiveRent,
                         'status' => 'active',
@@ -306,7 +319,7 @@ class TenantsController
                                         <li><strong>Property:</strong> ' . htmlspecialchars($property['name']) . '</li>
                                         <li><strong>Unit:</strong> ' . htmlspecialchars($currentUnit['unit_number']) . '</li>
                                         <li><strong>Monthly Rent:</strong> Ksh ' . number_format($rentAmount, 2) . '</li>
-                                        <li><strong>Start Date:</strong> ' . date('Y-m-d') . '</li>
+                                        <li><strong>Start Date:</strong> ' . htmlspecialchars($leaseStartDate) . '</li>
                                     </ul>
                                     <p>Thank you for choosing ' . htmlspecialchars($property['name']) . '.</p>
                                     <p>Best regards,<br>RentSmart Team</p>'
@@ -335,7 +348,7 @@ class TenantsController
                                             <li><strong>Tenant Email:</strong> ' . htmlspecialchars($data['email']) . '</li>
                                             <li><strong>Tenant Phone:</strong> ' . htmlspecialchars($data['phone']) . '</li>
                                             <li><strong>Monthly Rent:</strong> Ksh ' . number_format($rentAmount, 2) . '</li>
-                                            <li><strong>Start Date:</strong> ' . date('Y-m-d') . '</li>
+                                            <li><strong>Start Date:</strong> ' . htmlspecialchars($leaseStartDate) . '</li>
                                         </ul>
                                         <p>Login to your dashboard for more details.</p>
                                         <p>Best regards,<br>RentSmart Team</p>'
@@ -365,7 +378,7 @@ class TenantsController
                                             <li><strong>Tenant Email:</strong> ' . htmlspecialchars($data['email']) . '</li>
                                             <li><strong>Tenant Phone:</strong> ' . htmlspecialchars($data['phone']) . '</li>
                                             <li><strong>Monthly Rent:</strong> Ksh ' . number_format($rentAmount, 2) . '</li>
-                                            <li><strong>Start Date:</strong> ' . date('Y-m-d') . '</li>
+                                            <li><strong>Start Date:</strong> ' . htmlspecialchars($leaseStartDate) . '</li>
                                         </ul>
                                         <p>Login to your dashboard for more details.</p>
                                         <p>Best regards,<br>RentSmart Team</p>'
@@ -505,11 +518,18 @@ class TenantsController
                         // Create new lease (security deposit equals rent)
                         $currentUnit = $this->unit->getById($unitId, $_SESSION['user_id']);
                         $effectiveRent = $rentAmount ?: ($currentUnit['rent_amount'] ?? 0);
+
+                        // Default lease start date to tenant registration date (or today)
+                        $tenantRow = $this->tenant->getById($id, $_SESSION['user_id']);
+                        $leaseStartDate = trim((string)($tenantRow['registered_on'] ?? ''));
+                        if ($leaseStartDate === '' || strtotime($leaseStartDate) === false) {
+                            $leaseStartDate = date('Y-m-d');
+                        }
                         $leaseData = [
                             'unit_id' => $unitId,
                             'tenant_id' => $id,
-                            'start_date' => date('Y-m-d'),
-                            'end_date' => date('Y-m-d', strtotime('+1 year')),
+                            'start_date' => $leaseStartDate,
+                            'end_date' => date('Y-m-d', strtotime($leaseStartDate . ' +1 year')),
                             'rent_amount' => $effectiveRent,
                             'security_deposit' => $effectiveRent,
                             'status' => 'active',
@@ -766,6 +786,7 @@ class TenantsController
             $updated = 0;
             $assigned = 0;
             $userId = $_SESSION['user_id'];
+            $importedOn = date('Y-m-d');
             while (($row = fgetcsv($handle)) !== false) {
                 $data = array_combine($header, $row);
                 if (empty($data['email']) || empty($data['first_name']) || empty($data['last_name'])) continue;
@@ -800,8 +821,13 @@ class TenantsController
                     'name' => trim(($data['first_name'] ?? '') . ' ' . ($data['last_name'] ?? '')),
                     'email' => $data['email'],
                     'phone' => $data['phone'] ?? '',
-                    'registered_on' => $data['registered_on'] ?? ($data['move_in_date'] ?? date('Y-m-d')),
+                    'registered_on' => $data['registered_on'] ?? ($data['move_in_date'] ?? $importedOn),
                 ];
+
+                $payload['registered_on'] = trim((string)$payload['registered_on']);
+                if ($payload['registered_on'] === '' || strtotime($payload['registered_on']) === false) {
+                    $payload['registered_on'] = $importedOn;
+                }
 
                 if ($propertyId) {
                     $payload['property_id'] = $propertyId;
@@ -834,7 +860,10 @@ class TenantsController
                             $lease = $leaseModel->getActiveLeaseByTenant((int)$existing['id']);
                             if (!$lease) {
                                 $effectiveRent = (float)($currentUnit['rent_amount'] ?? 0);
-                                $startDate = $data['move_in_date'] ?? date('Y-m-d');
+                                $startDate = trim((string)($data['move_in_date'] ?? ''));
+                                if ($startDate === '' || strtotime($startDate) === false) {
+                                    $startDate = (string)$payload['registered_on'];
+                                }
                                 $leaseData = [
                                     'unit_id' => $unitId,
                                     'tenant_id' => (int)$existing['id'],
@@ -877,7 +906,10 @@ class TenantsController
 
                                 $leaseModel = new \App\Models\Lease();
                                 $effectiveRent = (float)($currentUnit['rent_amount'] ?? 0);
-                                $startDate = $data['move_in_date'] ?? date('Y-m-d');
+                                $startDate = trim((string)($data['move_in_date'] ?? ''));
+                                if ($startDate === '' || strtotime($startDate) === false) {
+                                    $startDate = (string)$payload['registered_on'];
+                                }
                                 $leaseData = [
                                     'unit_id' => $unitId,
                                     'tenant_id' => (int)$tenantId,

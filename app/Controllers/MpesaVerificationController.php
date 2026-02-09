@@ -140,6 +140,16 @@ class MpesaVerificationController
                 $updateSql = "UPDATE payments SET status = ? WHERE id = ?";
                 $updateStmt = $this->db->prepare($updateSql);
                 $updateStmt->execute([$status, $result['payment_id']]);
+
+                // Post to ledger once marked completed/verified so it shows on GL/trial balance/balance sheet
+                if (in_array((string)$status, ['completed', 'verified'], true)) {
+                    try {
+                        $paymentModel = new Payment();
+                        $paymentModel->postExistingPaymentToLedger((int)$result['payment_id']);
+                    } catch (\Exception $e) {
+                        error_log('Ledger post after M-Pesa verification failed: ' . $e->getMessage());
+                    }
+                }
             }
         } catch (\Exception $e) {
             error_log("Error updating payment status: " . $e->getMessage());

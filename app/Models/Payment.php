@@ -12,6 +12,44 @@ class Payment extends Model
 {
     protected $table = 'payments';
 
+    public function __construct()
+    {
+        parent::__construct();
+        $this->ensureAppliesToMonthColumn();
+    }
+
+    private function ensureAppliesToMonthColumn(): void
+    {
+        try {
+            // Add applies_to_month if missing. Safe no-op if column exists.
+            $this->db->exec("ALTER TABLE payments ADD COLUMN applies_to_month DATE NULL AFTER payment_date");
+            $this->db->exec("ALTER TABLE payments ADD INDEX idx_applies_to_month (applies_to_month)");
+        } catch (\Exception $e) {
+            // Ignore: most likely column/index already exists.
+        }
+    }
+
+    public function postExistingPaymentToLedger(int $paymentId): void
+    {
+        try {
+            $stmt = $this->db->prepare("SELECT id, lease_id, amount, payment_date, payment_type, status FROM payments WHERE id = ? LIMIT 1");
+            $stmt->execute([(int)$paymentId]);
+            $p = $stmt->fetch(\PDO::FETCH_ASSOC) ?: null;
+            if (!$p) return;
+
+            $data = [
+                'lease_id' => (int)($p['lease_id'] ?? 0),
+                'amount' => (float)($p['amount'] ?? 0),
+                'payment_date' => (string)($p['payment_date'] ?? date('Y-m-d')),
+                'payment_type' => (string)($p['payment_type'] ?? 'rent'),
+                'status' => (string)($p['status'] ?? 'completed'),
+            ];
+            $this->postPaymentToLedgerIfNeeded((int)$paymentId, $data);
+        } catch (\Exception $e) {
+            error_log('Post existing payment to ledger failed: ' . $e->getMessage());
+        }
+    }
+
     private function resolveAccountingUserIdForLease(int $leaseId): ?int
     {
         try {
@@ -1424,13 +1462,14 @@ class Payment extends Model
      */
     public function createRentPayment($data)
     {
-        $sql = "INSERT INTO payments (lease_id, amount, payment_date, payment_type, payment_method, notes, status) 
-                VALUES (:lease_id, :amount, :payment_date, :payment_type, :payment_method, :notes, :status)";
+        $sql = "INSERT INTO payments (lease_id, amount, payment_date, applies_to_month, payment_type, payment_method, notes, status) 
+                VALUES (:lease_id, :amount, :payment_date, :applies_to_month, :payment_type, :payment_method, :notes, :status)";
         $stmt = $this->db->prepare($sql);
         $stmt->execute([
             'lease_id' => $data['lease_id'],
             'amount' => $data['amount'],
             'payment_date' => $data['payment_date'],
+            'applies_to_month' => $data['applies_to_month'] ?? null,
             'payment_type' => $data['payment_type'],
             'payment_method' => $data['payment_method'],
             'notes' => $data['notes'] ?? null,
@@ -1460,14 +1499,15 @@ class Payment extends Model
 
     public function createUtilityPayment($data)
     {
-        $sql = "INSERT INTO payments (lease_id, utility_id, amount, payment_date, payment_type, payment_method, notes, status) 
-                VALUES (:lease_id, :utility_id, :amount, :payment_date, :payment_type, :payment_method, :notes, :status)";
+        $sql = "INSERT INTO payments (lease_id, utility_id, amount, payment_date, applies_to_month, payment_type, payment_method, notes, status) 
+                VALUES (:lease_id, :utility_id, :amount, :payment_date, :applies_to_month, :payment_type, :payment_method, :notes, :status)";
         $stmt = $this->db->prepare($sql);
         $stmt->execute([
             'lease_id' => $data['lease_id'],
             'utility_id' => $data['utility_id'],
             'amount' => $data['amount'],
             'payment_date' => $data['payment_date'],
+            'applies_to_month' => $data['applies_to_month'] ?? null,
             'payment_type' => $data['payment_type'],
             'payment_method' => $data['payment_method'],
             'notes' => $data['notes'] ?? null,
@@ -1569,33 +1609,63 @@ class Payment extends Model
             return [$lease];
         }
 
-        $startOfMonth = date('Y-m-01');
-        $endOfMonth = date('Y-m-t');
+        $targetYm = date('Y-m');
+        $targetKey = $targetYm . '-01';
 
-        $sumPrev = $this->db->prepare("SELECT COALESCE(SUM(amount),0) AS s FROM payments WHERE lease_id = ? AND payment_type = 'rent' AND status IN ('completed','verified') AND payment_date < ?");
-        $sumMonth = $this->db->prepare("SELECT COALESCE(SUM(amount),0) AS s FROM payments WHERE lease_id = ? AND payment_type = 'rent' AND status IN ('completed','verified') AND payment_date BETWEEN ? AND ?");
-
-        $sumPrev->execute([(int)$lease['id'], $startOfMonth]);
-        $paidPrev = (float)($sumPrev->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0);
-        $sumMonth->execute([(int)$lease['id'], $startOfMonth, $endOfMonth]);
-        $paidInMonth = (float)($sumMonth->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0);
+        $tagStmt = $this->db->prepare(
+            "SELECT DATE_FORMAT(applies_to_month, '%Y-%m-01') AS m, COALESCE(SUM(amount),0) AS s\n"
+            . "FROM payments\n"
+            . "WHERE lease_id = ? AND payment_type = 'rent' AND status IN ('completed','verified') AND applies_to_month IS NOT NULL\n"
+            . "GROUP BY DATE_FORMAT(applies_to_month, '%Y-%m-01')"
+        );
+        $tagStmt->execute([(int)$lease['id']]);
+        $tagRows = $tagStmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+        $tagged = [];
+        foreach ($tagRows as $r) {
+            $k = (string)($r['m'] ?? '');
+            if ($k !== '') $tagged[$k] = (float)($r['s'] ?? 0);
+        }
+        $untagStmt = $this->db->prepare(
+            "SELECT COALESCE(SUM(amount),0) AS s FROM payments\n"
+            . "WHERE lease_id = ? AND payment_type = 'rent' AND status IN ('completed','verified') AND applies_to_month IS NULL"
+        );
+        $untagStmt->execute([(int)$lease['id']]);
+        $untaggedTotal = (float)($untagStmt->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0);
 
         try {
             $leaseStart = new \DateTime($lease['start_date']);
         } catch (\Exception $e) {
-            $lease['overdue_amount'] = max(0.0, $rent - $paidInMonth);
+            $lease['overdue_amount'] = max(0.0, $rent);
             return [$lease];
         }
-        $selectedMonth = new \DateTime($startOfMonth);
-        $leaseStartMonth = new \DateTime($leaseStart->format('Y-m-01'));
-        $monthsPrev = (int)floor($paidPrev / $rent + 1e-6);
-        $remainderPrev = $paidPrev - $monthsPrev * $rent;
-        $monthsElapsed = ((int)$selectedMonth->format('Y') - (int)$leaseStartMonth->format('Y')) * 12 + ((int)$selectedMonth->format('n') - (int)$leaseStartMonth->format('n')) + 1;
-        $coveredByPrev = ($monthsPrev >= $monthsElapsed);
-        $applied = $remainderPrev + $paidInMonth;
-        $balance = $coveredByPrev ? 0.0 : max($rent - $applied, 0.0);
+        $startMonth = new \DateTime($leaseStart->format('Y-m-01'));
+        $selectedMonth = new \DateTime(date('Y-m-01'));
 
-        $lease['overdue_amount'] = round($balance, 2);
+        $months = [];
+        $cursor = clone $startMonth;
+        while ($cursor <= $selectedMonth) {
+            $k = $cursor->format('Y-m-01');
+            $months[$k] = $rent;
+            $cursor->modify('+1 month');
+        }
+
+        $excess = 0.0;
+        foreach ($months as $k => $outstanding) {
+            $paid = (float)($tagged[$k] ?? 0);
+            $apply = min($outstanding, max(0.0, $paid));
+            $months[$k] = max(0.0, $outstanding - $apply);
+            $excess += max(0.0, $paid - $apply);
+        }
+
+        $remaining = max(0.0, $untaggedTotal) + $excess;
+        foreach ($months as $k => $outstanding) {
+            if ($remaining <= 0) break;
+            $apply = min($outstanding, $remaining);
+            $months[$k] = max(0.0, $outstanding - $apply);
+            $remaining -= $apply;
+        }
+
+        $lease['overdue_amount'] = round((float)($months[$targetKey] ?? $rent), 2);
         return [$lease];
     }
 
@@ -1649,21 +1719,46 @@ class Payment extends Model
             return [];
         }
 
-        $payStmt = $this->db->prepare("SELECT amount FROM payments WHERE lease_id = ? AND payment_type = 'rent' AND status IN ('completed','verified') ORDER BY payment_date ASC, id ASC");
-        $payStmt->execute([$lease['id']]);
-        $paidRows = $payStmt->fetchAll(\PDO::FETCH_ASSOC);
-
-        $remainingPaid = 0.0;
-        foreach ($paidRows as $row) {
-            $remainingPaid += isset($row['amount']) ? (float)$row['amount'] : 0.0;
+        $tagStmt = $this->db->prepare(
+            "SELECT DATE_FORMAT(applies_to_month, '%Y-%m-01') AS m, COALESCE(SUM(amount),0) AS s\n"
+            . "FROM payments\n"
+            . "WHERE lease_id = ? AND payment_type = 'rent' AND status IN ('completed','verified') AND applies_to_month IS NOT NULL\n"
+            . "GROUP BY DATE_FORMAT(applies_to_month, '%Y-%m-01')"
+        );
+        $tagStmt->execute([(int)$lease['id']]);
+        $tagRows = $tagStmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+        $tagged = [];
+        foreach ($tagRows as $r) {
+            $k = (string)($r['m'] ?? '');
+            if ($k !== '') $tagged[$k] = (float)($r['s'] ?? 0);
         }
 
+        $untagStmt = $this->db->prepare(
+            "SELECT amount FROM payments\n"
+            . "WHERE lease_id = ? AND payment_type = 'rent' AND status IN ('completed','verified') AND applies_to_month IS NULL\n"
+            . "ORDER BY payment_date ASC, id ASC"
+        );
+        $untagStmt->execute([(int)$lease['id']]);
+        $untagRows = $untagStmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+        $untaggedTotal = 0.0;
+        foreach ($untagRows as $row) {
+            $untaggedTotal += isset($row['amount']) ? (float)$row['amount'] : 0.0;
+        }
+
+        $excess = 0.0;
         for ($i = 0; $i < count($months); $i++) {
-            if ($remainingPaid <= 0) {
-                break;
-            }
-            $apply = $remainingPaid >= $rentAmount ? $rentAmount : $remainingPaid;
-            $months[$i]['outstanding'] = max(0.0, $rentAmount - $apply);
+            $k = sprintf('%04d-%02d-01', (int)$months[$i]['year'], (int)$months[$i]['month']);
+            $paid = (float)($tagged[$k] ?? 0);
+            $apply = min((float)$months[$i]['outstanding'], max(0.0, $paid));
+            $months[$i]['outstanding'] = max(0.0, (float)$months[$i]['outstanding'] - $apply);
+            $excess += max(0.0, $paid - $apply);
+        }
+
+        $remainingPaid = max(0.0, $untaggedTotal) + $excess;
+        for ($i = 0; $i < count($months); $i++) {
+            if ($remainingPaid <= 0) break;
+            $apply = min((float)$months[$i]['outstanding'], $remainingPaid);
+            $months[$i]['outstanding'] = max(0.0, (float)$months[$i]['outstanding'] - $apply);
             $remainingPaid -= $apply;
         }
 
@@ -1706,38 +1801,76 @@ class Payment extends Model
         $today = new \DateTime();
         $currentMonth = new \DateTime($today->format('Y-m-01'));
 
-        $stmt = $this->db->prepare("SELECT IFNULL(SUM(amount),0) AS total_paid FROM payments WHERE lease_id = ? AND payment_type = 'rent' AND status IN ('completed','verified')");
-        $stmt->execute([$lease['id']]);
-        $row = $stmt->fetch(\PDO::FETCH_ASSOC) ?: ['total_paid' => 0];
-        $totalPaid = (float)$row['total_paid'];
+        $tagStmt = $this->db->prepare(
+            "SELECT DATE_FORMAT(applies_to_month, '%Y-%m-01') AS m, COALESCE(SUM(amount),0) AS s\n"
+            . "FROM payments\n"
+            . "WHERE lease_id = ? AND payment_type = 'rent' AND status IN ('completed','verified') AND applies_to_month IS NOT NULL\n"
+            . "GROUP BY DATE_FORMAT(applies_to_month, '%Y-%m-01')"
+        );
+        $tagStmt->execute([(int)$lease['id']]);
+        $tagRows = $tagStmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+        $tagged = [];
+        foreach ($tagRows as $r) {
+            $k = (string)($r['m'] ?? '');
+            if ($k !== '') $tagged[$k] = (float)($r['s'] ?? 0);
+        }
+        $untagStmt = $this->db->prepare(
+            "SELECT COALESCE(SUM(amount),0) AS s FROM payments\n"
+            . "WHERE lease_id = ? AND payment_type = 'rent' AND status IN ('completed','verified') AND applies_to_month IS NULL"
+        );
+        $untagStmt->execute([(int)$lease['id']]);
+        $untaggedTotal = (float)($untagStmt->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0);
 
-        if ($totalPaid < 0.01) {
-            $nextDue = clone $startMonth;
-            return [
-                'months_paid' => 0,
-                'prepaid_months' => 0,
-                'next_due_year' => (int)$nextDue->format('Y'),
-                'next_due_month' => (int)$nextDue->format('n'),
-                'next_due_label' => $nextDue->format('F Y'),
-                'due_now' => $nextDue <= $currentMonth,
-            ];
+        // Build months from lease start to current month
+        $monthKeys = [];
+        $cursor = clone $startMonth;
+        while ($cursor <= $currentMonth) {
+            $monthKeys[] = $cursor->format('Y-m-01');
+            $cursor->modify('+1 month');
         }
 
-        $monthsPaid = (int)floor($totalPaid / $rentAmount + 1e-6);
+        $outstandingByMonth = [];
+        $excess = 0.0;
+        foreach ($monthKeys as $k) {
+            $out = $rentAmount;
+            $paid = (float)($tagged[$k] ?? 0);
+            $apply = min($out, max(0.0, $paid));
+            $out -= $apply;
+            $excess += max(0.0, $paid - $apply);
+            $outstandingByMonth[$k] = max(0.0, $out);
+        }
+
+        $remaining = max(0.0, $untaggedTotal) + $excess;
+        foreach ($monthKeys as $k) {
+            if ($remaining <= 0) break;
+            $apply = min((float)$outstandingByMonth[$k], $remaining);
+            $outstandingByMonth[$k] = max(0.0, (float)$outstandingByMonth[$k] - $apply);
+            $remaining -= $apply;
+        }
+
         $nextDue = clone $startMonth;
-        $nextDue->modify("+{$monthsPaid} month");
+        $monthsPaid = 0;
+        foreach ($monthKeys as $idx => $k) {
+            if (((float)$outstandingByMonth[$k]) > 0.0001) {
+                $nextDue = new \DateTime($k);
+                $monthsPaid = $idx;
+                break;
+            }
+            // all months covered so far
+            $monthsPaid = $idx + 1;
+            $nextDue = new \DateTime($k);
+            $nextDue->modify('+1 month');
+        }
 
         $dueNow = ($nextDue <= $currentMonth);
         $prepaidMonths = 0;
-        if (!$dueNow) {
-            $yDiff = (int)$nextDue->format('Y') - (int)$currentMonth->format('Y');
-            $mDiff = (int)$nextDue->format('n') - (int)$currentMonth->format('n');
-            $prepaidMonths = $yDiff * 12 + $mDiff;
+        if (!$dueNow && $remaining > 0.0) {
+            $prepaidMonths = (int)floor($remaining / $rentAmount + 1e-6);
         }
 
         return [
-            'months_paid' => $monthsPaid,
-            'prepaid_months' => max(0, $prepaidMonths),
+            'months_paid' => (int)$monthsPaid,
+            'prepaid_months' => max(0, (int)$prepaidMonths),
             'next_due_year' => (int)$nextDue->format('Y'),
             'next_due_month' => (int)$nextDue->format('n'),
             'next_due_label' => $nextDue->format('F Y'),

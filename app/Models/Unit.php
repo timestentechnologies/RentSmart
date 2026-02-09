@@ -135,9 +135,15 @@ class Unit extends Model
         $user = new User();
         $userData = $user->find($userId);
         
-        $sql = "SELECT u.*, p.name as property_name 
+        $sql = "SELECT u.*, p.name as property_name,
+                CASE 
+                    WHEN l.id IS NOT NULL AND l.status = 'active' AND CURRENT_DATE BETWEEN l.start_date AND l.end_date 
+                    THEN 'occupied'
+                    ELSE u.status 
+                END as actual_status
                 FROM units u
-                JOIN properties p ON u.property_id = p.id";
+                JOIN properties p ON u.property_id = p.id
+                LEFT JOIN leases l ON u.id = l.unit_id AND l.status = 'active'";
 
         $params = [];
         
@@ -166,7 +172,14 @@ class Unit extends Model
         
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
-        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        $units = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        foreach ($units as &$u) {
+            if (!empty($u['actual_status'])) {
+                $u['status'] = $u['actual_status'];
+            }
+            unset($u['actual_status']);
+        }
+        return $units;
     }
 
     public function getById($id, $userId = null)

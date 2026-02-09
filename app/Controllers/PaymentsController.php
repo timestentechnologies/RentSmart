@@ -262,6 +262,17 @@ class PaymentsController
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
                 $paymentModel = new Payment();
+
+                $appliesToMonthRaw = trim((string)($_POST['applies_to_month'] ?? ''));
+                $appliesToMonth = null;
+                if ($appliesToMonthRaw !== '') {
+                    // Accept YYYY-MM or YYYY-MM-DD; store as YYYY-MM-01
+                    if (preg_match('/^\d{4}-\d{2}$/', $appliesToMonthRaw)) {
+                        $appliesToMonth = $appliesToMonthRaw . '-01';
+                    } else if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $appliesToMonthRaw)) {
+                        $appliesToMonth = substr($appliesToMonthRaw, 0, 7) . '-01';
+                    }
+                }
                 
                 // Get the lease_id from the tenant's active lease (with role-based access)
                 $lease = $paymentModel->getActiveLease($_POST['tenant_id'], $this->userId);
@@ -290,6 +301,7 @@ class PaymentsController
                         'lease_id' => $lease['id'],
                         'amount' => $_POST['rent_amount'],
                         'payment_date' => $_POST['payment_date'],
+                        'applies_to_month' => $appliesToMonth,
                         'payment_type' => 'rent',
                         'payment_method' => $_POST['payment_method'],
                         'notes' => 'Rent payment: ' . ($_POST['notes'] ?? '')
@@ -487,6 +499,7 @@ class PaymentsController
                                     'utility_id' => $utilityId,
                                     'amount' => $amount,
                                     'payment_date' => $_POST['payment_date'],
+                                    'applies_to_month' => $appliesToMonth,
                                     'payment_type' => 'utility',
                                     'payment_method' => $_POST['payment_method'],
                                     'notes' => 'Utility payment: ' . ($_POST['notes'] ?? '')
@@ -538,6 +551,7 @@ class PaymentsController
                                     'utility_id' => $utilityId,
                                     'amount' => $_POST['utility_amount'],
                                     'payment_date' => $_POST['payment_date'],
+                                    'applies_to_month' => $appliesToMonth,
                                     'payment_type' => 'utility',
                                     'payment_method' => $_POST['payment_method'],
                                     'notes' => ucfirst($_POST['utility_type']) . ' utility payment: ' . ($_POST['notes'] ?? '')
@@ -593,6 +607,7 @@ class PaymentsController
                         'lease_id' => $lease['id'],
                         'amount' => $_POST['maintenance_amount'],
                         'payment_date' => $_POST['payment_date'],
+                        'applies_to_month' => $appliesToMonth,
                         'payment_type' => 'other',
                         'payment_method' => $_POST['payment_method'],
                         'notes' => 'Maintenance payment: ' . ($_POST['notes'] ?? '')
