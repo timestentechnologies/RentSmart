@@ -241,7 +241,8 @@ ob_start();
                             <tr>
                                 <th>Property</th>
                                 <th>Unit</th>
-                                <th>Utility Type</th>
+                                <th>Tenant</th>
+                                <th>Utility Name</th>
                                 <th>Type</th>
                                 <th>Meter</th>
                                 <th>Previous Reading</th>
@@ -258,7 +259,13 @@ ob_start();
                                 <tr>
                                     <td><?= htmlspecialchars($utility['property_name'] ?? '-') ?></td>
                                     <td><?= htmlspecialchars($utility['unit_number'] ?? '-') ?></td>
-                                    <td><?= ucfirst($utility['utility_type']) ?></td>
+                                    <td><?= htmlspecialchars($utility['tenant_name'] ?? '-') ?></td>
+                                    <td>
+                                        <?php
+                                            $uname = trim((string)($utility['utility_type'] ?? ($utility['type'] ?? '')));
+                                            echo $uname !== '' ? htmlspecialchars(ucfirst($uname)) : '-';
+                                        ?>
+                                    </td>
                                     <td><?= $utility['is_metered'] ? 'Metered' : 'Flat Rate' ?></td>
                                     <td><?= htmlspecialchars($utility['meter_number']) ?></td>
                                     <td><?= htmlspecialchars($utility['previous_reading']) ?></td>
