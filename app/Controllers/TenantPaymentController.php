@@ -33,14 +33,13 @@ class TenantPaymentController
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
+        $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
         if (!isset($_SESSION['tenant_id'])) {
             header('Location: ' . BASE_URL . '/');
             exit;
         }
 
         try {
-            $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
-            
             $tenantId = $_SESSION['tenant_id'];
             $paymentType = isset($_POST['payment_type']) ? strtolower(trim($_POST['payment_type'])) : '';
             if ($paymentType === 'utilities') {
@@ -500,12 +499,13 @@ class TenantPaymentController
             $_SESSION['flash_type'] = 'success';
             redirect('/tenant/dashboard');
 
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             error_log("Error in TenantPaymentController::process: " . $e->getMessage());
             error_log("Stack trace: " . $e->getTraceAsString());
-            
+
             if ($isAjax) {
                 header('Content-Type: application/json');
+                http_response_code(500);
                 echo json_encode([
                     'success' => false,
                     'message' => 'Payment processing failed: ' . $e->getMessage()
@@ -514,22 +514,6 @@ class TenantPaymentController
             }
 
             $_SESSION['flash_message'] = $e->getMessage();
-            $_SESSION['flash_type'] = 'danger';
-            redirect('/tenant/dashboard');
-        } catch (\Error $e) {
-            error_log("Fatal error in TenantPaymentController::process: " . $e->getMessage());
-            error_log("Stack trace: " . $e->getTraceAsString());
-            
-            if ($isAjax) {
-                header('Content-Type: application/json');
-                echo json_encode([
-                    'success' => false,
-                    'message' => 'Payment processing failed due to a system error'
-                ]);
-                exit;
-            }
-
-            $_SESSION['flash_message'] = 'Payment processing failed due to a system error';
             $_SESSION['flash_type'] = 'danger';
             redirect('/tenant/dashboard');
         }
