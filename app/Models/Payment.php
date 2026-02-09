@@ -15,7 +15,6 @@ class Payment extends Model
     public function __construct()
     {
         parent::__construct();
-        $this->ensureAppliesToMonthColumn();
     }
 
     private function ensureAppliesToMonthColumn(): void
