@@ -391,7 +391,7 @@ class UnitsController
                 try {
                     if (($data['status'] ?? '') === 'vacant') {
                         // Deactivate any active lease for this unit
-                        $stmt = $this->db->prepare("UPDATE leases SET status = 'inactive', updated_at = NOW() WHERE unit_id = ? AND status = 'active'");
+                        $stmt = $this->db->prepare("UPDATE leases SET status = 'terminated', updated_at = NOW() WHERE unit_id = ? AND status = 'active'");
                         $stmt->execute([(int)$id]);
 
                         // If unit had a tenant assigned, clear tenant linkage (keep tenant record as pending)

@@ -69,7 +69,7 @@ ob_start();
                         <h6 class="card-title">Active Tenants</h6>
                         <h2 class="mt-3 mb-2">
                             <?= count(array_filter($tenants, function($tenant) {
-                                return isset($tenant['property_name']) && $tenant['property_name'] !== null;
+                                return isset($tenant['unit_number']) && $tenant['unit_number'] !== null && $tenant['unit_number'] !== '-';
                             })) ?>
                         </h2>
                         <p class="mb-0 text-muted">Currently renting</p>
