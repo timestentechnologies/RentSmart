@@ -9,6 +9,32 @@ ob_start();
         </div>
     </div>
 
+    <div class="card mt-4 mb-4">
+        <div class="card-body">
+            <form method="GET" class="row g-3 align-items-end">
+                <div class="col-12 col-md-3">
+                    <label class="form-label">Month</label>
+                    <input type="month" name="month" class="form-control" value="<?= htmlspecialchars($selectedMonth ?? date('Y-m')) ?>">
+                </div>
+                <div class="col-12 col-md-5">
+                    <label class="form-label">Property</label>
+                    <select name="property_id" class="form-select">
+                        <option value="">All Properties</option>
+                        <?php foreach (($properties ?? []) as $p): ?>
+                            <option value="<?= (int)$p['id'] ?>" <?= (isset($selectedPropertyId) && (int)$selectedPropertyId === (int)$p['id']) ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($p['name'] ?? '') ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="col-12 col-md-4">
+                    <button type="submit" class="btn btn-primary">Apply</button>
+                    <a href="<?= BASE_URL ?>/dashboard" class="btn btn-outline-secondary">Reset</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Welcome Message -->
     <div class="card mt-4 mb-4 bg-info bg-opacity-25">
         <div class="card-body">
