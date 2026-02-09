@@ -169,7 +169,6 @@ class TenantsController
             // Optional property assignment fields
             $propertyId = filter_input(INPUT_POST, 'property_id', FILTER_SANITIZE_NUMBER_INT);
             $unitId = filter_input(INPUT_POST, 'unit_id', FILTER_SANITIZE_NUMBER_INT);
-            $rentAmount = filter_input(INPUT_POST, 'rent_amount', FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION);
 
             if (!$firstName || !$lastName || !$email || !$phone) {
                 if ($isAjax) {
@@ -270,14 +269,14 @@ class TenantsController
                         'unit_number' => $currentUnit['unit_number'],
                         'type' => $currentUnit['type'],
                         'size' => $currentUnit['size'],
-                        'rent_amount' => $rentAmount ?: $currentUnit['rent_amount'],
+                        'rent_amount' => $currentUnit['rent_amount'],
                         'status' => 'occupied',
                         'tenant_id' => $tenantId
                     ];
                     $this->unit->update($unitId, $unitData);
                     // Create lease (security deposit equals rent)
                     $leaseModel = new \App\Models\Lease();
-                    $effectiveRent = $rentAmount ?: ($currentUnit['rent_amount'] ?? 0);
+                    $effectiveRent = (float)($currentUnit['rent_amount'] ?? 0);
 
                     // Lease start date defaults to tenant registration date (or today) if not explicitly provided
                     $leaseStartDate = $registeredOnNormalized;
@@ -345,7 +344,7 @@ class TenantsController
                                     <ul style="font-size:15px;">
                                         <li><strong>Property:</strong> ' . htmlspecialchars($property['name']) . '</li>
                                         <li><strong>Unit:</strong> ' . htmlspecialchars($currentUnit['unit_number']) . '</li>
-                                        <li><strong>Monthly Rent:</strong> Ksh ' . number_format($rentAmount, 2) . '</li>
+                                        <li><strong>Monthly Rent:</strong> Ksh ' . number_format($effectiveRent, 2) . '</li>
                                         <li><strong>Start Date:</strong> ' . htmlspecialchars($leaseStartDate) . '</li>
                                     </ul>
                                     <p>Thank you for choosing ' . htmlspecialchars($property['name']) . '.</p>
@@ -374,7 +373,7 @@ class TenantsController
                                             <li><strong>Tenant Name:</strong> ' . htmlspecialchars($data['name']) . '</li>
                                             <li><strong>Tenant Email:</strong> ' . htmlspecialchars($data['email']) . '</li>
                                             <li><strong>Tenant Phone:</strong> ' . htmlspecialchars($data['phone']) . '</li>
-                                            <li><strong>Monthly Rent:</strong> Ksh ' . number_format($rentAmount, 2) . '</li>
+                                            <li><strong>Monthly Rent:</strong> Ksh ' . number_format($effectiveRent, 2) . '</li>
                                             <li><strong>Start Date:</strong> ' . htmlspecialchars($leaseStartDate) . '</li>
                                         </ul>
                                         <p>Login to your dashboard for more details.</p>
@@ -404,7 +403,7 @@ class TenantsController
                                             <li><strong>Tenant Name:</strong> ' . htmlspecialchars($data['name']) . '</li>
                                             <li><strong>Tenant Email:</strong> ' . htmlspecialchars($data['email']) . '</li>
                                             <li><strong>Tenant Phone:</strong> ' . htmlspecialchars($data['phone']) . '</li>
-                                            <li><strong>Monthly Rent:</strong> Ksh ' . number_format($rentAmount, 2) . '</li>
+                                            <li><strong>Monthly Rent:</strong> Ksh ' . number_format($effectiveRent, 2) . '</li>
                                             <li><strong>Start Date:</strong> ' . htmlspecialchars($leaseStartDate) . '</li>
                                         </ul>
                                         <p>Login to your dashboard for more details.</p>
@@ -420,7 +419,9 @@ class TenantsController
                     }
                 }
 
-                $this->db->commit();
+                if ($this->db->inTransaction()) {
+                    $this->db->commit();
+                }
                 if ($isAjax) {
                     // Fetch the newly created tenant with all joined info
                     $newTenant = $this->tenant->getById($tenantId);
@@ -435,7 +436,9 @@ class TenantsController
                 $_SESSION['flash_message'] = 'Tenant added successfully';
                 $_SESSION['flash_type'] = 'success';
             } catch (\Exception $e) {
-                $this->db->rollBack();
+                if ($this->db->inTransaction()) {
+                    $this->db->rollBack();
+                }
                 error_log('TenantsController::store transaction error: ' . $e->getMessage());
                 if ($isAjax) {
                     header('Content-Type: application/json');
@@ -490,7 +493,6 @@ class TenantsController
             $phone = filter_input(INPUT_POST, 'phone', FILTER_SANITIZE_STRING);
             $propertyId = filter_input(INPUT_POST, 'property_id', FILTER_SANITIZE_NUMBER_INT);
             $unitId = filter_input(INPUT_POST, 'unit_id', FILTER_SANITIZE_NUMBER_INT);
-            $rentAmount = filter_input(INPUT_POST, 'rent_amount', FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION);
 
             if (!$name || !$email || !$phone) {
                 throw new \Exception('All fields are required');
@@ -507,7 +509,6 @@ class TenantsController
                     'phone' => $phone,
                     'property_id' => $propertyId ? $propertyId : null,
                     'unit_id' => $unitId ? $unitId : null,
-                    'rent_amount' => $rentAmount !== false ? $rentAmount : null,
                     'updated_at' => date('Y-m-d H:i:s')
                 ];
 
@@ -523,7 +524,6 @@ class TenantsController
                         // Update existing lease with new unit
                         $leaseData = [
                             'unit_id' => $unitId,
-                            'rent_amount' => $rentAmount ?: $existingLease['rent_amount'],
                             'updated_at' => date('Y-m-d H:i:s')
                         ];
                         $leaseModel->update($existingLease['id'], $leaseData);
@@ -544,7 +544,7 @@ class TenantsController
                     } else {
                         // Create new lease (security deposit equals rent)
                         $currentUnit = $this->unit->getById($unitId, $_SESSION['user_id']);
-                        $effectiveRent = $rentAmount ?: ($currentUnit['rent_amount'] ?? 0);
+                        $effectiveRent = (float)($currentUnit['rent_amount'] ?? 0);
 
                         // Default lease start date to tenant registration date (or today)
                         $tenantRow = $this->tenant->getById($id, $_SESSION['user_id']);
@@ -614,7 +614,9 @@ class TenantsController
                 $_SESSION['flash_type'] = 'success';
                 redirect('/tenants');
             } catch (\Exception $e) {
-                $this->db->rollBack();
+                if ($this->db->inTransaction()) {
+                    $this->db->rollBack();
+                }
                 throw $e;
             }
         } catch (\Exception $e) {
