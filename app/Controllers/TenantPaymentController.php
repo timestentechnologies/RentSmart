@@ -748,8 +748,8 @@ class TenantPaymentController
             
             // Create a pending payment record
             $paymentData = [
-                'lease_id' => $lease['id'],,
-                'applies_to_month' => $appliesToMonth
+                'lease_id' => $lease['id'],
+                'applies_to_month' => $appliesToMonth,
                 'amount' => $amount,
                 'payment_date' => date('Y-m-d'),
                 'payment_type' => $paymentType,
