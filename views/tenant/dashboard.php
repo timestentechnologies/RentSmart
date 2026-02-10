@@ -495,17 +495,17 @@
                         }
                     }
                     $grandTotalCombined = $totalRentAmountCombined + $totalUtilitiesCombined;
+                    $grandTotalAll = $grandTotalCombined + (float)($maintenanceOutstanding ?? 0);
                     ?>
                     <div class="mt-3 pt-3 border-top">
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <div>
-                                <span class="fw-bold">Total Rent + Utilities Due</span>
+                                <span class="fw-bold">Total Rent + Utilities + Maintenance Due</span>
                             </div>
                             <div>
-                                <strong class="fs-6">Ksh <?= number_format($grandTotalCombined, 2) ?></strong>
+                                <strong class="fs-6">Ksh <?= number_format($grandTotalAll, 2) ?></strong>
                             </div>
                         </div>
-                        <?php $grandTotalAll = $grandTotalCombined + (float)($maintenanceOutstanding ?? 0); ?>
                         <button type="button" class="btn btn-warning btn-sm w-100" <?= $grandTotalAll > 0 ? '' : 'disabled' ?>
                                 onclick="openPaymentModal('all', <?= htmlspecialchars(json_encode($paymentMethods)) ?>)">
                             <i class="bi bi-credit-card me-1"></i>Pay All
