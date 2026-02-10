@@ -2172,9 +2172,10 @@ function parseJsonResponse(response) {
         try {
             return JSON.parse(text);
         } catch (e) {
+            const snippet = String(text).replace(/\s+/g, ' ').slice(0, 300);
             return {
                 success: false,
-                message: `Request failed (${response.status}). Invalid JSON response.`
+                message: `Request failed (${response.status}). Invalid JSON response. Response: ${snippet}`
             };
         }
     });
