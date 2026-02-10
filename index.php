@@ -758,8 +758,32 @@ try {
         echo view('errors/404', ['title' => '404 Not Found']);
     }
 } catch (\Throwable $e) {
-    error_log("Error in routing: " . $e->getMessage());
-    error_log("Error trace: " . $e->getTraceAsString());
+    $globalErrorId = null;
+    try {
+        $globalErrorId = bin2hex(random_bytes(4));
+    } catch (\Throwable $ignore) {
+        $globalErrorId = (string)time();
+    }
+
+    error_log("Error in routing | error_id={$globalErrorId} | msg=" . $e->getMessage());
+    error_log("Error in routing | error_id={$globalErrorId} | trace=" . $e->getTraceAsString());
+
+    try {
+        $requestPath = trim((string)parse_url((string)($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH), '/');
+        if ($requestPath === 'tenant/payment/process') {
+            $debugPayload = [
+                'ts' => date('c'),
+                'error_id' => $globalErrorId,
+                'step' => 'global_router',
+                'message' => $e->getMessage(),
+                'pdo' => ($e instanceof \PDOException) ? ($e->errorInfo ?? null) : null,
+                'trace' => $e->getTraceAsString(),
+            ];
+            $debugFile = rtrim(sys_get_temp_dir(), '/\\') . DIRECTORY_SEPARATOR . 'rentsmart_tenant_payment_last_error.json';
+            @file_put_contents($debugFile, json_encode($debugPayload));
+        }
+    } catch (\Throwable $ignore) {
+    }
     if (getenv('APP_ENV') === 'development') {
         throw $e;
     }
@@ -772,7 +796,8 @@ try {
         http_response_code(500);
         echo json_encode([
             'success' => false,
-            'message' => 'Server error: ' . $e->getMessage()
+            'message' => 'Server error. Error ID: ' . $globalErrorId,
+            'error_id' => $globalErrorId
         ]);
         exit;
     }
