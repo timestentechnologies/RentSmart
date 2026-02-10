@@ -95,6 +95,37 @@ ob_start();
           </tfoot>
         </table>
       </div>
+
+      <?php if (!empty($maintenancePayments)): ?>
+      <div class="mt-4">
+        <h6>Maintenance Payments</h6>
+        <div class="table-responsive">
+          <table class="table table-sm">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Method</th>
+                <th>Status</th>
+                <th>M-Pesa Code</th>
+                <th class="text-end">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              <?php foreach ($maintenancePayments as $p): ?>
+                <tr>
+                  <td><?= htmlspecialchars((string)($p['payment_date'] ?? '-')) ?></td>
+                  <td><?= htmlspecialchars((string)($p['payment_method'] ?? '-')) ?></td>
+                  <td><?= htmlspecialchars((string)($p['status'] ?? '-')) ?></td>
+                  <td><?= htmlspecialchars((string)($p['transaction_code'] ?? '-')) ?></td>
+                  <td class="text-end">Ksh <?= number_format((float)($p['amount'] ?? 0), 2) ?></td>
+                </tr>
+              <?php endforeach; ?>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <?php endif; ?>
+
       <?php if (!empty($invoice['notes'])): ?>
       <div class="mt-3">
         <h6>Notes</h6>
