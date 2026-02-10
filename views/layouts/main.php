@@ -1587,11 +1587,11 @@ ob_clean();
     <div id="notifContainer" style="position:fixed; right:18px; top:18px; z-index:3000; pointer-events:auto;">
         <button id="notifBellBtn" type="button" class="btn rounded-circle position-relative" data-bs-toggle="modal" data-bs-target="#notificationsModal" style="width:48px; height:48px; background:#6B3E99; border-color:#6B3E99; color:#fff; pointer-events:auto;">
             <i class="bi bi-bell"></i>
-            <span id="notifBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none">0</span>
+            <span id="notifBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill d-none" style="background:#ff6b00;">0</span>
         </button>
     </div>
 
-    <div class="modal fade" id="notificationsModal" tabindex="-1" aria-hidden="true">
+    <div class="modal fade" id="notificationsModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="false">
         <div class="modal-dialog modal-dialog-scrollable modal-lg">
             <div class="modal-content">
                 <div class="modal-header">
@@ -1599,18 +1599,43 @@ ob_clean();
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
+                    <style>
+                        #notificationsModal .btn-notif-filter {
+                            border-color: #ff6b00;
+                            color: #ff6b00;
+                        }
+                        #notificationsModal .btn-notif-filter.active {
+                            background: #ff6b00;
+                            border-color: #ff6b00;
+                            color: #fff;
+                        }
+                        #notificationsModal .btn-notif-action {
+                            border-color: #ff6b00;
+                            color: #ff6b00;
+                        }
+                        #notificationsModal .btn-notif-action:hover {
+                            background: #ff6b00;
+                            border-color: #ff6b00;
+                            color: #fff;
+                        }
+                        #notificationsModal .btn-notif-close {
+                            background: #ff6b00;
+                            border-color: #ff6b00;
+                            color: #fff;
+                        }
+                    </style>
                     <div class="d-flex align-items-center justify-content-between gap-2 mb-3 flex-wrap">
                         <div class="btn-group" role="group" aria-label="Notification filter">
-                            <button type="button" class="btn btn-outline-secondary" data-notif-filter="all">All</button>
-                            <button type="button" class="btn btn-outline-secondary active" data-notif-filter="unread">Unread</button>
-                            <button type="button" class="btn btn-outline-secondary" data-notif-filter="read">Read</button>
+                            <button type="button" class="btn btn-notif-filter" data-notif-filter="all">All</button>
+                            <button type="button" class="btn btn-notif-filter active" data-notif-filter="unread">Unread</button>
+                            <button type="button" class="btn btn-notif-filter" data-notif-filter="read">Read</button>
                         </div>
-                        <button type="button" class="btn btn-outline-secondary" id="notifMarkAllBtn">Mark all as read</button>
+                        <button type="button" class="btn btn-notif-action" id="notifMarkAllBtn">Mark all as read</button>
                     </div>
                     <div id="notifList" class="list-group"></div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-notif-close" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
         </div>
