@@ -131,10 +131,6 @@ class MaintenanceController
                 $allowedSources = ['rent_balance','cash','bank','mpesa','owner_funds','other'];
                 $expMethod = in_array($expensePaymentMethod, $allowedMethods, true) ? $expensePaymentMethod : 'cash';
                 $srcFunds = in_array($sourceOfFunds, $allowedSources, true) ? $sourceOfFunds : ($chargeToTenant ? 'other' : 'cash');
-                // If we are charging the tenant, do not mark expense as funded from rent_balance
-                if ($chargeToTenant && $srcFunds === 'rent_balance') {
-                    $srcFunds = 'other';
-                }
 
                 $expenseData = [
                     'user_id' => $userId,
@@ -227,7 +223,7 @@ class MaintenanceController
                                 'lease_id' => (int)$lease['id'],
                                 'amount' => -abs($actualCost),
                                 'payment_date' => date('Y-m-d'),
-                                'payment_type' => 'rent',
+                                'payment_type' => 'other',
                                 'payment_method' => 'other',
                                 'notes' => ($chargeToTenant ? 'Maintenance charge to tenant ' : 'Maintenance deduction from rent balance ') . $negativePaymentNoteTag,
                                 'status' => 'completed'
