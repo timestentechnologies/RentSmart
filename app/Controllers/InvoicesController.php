@@ -202,6 +202,7 @@ class InvoicesController
         }
         // Compute payment status summary for the invoice's month (rent/utilities)
         $paymentStatus = null;
+        $maintenancePayments = [];
         if (!empty($invoice['tenant_id']) && !empty($invoice['issue_date'])) {
             $leaseModel = new Lease();
             $lease = $leaseModel->getActiveLeaseByTenant((int)$invoice['tenant_id']);
@@ -210,6 +211,22 @@ class InvoicesController
                 $end = date('Y-m-t', strtotime($invoice['issue_date']));
                 $monthLabel = date('F Y', strtotime($start));
                 $payModel = new \App\Models\Payment();
+
+                $maintenancePayments = $payModel->query(
+                    "SELECT p.id, p.amount, p.payment_date, p.applies_to_month, p.payment_method, p.status, p.notes, mmp.transaction_code\n"
+                    . "FROM payments p\n"
+                    . "LEFT JOIN manual_mpesa_payments mmp ON p.id = mmp.payment_id\n"
+                    . "WHERE p.lease_id = ?\n"
+                    . "  AND p.payment_type = 'other'\n"
+                    . "  AND p.status IN ('completed','verified')\n"
+                    . "  AND (p.notes LIKE 'Maintenance payment:%' OR p.notes LIKE '%MAINT-%')\n"
+                    . "  AND (\n"
+                    . "        (p.applies_to_month IS NOT NULL AND p.applies_to_month BETWEEN ? AND ?)\n"
+                    . "     OR (p.applies_to_month IS NULL AND p.payment_date BETWEEN ? AND ?)\n"
+                    . "  )\n"
+                    . "ORDER BY p.payment_date ASC, p.id ASC",
+                    [$lease['id'], $start, $end, $start, $end]
+                );
 
                 // IMPORTANT: Allocate total rent paid sequentially from lease start month.
                 // This prevents later invoices showing "Advance" while older invoices remain due.
@@ -296,6 +313,7 @@ class InvoicesController
         }
         // Make available to the view
         $paymentStatus = $paymentStatus;
+        $maintenancePayments = $maintenancePayments;
         require 'views/invoices/show.php';
     }
 
