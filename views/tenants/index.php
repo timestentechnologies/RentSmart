@@ -209,9 +209,7 @@ ob_start();
                                         $maintenanceDue = max((float)($tenant['maintenance_due'] ?? 0), 0.0);
                                         $balance = $rentDue + $utilitiesDue + $maintenanceDue;
                                         $balanceClass = $balance > 0 ? 'text-danger' : 'text-muted';
-                                        $totalPaid = (float)($tenant['total_payments'] ?? 0);
-                                        $monthlyRent = (float)($tenant['rent_amount'] ?? 0);
-                                        $isAdvance = ($monthlyRent > 0.0 && $totalPaid > ($monthlyRent + 0.009));
+                                        $isAdvance = (bool)($tenant['is_advance_paid'] ?? false);
                                     ?>
                                     <span class="<?= $balanceClass ?>">
                                         <?php if ($balance > 0.009): ?>
