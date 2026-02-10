@@ -1765,6 +1765,17 @@ ob_clean();
           async function refreshBadge(){
             try {
               const res = await fetch(window.BASE_URL + '/notifications/unread-count', { credentials: 'same-origin' });
+              if (!res.ok) {
+                console.warn('notifications/unread-count failed', res.status);
+                badge.classList.add('d-none');
+                return;
+              }
+              const ct = (res.headers.get('content-type') || '').toLowerCase();
+              if (ct.indexOf('application/json') === -1) {
+                console.warn('notifications/unread-count non-json response', res.status);
+                badge.classList.add('d-none');
+                return;
+              }
               const data = await res.json();
               const c = (data && data.success) ? (parseInt(data.count, 10) || 0) : 0;
               if (c > 0) {
@@ -1774,6 +1785,8 @@ ob_clean();
                 badge.classList.add('d-none');
               }
             } catch (e) {
+              console.warn('notifications/unread-count error', e);
+              badge.classList.add('d-none');
             }
           }
 
@@ -1785,6 +1798,17 @@ ob_clean();
             try {
               const qs = currentFilter === 'all' ? '' : ('status=' + encodeURIComponent(currentFilter) + '&');
               const res = await fetch(window.BASE_URL + '/notifications/list?' + qs + 'limit=50', { credentials: 'same-origin' });
+              if (!res.ok) {
+                console.warn('notifications/list failed', res.status);
+                setEmptyState('Unable to load notifications');
+                return;
+              }
+              const ct = (res.headers.get('content-type') || '').toLowerCase();
+              if (ct.indexOf('application/json') === -1) {
+                console.warn('notifications/list non-json response', res.status);
+                setEmptyState('Unable to load notifications');
+                return;
+              }
               const data = await res.json();
               const items = (data && data.success && Array.isArray(data.items)) ? data.items : [];
               if (!items.length) {
@@ -1793,6 +1817,8 @@ ob_clean();
                 list.innerHTML = items.map(fmtItem).join('');
               }
             } catch (e) {
+              console.warn('notifications/list error', e);
+              setEmptyState('Unable to load notifications');
             }
           }
 
