@@ -160,6 +160,12 @@ if (!function_exists('requireAuth')) {
             redirect('home');
         }
 
+        // Allow notifications endpoints even if subscription is missing/expired
+        // (still requires authentication via user_id)
+        if (strpos($path, 'notifications/') === 0) {
+            return;
+        }
+
         // Skip subscription check for administrators and caretakers
         if (isset($_SESSION['user_role']) && (in_array(strtolower($_SESSION['user_role']), ['administrator','admin','caretaker']))) {
             return;
