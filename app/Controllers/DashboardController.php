@@ -307,7 +307,7 @@ class DashboardController
                     "SELECT COALESCE(SUM(ABS(amount)),0) AS s\n"
                     . "FROM payments\n"
                     . "WHERE lease_id = ?\n"
-                    . "  AND payment_type = 'rent'\n"
+                    . "  AND payment_type = 'other'\n"
                     . "  AND amount < 0\n"
                     . "  AND notes LIKE '%MAINT-%'\n"
                     . "  AND status IN ('completed','verified')\n"

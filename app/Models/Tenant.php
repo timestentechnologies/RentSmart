@@ -17,8 +17,8 @@ class Tenant extends Model
                 l.rent_amount,
                 l.start_date,
                 l.end_date,
-                (SELECT COALESCE(SUM(amount),0) FROM payments WHERE lease_id = l.id AND payment_type = 'rent' AND status IN ('completed','verified')) as total_payments,
-                (SELECT COALESCE(SUM(amount),0) FROM payments 
+                (SELECT COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END),0) FROM payments WHERE lease_id = l.id AND payment_type = 'rent' AND status IN ('completed','verified')) as total_payments,
+                (SELECT COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END),0) FROM payments 
                  WHERE lease_id = l.id 
                  AND payment_type = 'rent'
                  AND status IN ('completed','verified')
@@ -56,7 +56,7 @@ class Tenant extends Model
                             SELECT COALESCE(SUM(ABS(p1.amount)),0)
                             FROM payments p1
                             WHERE p1.lease_id = l.id
-                              AND p1.payment_type = 'rent'
+                              AND p1.payment_type = 'other'
                               AND p1.amount < 0
                               AND p1.notes LIKE '%MAINT-%'
                               AND p1.status IN ('completed','verified')

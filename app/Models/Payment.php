@@ -68,7 +68,7 @@ class Payment extends Model
 
         // Tagged totals by month
         $tagStmt = $this->db->prepare(
-            "SELECT DATE_FORMAT(applies_to_month, '%Y-%m-01') AS m, COALESCE(SUM(amount),0) AS s\n"
+            "SELECT DATE_FORMAT(applies_to_month, '%Y-%m-01') AS m, COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END),0) AS s\n"
             . "FROM payments\n"
             . "WHERE lease_id = ? AND payment_type = 'rent' AND status IN ('completed','verified') AND applies_to_month IS NOT NULL\n"
             . "GROUP BY DATE_FORMAT(applies_to_month, '%Y-%m-01')"
@@ -85,7 +85,7 @@ class Payment extends Model
 
         // Untagged totals
         $untagStmt = $this->db->prepare(
-            "SELECT COALESCE(SUM(amount),0) AS s FROM payments\n"
+            "SELECT COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END),0) AS s FROM payments\n"
             . "WHERE lease_id = ? AND payment_type = 'rent' AND status IN ('completed','verified') AND applies_to_month IS NULL"
         );
         $untagStmt->execute([$leaseId]);
@@ -527,7 +527,7 @@ class Payment extends Model
         $maintChargesStmt = $this->db->prepare("SELECT COALESCE(SUM(ABS(amount)),0) AS s
             FROM payments
             WHERE lease_id = ?
-              AND payment_type = 'rent'
+              AND payment_type = 'other'
               AND amount < 0
               AND notes LIKE '%MAINT-%'
               AND status IN ('completed','verified')
@@ -568,10 +568,8 @@ class Payment extends Model
             $coveredByPrev = ($monthsPrev >= $monthsElapsed);
             $applied = $remainderPrev + $paidInMonth;
             if ($coveredByPrev) {
-                // Previous payments fully cover this month, but tenant-billed charges may still exist.
-                // Maintenance charges are recorded as negative rent adjustments, so if net paid in this month is negative,
-                // show it as an additional balance due.
-                $rentBalance = max(-$paidInMonth, 0.0);
+                // Previous payments fully cover this month. Rent balance is settled.
+                $rentBalance = 0.0;
             } else {
                 $rentBalance = max($rent - $applied, 0.0);
             }
