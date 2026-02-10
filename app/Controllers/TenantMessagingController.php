@@ -7,7 +7,9 @@ use App\Models\Lease;
 use App\Models\Unit;
 use App\Models\Property;
 use App\Models\User;
+use App\Models\Tenant;
 use App\Models\Setting;
+use App\Models\Notification;
 
 class TenantMessagingController
 {
@@ -114,6 +116,34 @@ class TenantMessagingController
                 'receiver_id' => (int)$userId,
                 'body' => $body,
             ]);
+
+            // In-app notification to recipient
+            try {
+                $tenantModel = new Tenant();
+                $t = $tenantModel->find((int)$this->tenantId);
+                $tenantName = trim((string)(($t['first_name'] ?? '') . ' ' . ($t['last_name'] ?? '')));
+                if ($tenantName === '') {
+                    $tenantName = (string)($t['name'] ?? 'Tenant');
+                }
+                $n = new Notification();
+                $n->createNotification([
+                    'recipient_type' => 'user',
+                    'recipient_id' => (int)$userId,
+                    'actor_type' => 'tenant',
+                    'actor_id' => (int)$this->tenantId,
+                    'title' => 'New Message',
+                    'body' => $tenantName . ': ' . mb_strimwidth((string)$body, 0, 160, '…'),
+                    'link' => BASE_URL . '/messaging',
+                    'entity_type' => 'message',
+                    'entity_id' => (int)$id,
+                    'payload' => [
+                        'tenant_id' => (int)$this->tenantId,
+                        'user_id' => (int)$userId,
+                    ],
+                ]);
+            } catch (\Throwable $notifyErr) {
+                error_log('TenantMessagingController::send notify failed: ' . $notifyErr->getMessage());
+            }
 
             // Optional email notification to recipient
             try {
