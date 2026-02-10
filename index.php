@@ -326,6 +326,14 @@ $routes = [
     'messaging/send' => ['controller' => 'MessagingController', 'action' => 'send'],
     // Notifications
     'notifications/feed' => ['controller' => 'NotificationsController', 'action' => 'feed'],
+    'notifications/unread-count' => ['controller' => 'NotificationsController', 'action' => 'unreadCount'],
+    'notifications/list' => ['controller' => 'NotificationsController', 'action' => 'list'],
+    'notifications/mark-read' => [
+        'POST' => ['controller' => 'NotificationsController', 'action' => 'markRead'],
+    ],
+    'notifications/mark-all-read' => [
+        'POST' => ['controller' => 'NotificationsController', 'action' => 'markAllRead'],
+    ],
     // Notices
     'notices' => ['controller' => 'NoticesController', 'action' => 'index'],
     'notices/store' => ['controller' => 'NoticesController', 'action' => 'store'],
@@ -377,6 +385,11 @@ $routes = [
     'tenant/maintenance' => ['controller' => 'TenantMaintenanceController', 'action' => 'index'],
     'tenant/maintenance/create' => ['controller' => 'TenantMaintenanceController', 'action' => 'create'],
     'tenant/maintenance/get/(\d+)' => ['controller' => 'TenantMaintenanceController', 'action' => 'get'],
+    // Tenant Notifications
+    'tenant/notifications/unread-count' => ['controller' => 'NotificationsController', 'action' => 'tenantUnreadCount'],
+    'tenant/notifications/list' => ['controller' => 'NotificationsController', 'action' => 'tenantList'],
+    'tenant/notifications/mark-read' => ['controller' => 'NotificationsController', 'action' => 'tenantMarkRead'],
+    'tenant/notifications/mark-all-read' => ['controller' => 'NotificationsController', 'action' => 'tenantMarkAllRead'],
     'tenant/payment/process' => ['controller' => 'TenantPaymentController', 'action' => 'process'],
     'tenant/payment/initiate-stk' => ['controller' => 'TenantPaymentController', 'action' => 'initiateSTK'],
     'tenant/payment/check-stk-status' => ['controller' => 'TenantPaymentController', 'action' => 'checkSTKStatus'],
@@ -549,6 +562,11 @@ $protectedRoutes = [
     'messaging',
     'messaging/thread',
     'messaging/send',
+    'notifications/feed',
+    'notifications/unread-count',
+    'notifications/list',
+    'notifications/mark-read',
+    'notifications/mark-all-read',
     'notices',
     'notices/store',
     'notices/delete/(\d+)',
