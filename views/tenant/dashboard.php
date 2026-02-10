@@ -1960,6 +1960,7 @@ function showPaymentSuccessModal(paymentDetails) {
 document.addEventListener('DOMContentLoaded', function() {
     const appliesToMonth = document.getElementById('appliesToMonth');
     const appliesToMonthHidden = document.getElementById('appliesToMonthHidden');
+    const paymentTypeField = document.getElementById('paymentType');
     const submitBtn = document.getElementById('submitPaymentBtn');
     const paidWarning = document.getElementById('paidMonthWarning');
     const paidMonths = <?= json_encode(array_values(array_unique($paidRentMonths ?? []))) ?>;
@@ -1969,6 +1970,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const checkPaidMonth = () => {
         if (!appliesToMonth || !submitBtn || !paidWarning) return;
+        const pt = (paymentTypeField && paymentTypeField.value) ? String(paymentTypeField.value).toLowerCase() : '';
+        const isRentFlow = (pt === 'rent' || pt === 'rent_advance');
+
+        // Only block month selection for rent payments. Utilities/maintenance can have partial metered charges.
+        if (!isRentFlow) {
+            paidWarning.textContent = '';
+            paidWarning.style.display = 'none';
+            submitBtn.disabled = false;
+            return;
+        }
         const ym = (appliesToMonth.value || '').trim();
         const isPaid = ym !== '' && Array.isArray(paidMonths) && paidMonths.indexOf(ym) !== -1;
         if (isPaid) {
@@ -1988,6 +1999,10 @@ document.addEventListener('DOMContentLoaded', function() {
             checkPaidMonth();
         });
         appliesToMonthHidden.value = (appliesToMonth.value && appliesToMonth.value.match(/^\d{4}-\d{2}$/)) ? (appliesToMonth.value + '-01') : '';
+    }
+
+    if (paymentTypeField) {
+        paymentTypeField.addEventListener('change', checkPaidMonth);
     }
 
     checkPaidMonth();
