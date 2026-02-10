@@ -1584,8 +1584,8 @@ ob_clean();
         <i class="bi bi-moon-fill" id="themeIcon"></i>
     </button>
 
-    <div id="notifContainer" style="position:fixed; right:18px; top:88px; z-index:3000; pointer-events:auto;">
-        <button id="notifBellBtn" class="btn rounded-circle position-relative" style="width:48px; height:48px; background:#6B3E99; border-color:#6B3E99; color:#fff;">
+    <div id="notifContainer" style="position:fixed; right:18px; top:18px; z-index:3000; pointer-events:auto;">
+        <button id="notifBellBtn" type="button" class="btn rounded-circle position-relative" data-bs-toggle="modal" data-bs-target="#notificationsModal" style="width:48px; height:48px; background:#6B3E99; border-color:#6B3E99; color:#fff; pointer-events:auto;">
             <i class="bi bi-bell"></i>
             <span id="notifBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none">0</span>
         </button>
@@ -1721,8 +1721,6 @@ ob_clean();
           if (!badge || !list || !markAllBtn || !filterBtns || !filterBtns.length) return;
 
           let currentFilter = 'unread';
-          let modal;
-          try { modal = bootstrap.Modal.getOrCreateInstance(modalEl); } catch (e) { modal = null; }
 
           function esc(s){
             return (s||'').toString().replace(/[&<>"']/g, function(c){
@@ -1810,11 +1808,8 @@ ob_clean();
             }
           }
 
-          btn.addEventListener('click', function(){
-            if (modal) {
-              modal.show();
-              loadList();
-            }
+          modalEl.addEventListener('show.bs.modal', function(){
+            loadList();
           });
 
           filterBtns.forEach(function(b){
