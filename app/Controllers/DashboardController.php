@@ -164,11 +164,6 @@ class DashboardController
 
             $rangeStart = $startOfMonth;
             $rangeEnd = $endOfMonth;
-            $totalExpenses = $this->expense->getTotalForPeriod($userId, $rangeStart, $rangeEnd);
-            $rentBalanceExpenses = $this->expense->getTotalForPeriod($userId, $rangeStart, $rangeEnd, 'rent_balance');
-
-            // Net revenue: payments minus expenses that draw from rent balance
-            $totalRevenue = $currentMonthRevenue - $rentBalanceExpenses;
 
             $db = $this->payment->getDb();
 
@@ -215,6 +210,13 @@ class DashboardController
                     // keep default range
                 }
             }
+
+            // Expenses for the computed range (must be computed after rangeStart/rangeEnd are finalized)
+            $totalExpenses = $this->expense->getTotalForPeriod($userId, $rangeStart, $rangeEnd);
+            $rentBalanceExpenses = $this->expense->getTotalForPeriod($userId, $rangeStart, $rangeEnd, 'rent_balance');
+
+            // Net revenue: payments minus expenses that draw from rent balance
+            $totalRevenue = $currentMonthRevenue - $rentBalanceExpenses;
 
             // Received amounts (selected month or all_months range)
             // Use applies_to_month when present (fallback to payment_date), so late-paid rent can be counted in the correct month.
