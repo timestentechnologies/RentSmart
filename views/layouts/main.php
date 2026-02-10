@@ -1725,7 +1725,7 @@ ob_clean();
       // Notifications bell + tray
       (function(){
         try {
-          if (!window.BASE_URL) return;
+          if (typeof window.BASE_URL === 'undefined' || window.BASE_URL === null) return;
           const container = document.getElementById('notifContainer');
           const btn = document.getElementById('notifBellBtn');
           const modalEl = document.getElementById('notificationsModal');
