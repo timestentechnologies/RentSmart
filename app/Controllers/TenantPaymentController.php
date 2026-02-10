@@ -76,6 +76,12 @@ class TenantPaymentController
             if (!$paymentMethodData) {
                 throw new \Exception('Invalid payment method selected');
             }
+
+            // Normalize payment method type to match payments.payment_method enum values
+            $normalizedPaymentMethodType = (string)($paymentMethodData['type'] ?? '');
+            if ($normalizedPaymentMethodType === 'cheque') {
+                $normalizedPaymentMethodType = 'check';
+            }
             
             // Get additional payment details based on method
             $paymentDetails = $this->getPaymentDetails($paymentMethodData['type'], $paymentMethodData['details']);
@@ -137,7 +143,7 @@ class TenantPaymentController
 
             // Determine payment status based on method type
             $paymentStatus = 'completed';
-            if ($paymentMethodData['type'] === 'mpesa_manual' || $paymentMethodData['type'] === 'mpesa_stk') {
+            if ($normalizedPaymentMethodType === 'mpesa_manual' || $normalizedPaymentMethodType === 'mpesa_stk') {
                 $paymentStatus = 'pending_verification';
             }
 
@@ -159,7 +165,7 @@ class TenantPaymentController
                     'payment_date' => $today,
                     'applies_to_month' => $appliesToMonth,
                     'payment_type' => 'other',
-                    'payment_method' => $paymentMethodData['type'],
+                    'payment_method' => $normalizedPaymentMethodType,
                     'notes' => 'Maintenance payment: Payment via ' . $paymentMethodData['name'] . ' - ' . ($paymentDetails['mpesa_notes'] ?? ''),
                     'status' => $paymentStatus
                 ];
@@ -219,7 +225,7 @@ class TenantPaymentController
                         'payment_date' => date('Y-m-d'),
                         'applies_to_month' => $appliesToMonth,
                         'payment_type' => 'utility',
-                        'payment_method' => $paymentMethodData['type'], // Use 'type' instead of 'name' to match enum values
+                        'payment_method' => $normalizedPaymentMethodType, // normalized to match enum values
                         'notes' => 'Payment via ' . $paymentMethodData['name'] . ' - ' . ucfirst($utilityPayment['utility']['utility_type']) . ' - ' . ($paymentDetails['mpesa_notes'] ?? ''),
                         'status' => $paymentStatus
                     ];
@@ -295,7 +301,7 @@ class TenantPaymentController
                         'payment_date' => date('Y-m-d'),
                         'applies_to_month' => $appliesToMonth,
                         'payment_type' => 'other',
-                        'payment_method' => $paymentMethodData['type'],
+                        'payment_method' => $normalizedPaymentMethodType,
                         'notes' => 'Maintenance payment: Payment via ' . $paymentMethodData['name'] . ' - ' . ($paymentDetails['mpesa_notes'] ?? ''),
                         'status' => $paymentStatus
                     ];
@@ -322,7 +328,7 @@ class TenantPaymentController
                         'applies_to_month' => $appliesToMonth,
                         'payment_type' => 'rent',
                         // Use enum value for method
-                        'payment_method' => $paymentMethodData['type'],
+                        'payment_method' => $normalizedPaymentMethodType,
                         'notes' => 'Combined Rent+Utilities via ' . $paymentMethodData['name'] . ' - ' . ($paymentDetails['mpesa_notes'] ?? ''),
                         'status' => $paymentStatus
                     ];
@@ -352,7 +358,7 @@ class TenantPaymentController
                         'payment_date' => date('Y-m-d'),
                         'applies_to_month' => $appliesToMonth,
                         'payment_type' => 'utility',
-                        'payment_method' => $paymentMethodData['type'], // keep consistent with utility branch
+                        'payment_method' => $normalizedPaymentMethodType, // normalized
                         'notes' => 'Combined via ' . $paymentMethodData['name'] . ' - ' . ucfirst($utilityPayment['utility']['utility_type']) . ' - ' . ($paymentDetails['mpesa_notes'] ?? ''),
                         'status' => $paymentStatus
                     ];
@@ -441,7 +447,7 @@ class TenantPaymentController
                             'payment_date' => $today,
                             'applies_to_month' => $appliesToMonth,
                             'payment_type' => 'other',
-                            'payment_method' => $paymentMethodData['type'],
+                            'payment_method' => $normalizedPaymentMethodType,
                             'notes' => 'Maintenance payment: Payment via ' . $paymentMethodData['name'] . ' - ' . ($paymentDetails['mpesa_notes'] ?? ''),
                             'status' => $paymentStatus
                         ];
@@ -457,7 +463,6 @@ class TenantPaymentController
                         }
                     }
                 }
-
                 // 2) Rent payment part
                 if ($remainingAmount > 0.0) {
                     $paymentData = [
@@ -466,13 +471,13 @@ class TenantPaymentController
                         'payment_date' => $today,
                         'applies_to_month' => $appliesToMonth,
                         'payment_type' => $paymentType,
-                        'payment_method' => $paymentMethodData['type'],
+                        'payment_method' => $normalizedPaymentMethodType,
                         'notes' => 'Payment via ' . $paymentMethodData['name'] . ' - ' . ($paymentDetails['mpesa_notes'] ?? ''),
                         'status' => $paymentStatus
                     ];
                     $createdPaymentId = $this->payment->createRentPayment($paymentData);
 
-                    if ($paymentMethodData['type'] === 'mpesa_manual' || $paymentMethodData['type'] === 'mpesa_stk') {
+                    if ($normalizedPaymentMethodType === 'mpesa_manual' || $normalizedPaymentMethodType === 'mpesa_stk') {
                         $this->saveMpesaTransaction($createdPaymentId, $paymentDetails, $remainingAmount);
                     }
                 }
@@ -660,7 +665,9 @@ class TenantPaymentController
                 } else if (preg_match('/^\d{4}-\d{2}$/', $appliesToMonthRaw)) {
                     $appliesToMonth = $appliesToMonthRaw . '-01';
                 }
-            }$paymentType = isset($_POST['payment_type']) ? trim($_POST['payment_type']) : '';
+            }
+
+            $paymentType = isset($_POST['payment_type']) ? trim($_POST['payment_type']) : '';
             
             $paymentMethodId = isset($_POST['payment_method_id']) ? intval($_POST['payment_method_id']) : 0;
             
