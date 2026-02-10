@@ -32,6 +32,7 @@ class Tenant extends Model
                                         SELECT ur.cost
                                         FROM utility_readings ur
                                         WHERE ur.utility_id = ut.id
+                                        AND ur.reading_date BETWEEN DATE_FORMAT(NOW() ,'%Y-%m-01') AND LAST_DAY(NOW())
                                         ORDER BY ur.reading_date DESC, ur.id DESC
                                         LIMIT 1
                                     ), 0)
@@ -44,6 +45,10 @@ class Tenant extends Model
                                 WHERE p3.utility_id = ut.id
                                   AND p3.payment_type = 'utility'
                                   AND p3.status IN ('completed','verified')
+                                  AND (
+                                        (p3.applies_to_month IS NOT NULL AND p3.applies_to_month BETWEEN DATE_FORMAT(NOW() ,'%Y-%m-01') AND LAST_DAY(NOW()))
+                                     OR (p3.applies_to_month IS NULL AND p3.payment_date BETWEEN DATE_FORMAT(NOW() ,'%Y-%m-01') AND LAST_DAY(NOW()))
+                                  )
                             ), 0)
                         , 0)
                     ), 0)
@@ -68,7 +73,10 @@ class Tenant extends Model
                             WHERE p2x.lease_id = l.id
                               AND p2x.payment_type = 'other'
                               AND p2x.status IN ('completed','verified')
-                              AND p2x.payment_date BETWEEN DATE_FORMAT(NOW() ,'%Y-%m-01') AND LAST_DAY(NOW())
+                              AND (
+                                    (p2x.applies_to_month IS NOT NULL AND p2x.applies_to_month BETWEEN DATE_FORMAT(NOW() ,'%Y-%m-01') AND LAST_DAY(NOW()))
+                                 OR (p2x.applies_to_month IS NULL AND p2x.payment_date BETWEEN DATE_FORMAT(NOW() ,'%Y-%m-01') AND LAST_DAY(NOW()))
+                              )
                               AND (p2x.notes LIKE 'Maintenance payment:%' OR p2x.notes LIKE '%MAINT-%')
                         )
                     , 0)
