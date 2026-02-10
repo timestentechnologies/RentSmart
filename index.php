@@ -401,6 +401,9 @@ $routes = [
     // M-Pesa Verification routes
     'mpesa-verification' => ['controller' => 'MpesaVerificationController', 'action' => 'index'],
     'mpesa-verification/verify/(\d+)' => ['controller' => 'MpesaVerificationController', 'action' => 'verify'],
+
+    // Admin Debug routes
+    'admin/debug/tenant-payment-error' => ['controller' => 'AdminDebugController', 'action' => 'tenantPaymentError'],
     // Public inquiry
     'inquiries/store' => ['controller' => 'InquiryController', 'action' => 'store'],
 ];
