@@ -1682,7 +1682,7 @@ ob_clean();
           container.id = 'notifContainer';
           container.style.position = 'fixed';
           container.style.right = '18px';
-          container.style.bottom = '18px';
+          container.style.top = '18px';
           container.style.zIndex = '1061';
 
           const btn = document.createElement('button');
@@ -1696,7 +1696,7 @@ ob_clean();
           tray.className = 'card shadow';
           tray.style.position = 'fixed';
           tray.style.right = '18px';
-          tray.style.bottom = '72px';
+          tray.style.top = '72px';
           tray.style.width = '320px';
           tray.style.maxHeight = '60vh';
           tray.style.overflow = 'hidden';
