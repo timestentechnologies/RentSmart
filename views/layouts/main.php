@@ -1704,7 +1704,10 @@ ob_clean();
           tray.innerHTML = '\
             <div class="card-header d-flex justify-content-between align-items-center">\
               <strong>Notifications</strong>\
-              <button type="button" class="btn-close" aria-label="Close"></button>\
+              <div class="d-flex align-items-center gap-2">\
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="notifMarkAllBtn">Mark all read</button>\
+                <button type="button" class="btn-close" aria-label="Close"></button>\
+              </div>\
             </div>\
             <div id="notifList" class="list-group list-group-flush" style="max-height:48vh;overflow:auto"></div>';
 
@@ -1715,54 +1718,123 @@ ob_clean();
           const badge = btn.querySelector('#notifBadge');
           const list = tray.querySelector('#notifList');
           const closer = tray.querySelector('.btn-close');
+          const markAllBtn = tray.querySelector('#notifMarkAllBtn');
 
-          function fmtItem(it){
-            const icon = it.icon || 'bi-dot';
-            const title = (it.title||'').toString();
-            const body = (it.body||'').toString();
-            const link = (it.link||'');
-            const aOpen = link ? '<a class="list-group-item list-group-item-action" href="'+link+'">' : '<div class="list-group-item">';
-            const aClose = link ? '</a>' : '</div>';
-            return aOpen + '\
-              <div class="d-flex">\
-                <div class="me-2 text-primary"><i class="bi '+icon+'"></i></div>\
-                <div>\
-                  <div class="fw-semibold">'+title+'</div>\
-                  <div class="small text-muted">'+body+'</div>\
-                </div>\
-              </div>' + aClose;
+          function esc(s){
+            return (s||'').toString().replace(/[&<>"']/g, function(c){
+              return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c] || c);
+            });
           }
 
-          async function loadFeed(){
+          function fmtItem(it){
+            const id = (it.id||'').toString();
+            const title = esc(it.title||'');
+            const body = esc(it.body||'');
+            const link = (it.link||'').toString();
+            const readAt = it.read_at;
+            const cls = 'list-group-item list-group-item-action' + (readAt ? '' : ' fw-semibold');
+            return '<a class="'+cls+'" href="'+(link||'#')+'" data-notif-id="'+id+'" data-notif-link="'+esc(link)+'">'
+              + '<div class="d-flex">'
+              +   '<div class="me-2 text-primary"><i class="bi bi-bell"></i></div>'
+              +   '<div>'
+              +     '<div>'+title+'</div>'
+              +     (body ? '<div class="small text-muted">'+body+'</div>' : '')
+              +   '</div>'
+              + '</div>'
+              + '</a>';
+          }
+
+          async function refreshBadge(){
             try {
-              const res = await fetch(window.BASE_URL + '/notifications/feed', { credentials: 'same-origin' });
+              const res = await fetch(window.BASE_URL + '/notifications/unread-count', { credentials: 'same-origin' });
               const data = await res.json();
-              const items = (data && data.success && Array.isArray(data.items)) ? data.items : [];
-              // Update badge
-              if (items.length > 0) {
-                badge.textContent = String(items.length);
+              const c = (data && data.success) ? (parseInt(data.count, 10) || 0) : 0;
+              if (c > 0) {
+                badge.textContent = String(c);
                 badge.classList.remove('d-none');
               } else {
                 badge.classList.add('d-none');
               }
-              // Render list
-              list.innerHTML = items.length ? items.map(fmtItem).join('') : '<div class="list-group-item text-muted">No recent activity</div>';
             } catch (e) {
-              // ignore
+            }
+          }
+
+          async function loadList(){
+            try {
+              const res = await fetch(window.BASE_URL + '/notifications/list?status=unread&limit=20', { credentials: 'same-origin' });
+              const data = await res.json();
+              const items = (data && data.success && Array.isArray(data.items)) ? data.items : [];
+              list.innerHTML = items.length ? items.map(fmtItem).join('') : '<div class="list-group-item text-muted">No unread notifications</div>';
+            } catch (e) {
+            }
+          }
+
+          async function markRead(id){
+            const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+            const fd = new FormData();
+            fd.append('id', String(id));
+            try {
+              await fetch(window.BASE_URL + '/notifications/mark-read', {
+                method: 'POST',
+                body: fd,
+                credentials: 'same-origin',
+                headers: { 'X-CSRF-Token': csrf }
+              });
+            } catch (e) {
+            }
+          }
+
+          async function markAllRead(){
+            const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+            try {
+              await fetch(window.BASE_URL + '/notifications/mark-all-read', {
+                method: 'POST',
+                body: new FormData(),
+                credentials: 'same-origin',
+                headers: { 'X-CSRF-Token': csrf }
+              });
+            } catch (e) {
             }
           }
 
           btn.addEventListener('click', function(){
             tray.style.display = (tray.style.display === 'none') ? 'block' : 'none';
+            if (tray.style.display === 'block') {
+              loadList();
+            }
           });
           closer.addEventListener('click', function(){ tray.style.display = 'none'; });
+          if (markAllBtn) {
+            markAllBtn.addEventListener('click', async function(){
+              await markAllRead();
+              await refreshBadge();
+              await loadList();
+            });
+          }
           document.addEventListener('click', function(ev){
             const el = ev.target;
             if (!container.contains(el)) tray.style.display = 'none';
           });
 
-          loadFeed();
-          setInterval(loadFeed, 45000);
+          list.addEventListener('click', async function(ev){
+            const a = ev.target && ev.target.closest ? ev.target.closest('[data-notif-id]') : null;
+            if (!a) return;
+            ev.preventDefault();
+            const id = a.getAttribute('data-notif-id');
+            const link = a.getAttribute('data-notif-link') || '';
+            if (id) {
+              await markRead(id);
+              await refreshBadge();
+              await loadList();
+            }
+            if (link) {
+              window.location.href = link;
+            }
+          });
+
+          refreshBadge();
+          loadList();
+          setInterval(refreshBadge, 45000);
         } catch(e) { /* no-op */ }
       })();
     </script>

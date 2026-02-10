@@ -64,7 +64,24 @@
             <h1 class="fw-bold mb-2" style="font-size:2.5rem;">Welcome, <?php echo htmlspecialchars($tenant['first_name'] . ' ' . $tenant['last_name']); ?></h1>
             <p class="lead mb-0">Your personal tenant portal for managing your property, lease, payments, and utilities.</p>
         </div>
-        <a href="<?= BASE_URL ?>/tenant/logout" class="btn btn-outline-secondary position-absolute end-0 top-0 m-4" style="z-index:2;">Logout</a>
+        <div class="position-absolute end-0 top-0 m-4 d-flex align-items-center gap-2" style="z-index:2;">
+            <button type="button" id="tenantNotifBellBtn" class="btn btn-outline-secondary position-relative" title="Notifications">
+                <i class="bi bi-bell"></i>
+                <span id="tenantNotifBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none">0</span>
+            </button>
+            <a href="<?= BASE_URL ?>/tenant/logout" class="btn btn-outline-secondary">Logout</a>
+        </div>
+    </div>
+
+    <div id="tenantNotifTray" class="card shadow" style="position:fixed; right:18px; top:86px; width:320px; max-height:60vh; overflow:hidden; display:none; z-index:1061;">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <strong>Notifications</strong>
+            <div class="d-flex align-items-center gap-2">
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="tenantNotifMarkAllBtn">Mark all read</button>
+                <button type="button" class="btn-close" aria-label="Close" id="tenantNotifCloseBtn"></button>
+            </div>
+        </div>
+        <div id="tenantNotifList" class="list-group list-group-flush" style="max-height:48vh; overflow:auto;"></div>
     </div>
 
     <!-- Dashboard Info Cards -->
@@ -1246,6 +1263,111 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  (function(){
+    try {
+      const bell = document.getElementById('tenantNotifBellBtn');
+      const badge = document.getElementById('tenantNotifBadge');
+      const tray = document.getElementById('tenantNotifTray');
+      const list = document.getElementById('tenantNotifList');
+      const closeBtn = document.getElementById('tenantNotifCloseBtn');
+      const markAllBtn = document.getElementById('tenantNotifMarkAllBtn');
+      if (!bell || !badge || !tray || !list) return;
+
+      function esc(s){
+        return (s||'').toString().replace(/[&<>"']/g, function(c){
+          return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'':'&#39;'}[c] || c);
+        });
+      }
+
+      function fmtItem(it){
+        const id = (it.id||'').toString();
+        const title = esc(it.title||'');
+        const body = esc(it.body||'');
+        const link = (it.link||'').toString();
+        return '<a class="list-group-item list-group-item-action fw-semibold" href="'+(link||'#')+'" data-notif-id="'+id+'" data-notif-link="'+esc(link)+'">'
+          + '<div class="d-flex">'
+          +   '<div class="me-2 text-primary"><i class="bi bi-bell"></i></div>'
+          +   '<div>'
+          +     '<div>'+title+'</div>'
+          +     (body ? '<div class="small text-muted">'+body+'</div>' : '')
+          +   '</div>'
+          + '</div>'
+          + '</a>';
+      }
+
+      async function refreshBadge(){
+        try {
+          const res = await fetch('<?= BASE_URL ?>/tenant/notifications/unread-count', { credentials: 'same-origin' });
+          const data = await res.json();
+          const c = (data && data.success) ? (parseInt(data.count, 10) || 0) : 0;
+          if (c > 0) {
+            badge.textContent = String(c);
+            badge.classList.remove('d-none');
+          } else {
+            badge.classList.add('d-none');
+          }
+        } catch (e) {}
+      }
+
+      async function loadList(){
+        try {
+          const res = await fetch('<?= BASE_URL ?>/tenant/notifications/list?status=unread&limit=20', { credentials: 'same-origin' });
+          const data = await res.json();
+          const items = (data && data.success && Array.isArray(data.items)) ? data.items : [];
+          list.innerHTML = items.length ? items.map(fmtItem).join('') : '<div class="list-group-item text-muted">No unread notifications</div>';
+        } catch (e) {}
+      }
+
+      async function markRead(id){
+        const fd = new FormData();
+        fd.append('id', String(id));
+        try {
+          await fetch('<?= BASE_URL ?>/tenant/notifications/mark-read', { method:'POST', body: fd, credentials:'same-origin' });
+        } catch (e) {}
+      }
+
+      async function markAllRead(){
+        try {
+          await fetch('<?= BASE_URL ?>/tenant/notifications/mark-all-read', { method:'POST', body: new FormData(), credentials:'same-origin' });
+        } catch (e) {}
+      }
+
+      bell.addEventListener('click', function(){
+        tray.style.display = (tray.style.display === 'none') ? 'block' : 'none';
+        if (tray.style.display === 'block') loadList();
+      });
+      if (closeBtn) closeBtn.addEventListener('click', function(){ tray.style.display = 'none'; });
+      document.addEventListener('click', function(ev){
+        const el = ev.target;
+        if (!tray.contains(el) && !bell.contains(el)) tray.style.display = 'none';
+      });
+      if (markAllBtn) {
+        markAllBtn.addEventListener('click', async function(){
+          await markAllRead();
+          await refreshBadge();
+          await loadList();
+        });
+      }
+      list.addEventListener('click', async function(ev){
+        const a = ev.target && ev.target.closest ? ev.target.closest('[data-notif-id]') : null;
+        if (!a) return;
+        ev.preventDefault();
+        const id = a.getAttribute('data-notif-id');
+        const link = a.getAttribute('data-notif-link') || '';
+        if (id) {
+          await markRead(id);
+          await refreshBadge();
+          await loadList();
+        }
+        if (link) { window.location.href = link; }
+      });
+
+      refreshBadge();
+      setInterval(refreshBadge, 45000);
+    } catch (e) {}
+  })();
+</script>
 
 <script>
   document.addEventListener('DOMContentLoaded', function () {
