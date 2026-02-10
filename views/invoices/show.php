@@ -48,9 +48,11 @@ ob_start();
             elseif ($paymentStatus['rent']['status'] === 'advance') $rentBadge = 'info';
             elseif ($paymentStatus['rent']['status'] === 'due') $rentBadge = 'danger';
             $utilBadge = ($paymentStatus['utilities']['status'] ?? 'due') === 'paid' ? 'success' : 'warning';
+            $maintBadge = ($paymentStatus['maintenance']['status'] ?? 'due') === 'paid' ? 'success' : 'warning';
           ?>
           <span class="badge bg-<?= $rentBadge ?>">Rent: <?= htmlspecialchars(ucfirst($paymentStatus['rent']['status'])) ?> (Paid <?= number_format((float)$paymentStatus['rent']['paid'],2) ?> / Due <?= number_format((float)$paymentStatus['rent']['amount'],2) ?>)</span>
           <span class="badge bg-<?= $utilBadge ?>">Utilities: <?= htmlspecialchars(ucfirst($paymentStatus['utilities']['status'])) ?> (Paid <?= number_format((float)$paymentStatus['utilities']['paid'],2) ?> / Due <?= number_format((float)($paymentStatus['utilities']['due'] ?? ($paymentStatus['utilities']['amount'] ?? 0)),2) ?>)</span>
+          <span class="badge bg-<?= $maintBadge ?>">Maintenance: <?= htmlspecialchars(ucfirst($paymentStatus['maintenance']['status'] ?? 'due')) ?> (Paid <?= number_format((float)($paymentStatus['maintenance']['paid'] ?? 0),2) ?> / Due <?= number_format((float)($paymentStatus['maintenance']['due'] ?? ($paymentStatus['maintenance']['amount'] ?? 0)),2) ?>)</span>
         </div>
       </div>
       <?php endif; ?>
