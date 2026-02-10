@@ -190,23 +190,47 @@ class InvoicesController
                 $end = date('Y-m-t', strtotime($invoice['issue_date']));
                 $monthLabel = date('F Y', strtotime($start));
                 $payModel = new \App\Models\Payment();
-                $rows = $payModel->query(
-                    "SELECT payment_type, COALESCE(SUM(amount),0) AS total_paid
+
+                // IMPORTANT: Allocate total rent paid sequentially from lease start month.
+                // This prevents later invoices showing "Advance" while older invoices remain due.
+                $rentAmount = (float)($lease['rent_amount'] ?? 0.0);
+                $paidRent = 0.0;
+                if ($rentAmount > 0.0) {
+                    $leaseStartMonth = date('Y-m-01', strtotime((string)$lease['start_date']));
+                    $invMonth = date('Y-m-01', strtotime($start));
+                    $monthIndex = ((int)date('Y', strtotime($invMonth)) - (int)date('Y', strtotime($leaseStartMonth))) * 12
+                        + ((int)date('n', strtotime($invMonth)) - (int)date('n', strtotime($leaseStartMonth)));
+                    if ($monthIndex < 0) { $monthIndex = 0; }
+
+                    $rentTotalPaidStmt = $payModel->query(
+                        "SELECT COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END),0) AS s
+                         FROM payments
+                         WHERE lease_id = ? AND payment_type = 'rent' AND status IN ('completed','verified')",
+                        [$lease['id']]
+                    );
+                    $rentTotalPaid = (float)($rentTotalPaidStmt[0]['s'] ?? 0.0);
+
+                    // Remaining rent amount available to settle this invoice month after settling previous months
+                    $remainingForThisMonth = $rentTotalPaid - ($monthIndex * $rentAmount);
+                    $paidRent = max(0.0, $remainingForThisMonth);
+                }
+
+                // Utilities are still month-scoped (by payment_date); rent is sequentially allocated above.
+                $paidUtilRows = $payModel->query(
+                    "SELECT COALESCE(SUM(amount),0) AS s
                      FROM payments
                      WHERE lease_id = ? AND status IN ('completed','verified')
-                       AND payment_date BETWEEN ? AND ?
-                     GROUP BY payment_type",
+                       AND payment_type = 'utility'
+                       AND payment_date BETWEEN ? AND ?",
                     [$lease['id'], $start, $end]
                 );
-                $paidRent = 0.0; $paidUtil = 0.0;
-                foreach ($rows as $r) {
-                    if (($r['payment_type'] ?? '') === 'rent') { $paidRent = (float)$r['total_paid']; }
-                    if (($r['payment_type'] ?? '') === 'utility') { $paidUtil = (float)$r['total_paid']; }
-                }
-                $rentAmount = (float)($lease['rent_amount'] ?? 0.0);
+                $paidUtil = (float)($paidUtilRows[0]['s'] ?? 0.0);
                 $rentStatus = 'due';
-                if ($paidRent > $rentAmount + 0.009) { $rentStatus = 'advance'; }
-                else if ($paidRent >= $rentAmount - 0.009) { $rentStatus = 'paid'; }
+
+                // paidRent here may include funds that would become advance for future months.
+                // For the invoice month status, compare against a single month's rent.
+                if ($rentAmount > 0.0 && $paidRent > $rentAmount + 0.009) { $rentStatus = 'advance'; }
+                else if ($rentAmount > 0.0 && $paidRent >= $rentAmount - 0.009) { $rentStatus = 'paid'; }
                 $utilStatus = $paidUtil > 0.0 ? 'paid' : 'due';
                 $paymentStatus = [
                     'month_label' => $monthLabel,
@@ -256,23 +280,41 @@ class InvoicesController
                 $end = date('Y-m-t', strtotime($invoice['issue_date']));
                 $monthLabel = date('F Y', strtotime($start));
                 $payModel = new \App\Models\Payment();
-                $rows = $payModel->query(
-                    "SELECT payment_type, COALESCE(SUM(amount),0) AS total_paid
+
+                // IMPORTANT: Allocate total rent paid sequentially from lease start month.
+                $rentAmount = (float)($lease['rent_amount'] ?? 0.0);
+                $paidRent = 0.0;
+                if ($rentAmount > 0.0) {
+                    $leaseStartMonth = date('Y-m-01', strtotime((string)$lease['start_date']));
+                    $invMonth = date('Y-m-01', strtotime($start));
+                    $monthIndex = ((int)date('Y', strtotime($invMonth)) - (int)date('Y', strtotime($leaseStartMonth))) * 12
+                        + ((int)date('n', strtotime($invMonth)) - (int)date('n', strtotime($leaseStartMonth)));
+                    if ($monthIndex < 0) { $monthIndex = 0; }
+
+                    $rentTotalPaidStmt = $payModel->query(
+                        "SELECT COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END),0) AS s
+                         FROM payments
+                         WHERE lease_id = ? AND payment_type = 'rent' AND status IN ('completed','verified')",
+                        [$lease['id']]
+                    );
+                    $rentTotalPaid = (float)($rentTotalPaidStmt[0]['s'] ?? 0.0);
+                    $remainingForThisMonth = $rentTotalPaid - ($monthIndex * $rentAmount);
+                    $paidRent = max(0.0, $remainingForThisMonth);
+                }
+
+                $paidUtilRows = $payModel->query(
+                    "SELECT COALESCE(SUM(amount),0) AS s
                      FROM payments
                      WHERE lease_id = ? AND status IN ('completed','verified')
-                       AND payment_date BETWEEN ? AND ?
-                     GROUP BY payment_type",
+                       AND payment_type = 'utility'
+                       AND payment_date BETWEEN ? AND ?",
                     [$lease['id'], $start, $end]
                 );
-                $paidRent = 0.0; $paidUtil = 0.0;
-                foreach ($rows as $r) {
-                    if (($r['payment_type'] ?? '') === 'rent') { $paidRent = (float)$r['total_paid']; }
-                    if (($r['payment_type'] ?? '') === 'utility') { $paidUtil = (float)$r['total_paid']; }
-                }
-                $rentAmount = (float)($lease['rent_amount'] ?? 0.0);
+                $paidUtil = (float)($paidUtilRows[0]['s'] ?? 0.0);
                 $rentStatus = 'due';
-                if ($paidRent > $rentAmount + 0.009) { $rentStatus = 'advance'; }
-                else if ($paidRent >= $rentAmount - 0.009) { $rentStatus = 'paid'; }
+
+                if ($rentAmount > 0.0 && $paidRent > $rentAmount + 0.009) { $rentStatus = 'advance'; }
+                else if ($rentAmount > 0.0 && $paidRent >= $rentAmount - 0.009) { $rentStatus = 'paid'; }
                 $utilStatus = $paidUtil > 0.0 ? 'paid' : 'due';
                 $paymentStatus = [
                     'month_label' => $monthLabel,
