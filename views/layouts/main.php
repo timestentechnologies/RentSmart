@@ -1584,22 +1584,36 @@ ob_clean();
         <i class="bi bi-moon-fill" id="themeIcon"></i>
     </button>
 
-    <div id="notifContainer" style="position:fixed; right:18px; top:18px; z-index:1061;">
-        <button id="notifBellBtn" class="btn btn-primary rounded-circle position-relative" style="width:48px; height:48px;">
+    <div id="notifContainer" style="position:fixed; right:18px; top:88px; z-index:3000; pointer-events:auto;">
+        <button id="notifBellBtn" class="btn rounded-circle position-relative" style="width:48px; height:48px; background:#6B3E99; border-color:#6B3E99; color:#fff;">
             <i class="bi bi-bell"></i>
             <span id="notifBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none">0</span>
         </button>
     </div>
 
-    <div id="notifTray" class="card shadow" style="position:fixed; right:18px; top:72px; width:320px; max-height:60vh; overflow:hidden; display:none; z-index:1061;">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <strong>Notifications</strong>
-            <div class="d-flex align-items-center gap-2">
-                <button type="button" class="btn btn-sm btn-outline-secondary" id="notifMarkAllBtn">Mark all read</button>
-                <button type="button" class="btn-close" aria-label="Close"></button>
+    <div class="modal fade" id="notificationsModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-scrollable modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Notifications</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="d-flex align-items-center justify-content-between gap-2 mb-3 flex-wrap">
+                        <div class="btn-group" role="group" aria-label="Notification filter">
+                            <button type="button" class="btn btn-outline-secondary" data-notif-filter="all">All</button>
+                            <button type="button" class="btn btn-outline-secondary active" data-notif-filter="unread">Unread</button>
+                            <button type="button" class="btn btn-outline-secondary" data-notif-filter="read">Read</button>
+                        </div>
+                        <button type="button" class="btn btn-outline-secondary" id="notifMarkAllBtn">Mark all as read</button>
+                    </div>
+                    <div id="notifList" class="list-group"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
             </div>
         </div>
-        <div id="notifList" class="list-group list-group-flush" style="max-height:48vh; overflow:auto"></div>
     </div>
 
     <?php if (isset($_SESSION['user_role']) && in_array(strtolower($_SESSION['user_role']), ['manager','agent','landlord'])): ?>
@@ -1698,13 +1712,17 @@ ob_clean();
           if (!window.BASE_URL) return;
           const container = document.getElementById('notifContainer');
           const btn = document.getElementById('notifBellBtn');
-          const tray = document.getElementById('notifTray');
-          if (!container || !btn || !tray) return;
+          const modalEl = document.getElementById('notificationsModal');
+          if (!container || !btn || !modalEl) return;
           const badge = document.getElementById('notifBadge');
           const list = document.getElementById('notifList');
-          const closer = tray.querySelector('.btn-close');
           const markAllBtn = document.getElementById('notifMarkAllBtn');
-          if (!badge || !list || !closer || !markAllBtn) return;
+          const filterBtns = modalEl.querySelectorAll('[data-notif-filter]');
+          if (!badge || !list || !markAllBtn || !filterBtns || !filterBtns.length) return;
+
+          let currentFilter = 'unread';
+          let modal;
+          try { modal = bootstrap.Modal.getOrCreateInstance(modalEl); } catch (e) { modal = null; }
 
           function esc(s){
             return (s||'').toString().replace(/[&<>"']/g, function(c){
@@ -1719,7 +1737,7 @@ ob_clean();
             const link = (it.link||'').toString();
             const readAt = it.read_at;
             const cls = 'list-group-item list-group-item-action' + (readAt ? '' : ' fw-semibold');
-            return '<a class="'+cls+'" href="'+(link||'#')+'" data-notif-id="'+id+'" data-notif-link="'+esc(link)+'">'
+            return '<a class="'+cls+'" href="'+(link||'#')+'" data-notif-id="'+id+'" data-notif-link="'+esc(link)+'" data-notif-read-at="'+esc(readAt||'')+'">'
               + '<div class="d-flex">'
               +   '<div class="me-2 text-primary"><i class="bi bi-bell"></i></div>'
               +   '<div>'
@@ -1745,12 +1763,21 @@ ob_clean();
             }
           }
 
+          function setEmptyState(msg){
+            list.innerHTML = '<div class="list-group-item text-muted">' + esc(msg) + '</div>';
+          }
+
           async function loadList(){
             try {
-              const res = await fetch(window.BASE_URL + '/notifications/list?status=unread&limit=20', { credentials: 'same-origin' });
+              const qs = currentFilter === 'all' ? '' : ('status=' + encodeURIComponent(currentFilter) + '&');
+              const res = await fetch(window.BASE_URL + '/notifications/list?' + qs + 'limit=50', { credentials: 'same-origin' });
               const data = await res.json();
               const items = (data && data.success && Array.isArray(data.items)) ? data.items : [];
-              list.innerHTML = items.length ? items.map(fmtItem).join('') : '<div class="list-group-item text-muted">No unread notifications</div>';
+              if (!items.length) {
+                setEmptyState(currentFilter === 'read' ? 'No read notifications' : (currentFilter === 'all' ? 'No notifications' : 'No unread notifications'));
+              } else {
+                list.innerHTML = items.map(fmtItem).join('');
+              }
             } catch (e) {
             }
           }
@@ -1784,22 +1811,25 @@ ob_clean();
           }
 
           btn.addEventListener('click', function(){
-            tray.style.display = (tray.style.display === 'none') ? 'block' : 'none';
-            if (tray.style.display === 'block') {
+            if (modal) {
+              modal.show();
               loadList();
             }
           });
-          closer.addEventListener('click', function(){ tray.style.display = 'none'; });
-          if (markAllBtn) {
-            markAllBtn.addEventListener('click', async function(){
-              await markAllRead();
-              await refreshBadge();
-              await loadList();
+
+          filterBtns.forEach(function(b){
+            b.addEventListener('click', function(){
+              filterBtns.forEach(function(x){ x.classList.remove('active'); });
+              b.classList.add('active');
+              currentFilter = b.getAttribute('data-notif-filter') || 'unread';
+              loadList();
             });
-          }
-          document.addEventListener('click', function(ev){
-            const el = ev.target;
-            if (!container.contains(el)) tray.style.display = 'none';
+          });
+
+          markAllBtn.addEventListener('click', async function(){
+            await markAllRead();
+            await refreshBadge();
+            await loadList();
           });
 
           list.addEventListener('click', async function(ev){
@@ -1808,10 +1838,13 @@ ob_clean();
             ev.preventDefault();
             const id = a.getAttribute('data-notif-id');
             const link = a.getAttribute('data-notif-link') || '';
+            const readAt = a.getAttribute('data-notif-read-at') || '';
             if (id) {
-              await markRead(id);
-              await refreshBadge();
-              await loadList();
+              if (!readAt) {
+                await markRead(id);
+                await refreshBadge();
+                await loadList();
+              }
             }
             if (link) {
               window.location.href = link;
@@ -1819,7 +1852,6 @@ ob_clean();
           });
 
           refreshBadge();
-          loadList();
           setInterval(refreshBadge, 45000);
         } catch(e) { /* no-op */ }
       })();
