@@ -1584,6 +1584,24 @@ ob_clean();
         <i class="bi bi-moon-fill" id="themeIcon"></i>
     </button>
 
+    <div id="notifContainer" style="position:fixed; right:18px; top:18px; z-index:1061;">
+        <button id="notifBellBtn" class="btn btn-primary rounded-circle position-relative" style="width:48px; height:48px;">
+            <i class="bi bi-bell"></i>
+            <span id="notifBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none">0</span>
+        </button>
+    </div>
+
+    <div id="notifTray" class="card shadow" style="position:fixed; right:18px; top:72px; width:320px; max-height:60vh; overflow:hidden; display:none; z-index:1061;">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <strong>Notifications</strong>
+            <div class="d-flex align-items-center gap-2">
+                <button type="button" class="btn btn-sm btn-outline-secondary" id="notifMarkAllBtn">Mark all read</button>
+                <button type="button" class="btn-close" aria-label="Close"></button>
+            </div>
+        </div>
+        <div id="notifList" class="list-group list-group-flush" style="max-height:48vh; overflow:auto"></div>
+    </div>
+
     <?php if (isset($_SESSION['user_role']) && in_array(strtolower($_SESSION['user_role']), ['manager','agent','landlord'])): ?>
         <?php 
             $roleTxt = ucfirst($_SESSION['user_role'] ?? 'User');
@@ -1678,47 +1696,15 @@ ob_clean();
       (function(){
         try {
           if (!window.BASE_URL) return;
-          const container = document.createElement('div');
-          container.id = 'notifContainer';
-          container.style.position = 'fixed';
-          container.style.right = '18px';
-          container.style.top = '18px';
-          container.style.zIndex = '1061';
-
-          const btn = document.createElement('button');
-          btn.id = 'notifBellBtn';
-          btn.className = 'btn btn-primary rounded-circle position-relative';
-          btn.style.width = '48px'; btn.style.height = '48px';
-          btn.innerHTML = '<i class="bi bi-bell"></i><span id="notifBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none">0</span>';
-
-          const tray = document.createElement('div');
-          tray.id = 'notifTray';
-          tray.className = 'card shadow';
-          tray.style.position = 'fixed';
-          tray.style.right = '18px';
-          tray.style.top = '72px';
-          tray.style.width = '320px';
-          tray.style.maxHeight = '60vh';
-          tray.style.overflow = 'hidden';
-          tray.style.display = 'none';
-          tray.innerHTML = '\
-            <div class="card-header d-flex justify-content-between align-items-center">\
-              <strong>Notifications</strong>\
-              <div class="d-flex align-items-center gap-2">\
-                <button type="button" class="btn btn-sm btn-outline-secondary" id="notifMarkAllBtn">Mark all read</button>\
-                <button type="button" class="btn-close" aria-label="Close"></button>\
-              </div>\
-            </div>\
-            <div id="notifList" class="list-group list-group-flush" style="max-height:48vh;overflow:auto"></div>';
-
-          container.appendChild(btn);
-          container.appendChild(tray);
-          document.body.appendChild(container);
-
-          const badge = btn.querySelector('#notifBadge');
-          const list = tray.querySelector('#notifList');
+          const container = document.getElementById('notifContainer');
+          const btn = document.getElementById('notifBellBtn');
+          const tray = document.getElementById('notifTray');
+          if (!container || !btn || !tray) return;
+          const badge = document.getElementById('notifBadge');
+          const list = document.getElementById('notifList');
           const closer = tray.querySelector('.btn-close');
-          const markAllBtn = tray.querySelector('#notifMarkAllBtn');
+          const markAllBtn = document.getElementById('notifMarkAllBtn');
+          if (!badge || !list || !closer || !markAllBtn) return;
 
           function esc(s){
             return (s||'').toString().replace(/[&<>"']/g, function(c){
