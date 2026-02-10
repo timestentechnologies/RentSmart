@@ -6,6 +6,7 @@ use App\Models\MaintenanceRequest;
 use App\Models\Tenant;
 use App\Models\Unit;
 use App\Models\Property;
+use App\Models\Notification;
 
 class TenantMaintenanceController
 {
@@ -102,6 +103,60 @@ class TenantMaintenanceController
             ];
 
             $requestId = $this->maintenanceRequest->create($data);
+
+            // Notify property staff (agent/manager/landlord/caretaker)
+            try {
+                $propertyId = (int)($tenant['property_id'] ?? 0);
+                if ($propertyId <= 0 && !empty($tenant['unit_id'])) {
+                    $unitModel = new Unit();
+                    $u = $unitModel->find((int)$tenant['unit_id']);
+                    $propertyId = (int)($u['property_id'] ?? 0);
+                }
+
+                if ($propertyId > 0) {
+                    $property = $this->property->find($propertyId);
+                    $recipients = [];
+                    foreach (['owner_id', 'manager_id', 'agent_id', 'caretaker_user_id'] as $k) {
+                        $uid = (int)($property[$k] ?? 0);
+                        if ($uid > 0) {
+                            $recipients[$uid] = true;
+                        }
+                    }
+
+                    if (!empty($recipients)) {
+                        $tenantName = trim((string)(($tenant['first_name'] ?? '') . ' ' . ($tenant['last_name'] ?? '')));
+                        if ($tenantName === '') {
+                            $tenantName = (string)($tenant['name'] ?? 'Tenant');
+                        }
+                        $propName = (string)($property['name'] ?? 'Property');
+                        $unitTxt = $unitNumber ? ('Unit ' . $unitNumber) : 'Unit';
+
+                        $notif = new Notification();
+                        foreach (array_keys($recipients) as $userId) {
+                            $notif->createNotification([
+                                'recipient_type' => 'user',
+                                'recipient_id' => (int)$userId,
+                                'actor_type' => 'tenant',
+                                'actor_id' => (int)$tenantId,
+                                'title' => 'New Maintenance Request',
+                                'body' => $tenantName . ' submitted a request at ' . $propName . ' (' . $unitTxt . '): ' . $title,
+                                'link' => BASE_URL . '/maintenance',
+                                'entity_type' => 'maintenance_request',
+                                'entity_id' => (int)$requestId,
+                                'payload' => [
+                                    'tenant_id' => (int)$tenantId,
+                                    'property_id' => (int)$propertyId,
+                                    'unit_id' => isset($tenant['unit_id']) ? (int)$tenant['unit_id'] : null,
+                                    'priority' => $data['priority'] ?? null,
+                                    'category' => $data['category'] ?? null,
+                                ],
+                            ]);
+                        }
+                    }
+                }
+            } catch (\Throwable $notifyErr) {
+                error_log('TenantMaintenanceController::create notify failed: ' . $notifyErr->getMessage());
+            }
 
             if ($isAjax) {
                 header('Content-Type: application/json');
