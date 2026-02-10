@@ -7,6 +7,7 @@ use App\Models\Tenant;
 use App\Models\Lease;
 use App\Models\Utility;
 use App\Models\PaymentMethod;
+use App\Models\Notification;
 
 class TenantPaymentController
 {
@@ -495,13 +496,69 @@ class TenantPaymentController
                     }
                 }
 
-                $paymentId = $createdPaymentId;
-                try {
-                    // Ensure a monthly rent invoice exists for this tenant for this month
-                    $invModel = new \App\Models\Invoice();
-                    $invModel->ensureMonthlyRentInvoice((int)$lease['tenant_id'], $today, (float)$lease['rent_amount'], null, 'AUTO');
-                    $invModel->updateStatusForTenantMonth((int)$lease['tenant_id'], $today);
-                } catch (\Exception $e) { error_log('Auto-invoice (rent) failed: ' . $e->getMessage()); }
+            $paymentId = $createdPaymentId;
+            }
+
+            // Notify property staff (agent/manager/landlord/caretaker)
+            try {
+                $db = $this->payment->getDb();
+                $stmt = $db->prepare(
+                    'SELECT p.id AS property_id, p.name AS property_name, p.owner_id, p.manager_id, p.agent_id, p.caretaker_user_id,
+                            u.unit_number
+                     FROM leases l
+                     JOIN units u ON l.unit_id = u.id
+                     JOIN properties p ON u.property_id = p.id
+                     WHERE l.id = ?'
+                );
+                $stmt->execute([(int)$lease['id']]);
+                $prop = $stmt->fetch(\PDO::FETCH_ASSOC) ?: [];
+
+                $recipients = [];
+                foreach (['owner_id', 'manager_id', 'agent_id', 'caretaker_user_id'] as $k) {
+                    $uid = (int)($prop[$k] ?? 0);
+                    if ($uid > 0) {
+                        $recipients[$uid] = true;
+                    }
+                }
+
+                if (!empty($recipients)) {
+                    $tenantName = trim((string)(($tenant['first_name'] ?? '') . ' ' . ($tenant['last_name'] ?? '')));
+                    if ($tenantName === '') {
+                        $tenantName = (string)($tenant['name'] ?? 'Tenant');
+                    }
+                    $propName = (string)($prop['property_name'] ?? 'Property');
+                    $unitNumber = (string)($prop['unit_number'] ?? '');
+                    $unitTxt = $unitNumber !== '' ? ('Unit ' . $unitNumber) : 'Unit';
+
+                    $statusTxt = ($paymentStatus === 'pending_verification') ? 'Pending verification' : 'Completed';
+                    $typeTxt = ucfirst((string)$paymentType);
+                    $body = $tenantName . ' made a ' . $typeTxt . ' payment of Ksh' . number_format((float)$amount, 2) . ' at ' . $propName . ' (' . $unitTxt . '). Status: ' . $statusTxt;
+
+                    $notif = new Notification();
+                    foreach (array_keys($recipients) as $userId) {
+                        $notif->createNotification([
+                            'recipient_type' => 'user',
+                            'recipient_id' => (int)$userId,
+                            'actor_type' => 'tenant',
+                            'actor_id' => (int)$tenantId,
+                            'title' => 'Payment Received',
+                            'body' => $body,
+                            'link' => BASE_URL . '/payments',
+                            'entity_type' => 'payment',
+                            'entity_id' => (int)$paymentId,
+                            'payload' => [
+                                'tenant_id' => (int)$tenantId,
+                                'lease_id' => (int)($lease['id'] ?? 0),
+                                'property_id' => (int)($prop['property_id'] ?? 0),
+                                'payment_type' => $paymentType,
+                                'payment_status' => $paymentStatus,
+                                'amount' => (float)$amount,
+                            ],
+                        ]);
+                    }
+                }
+            } catch (\Throwable $notifyErr) {
+                error_log('TenantPaymentController::process notify failed: ' . $notifyErr->getMessage());
             }
 
             if ($isAjax) {
