@@ -81,6 +81,7 @@ class DashboardController
             if (!preg_match('/^\d{4}-\d{2}$/', $selectedMonth)) {
                 $selectedMonth = date('Y-m');
             }
+            $allMonths = isset($_GET['all_months']) && (string)$_GET['all_months'] === '1';
             $selectedPropertyId = isset($_GET['property_id']) && $_GET['property_id'] !== '' ? (int)$_GET['property_id'] : null;
 
             $properties = $this->property->getAll($userId);
@@ -157,10 +158,14 @@ class DashboardController
             }
             
             // Calculate total expenses (selected month) and adjust revenue by rent-balance-funded expenses
+            // If all_months is enabled, compute from earliest relevant month up to end of selected month.
             $startOfMonth = $selectedMonth . '-01';
             $endOfMonth = date('Y-m-t', strtotime($startOfMonth));
-            $totalExpenses = $this->expense->getTotalForPeriod($userId, $startOfMonth, $endOfMonth);
-            $rentBalanceExpenses = $this->expense->getTotalForPeriod($userId, $startOfMonth, $endOfMonth, 'rent_balance');
+
+            $rangeStart = $startOfMonth;
+            $rangeEnd = $endOfMonth;
+            $totalExpenses = $this->expense->getTotalForPeriod($userId, $rangeStart, $rangeEnd);
+            $rentBalanceExpenses = $this->expense->getTotalForPeriod($userId, $rangeStart, $rangeEnd, 'rent_balance');
 
             // Net revenue: payments minus expenses that draw from rent balance
             $totalRevenue = $currentMonthRevenue - $rentBalanceExpenses;
@@ -185,7 +190,34 @@ class DashboardController
                 $propertyParams[] = $selectedPropertyId;
             }
 
-            // Received amounts (current month)
+            // If all_months is enabled, we start from the earliest active lease start month the user can access.
+            if ($allMonths) {
+                try {
+                    $stmtMinLease = $db->prepare(
+                        "SELECT MIN(l.start_date) AS d\n"
+                        . "FROM leases l\n"
+                        . "JOIN units u ON l.unit_id = u.id\n"
+                        . "JOIN properties pr ON u.property_id = pr.id\n"
+                        . "WHERE l.status = 'active'" . $accessWhere . $propertyWhere
+                    );
+                    $stmtMinLease->execute(array_merge($accessParams, $propertyParams));
+                    $minLeaseDate = (string)($stmtMinLease->fetch(\PDO::FETCH_ASSOC)['d'] ?? '');
+                    if ($minLeaseDate !== '') {
+                        $dtMin = new \DateTime($minLeaseDate);
+                        $dtMin = new \DateTime($dtMin->format('Y-m-01'));
+                        $dtSelected = new \DateTime($startOfMonth);
+                        if ($dtMin <= $dtSelected) {
+                            $rangeStart = $dtMin->format('Y-m-d');
+                            $rangeEnd = $endOfMonth;
+                        }
+                    }
+                } catch (\Throwable $e) {
+                    // keep default range
+                }
+            }
+
+            // Received amounts (selected month or all_months range)
+            // Use applies_to_month when present (fallback to payment_date), so late-paid rent can be counted in the correct month.
             $stmtRentReceived = $db->prepare(
                 "SELECT COALESCE(SUM(CASE WHEN p.amount > 0 THEN p.amount ELSE 0 END),0) AS s\n"
                 . "FROM payments p\n"
@@ -194,9 +226,12 @@ class DashboardController
                 . "JOIN properties pr ON u.property_id = pr.id\n"
                 . "WHERE p.payment_type = 'rent'\n"
                 . "  AND p.status IN ('completed','verified')\n"
-                . "  AND p.payment_date BETWEEN ? AND ?" . $accessWhere . $propertyWhere
+                . "  AND (\n"
+                . "        (p.applies_to_month IS NOT NULL AND p.applies_to_month BETWEEN ? AND ?)\n"
+                . "     OR (p.applies_to_month IS NULL AND p.payment_date BETWEEN ? AND ?)\n"
+                . "  )" . $accessWhere . $propertyWhere
             );
-            $stmtRentReceived->execute(array_merge([$startOfMonth, $endOfMonth], $accessParams, $propertyParams));
+            $stmtRentReceived->execute(array_merge([$rangeStart, $rangeEnd, $rangeStart, $rangeEnd], $accessParams, $propertyParams));
             $rentReceived = (float)($stmtRentReceived->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0);
 
             $stmtUtilityReceived = $db->prepare(
@@ -207,9 +242,12 @@ class DashboardController
                 . "JOIN properties pr ON u.property_id = pr.id\n"
                 . "WHERE p.payment_type = 'utility'\n"
                 . "  AND p.status IN ('completed','verified')\n"
-                . "  AND p.payment_date BETWEEN ? AND ?" . $accessWhere . $propertyWhere
+                . "  AND (\n"
+                . "        (p.applies_to_month IS NOT NULL AND p.applies_to_month BETWEEN ? AND ?)\n"
+                . "     OR (p.applies_to_month IS NULL AND p.payment_date BETWEEN ? AND ?)\n"
+                . "  )" . $accessWhere . $propertyWhere
             );
-            $stmtUtilityReceived->execute(array_merge([$startOfMonth, $endOfMonth], $accessParams, $propertyParams));
+            $stmtUtilityReceived->execute(array_merge([$rangeStart, $rangeEnd, $rangeStart, $rangeEnd], $accessParams, $propertyParams));
             $utilityReceived = (float)($stmtUtilityReceived->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0);
 
             $stmtMaintenanceReceived = $db->prepare(
@@ -220,15 +258,18 @@ class DashboardController
                 . "JOIN properties pr ON u.property_id = pr.id\n"
                 . "WHERE p.payment_type = 'other'\n"
                 . "  AND p.status IN ('completed','verified')\n"
-                . "  AND p.payment_date BETWEEN ? AND ?\n"
+                . "  AND (\n"
+                . "        (p.applies_to_month IS NOT NULL AND p.applies_to_month BETWEEN ? AND ?)\n"
+                . "     OR (p.applies_to_month IS NULL AND p.payment_date BETWEEN ? AND ?)\n"
+                . "  )\n"
                 . "  AND (p.notes LIKE 'Maintenance payment:%' OR p.notes LIKE '%MAINT-%')" . $accessWhere . $propertyWhere
             );
-            $stmtMaintenanceReceived->execute(array_merge([$startOfMonth, $endOfMonth], $accessParams, $propertyParams));
+            $stmtMaintenanceReceived->execute(array_merge([$rangeStart, $rangeEnd, $rangeStart, $rangeEnd], $accessParams, $propertyParams));
             $maintenanceReceived = (float)($stmtMaintenanceReceived->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0);
 
             $receivedTotal = $rentReceived + $utilityReceived + $maintenanceReceived;
 
-            // Expected amounts (selected month) and money-not-received (Expected - Received for selected month)
+            // Expected amounts (selected month or all_months range) and money-not-received (Expected - Received)
             // This aligns the dashboard cards with the wallet/received figures.
             $rentExpected = 0.0;
             $utilityExpected = 0.0;
@@ -255,6 +296,13 @@ class DashboardController
                     . "LIMIT 1"
                 );
 
+                $utilityChargeMeteredForRangeStmt = $db->prepare(
+                    "SELECT COALESCE(SUM(cost),0) AS c\n"
+                    . "FROM utility_readings\n"
+                    . "WHERE utility_id = ?\n"
+                    . "  AND reading_date BETWEEN ? AND ?"
+                );
+
                 $maintChargesStmt = $db->prepare(
                     "SELECT COALESCE(SUM(ABS(amount)),0) AS s\n"
                     . "FROM payments\n"
@@ -274,7 +322,13 @@ class DashboardController
                             $leaseStartMonth = new \DateTime($leaseStart->format('Y-m-01'));
                             $selectedMonthDt = new \DateTime($startOfMonth);
                             if ($selectedMonthDt >= $leaseStartMonth) {
-                                $rentExpected += $rent;
+                                if ($allMonths) {
+                                    $monthsElapsed = ((int)$selectedMonthDt->format('Y') - (int)$leaseStartMonth->format('Y')) * 12
+                                        + ((int)$selectedMonthDt->format('n') - (int)$leaseStartMonth->format('n')) + 1;
+                                    $rentExpected += max(0, $monthsElapsed) * $rent;
+                                } else {
+                                    $rentExpected += $rent;
+                                }
                             }
                         } catch (\Throwable $e) {
                             // ignore invalid dates
@@ -286,15 +340,38 @@ class DashboardController
                     $utils = $unitsUtilitiesStmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
                     foreach ($utils as $ut) {
                         if ((int)($ut['is_metered'] ?? 0) === 1) {
-                            $utilityChargeMeteredForMonthStmt->execute([(int)$ut['id'], $startOfMonth, $endOfMonth]);
-                            $utilityExpected += (float)($utilityChargeMeteredForMonthStmt->fetch(\PDO::FETCH_ASSOC)['c'] ?? 0);
+                            if ($allMonths) {
+                                $utilityChargeMeteredForRangeStmt->execute([(int)$ut['id'], $rangeStart, $rangeEnd]);
+                                $utilityExpected += (float)($utilityChargeMeteredForRangeStmt->fetch(\PDO::FETCH_ASSOC)['c'] ?? 0);
+                            } else {
+                                $utilityChargeMeteredForMonthStmt->execute([(int)$ut['id'], $startOfMonth, $endOfMonth]);
+                                $utilityExpected += (float)($utilityChargeMeteredForMonthStmt->fetch(\PDO::FETCH_ASSOC)['c'] ?? 0);
+                            }
                         } else {
-                            $utilityExpected += (float)($ut['flat_rate'] ?? 0);
+                            if ($allMonths) {
+                                $leaseStartMonthForFlat = null;
+                                try {
+                                    $leaseStart = new \DateTime((string)($L['start_date'] ?? ''));
+                                    $leaseStartMonthForFlat = new \DateTime($leaseStart->format('Y-m-01'));
+                                } catch (\Throwable $e) {
+                                    $leaseStartMonthForFlat = null;
+                                }
+                                if ($leaseStartMonthForFlat !== null) {
+                                    $selectedMonthDt = new \DateTime($startOfMonth);
+                                    if ($selectedMonthDt >= $leaseStartMonthForFlat) {
+                                        $monthsElapsed = ((int)$selectedMonthDt->format('Y') - (int)$leaseStartMonthForFlat->format('Y')) * 12
+                                            + ((int)$selectedMonthDt->format('n') - (int)$leaseStartMonthForFlat->format('n')) + 1;
+                                        $utilityExpected += max(0, $monthsElapsed) * (float)($ut['flat_rate'] ?? 0);
+                                    }
+                                }
+                            } else {
+                                $utilityExpected += (float)($ut['flat_rate'] ?? 0);
+                            }
                         }
                     }
 
-                    // Maintenance expected for selected month (based on charges posted this month)
-                    $maintChargesStmt->execute([(int)$L['lease_id'], $startOfMonth, $endOfMonth]);
+                    // Maintenance expected for selected month/range (based on charges posted)
+                    $maintChargesStmt->execute([(int)$L['lease_id'], $rangeStart, $rangeEnd]);
                     $maintenanceExpected += (float)($maintChargesStmt->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0);
                 }
             } catch (\Throwable $e) {
