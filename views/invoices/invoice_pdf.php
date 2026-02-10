@@ -127,6 +127,38 @@
         <td><strong>Utilities:</strong></td>
         <td><?= htmlspecialchars(ucfirst($paymentStatus['utilities']['status'])) ?> (Paid <?= number_format((float)$paymentStatus['utilities']['paid'], 2) ?> / Due <?= number_format((float)($paymentStatus['utilities']['due'] ?? ($paymentStatus['utilities']['amount'] ?? 0)), 2) ?>)</td>
       </tr>
+      <tr>
+        <td><strong>Maintenance:</strong></td>
+        <td><?= htmlspecialchars(ucfirst($paymentStatus['maintenance']['status'] ?? 'due')) ?> (Paid <?= number_format((float)($paymentStatus['maintenance']['paid'] ?? 0), 2) ?> / Due <?= number_format((float)($paymentStatus['maintenance']['due'] ?? ($paymentStatus['maintenance']['amount'] ?? 0)), 2) ?>)</td>
+      </tr>
+    </table>
+  </div>
+  <?php endif; ?>
+
+  <?php if (!empty($maintenancePayments)): ?>
+  <div class="section">
+    <div class="section-title">Maintenance Payments</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th>
+          <th>Method</th>
+          <th>Status</th>
+          <th>M-Pesa Code</th>
+          <th class="right">Amount</th>
+        </tr>
+      </thead>
+      <tbody>
+        <?php foreach ($maintenancePayments as $p): ?>
+          <tr>
+            <td><?= htmlspecialchars((string)($p['payment_date'] ?? '-')) ?></td>
+            <td><?= htmlspecialchars((string)($p['payment_method'] ?? '-')) ?></td>
+            <td><?= htmlspecialchars((string)($p['status'] ?? '-')) ?></td>
+            <td><?= htmlspecialchars((string)($p['transaction_code'] ?? '-')) ?></td>
+            <td class="right"><?= number_format((float)($p['amount'] ?? 0), 2) ?></td>
+          </tr>
+        <?php endforeach; ?>
+      </tbody>
     </table>
   </div>
   <?php endif; ?>
