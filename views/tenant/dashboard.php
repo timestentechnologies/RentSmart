@@ -65,23 +65,62 @@
             <p class="lead mb-0">Your personal tenant portal for managing your property, lease, payments, and utilities.</p>
         </div>
         <div class="position-absolute end-0 top-0 m-4 d-flex align-items-center gap-2" style="z-index:2;">
-            <button type="button" id="tenantNotifBellBtn" class="btn btn-outline-secondary position-relative" title="Notifications">
+            <button type="button" id="tenantNotifBellBtn" class="btn rounded-circle position-relative" data-bs-toggle="modal" data-bs-target="#tenantNotificationsModal" style="width:44px; height:44px; background:#6B3E99; border-color:#6B3E99; color:#fff;">
                 <i class="bi bi-bell"></i>
-                <span id="tenantNotifBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger d-none">0</span>
+                <span id="tenantNotifBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill d-none" style="background:#ff6b00;">0</span>
             </button>
             <a href="<?= BASE_URL ?>/tenant/logout" class="btn btn-outline-secondary">Logout</a>
         </div>
     </div>
 
-    <div id="tenantNotifTray" class="card shadow" style="position:fixed; right:18px; top:86px; width:320px; max-height:60vh; overflow:hidden; display:none; z-index:1061;">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <strong>Notifications</strong>
-            <div class="d-flex align-items-center gap-2">
-                <button type="button" class="btn btn-sm btn-outline-secondary" id="tenantNotifMarkAllBtn">Mark all read</button>
-                <button type="button" class="btn-close" aria-label="Close" id="tenantNotifCloseBtn"></button>
+    <div class="modal fade" id="tenantNotificationsModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="false">
+        <div class="modal-dialog modal-dialog-scrollable modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Notifications</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <style>
+                        #tenantNotificationsModal .btn-notif-filter {
+                            border-color: #ff6b00;
+                            color: #ff6b00;
+                        }
+                        #tenantNotificationsModal .btn-notif-filter.active {
+                            background: #ff6b00;
+                            border-color: #ff6b00;
+                            color: #fff;
+                        }
+                        #tenantNotificationsModal .btn-notif-action {
+                            border-color: #ff6b00;
+                            color: #ff6b00;
+                        }
+                        #tenantNotificationsModal .btn-notif-action:hover {
+                            background: #ff6b00;
+                            border-color: #ff6b00;
+                            color: #fff;
+                        }
+                        #tenantNotificationsModal .btn-notif-close {
+                            background: #ff6b00;
+                            border-color: #ff6b00;
+                            color: #fff;
+                        }
+                    </style>
+                    <div class="d-flex align-items-center justify-content-between gap-2 mb-3 flex-wrap">
+                        <div class="btn-group" role="group" aria-label="Notification filter">
+                            <button type="button" class="btn btn-notif-filter" data-tenant-notif-filter="all">All</button>
+                            <button type="button" class="btn btn-notif-filter active" data-tenant-notif-filter="unread">Unread</button>
+                            <button type="button" class="btn btn-notif-filter" data-tenant-notif-filter="read">Read</button>
+                        </div>
+                        <button type="button" class="btn btn-notif-action" id="tenantNotifMarkAllBtn">Mark all as read</button>
+                    </div>
+                    <div id="tenantNotifList" class="list-group"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-notif-close" data-bs-dismiss="modal">Close</button>
+                </div>
             </div>
         </div>
-        <div id="tenantNotifList" class="list-group list-group-flush" style="max-height:48vh; overflow:auto;"></div>
     </div>
 
     <!-- Dashboard Info Cards -->
@@ -1268,11 +1307,13 @@
     try {
       const bell = document.getElementById('tenantNotifBellBtn');
       const badge = document.getElementById('tenantNotifBadge');
-      const tray = document.getElementById('tenantNotifTray');
+      const modalEl = document.getElementById('tenantNotificationsModal');
       const list = document.getElementById('tenantNotifList');
-      const closeBtn = document.getElementById('tenantNotifCloseBtn');
       const markAllBtn = document.getElementById('tenantNotifMarkAllBtn');
-      if (!bell || !badge || !tray || !list) return;
+      const filterBtns = modalEl ? modalEl.querySelectorAll('[data-tenant-notif-filter]') : [];
+      if (!bell || !badge || !modalEl || !list || !markAllBtn || !filterBtns || !filterBtns.length) return;
+
+      let currentFilter = 'unread';
 
       function esc(s){
         return (s||'').toString().replace(/[&<>"']/g, function(c){
@@ -1285,7 +1326,9 @@
         const title = esc(it.title||'');
         const body = esc(it.body||'');
         const link = (it.link||'').toString();
-        return '<a class="list-group-item list-group-item-action fw-semibold" href="'+(link||'#')+'" data-notif-id="'+id+'" data-notif-link="'+esc(link)+'">'
+        const readAt = it.read_at;
+        const cls = 'list-group-item list-group-item-action' + (readAt ? '' : ' fw-semibold');
+        return '<a class="'+cls+'" href="'+(link||'#')+'" data-notif-id="'+id+'" data-notif-link="'+esc(link)+'" data-notif-read-at="'+esc(readAt||'')+'">'
           + '<div class="d-flex">'
           +   '<div class="me-2 text-primary"><i class="bi bi-bell"></i></div>'
           +   '<div>'
@@ -1294,6 +1337,10 @@
           +   '</div>'
           + '</div>'
           + '</a>';
+      }
+
+      function setEmptyState(msg){
+        list.innerHTML = '<div class="list-group-item text-muted">' + esc(msg) + '</div>';
       }
 
       async function refreshBadge(){
@@ -1312,10 +1359,15 @@
 
       async function loadList(){
         try {
-          const res = await fetch('<?= BASE_URL ?>/tenant/notifications/list?status=unread&limit=20', { credentials: 'same-origin' });
+          const qs = currentFilter === 'all' ? '' : ('status=' + encodeURIComponent(currentFilter) + '&');
+          const res = await fetch('<?= BASE_URL ?>/tenant/notifications/list?' + qs + 'limit=50', { credentials: 'same-origin' });
           const data = await res.json();
           const items = (data && data.success && Array.isArray(data.items)) ? data.items : [];
-          list.innerHTML = items.length ? items.map(fmtItem).join('') : '<div class="list-group-item text-muted">No unread notifications</div>';
+          if (!items.length) {
+            setEmptyState(currentFilter === 'read' ? 'No read notifications' : (currentFilter === 'all' ? 'No notifications' : 'No unread notifications'));
+          } else {
+            list.innerHTML = items.map(fmtItem).join('');
+          }
         } catch (e) {}
       }
 
@@ -1333,14 +1385,17 @@
         } catch (e) {}
       }
 
-      bell.addEventListener('click', function(){
-        tray.style.display = (tray.style.display === 'none') ? 'block' : 'none';
-        if (tray.style.display === 'block') loadList();
+      modalEl.addEventListener('show.bs.modal', function(){
+        loadList();
       });
-      if (closeBtn) closeBtn.addEventListener('click', function(){ tray.style.display = 'none'; });
-      document.addEventListener('click', function(ev){
-        const el = ev.target;
-        if (!tray.contains(el) && !bell.contains(el)) tray.style.display = 'none';
+
+      filterBtns.forEach(function(b){
+        b.addEventListener('click', function(){
+          filterBtns.forEach(function(x){ x.classList.remove('active'); });
+          b.classList.add('active');
+          currentFilter = b.getAttribute('data-tenant-notif-filter') || 'unread';
+          loadList();
+        });
       });
       if (markAllBtn) {
         markAllBtn.addEventListener('click', async function(){
@@ -1355,10 +1410,13 @@
         ev.preventDefault();
         const id = a.getAttribute('data-notif-id');
         const link = a.getAttribute('data-notif-link') || '';
+        const readAt = a.getAttribute('data-notif-read-at') || '';
         if (id) {
-          await markRead(id);
-          await refreshBadge();
-          await loadList();
+          if (!readAt) {
+            await markRead(id);
+            await refreshBadge();
+            await loadList();
+          }
         }
         if (link) { window.location.href = link; }
       });
