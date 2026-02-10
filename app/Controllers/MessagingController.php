@@ -7,6 +7,7 @@ use App\Models\Tenant;
 use App\Models\Property;
 use App\Models\User;
 use App\Models\Setting;
+use App\Models\Notification;
 
 class MessagingController
 {
@@ -157,6 +158,51 @@ class MessagingController
                 'receiver_id' => $receiverId,
                 'body' => $body
             ]);
+
+            // In-app notification to recipient
+            try {
+                $userModel = new User();
+                $sender = $userModel->find((int)$this->userId);
+                $senderName = (string)($sender['name'] ?? 'Staff');
+                $preview = mb_strimwidth((string)$body, 0, 160, '…');
+
+                $n = new Notification();
+                if ($receiverType === 'tenant') {
+                    $n->createNotification([
+                        'recipient_type' => 'tenant',
+                        'recipient_id' => (int)$receiverId,
+                        'actor_type' => 'user',
+                        'actor_id' => (int)$this->userId,
+                        'title' => 'New Message',
+                        'body' => $senderName . ': ' . $preview,
+                        'link' => BASE_URL . '/tenant/messaging',
+                        'entity_type' => 'message',
+                        'entity_id' => (int)$id,
+                        'payload' => [
+                            'user_id' => (int)$this->userId,
+                            'tenant_id' => (int)$receiverId,
+                        ],
+                    ]);
+                } else {
+                    $n->createNotification([
+                        'recipient_type' => 'user',
+                        'recipient_id' => (int)$receiverId,
+                        'actor_type' => 'user',
+                        'actor_id' => (int)$this->userId,
+                        'title' => 'New Message',
+                        'body' => $senderName . ': ' . $preview,
+                        'link' => BASE_URL . '/messaging',
+                        'entity_type' => 'message',
+                        'entity_id' => (int)$id,
+                        'payload' => [
+                            'sender_user_id' => (int)$this->userId,
+                            'user_id' => (int)$receiverId,
+                        ],
+                    ]);
+                }
+            } catch (\Throwable $notifyErr) {
+                error_log('MessagingController::send notify failed: ' . $notifyErr->getMessage());
+            }
 
             try {
                 $userModel = new User();
