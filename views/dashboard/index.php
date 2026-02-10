@@ -16,7 +16,14 @@ ob_start();
                     <label class="form-label">Month</label>
                     <input type="month" id="dashboardMonth" name="month" class="form-control" value="<?= htmlspecialchars($selectedMonth ?? date('Y-m')) ?>">
                 </div>
-                <div class="col-12 col-md-5">
+                <div class="col-12 col-md-2">
+                    <label class="form-label">All Months</label>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="dashboardAllMonths" name="all_months" value="1" <?= !empty($allMonths) ? 'checked' : '' ?>>
+                        <label class="form-check-label" for="dashboardAllMonths">Up to selected</label>
+                    </div>
+                </div>
+                <div class="col-12 col-md-4">
                     <label class="form-label">Property</label>
                     <select id="dashboardProperty" name="property_id" class="form-select">
                         <option value="">All Properties</option>
@@ -27,7 +34,7 @@ ob_start();
                         <?php endforeach; ?>
                     </select>
                 </div>
-                <div class="col-12 col-md-4">
+                <div class="col-12 col-md-3">
                     <a href="<?= BASE_URL ?>/dashboard" class="btn btn-outline-secondary">Reset</a>
                 </div>
             </form>
@@ -38,6 +45,7 @@ ob_start();
 document.addEventListener('DOMContentLoaded', function () {
     const form = document.getElementById('dashboardFilters');
     const month = document.getElementById('dashboardMonth');
+    const allMonths = document.getElementById('dashboardAllMonths');
     const property = document.getElementById('dashboardProperty');
     if (!form || !month || !property) return;
 
@@ -47,6 +55,7 @@ document.addEventListener('DOMContentLoaded', function () {
     };
 
     month.addEventListener('change', submit);
+    if (allMonths) allMonths.addEventListener('change', submit);
     property.addEventListener('change', submit);
 });
 </script>
