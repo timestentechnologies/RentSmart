@@ -1771,7 +1771,7 @@ class Payment extends Model
         $targetKey = $targetYm . '-01';
 
         $tagStmt = $this->db->prepare(
-            "SELECT DATE_FORMAT(applies_to_month, '%Y-%m-01') AS m, COALESCE(SUM(amount),0) AS s\n"
+            "SELECT DATE_FORMAT(applies_to_month, '%Y-%m-01') AS m, COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END),0) AS s\n"
             . "FROM payments\n"
             . "WHERE lease_id = ? AND payment_type = 'rent' AND status IN ('completed','verified') AND applies_to_month IS NOT NULL\n"
             . "GROUP BY DATE_FORMAT(applies_to_month, '%Y-%m-01')"
@@ -1784,7 +1784,7 @@ class Payment extends Model
             if ($k !== '') $tagged[$k] = (float)($r['s'] ?? 0);
         }
         $untagStmt = $this->db->prepare(
-            "SELECT COALESCE(SUM(amount),0) AS s FROM payments\n"
+            "SELECT COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END),0) AS s FROM payments\n"
             . "WHERE lease_id = ? AND payment_type = 'rent' AND status IN ('completed','verified') AND applies_to_month IS NULL"
         );
         $untagStmt->execute([(int)$lease['id']]);
@@ -1878,7 +1878,7 @@ class Payment extends Model
         }
 
         $tagStmt = $this->db->prepare(
-            "SELECT DATE_FORMAT(applies_to_month, '%Y-%m-01') AS m, COALESCE(SUM(amount),0) AS s\n"
+            "SELECT DATE_FORMAT(applies_to_month, '%Y-%m-01') AS m, COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END),0) AS s\n"
             . "FROM payments\n"
             . "WHERE lease_id = ? AND payment_type = 'rent' AND status IN ('completed','verified') AND applies_to_month IS NOT NULL\n"
             . "GROUP BY DATE_FORMAT(applies_to_month, '%Y-%m-01')"
@@ -1894,6 +1894,7 @@ class Payment extends Model
         $untagStmt = $this->db->prepare(
             "SELECT amount FROM payments\n"
             . "WHERE lease_id = ? AND payment_type = 'rent' AND status IN ('completed','verified') AND applies_to_month IS NULL\n"
+            . "  AND amount > 0\n"
             . "ORDER BY payment_date ASC, id ASC"
         );
         $untagStmt->execute([(int)$lease['id']]);
@@ -1960,7 +1961,7 @@ class Payment extends Model
         $currentMonth = new \DateTime($today->format('Y-m-01'));
 
         $tagStmt = $this->db->prepare(
-            "SELECT DATE_FORMAT(applies_to_month, '%Y-%m-01') AS m, COALESCE(SUM(amount),0) AS s\n"
+            "SELECT DATE_FORMAT(applies_to_month, '%Y-%m-01') AS m, COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END),0) AS s\n"
             . "FROM payments\n"
             . "WHERE lease_id = ? AND payment_type = 'rent' AND status IN ('completed','verified') AND applies_to_month IS NOT NULL\n"
             . "GROUP BY DATE_FORMAT(applies_to_month, '%Y-%m-01')"
@@ -1973,7 +1974,7 @@ class Payment extends Model
             if ($k !== '') $tagged[$k] = (float)($r['s'] ?? 0);
         }
         $untagStmt = $this->db->prepare(
-            "SELECT COALESCE(SUM(amount),0) AS s FROM payments\n"
+            "SELECT COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END),0) AS s FROM payments\n"
             . "WHERE lease_id = ? AND payment_type = 'rent' AND status IN ('completed','verified') AND applies_to_month IS NULL"
         );
         $untagStmt->execute([(int)$lease['id']]);
@@ -2054,7 +2055,7 @@ class Payment extends Model
                 "SELECT COALESCE(SUM(ABS(amount)),0) AS s\n"
                 . "FROM payments\n"
                 . "WHERE lease_id = ?\n"
-                . "  AND payment_type = 'rent'\n"
+                . "  AND payment_type = 'other'\n"
                 . "  AND amount < 0\n"
                 . "  AND notes LIKE ?\n"
                 . "  AND status IN ('completed','verified')\n"
@@ -2069,10 +2070,13 @@ class Payment extends Model
                 . "WHERE lease_id = ?\n"
                 . "  AND payment_type = 'other'\n"
                 . "  AND status IN ('completed','verified')\n"
-                . "  AND payment_date BETWEEN ? AND ?\n"
+                . "  AND (\n"
+                . "        (applies_to_month IS NOT NULL AND applies_to_month BETWEEN ? AND ?)\n"
+                . "     OR (applies_to_month IS NULL AND payment_date BETWEEN ? AND ?)\n"
+                . "  )\n"
                 . "  AND (notes LIKE 'Maintenance payment:%' OR notes LIKE '%MAINT-%')"
             );
-            $maintPaidStmt->execute([(int)$lease['id'], $monthStart, $monthEnd]);
+            $maintPaidStmt->execute([(int)$lease['id'], $monthStart, $monthEnd, $monthStart, $monthEnd]);
             $paid = (float)($maintPaidStmt->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0);
 
             return round(max(0.0, $charged - $paid), 2);

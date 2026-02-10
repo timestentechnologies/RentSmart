@@ -198,52 +198,53 @@ class Utility extends Model
 
     public function getTenantUtilities($tenantId)
     {
-        $sql = "SELECT u.*, 
-                       latest_reading.reading_value, 
-                       latest_reading.reading_date,
-                       latest_reading.cost as current_cost,
-                       previous_reading.reading_value as previous_reading_value,
-                       previous_reading.reading_date as previous_reading_date,
-                       CASE 
-                           WHEN u.is_metered = 1 THEN latest_reading.cost
-                           ELSE u.flat_rate
-                       END as amount,
-                       (CASE 
-                           WHEN u.is_metered = 1 THEN IFNULL(latest_reading.cost, 0)
+        $monthStart = date('Y-m-01');
+        $monthEnd = date('Y-m-t');
+
+        // Tenant portal should only show utilities for the tenant's active lease unit.
+        $sql = "SELECT u.*,
+                       mr.reading_value,
+                       mr.reading_date,
+                       mr.cost as current_cost,
+                       CASE
+                           WHEN u.is_metered = 1 THEN IFNULL(mr.cost, 0)
                            ELSE IFNULL(u.flat_rate, 0)
-                       END - IFNULL((SELECT SUM(p.amount) FROM payments p 
-                                         JOIN leases l ON p.lease_id = l.id 
-                                         WHERE l.tenant_id = ? AND p.payment_type = 'utility' 
-                                         AND p.status IN ('completed', 'verified') 
-                                         AND p.utility_id = u.id), 0)) AS net_amount
+                       END as amount,
+                       (
+                           CASE
+                               WHEN u.is_metered = 1 THEN IFNULL(mr.cost, 0)
+                               ELSE IFNULL(u.flat_rate, 0)
+                           END
+                           - IFNULL((
+                               SELECT SUM(p.amount)
+                               FROM payments p
+                               JOIN leases l ON p.lease_id = l.id
+                               WHERE l.tenant_id = ?
+                                 AND l.status = 'active'
+                                 AND p.payment_type = 'utility'
+                                 AND p.status IN ('completed','verified')
+                                 AND p.utility_id = u.id
+                                 AND (
+                                       (p.applies_to_month IS NOT NULL AND p.applies_to_month BETWEEN ? AND ?)
+                                    OR (p.applies_to_month IS NULL AND p.payment_date BETWEEN ? AND ?)
+                                 )
+                           ), 0)
+                       ) AS net_amount
                 FROM utilities u
-                JOIN units un ON u.unit_id = un.id
-                JOIN tenants t ON un.id = t.unit_id
+                JOIN leases l0 ON l0.unit_id = u.unit_id AND l0.tenant_id = ? AND l0.status = 'active'
                 LEFT JOIN (
-                    SELECT ur1.*
-                    FROM utility_readings ur1
+                    SELECT ur.*
+                    FROM utility_readings ur
                     INNER JOIN (
-                        SELECT utility_id, MAX(id) as max_id
+                        SELECT utility_id, MAX(id) AS max_id
                         FROM utility_readings
+                        WHERE reading_date BETWEEN ? AND ?
                         GROUP BY utility_id
-                    ) ur2 ON ur1.utility_id = ur2.utility_id AND ur1.id = ur2.max_id
-                ) latest_reading ON u.id = latest_reading.utility_id
-                LEFT JOIN (
-                    SELECT ur1.*
-                    FROM utility_readings ur1
-                    INNER JOIN (
-                        SELECT utility_id, MAX(id) as max_id
-                        FROM utility_readings ur3
-                        WHERE ur3.id < (
-                            SELECT MAX(id) FROM utility_readings ur4 
-                            WHERE ur4.utility_id = ur3.utility_id
-                        )
-                        GROUP BY utility_id
-                    ) ur2 ON ur1.utility_id = ur2.utility_id AND ur1.id = ur2.max_id
-                ) previous_reading ON u.id = previous_reading.utility_id
-                WHERE t.id = ?";
+                    ) x ON ur.utility_id = x.utility_id AND ur.id = x.max_id
+                ) mr ON u.id = mr.utility_id
+                ORDER BY u.utility_type";
         $stmt = $this->db->prepare($sql);
-        $stmt->execute([$tenantId, $tenantId]);
+        $stmt->execute([$tenantId, $monthStart, $monthEnd, $monthStart, $monthEnd, $tenantId, $monthStart, $monthEnd]);
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
 } 
