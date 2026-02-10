@@ -235,24 +235,47 @@ class InvoicesController
                     $paidRent = max(0.0, $remainingForThisMonth);
                 }
 
-                // Utilities are still month-scoped (by payment_date); rent is sequentially allocated above.
+                // Utilities are month-scoped using applies_to_month (fallback to payment_date).
                 $paidUtilRows = $payModel->query(
-                    "SELECT COALESCE(SUM(amount),0) AS s
+                    "SELECT COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END),0) AS s
                      FROM payments
                      WHERE lease_id = ? AND status IN ('completed','verified')
                        AND payment_type = 'utility'
-                       AND payment_date BETWEEN ? AND ?",
-                    [$lease['id'], $start, $end]
+                       AND (
+                             (applies_to_month IS NOT NULL AND applies_to_month BETWEEN ? AND ?)
+                          OR (applies_to_month IS NULL AND payment_date BETWEEN ? AND ?)
+                       )",
+                    [$lease['id'], $start, $end, $start, $end]
                 );
                 $paidUtil = (float)($paidUtilRows[0]['s'] ?? 0.0);
+
+                // Maintenance payments are captured as payment_type='other' and should be month-scoped too.
+                $paidMaintRows = $payModel->query(
+                    "SELECT COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END),0) AS s
+                     FROM payments
+                     WHERE lease_id = ? AND status IN ('completed','verified')
+                       AND payment_type = 'other'
+                       AND (
+                             (applies_to_month IS NOT NULL AND applies_to_month BETWEEN ? AND ?)
+                          OR (applies_to_month IS NULL AND payment_date BETWEEN ? AND ?)
+                       )
+                       AND (notes LIKE 'Maintenance payment:%' OR notes LIKE '%MAINT-%')",
+                    [$lease['id'], $start, $end, $start, $end]
+                );
+                $paidMaint = (float)($paidMaintRows[0]['s'] ?? 0.0);
                 $utilitiesTotal = 0.0;
+                $maintenanceTotal = 0.0;
                 foreach (($invoice['items'] ?? []) as $it) {
                     $desc = strtolower((string)($it['description'] ?? ''));
                     if (strpos($desc, 'utility') !== false) {
                         $utilitiesTotal += (float)($it['line_total'] ?? 0);
                     }
+                    if (strpos($desc, 'maint') !== false) {
+                        $maintenanceTotal += (float)($it['line_total'] ?? 0);
+                    }
                 }
                 $utilitiesDue = max(0.0, $utilitiesTotal - $paidUtil);
+                $maintenanceDue = max(0.0, $maintenanceTotal - $paidMaint);
                 $rentPaidForMonth = ($rentAmount > 0.0) ? min($paidRent, $rentAmount) : 0.0;
                 $rentStatus = 'due';
                 if ($rentAmount > 0.0 && $rentPaidForMonth >= $rentAmount - 0.009) { $rentStatus = 'paid'; }
@@ -260,10 +283,14 @@ class InvoicesController
                 $utilStatus = 'due';
                 if ($utilitiesDue <= 0.009) { $utilStatus = 'paid'; }
                 else if ($paidUtil > 0.01) { $utilStatus = 'partial'; }
+                $maintStatus = 'due';
+                if ($maintenanceDue <= 0.009) { $maintStatus = 'paid'; }
+                else if ($paidMaint > 0.01) { $maintStatus = 'partial'; }
                 $paymentStatus = [
                     'month_label' => $monthLabel,
                     'rent' => ['status' => $rentStatus, 'paid' => $rentPaidForMonth, 'amount' => $rentAmount],
                     'utilities' => ['status' => $utilStatus, 'paid' => $paidUtil, 'amount' => $utilitiesTotal, 'due' => $utilitiesDue],
+                    'maintenance' => ['status' => $maintStatus, 'paid' => $paidMaint, 'amount' => $maintenanceTotal, 'due' => $maintenanceDue],
                 ];
             }
         }
@@ -330,34 +357,67 @@ class InvoicesController
                     $paidRent = max(0.0, $remainingForThisMonth);
                 }
 
+                // Utilities are month-scoped using applies_to_month (fallback to payment_date).
                 $paidUtilRows = $payModel->query(
-                    "SELECT COALESCE(SUM(amount),0) AS s
+                    "SELECT COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END),0) AS s
                      FROM payments
                      WHERE lease_id = ? AND status IN ('completed','verified')
                        AND payment_type = 'utility'
-                       AND payment_date BETWEEN ? AND ?",
-                    [$lease['id'], $start, $end]
+                       AND (
+                             (applies_to_month IS NOT NULL AND applies_to_month BETWEEN ? AND ?)
+                          OR (applies_to_month IS NULL AND payment_date BETWEEN ? AND ?)
+                       )",
+                    [$lease['id'], $start, $end, $start, $end]
                 );
                 $paidUtil = (float)($paidUtilRows[0]['s'] ?? 0.0);
+
+                // Maintenance payments are captured as payment_type='other' and should be month-scoped too.
+                $paidMaintRows = $payModel->query(
+                    "SELECT COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END),0) AS s
+                     FROM payments
+                     WHERE lease_id = ? AND status IN ('completed','verified')
+                       AND payment_type = 'other'
+                       AND (
+                             (applies_to_month IS NOT NULL AND applies_to_month BETWEEN ? AND ?)
+                          OR (applies_to_month IS NULL AND payment_date BETWEEN ? AND ?)
+                       )
+                       AND (notes LIKE 'Maintenance payment:%' OR notes LIKE '%MAINT-%')",
+                    [$lease['id'], $start, $end, $start, $end]
+                );
+                $paidMaint = (float)($paidMaintRows[0]['s'] ?? 0.0);
+
                 $rentPaidForMonth = ($rentAmount > 0.0) ? min($paidRent, $rentAmount) : 0.0;
                 $rentStatus = 'due';
                 if ($rentAmount > 0.0 && $rentPaidForMonth >= $rentAmount - 0.009) { $rentStatus = 'paid'; }
                 else if ($rentPaidForMonth > 0.01) { $rentStatus = 'partial'; }
+
                 $utilitiesTotal = 0.0;
+                $maintenanceTotal = 0.0;
                 foreach (($invoice['items'] ?? []) as $it) {
                     $desc = strtolower((string)($it['description'] ?? ''));
                     if (strpos($desc, 'utility') !== false) {
                         $utilitiesTotal += (float)($it['line_total'] ?? 0);
                     }
+                    if (strpos($desc, 'maint') !== false) {
+                        $maintenanceTotal += (float)($it['line_total'] ?? 0);
+                    }
                 }
                 $utilitiesDue = max(0.0, $utilitiesTotal - $paidUtil);
+                $maintenanceDue = max(0.0, $maintenanceTotal - $paidMaint);
+
                 $utilStatus = 'due';
                 if ($utilitiesDue <= 0.009) { $utilStatus = 'paid'; }
                 else if ($paidUtil > 0.01) { $utilStatus = 'partial'; }
+
+                $maintStatus = 'due';
+                if ($maintenanceDue <= 0.009) { $maintStatus = 'paid'; }
+                else if ($paidMaint > 0.01) { $maintStatus = 'partial'; }
+
                 $paymentStatus = [
                     'month_label' => $monthLabel,
                     'rent' => ['status' => $rentStatus, 'paid' => $rentPaidForMonth, 'amount' => $rentAmount],
                     'utilities' => ['status' => $utilStatus, 'paid' => $paidUtil, 'amount' => $utilitiesTotal, 'due' => $utilitiesDue],
+                    'maintenance' => ['status' => $maintStatus, 'paid' => $paidMaint, 'amount' => $maintenanceTotal, 'due' => $maintenanceDue],
                 ];
             }
         }
