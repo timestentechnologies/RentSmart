@@ -33,6 +33,8 @@ class TenantPaymentController
         if (session_status() === PHP_SESSION_NONE) {
             session_start();
         }
+        $debugId = bin2hex(random_bytes(4));
+        $debugStep = 'start';
         $acceptHeader = strtolower((string)($_SERVER['HTTP_ACCEPT'] ?? ''));
         $isAjax = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')
             || (strpos($acceptHeader, 'application/json') !== false)
@@ -49,6 +51,7 @@ class TenantPaymentController
         }
 
         try {
+            $debugStep = 'read_input';
             $tenantId = $_SESSION['tenant_id'];
             $paymentType = isset($_POST['payment_type']) ? strtolower(trim($_POST['payment_type'])) : '';
             if ($paymentType === 'utilities') {
@@ -70,8 +73,11 @@ class TenantPaymentController
             if (!$paymentType || !$amount || !$paymentMethodId) {
                 throw new \Exception('Missing required payment information');
             }
+
+            error_log("TenantPaymentController::process start | error_id={$debugId} | tenant_id={$tenantId} | type={$paymentType} | amount={$amount} | method_id={$paymentMethodId} | applies_to_month=" . ($appliesToMonth ?? 'null') . " | ajax=" . ($isAjax ? '1' : '0'));
             
             // Get payment method details
+            $debugStep = 'get_payment_method';
             $paymentMethodData = $this->paymentMethod->getById($paymentMethodId);
             if (!$paymentMethodData) {
                 throw new \Exception('Invalid payment method selected');
@@ -84,6 +90,7 @@ class TenantPaymentController
             }
             
             // Get additional payment details based on method
+            $debugStep = 'get_payment_details';
             $paymentDetails = $this->getPaymentDetails($paymentMethodData['type'], $paymentMethodData['details']);
             
             // Check M-Pesa transaction code uniqueness if it's an M-Pesa payment
@@ -95,18 +102,21 @@ class TenantPaymentController
             }
 
             // Get tenant info
+            $debugStep = 'get_tenant';
             $tenant = $this->tenant->find($tenantId);
             if (!$tenant) {
                 throw new \Exception('Tenant not found');
             }
 
             // Get the active lease for this tenant
+            $debugStep = 'get_active_lease';
             $lease = $this->lease->getActiveLeaseByTenant($tenantId);
             if (!$lease) {
                 throw new \Exception('No active lease found for this tenant');
             }
 
             // Block selecting a month that is already fully paid (rent only; applies_to_month is stored as YYYY-MM-01)
+            $debugStep = 'validate_applies_to_month';
             if ($appliesToMonth !== null && in_array($paymentType, ['rent', 'both', 'all'], true)) {
                 if ($this->payment->isRentMonthFullyPaidByLease((int)$lease['id'], $appliesToMonth)) {
                     throw new \Exception('Selected month is already fully paid. Please select another month.');
@@ -114,6 +124,7 @@ class TenantPaymentController
             }
             
             // Authorize payment method against property's owner/manager/agent and linkage to property
+            $debugStep = 'authorize_payment_method';
             try {
                 $db = $this->payment->getDb();
                 $propStmt = $db->prepare('SELECT p.id AS property_id, p.owner_id, p.manager_id, p.agent_id
@@ -148,6 +159,7 @@ class TenantPaymentController
             }
 
             // Handle different payment types
+            $debugStep = 'handle_payment_type_' . $paymentType;
             if ($paymentType === 'maintenance') {
                 // Maintenance-only payment (recorded as payment_type='other')
                 $today = date('Y-m-d');
@@ -465,6 +477,7 @@ class TenantPaymentController
                 }
                 // 2) Rent payment part
                 if ($remainingAmount > 0.0) {
+                    $debugStep = 'create_rent_payment';
                     $paymentData = [
                         'lease_id' => $lease['id'],
                         'amount' => $remainingAmount,
@@ -492,11 +505,13 @@ class TenantPaymentController
             }
 
             if ($isAjax) {
+                $debugStep = 'respond_success';
                 header('Content-Type: application/json');
                 echo json_encode([
                     'success' => true,
                     'message' => 'Payment submitted successfully. You will receive a confirmation shortly.',
                     'payment_id' => $paymentId,
+                    'error_id' => $debugId,
                     'payment_details' => [
                         'payment_type' => $paymentType,
                         'amount' => $amount,
@@ -514,15 +529,37 @@ class TenantPaymentController
             redirect('/tenant/dashboard');
 
         } catch (\Throwable $e) {
-            error_log("Error in TenantPaymentController::process: " . $e->getMessage());
-            error_log("Stack trace: " . $e->getTraceAsString());
+            $pdoInfo = null;
+            if ($e instanceof \PDOException) {
+                $pdoInfo = $e->errorInfo ?? null;
+            }
+            error_log("TenantPaymentController::process failed | error_id={$debugId} | step={$debugStep} | msg=" . $e->getMessage());
+            if ($pdoInfo) {
+                error_log("TenantPaymentController::process failed | error_id={$debugId} | step={$debugStep} | pdo=" . json_encode($pdoInfo));
+            }
+            error_log("TenantPaymentController::process failed | error_id={$debugId} | step={$debugStep} | trace=" . $e->getTraceAsString());
+
+            try {
+                $debugPayload = [
+                    'ts' => date('c'),
+                    'error_id' => $debugId,
+                    'step' => $debugStep,
+                    'message' => $e->getMessage(),
+                    'pdo' => $pdoInfo,
+                ];
+                $debugFile = rtrim(sys_get_temp_dir(), '/\\') . DIRECTORY_SEPARATOR . 'rentsmart_tenant_payment_last_error.json';
+                @file_put_contents($debugFile, json_encode($debugPayload));
+            } catch (\Throwable $ignore) {
+            }
 
             if ($isAjax) {
                 header('Content-Type: application/json');
                 http_response_code(500);
                 echo json_encode([
                     'success' => false,
-                    'message' => 'Payment processing failed: ' . $e->getMessage()
+                    'message' => 'Payment processing failed. Error ID: ' . $debugId,
+                    'error_id' => $debugId,
+                    'step' => $debugStep
                 ]);
                 exit;
             }
