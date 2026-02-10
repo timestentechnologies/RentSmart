@@ -225,16 +225,14 @@ class InvoicesController
                     [$lease['id'], $start, $end]
                 );
                 $paidUtil = (float)($paidUtilRows[0]['s'] ?? 0.0);
+                $rentPaidForMonth = ($rentAmount > 0.0) ? min($paidRent, $rentAmount) : 0.0;
                 $rentStatus = 'due';
-
-                // paidRent here may include funds that would become advance for future months.
-                // For the invoice month status, compare against a single month's rent.
-                if ($rentAmount > 0.0 && $paidRent > $rentAmount + 0.009) { $rentStatus = 'advance'; }
-                else if ($rentAmount > 0.0 && $paidRent >= $rentAmount - 0.009) { $rentStatus = 'paid'; }
+                if ($rentAmount > 0.0 && $rentPaidForMonth >= $rentAmount - 0.009) { $rentStatus = 'paid'; }
+                else if ($rentPaidForMonth > 0.01) { $rentStatus = 'partial'; }
                 $utilStatus = $paidUtil > 0.0 ? 'paid' : 'due';
                 $paymentStatus = [
                     'month_label' => $monthLabel,
-                    'rent' => ['status' => $rentStatus, 'paid' => $paidRent, 'amount' => $rentAmount],
+                    'rent' => ['status' => $rentStatus, 'paid' => $rentPaidForMonth, 'amount' => $rentAmount],
                     'utilities' => ['status' => $utilStatus, 'paid' => $paidUtil],
                 ];
             }
@@ -311,14 +309,14 @@ class InvoicesController
                     [$lease['id'], $start, $end]
                 );
                 $paidUtil = (float)($paidUtilRows[0]['s'] ?? 0.0);
+                $rentPaidForMonth = ($rentAmount > 0.0) ? min($paidRent, $rentAmount) : 0.0;
                 $rentStatus = 'due';
-
-                if ($rentAmount > 0.0 && $paidRent > $rentAmount + 0.009) { $rentStatus = 'advance'; }
-                else if ($rentAmount > 0.0 && $paidRent >= $rentAmount - 0.009) { $rentStatus = 'paid'; }
+                if ($rentAmount > 0.0 && $rentPaidForMonth >= $rentAmount - 0.009) { $rentStatus = 'paid'; }
+                else if ($rentPaidForMonth > 0.01) { $rentStatus = 'partial'; }
                 $utilStatus = $paidUtil > 0.0 ? 'paid' : 'due';
                 $paymentStatus = [
                     'month_label' => $monthLabel,
-                    'rent' => ['status' => $rentStatus, 'paid' => $paidRent, 'amount' => $rentAmount],
+                    'rent' => ['status' => $rentStatus, 'paid' => $rentPaidForMonth, 'amount' => $rentAmount],
                     'utilities' => ['status' => $utilStatus, 'paid' => $paidUtil],
                 ];
             }
