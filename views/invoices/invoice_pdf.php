@@ -125,7 +125,7 @@
       </tr>
       <tr>
         <td><strong>Utilities:</strong></td>
-        <td><?= htmlspecialchars(ucfirst($paymentStatus['utilities']['status'])) ?> (Paid <?= number_format((float)$paymentStatus['utilities']['paid'], 2) ?>)</td>
+        <td><?= htmlspecialchars(ucfirst($paymentStatus['utilities']['status'])) ?> (Paid <?= number_format((float)$paymentStatus['utilities']['paid'], 2) ?> / Due <?= number_format((float)($paymentStatus['utilities']['due'] ?? ($paymentStatus['utilities']['amount'] ?? 0)), 2) ?>)</td>
       </tr>
     </table>
   </div>

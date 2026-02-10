@@ -180,6 +180,26 @@ class InvoicesController
             try { $invModel->updateStatusForTenantMonth((int)$invoice['tenant_id'], $invoice['issue_date']); } catch (\Exception $e) { error_log('Invoice status refresh (show) failed: ' . $e->getMessage()); }
             $invoice = $invModel->getWithItems((int)$id);
         }
+
+        $prevInvoiceId = null;
+        $nextInvoiceId = null;
+        if (!empty($invoice['tenant_id']) && !empty($invoice['issue_date'])) {
+            try {
+                $tenantId = (int)$invoice['tenant_id'];
+                $issueDate = (string)$invoice['issue_date'];
+                $prevRows = $invModel->query(
+                    "SELECT id FROM invoices WHERE tenant_id = ? AND issue_date < ? AND archived_at IS NULL AND status <> 'void' ORDER BY issue_date DESC, id DESC LIMIT 1",
+                    [$tenantId, $issueDate]
+                );
+                if (!empty($prevRows[0]['id'])) { $prevInvoiceId = (int)$prevRows[0]['id']; }
+                $nextRows = $invModel->query(
+                    "SELECT id FROM invoices WHERE tenant_id = ? AND issue_date > ? AND archived_at IS NULL AND status <> 'void' ORDER BY issue_date ASC, id ASC LIMIT 1",
+                    [$tenantId, $issueDate]
+                );
+                if (!empty($nextRows[0]['id'])) { $nextInvoiceId = (int)$nextRows[0]['id']; }
+            } catch (\Throwable $e) {
+            }
+        }
         // Compute payment status summary for the invoice's month (rent/utilities)
         $paymentStatus = null;
         if (!empty($invoice['tenant_id']) && !empty($invoice['issue_date'])) {
@@ -225,15 +245,25 @@ class InvoicesController
                     [$lease['id'], $start, $end]
                 );
                 $paidUtil = (float)($paidUtilRows[0]['s'] ?? 0.0);
+                $utilitiesTotal = 0.0;
+                foreach (($invoice['items'] ?? []) as $it) {
+                    $desc = strtolower((string)($it['description'] ?? ''));
+                    if (strpos($desc, 'utility') !== false) {
+                        $utilitiesTotal += (float)($it['line_total'] ?? 0);
+                    }
+                }
+                $utilitiesDue = max(0.0, $utilitiesTotal - $paidUtil);
                 $rentPaidForMonth = ($rentAmount > 0.0) ? min($paidRent, $rentAmount) : 0.0;
                 $rentStatus = 'due';
                 if ($rentAmount > 0.0 && $rentPaidForMonth >= $rentAmount - 0.009) { $rentStatus = 'paid'; }
                 else if ($rentPaidForMonth > 0.01) { $rentStatus = 'partial'; }
-                $utilStatus = $paidUtil > 0.0 ? 'paid' : 'due';
+                $utilStatus = 'due';
+                if ($utilitiesDue <= 0.009) { $utilStatus = 'paid'; }
+                else if ($paidUtil > 0.01) { $utilStatus = 'partial'; }
                 $paymentStatus = [
                     'month_label' => $monthLabel,
                     'rent' => ['status' => $rentStatus, 'paid' => $rentPaidForMonth, 'amount' => $rentAmount],
-                    'utilities' => ['status' => $utilStatus, 'paid' => $paidUtil],
+                    'utilities' => ['status' => $utilStatus, 'paid' => $paidUtil, 'amount' => $utilitiesTotal, 'due' => $utilitiesDue],
                 ];
             }
         }
@@ -313,11 +343,21 @@ class InvoicesController
                 $rentStatus = 'due';
                 if ($rentAmount > 0.0 && $rentPaidForMonth >= $rentAmount - 0.009) { $rentStatus = 'paid'; }
                 else if ($rentPaidForMonth > 0.01) { $rentStatus = 'partial'; }
-                $utilStatus = $paidUtil > 0.0 ? 'paid' : 'due';
+                $utilitiesTotal = 0.0;
+                foreach (($invoice['items'] ?? []) as $it) {
+                    $desc = strtolower((string)($it['description'] ?? ''));
+                    if (strpos($desc, 'utility') !== false) {
+                        $utilitiesTotal += (float)($it['line_total'] ?? 0);
+                    }
+                }
+                $utilitiesDue = max(0.0, $utilitiesTotal - $paidUtil);
+                $utilStatus = 'due';
+                if ($utilitiesDue <= 0.009) { $utilStatus = 'paid'; }
+                else if ($paidUtil > 0.01) { $utilStatus = 'partial'; }
                 $paymentStatus = [
                     'month_label' => $monthLabel,
                     'rent' => ['status' => $rentStatus, 'paid' => $rentPaidForMonth, 'amount' => $rentAmount],
-                    'utilities' => ['status' => $utilStatus, 'paid' => $paidUtil],
+                    'utilities' => ['status' => $utilStatus, 'paid' => $paidUtil, 'amount' => $utilitiesTotal, 'due' => $utilitiesDue],
                 ];
             }
         }
