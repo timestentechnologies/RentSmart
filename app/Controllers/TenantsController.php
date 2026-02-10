@@ -40,6 +40,7 @@ class TenantsController
                     if ($tenantId <= 0) {
                         $tenant['rent_due_total'] = 0.0;
                         $tenant['rent_due_months'] = 0;
+                        $tenant['is_advance_paid'] = false;
                         continue;
                     }
 
@@ -52,6 +53,11 @@ class TenantsController
                     }
                     $tenant['rent_due_total'] = round(max(0.0, $due), 2);
                     $tenant['rent_due_months'] = is_array($missed) ? count($missed) : 0;
+
+                    $coverage = $paymentModel->getTenantRentCoverage($tenantId);
+                    $tenant['is_advance_paid'] = is_array($coverage)
+                        && isset($coverage['prepaid_months'])
+                        && (int)$coverage['prepaid_months'] > 0;
                 }
                 unset($tenant);
             } catch (\Throwable $e) {
