@@ -1583,14 +1583,40 @@ ob_clean();
     </div>
 
     <div class="modal fade" id="notificationsModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="false">
-        <div class="modal-dialog modal-dialog-scrollable modal-lg">
+        <div class="modal-dialog modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title">Notifications</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
                     <style>
+                        #notificationsModal .modal-dialog {
+                            position: fixed;
+                            top: 74px;
+                            right: 18px;
+                            margin: 0;
+                            width: 420px;
+                            max-width: calc(100vw - 24px);
+                        }
+                        #notificationsModal .modal-content {
+                            border-radius: 14px;
+                            overflow: hidden;
+                        }
+                        #notificationsModal .modal-header {
+                            background: #6B3E99;
+                            color: #fff;
+                        }
+                        #notificationsModal .modal-title {
+                            color: #fff;
+                        }
+                        @media (max-width: 576px) {
+                            #notificationsModal .modal-dialog {
+                                right: 12px;
+                                top: 72px;
+                                width: calc(100vw - 24px);
+                            }
+                        }
                         #notificationsModal .btn-notif-filter {
                             border-color: #ff6b00;
                             color: #ff6b00;
