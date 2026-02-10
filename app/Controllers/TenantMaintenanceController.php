@@ -7,6 +7,7 @@ use App\Models\Tenant;
 use App\Models\Unit;
 use App\Models\Property;
 use App\Models\Notification;
+use App\Models\Lease;
 
 class TenantMaintenanceController
 {
@@ -14,6 +15,7 @@ class TenantMaintenanceController
     private $tenant;
     private $unit;
     private $property;
+    private $lease;
 
     public function __construct()
     {
@@ -21,6 +23,7 @@ class TenantMaintenanceController
         $this->tenant = new Tenant();
         $this->unit = new Unit();
         $this->property = new Property();
+        $this->lease = new Lease();
     }
 
     /**
@@ -80,19 +83,36 @@ class TenantMaintenanceController
                 throw new \Exception('Tenant not found');
             }
 
+            // Get tenant's active lease to reliably determine unit/property
+            $lease = $this->lease->getActiveLeaseByTenant($tenantId);
+            if (!$lease) {
+                throw new \Exception('No active lease found for this tenant');
+            }
+
+            $unitId = (int)($lease['unit_id'] ?? 0);
+            if ($unitId <= 0) {
+                throw new \Exception('No unit linked to active lease');
+            }
+
+            $unitData = $this->unit->find($unitId);
+            if (!$unitData) {
+                throw new \Exception('Unit not found');
+            }
+
+            $propertyId = (int)($unitData['property_id'] ?? 0);
+            if ($propertyId <= 0) {
+                throw new \Exception('Property not found for this unit');
+            }
+
             // Get unit number if unit_id exists
             $unitNumber = null;
-            if (!empty($tenant['unit_id'])) {
-                $unit = new Unit();
-                $unitData = $unit->find($tenant['unit_id']);
-                $unitNumber = $unitData['unit_number'] ?? null;
-            }
+            $unitNumber = $unitData['unit_number'] ?? null;
 
             $data = [
                 'tenant_id' => $tenantId,
-                'unit_id' => $tenant['unit_id'] ?? null,
+                'unit_id' => $unitId,
                 'unit_number' => $unitNumber,
-                'property_id' => $tenant['property_id'] ?? null,
+                'property_id' => $propertyId,
                 'title' => $title,
                 'description' => $description,
                 'category' => $category ?: 'other',
@@ -106,13 +126,6 @@ class TenantMaintenanceController
 
             // Notify property staff (agent/manager/landlord/caretaker)
             try {
-                $propertyId = (int)($tenant['property_id'] ?? 0);
-                if ($propertyId <= 0 && !empty($tenant['unit_id'])) {
-                    $unitModel = new Unit();
-                    $u = $unitModel->find((int)$tenant['unit_id']);
-                    $propertyId = (int)($u['property_id'] ?? 0);
-                }
-
                 if ($propertyId > 0) {
                     $property = $this->property->find($propertyId);
                     $recipients = [];
@@ -146,7 +159,7 @@ class TenantMaintenanceController
                                 'payload' => [
                                     'tenant_id' => (int)$tenantId,
                                     'property_id' => (int)$propertyId,
-                                    'unit_id' => isset($tenant['unit_id']) ? (int)$tenant['unit_id'] : null,
+                                    'unit_id' => (int)$unitId,
                                     'priority' => $data['priority'] ?? null,
                                     'category' => $data['category'] ?? null,
                                 ],
