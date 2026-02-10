@@ -6,7 +6,13 @@ ob_start();
     <div class="card-body d-flex justify-content-between align-items-center">
       <h1 class="h4 mb-0"><i class="bi bi-receipt text-primary me-2"></i>Invoice <?= htmlspecialchars($invoice['number'] ?? ('#'.$invoice['id'])) ?></h1>
       <div class="btn-group">
+        <?php if (!empty($prevInvoiceId)): ?>
+          <a class="btn btn-outline-secondary" href="<?= BASE_URL ?>/invoices/show/<?= (int)$prevInvoiceId ?>">Previous</a>
+        <?php endif; ?>
         <a class="btn btn-outline-secondary" href="<?= BASE_URL ?>/invoices">Back</a>
+        <?php if (!empty($nextInvoiceId)): ?>
+          <a class="btn btn-outline-secondary" href="<?= BASE_URL ?>/invoices/show/<?= (int)$nextInvoiceId ?>">Next</a>
+        <?php endif; ?>
         <a class="btn btn-outline-primary" href="<?= BASE_URL ?>/invoices/pdf/<?= (int)$invoice['id'] ?>">Download PDF</a>
         <a class="btn btn-outline-secondary" href="<?= BASE_URL ?>/invoices/email/<?= (int)$invoice['id'] ?>">Email PDF</a>
         <?php if (empty($invoice['posted_at'])): ?>
@@ -44,7 +50,7 @@ ob_start();
             $utilBadge = ($paymentStatus['utilities']['status'] ?? 'due') === 'paid' ? 'success' : 'warning';
           ?>
           <span class="badge bg-<?= $rentBadge ?>">Rent: <?= htmlspecialchars(ucfirst($paymentStatus['rent']['status'])) ?> (Paid <?= number_format((float)$paymentStatus['rent']['paid'],2) ?> / Due <?= number_format((float)$paymentStatus['rent']['amount'],2) ?>)</span>
-          <span class="badge bg-<?= $utilBadge ?>">Utilities: <?= htmlspecialchars(ucfirst($paymentStatus['utilities']['status'])) ?> (Paid <?= number_format((float)$paymentStatus['utilities']['paid'],2) ?>)</span>
+          <span class="badge bg-<?= $utilBadge ?>">Utilities: <?= htmlspecialchars(ucfirst($paymentStatus['utilities']['status'])) ?> (Paid <?= number_format((float)$paymentStatus['utilities']['paid'],2) ?> / Due <?= number_format((float)($paymentStatus['utilities']['due'] ?? ($paymentStatus['utilities']['amount'] ?? 0)),2) ?>)</span>
         </div>
       </div>
       <?php endif; ?>
