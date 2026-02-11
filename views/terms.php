@@ -44,6 +44,17 @@ if (!defined('BASE_URL')) {
     </style>
 </head>
 <body>
+    <?php
+    try {
+        require_once __DIR__ . '/../app/Models/Setting.php';
+        $settingsModel = new \App\Models\Setting();
+        $pageSettings = $settingsModel->getAllAsAssoc();
+    } catch (Throwable $e) {
+        $pageSettings = [];
+    }
+    $termsTitle = isset($pageSettings['terms_title']) && $pageSettings['terms_title'] !== '' ? (string)$pageSettings['terms_title'] : 'Terms of Service';
+    $termsEmail = isset($pageSettings['terms_contact_email']) && $pageSettings['terms_contact_email'] !== '' ? (string)$pageSettings['terms_contact_email'] : 'legal@rentsmart.com';
+    ?>
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-light fixed-top">
         <div class="container">
@@ -56,7 +67,7 @@ if (!defined('BASE_URL')) {
 
     <div class="policy-content">
         <div class="container">
-            <h1 class="mb-4">Terms of Service</h1>
+            <h1 class="mb-4"><?= htmlspecialchars($termsTitle) ?></h1>
             
             <p class="lead">Last updated: <?= date('F d, Y') ?></p>
 
@@ -128,7 +139,7 @@ if (!defined('BASE_URL')) {
             <h2>9. Contact Information</h2>
             <p>For questions about these terms, contact us at:</p>
             <ul>
-                <li>Email: legal@rentsmart.com</li>
+                <li>Email: <?= htmlspecialchars($termsEmail) ?></li>
                 <li>Phone: +254 700 000000</li>
                 <li>Address: Nairobi, Kenya</li>
             </ul>
@@ -138,4 +149,4 @@ if (!defined('BASE_URL')) {
     <!-- JavaScript -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
-</html> 
+</html>
