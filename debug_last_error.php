@@ -53,13 +53,34 @@ try {
         exit;
     }
 
-    $debugFile = rtrim(sys_get_temp_dir(), '/\\') . DIRECTORY_SEPARATOR . 'rentsmart_last_error.json';
-    $raw = is_file($debugFile) ? (string)@file_get_contents($debugFile) : '';
+    $debugFile1 = rtrim(sys_get_temp_dir(), '/\\') . DIRECTORY_SEPARATOR . 'rentsmart_last_error.json';
+    $debugFile2 = __DIR__ . DIRECTORY_SEPARATOR . 'logs' . DIRECTORY_SEPARATOR . 'rentsmart_last_error.json';
+
+    $debugFile = '';
+    if (is_file($debugFile1)) {
+        $debugFile = $debugFile1;
+    } elseif (is_file($debugFile2)) {
+        $debugFile = $debugFile2;
+    }
+
+    $raw = ($debugFile !== '' && is_file($debugFile)) ? (string)@file_get_contents($debugFile) : '';
 
     echo json_encode([
         'success' => true,
         'file' => $debugFile,
-        'exists' => is_file($debugFile),
+        'exists' => ($debugFile !== '' && is_file($debugFile)),
+        'candidates' => [
+            [
+                'file' => $debugFile1,
+                'exists' => is_file($debugFile1),
+                'writable_dir' => is_writable(dirname($debugFile1)),
+            ],
+            [
+                'file' => $debugFile2,
+                'exists' => is_file($debugFile2),
+                'writable_dir' => is_writable(dirname($debugFile2)),
+            ],
+        ],
         'data' => ($raw !== '' ? (json_decode($raw, true) ?: null) : null),
         'raw' => $raw,
     ]);
