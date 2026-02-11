@@ -689,15 +689,55 @@ document.addEventListener('DOMContentLoaded', function() {
                         tbody.prepend(row);
                     }
                     // Show SweetAlert success
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Tenant Added!',
-                        text: data.message || 'Tenant added successfully.',
-                        timer: 2000,
-                        showConfirmButton: false
-                    }).then(() => {
-                        window.location.reload();
-                    });
+                    const creds = data && data.credentials ? data.credentials : null;
+                    const hasCreds = creds && creds.phone && creds.email && creds.password;
+                    const normalizePhone = (p) => {
+                        const digits = String(p || '').replace(/[^0-9]/g, '');
+                        if (!digits) return '';
+                        if (digits.startsWith('254')) return digits;
+                        if (digits.startsWith('0') && digits.length === 10) return '254' + digits.slice(1);
+                        if (digits.length === 12 && digits.startsWith('254')) return digits;
+                        return digits;
+                    };
+
+                    if (hasCreds) {
+                        const phone = normalizePhone(creds.phone);
+                        const msg = `Hello ${creds.name || ''},\n\nYour tenant portal account has been created.\n\nLogin Email: ${creds.email}\nPassword: ${creds.password}\nPortal: ${creds.portal_url || 'https://rentsmart.timestentechnologies.co.ke/'}\n\nPlease change your password after first login.`;
+                        const waUrl = phone ? (`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`) : '';
+
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Tenant Added!',
+                            html: `Tenant created successfully.<br><small class="text-muted">You can send login credentials to the tenant via WhatsApp.</small>`,
+                            showCancelButton: true,
+                            confirmButtonText: 'Open WhatsApp',
+                            cancelButtonText: 'Close'
+                        }).then((result) => {
+                            if (result.isConfirmed) {
+                                if (waUrl) {
+                                    window.open(waUrl, '_blank');
+                                } else {
+                                    Swal.fire({
+                                        icon: 'warning',
+                                        title: 'Missing phone number',
+                                        text: 'Tenant phone number is missing or invalid for WhatsApp link.'
+                                    });
+                                }
+                            }
+                        }).finally(() => {
+                            window.location.reload();
+                        });
+                    } else {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Tenant Added!',
+                            text: data.message || 'Tenant added successfully.',
+                            timer: 2000,
+                            showConfirmButton: false
+                        }).then(() => {
+                            window.location.reload();
+                        });
+                    }
                 } else {
                     // Show SweetAlert error
                     Swal.fire({
