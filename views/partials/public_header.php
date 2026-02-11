@@ -66,6 +66,48 @@ $faviconUrl = $faviconUrl ?? site_setting_image_url('site_favicon', BASE_URL . '
 <script>
   (function () {
     try {
+      var openModalById = function (id) {
+        try {
+          if (!id) return false;
+          var el = document.getElementById(id);
+          if (!el) return false;
+          if (window.bootstrap && typeof window.bootstrap.Modal === 'function') {
+            window.bootstrap.Modal.getOrCreateInstance(el).show();
+            return true;
+          }
+        } catch (e) {}
+        return false;
+      };
+
+      // On homepage, make hash links open modals immediately (Bootstrap doesn't auto-open by hash)
+      document.addEventListener('click', function (ev) {
+        try {
+          var a = ev.target && ev.target.closest ? ev.target.closest('a[href*="#"]') : null;
+          if (!a) return;
+          var href = a.getAttribute('href') || '';
+          if (href.indexOf('#loginModal') !== -1) {
+            ev.preventDefault();
+            if (history && history.pushState) history.pushState(null, '', '#loginModal');
+            openModalById('loginModal');
+          } else if (href.indexOf('#registerModal') !== -1) {
+            ev.preventDefault();
+            if (history && history.pushState) history.pushState(null, '', '#registerModal');
+            openModalById('registerModal');
+          } else if (href.indexOf('#tenantLoginModal') !== -1) {
+            ev.preventDefault();
+            if (history && history.pushState) history.pushState(null, '', '#tenantLoginModal');
+            openModalById('tenantLoginModal');
+          }
+        } catch (e) {}
+      }, true);
+
+      window.addEventListener('hashchange', function () {
+        var h = (window.location.hash || '').replace('#', '');
+        if (h === 'loginModal' || h === 'registerModal' || h === 'tenantLoginModal') {
+          openModalById(h);
+        }
+      });
+
       var links = Array.prototype.slice.call(document.querySelectorAll('a.nav-link[data-public-section]'));
       if (!links.length) return;
 
