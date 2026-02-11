@@ -236,6 +236,7 @@ class AuthController
             }
 
             // Set session variables
+            unset($_SESSION['tenant_id'], $_SESSION['impersonating'], $_SESSION['original_user']);
             $_SESSION['user_id'] = $userId;
             $_SESSION['user_name'] = $name;
             $_SESSION['user_email'] = $email;
@@ -399,6 +400,7 @@ class AuthController
             ]);
 
             // Set session variables
+            unset($_SESSION['tenant_id'], $_SESSION['impersonating'], $_SESSION['original_user']);
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['user_name'] = $user['name'];
             $_SESSION['user_email'] = $user['email'];
