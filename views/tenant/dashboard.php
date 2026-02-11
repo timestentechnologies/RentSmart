@@ -333,7 +333,7 @@
             <div class="card h-100">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0"><i class="bi bi-pen me-2"></i>Signature Requests</h5>
-                    <a href="<?= BASE_URL ?>/esign" class="btn btn-sm btn-outline-primary" target="_blank">Open e‑Sign</a>
+                    <a href="<?= BASE_URL ?>/tenant/esign" class="btn btn-sm btn-outline-primary">Open e‑Sign</a>
                 </div>
                 <div class="card-body">
                     <?php if (empty($tenantESignRequests)): ?>

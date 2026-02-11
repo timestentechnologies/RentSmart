@@ -399,6 +399,8 @@ $routes = [
     'tenant/maintenance' => ['controller' => 'TenantMaintenanceController', 'action' => 'index'],
     'tenant/maintenance/create' => ['controller' => 'TenantMaintenanceController', 'action' => 'create'],
     'tenant/maintenance/get/(\d+)' => ['controller' => 'TenantMaintenanceController', 'action' => 'get'],
+
+    'tenant/esign' => ['controller' => 'TenantESignController', 'action' => 'index'],
     // Tenant Notifications
     'tenant/notifications/unread-count' => ['controller' => 'NotificationsController', 'action' => 'tenantUnreadCount'],
     'tenant/notifications/list' => ['controller' => 'NotificationsController', 'action' => 'tenantList'],
