@@ -65,6 +65,15 @@ try {
 
     $raw = ($debugFile !== '' && is_file($debugFile)) ? (string)@file_get_contents($debugFile) : '';
 
+    $phpLog = __DIR__ . DIRECTORY_SEPARATOR . 'logs' . DIRECTORY_SEPARATOR . 'php_errors.log';
+    $phpLogTail = '';
+    if (is_file($phpLog)) {
+        $contents = (string)@file_get_contents($phpLog);
+        if ($contents !== '') {
+            $phpLogTail = substr($contents, -20000);
+        }
+    }
+
     echo json_encode([
         'success' => true,
         'file' => $debugFile,
@@ -83,6 +92,11 @@ try {
         ],
         'data' => ($raw !== '' ? (json_decode($raw, true) ?: null) : null),
         'raw' => $raw,
+        'php_error_log' => [
+            'file' => $phpLog,
+            'exists' => is_file($phpLog),
+            'tail' => $phpLogTail,
+        ],
     ]);
     exit;
 } catch (\Throwable $e) {
