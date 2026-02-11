@@ -9,10 +9,9 @@ if (!defined('BASE_URL')) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Privacy Policy - RentSmart</title>
-    <?php
-    $faviconUrl = $favicon ? BASE_URL . '/public/assets/images/' . $favicon : BASE_URL . '/public/assets/images/site_favicon_1750832003.png';
-    ?>
+    <?php $faviconUrl = site_setting_image_url('site_favicon', BASE_URL . '/public/assets/images/site_favicon_1750832003.png'); ?>
     <link rel="icon" type="image/png" sizes="32x32" href="<?= htmlspecialchars($faviconUrl) ?>">
+    <link rel="icon" type="image/png" sizes="96x96" href="<?= htmlspecialchars($faviconUrl) ?>">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
     <!-- CSS -->
@@ -48,10 +47,27 @@ if (!defined('BASE_URL')) {
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-light fixed-top">
         <div class="container">
-            <a class="navbar-brand" href="/home">
+            <a class="navbar-brand" href="<?= BASE_URL ?>/">
                 <img src="<?= asset('images/site_logo_1751627446.png') ?>" alt="RentSmart Logo">
             </a>
-            <a href="/home" class="btn btn-outline-primary">Back to Home</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>/vacant-units">Vacant Units</a></li>
+                    <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>/#features">Features</a></li>
+                    <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>/#pricing">Pricing</a></li>
+                    <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>/#testimonials">Testimonials</a></li>
+                    <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>/#faq">FAQs</a></li>
+                    <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>/contact">Contact Us</a></li>
+                    <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>/docs">Documentation</a></li>
+                    <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>/terms">Terms</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="<?= BASE_URL ?>/privacy-policy">Privacy</a></li>
+                    <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>/login">Login</a></li>
+                    <li class="nav-item"><a class="btn btn-gradient ms-2" href="<?= BASE_URL ?>/register">Get Started - 7 Days Free</a></li>
+                </ul>
+            </div>
         </div>
     </nav>
 
