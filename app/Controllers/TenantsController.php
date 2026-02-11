@@ -440,7 +440,14 @@ class TenantsController
                     echo json_encode([
                         'success' => true,
                         'message' => 'Tenant added successfully',
-                        'tenant' => $newTenant
+                        'tenant' => $newTenant,
+                        'credentials' => [
+                            'name' => $name,
+                            'email' => $email,
+                            'phone' => $phone,
+                            'password' => $plainPassword,
+                            'portal_url' => 'https://rentsmart.timestentechnologies.co.ke/'
+                        ]
                     ]);
                     exit;
                 }
