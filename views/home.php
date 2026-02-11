@@ -817,58 +817,7 @@
     $ctaButtonText = site_setting('home_cta_button_text', 'Start Your 7-Day Free Trial');
     $ctaFootnote = site_setting('home_cta_footnote', 'No credit card required');
     ?>
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-light fixed-top">
-        <div class="container">
-            <a class="navbar-brand" href="#">
-                <img src="<?= asset('images/site_logo_1751627446.png') ?>" alt="RentSmart Logo">
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="<?= BASE_URL ?>/vacant-units">Vacant Units</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#features">Features</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#pricing">Pricing</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#testimonials">Testimonials</a>
-                    </li>
-                    <li class="nav-item">
-                            <a class="nav-link" href="#faq">FAQs</a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="<?= BASE_URL ?>/contact" class="nav-link <?= (strpos($current_uri, 'contact') === 0) ? 'active' : '' ?>">
-                             Contact Us
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="<?= BASE_URL ?>/docs">Documentation</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="<?= BASE_URL ?>/terms">Terms</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="<?= BASE_URL ?>/privacy-policy">Privacy</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#loginModal">Login</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="btn btn-gradient ms-2" href="#" data-bs-toggle="modal" data-bs-target="#registerModal">
-                            Get Started - 7 Days Free
-                        </a>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
+    <?php $activePage = 'home'; require __DIR__ . '/partials/public_header.php'; ?>
 
     <!-- Hero Section -->
     <section class="hero-section">

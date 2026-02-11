@@ -15,21 +15,6 @@ if (!defined('BASE_URL')) { define('BASE_URL', ''); }
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
     <style>
         :root { --primary-color:#6B3E99; --secondary-color:#8E5CC4; --light:#f8f9fa; }
-        .navbar { background:#fff; box-shadow:0 2px 10px rgba(0,0,0,.05); }
-        .btn-gradient {
-            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-            color: white;
-            border: none;
-            border-radius: 50px;
-            padding: 0.75rem 1.5rem;
-            transition: all 0.3s ease;
-        }
-        .btn-gradient:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 20px rgba(107, 62, 153, 0.2);
-            color: white;
-        }
-        .navbar .btn.btn-gradient { padding: .5rem .9rem; }
         .hero { background:linear-gradient(135deg, #6B3E99 0%, #8E5CC4 100%); color:#fff; padding:60px 0; position:relative; overflow:hidden; }
         .hero .overlay-icon { position:absolute; right:-40px; bottom:-40px; font-size:220px; opacity:.08; }
         .hero .overlay-icon-secondary { position:absolute; right:140px; top:-30px; font-size:140px; opacity:.06; }
