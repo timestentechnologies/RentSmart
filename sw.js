@@ -77,3 +77,44 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
+
+self.addEventListener('push', function(event) {
+  try {
+    const data = event && event.data ? event.data.json() : {};
+    const title = (data && data.title) ? String(data.title) : 'RentSmart';
+    const body = (data && data.body) ? String(data.body) : '';
+    const link = (data && data.link) ? String(data.link) : '';
+    const options = {
+      body: body,
+      icon: BASE + '/icon.php?size=192',
+      badge: BASE + '/icon.php?size=192',
+      data: { link: link }
+    };
+    event.waitUntil(self.registration.showNotification(title, options));
+  } catch (e) {
+  }
+});
+
+self.addEventListener('notificationclick', function(event) {
+  try {
+    event.notification.close();
+    const link = event.notification && event.notification.data ? event.notification.data.link : '';
+    if (!link) return;
+    const url = new URL(link, self.location.origin).toString();
+    event.waitUntil(
+      self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(function(clientList) {
+        for (const client of clientList) {
+          try {
+            if (client.url === url && 'focus' in client) {
+              return client.focus();
+            }
+          } catch (e) {}
+        }
+        if (self.clients.openWindow) {
+          return self.clients.openWindow(url);
+        }
+      })
+    );
+  } catch (e) {
+  }
+});
