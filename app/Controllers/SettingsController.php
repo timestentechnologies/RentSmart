@@ -582,6 +582,140 @@ class SettingsController
         redirect('/settings/payments');
     }
 
+    public function publicPages()
+    {
+        try {
+            $this->settings->ensureDefaultSettings();
+            $settings = $this->settings->getAllAsAssoc();
+
+            echo view('settings/public_pages', [
+                'title' => 'Public Pages Content - RentSmart',
+                'settings' => $settings
+            ]);
+        } catch (Exception $e) {
+            error_log('Error loading public pages settings: ' . $e->getMessage());
+            echo view('errors/500', [
+                'title' => '500 Internal Server Error'
+            ]);
+        }
+    }
+
+    public function updatePublicPages()
+    {
+        try {
+            if (!verify_csrf_token()) {
+                $_SESSION['flash_message'] = 'Invalid security token';
+                $_SESSION['flash_type'] = 'danger';
+                redirect('/settings/public-pages');
+            }
+
+            $allowedTextKeys = [
+                'home_hero_title',
+                'home_hero_subtitle',
+                'home_hero_primary_text',
+                'home_hero_secondary_text',
+
+                'home_stat1_number','home_stat1_label',
+                'home_stat2_number','home_stat2_label',
+                'home_stat3_number','home_stat3_label',
+                'home_stat4_number','home_stat4_label',
+
+                'home_split_badge',
+                'home_split_title',
+                'home_split_description',
+                'home_split_bullets_json',
+
+                'home_why_title',
+                'home_why_subtitle',
+                'home_why_cards_json',
+
+                'home_testimonials_title',
+                'home_testimonials_subtitle',
+                'home_testimonials_json',
+
+                'home_faq_title',
+                'home_faq_subtitle',
+                'home_faq_items_json',
+
+                'home_cta_title',
+                'home_cta_description',
+                'home_cta_button_text',
+                'home_cta_footnote',
+
+                'contact_hero_title',
+                'contact_hero_subtitle',
+
+                'terms_header',
+                'privacy_header',
+            ];
+
+            foreach ($allowedTextKeys as $key) {
+                if (array_key_exists($key, $_POST)) {
+                    $this->settings->updateByKey($key, trim((string)$_POST[$key]));
+                }
+            }
+
+            // Validate JSON fields if provided (do not overwrite with invalid JSON)
+            $jsonKeys = [
+                'home_split_bullets_json',
+                'home_why_cards_json',
+                'home_testimonials_json',
+                'home_faq_items_json',
+            ];
+            foreach ($jsonKeys as $key) {
+                if (!array_key_exists($key, $_POST)) {
+                    continue;
+                }
+                $raw = trim((string)$_POST[$key]);
+                if ($raw === '') {
+                    $this->settings->updateByKey($key, '');
+                    continue;
+                }
+                json_decode($raw, true);
+                if (json_last_error() !== JSON_ERROR_NONE) {
+                    throw new Exception('Invalid JSON provided for: ' . $key);
+                }
+                $this->settings->updateByKey($key, $raw);
+            }
+
+            // Handle split image upload
+            if (isset($_FILES['home_split_image']) && $_FILES['home_split_image']['error'] === UPLOAD_ERR_OK) {
+                $file = $_FILES['home_split_image'];
+                $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+                $allowed = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+                if (!in_array($ext, $allowed, true)) {
+                    throw new Exception('Invalid image type for split image');
+                }
+
+                $newName = 'home_split_image_' . time() . '.' . $ext;
+                $targetPath = __DIR__ . '/../../public/assets/images/' . $newName;
+                if (!move_uploaded_file($file['tmp_name'], $targetPath)) {
+                    throw new Exception('Failed to upload split image');
+                }
+
+                // Delete old file if exists
+                $old = $this->settings->get('home_split_image');
+                if (!empty($old)) {
+                    $oldPath = __DIR__ . '/../../public/assets/images/' . $old;
+                    if (file_exists($oldPath)) {
+                        @unlink($oldPath);
+                    }
+                }
+
+                $this->settings->updateByKey('home_split_image', $newName);
+            }
+
+            $_SESSION['flash_message'] = 'Public pages content updated successfully';
+            $_SESSION['flash_type'] = 'success';
+        } catch (Exception $e) {
+            error_log('Error updating public pages content: ' . $e->getMessage());
+            $_SESSION['flash_message'] = 'Error updating public pages content: ' . $e->getMessage();
+            $_SESSION['flash_type'] = 'danger';
+        }
+
+        redirect('/settings/public-pages');
+    }
+
     public function testMpesa()
     {
         try {
