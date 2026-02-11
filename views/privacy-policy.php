@@ -44,32 +44,7 @@ if (!defined('BASE_URL')) {
 
 </head>
 <body>
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-light fixed-top">
-        <div class="container">
-            <a class="navbar-brand" href="<?= BASE_URL ?>/">
-                <img src="<?= asset('images/site_logo_1751627446.png') ?>" alt="RentSmart Logo">
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>/vacant-units">Vacant Units</a></li>
-                    <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>/#features">Features</a></li>
-                    <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>/#pricing">Pricing</a></li>
-                    <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>/#testimonials">Testimonials</a></li>
-                    <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>/#faq">FAQs</a></li>
-                    <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>/contact">Contact Us</a></li>
-                    <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>/docs">Documentation</a></li>
-                    <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>/terms">Terms</a></li>
-                    <li class="nav-item"><a class="nav-link active" href="<?= BASE_URL ?>/privacy-policy">Privacy</a></li>
-                    <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>/login">Login</a></li>
-                    <li class="nav-item"><a class="btn btn-gradient ms-2" href="<?= BASE_URL ?>/register">Get Started - 7 Days Free</a></li>
-                </ul>
-            </div>
-        </div>
-    </nav>
+    <?php $activePage = 'privacy'; require __DIR__ . '/partials/public_header.php'; ?>
 
     <div class="policy-content">
         <div class="container">
@@ -94,7 +69,6 @@ if (!defined('BASE_URL')) {
         </div>
     </div>
 
-    <!-- JavaScript -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <?php require __DIR__ . '/partials/public_footer.php'; ?>
 </body>
-</html> 
+</html>
