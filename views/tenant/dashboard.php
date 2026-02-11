@@ -10,6 +10,9 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="<?= BASE_URL ?>/public/assets/css/style.css">
     <style>
+        html, body {
+            overflow-x: hidden;
+        }
         .hero-section {
             background: linear-gradient(90deg, #f8fafc 60%, #e9ecef 100%);
             padding: 2.5rem 1rem 2rem 1rem;
@@ -23,6 +26,42 @@
         }
         .dashboard-cards {
             gap: 1.5rem;
+        }
+
+        .hero-section h1 {
+            font-size: clamp(1.5rem, 5vw, 2.5rem);
+        }
+
+        .dashboard-cards-container, .dashboard-card {
+            min-width: 0;
+        }
+
+        .info-item {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: .5rem;
+            flex-wrap: wrap;
+        }
+
+        .info-value {
+            text-align: right;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+
+        @media (max-width: 576px) {
+            .hero-section {
+                padding: 1.5rem .75rem 1.25rem .75rem;
+            }
+            .hero-section .lead {
+                font-size: 1rem;
+            }
+            .hero-section .position-absolute.end-0.top-0 {
+                position: static !important;
+                margin: .75rem auto 0 auto !important;
+                justify-content: center;
+            }
         }
         .card-icon {
             font-size: 2rem;
@@ -44,7 +83,7 @@
     </style>
 </head>
 <body>
-<div class="container py-4">
+<div class="container py-4 px-3 px-sm-4">
     <!-- Hero Section with Logo -->
     <div class="hero-section text-center mb-4 position-relative overflow-hidden" style="min-height: 320px;">
         <!-- Decorative SVG background -->
@@ -125,9 +164,8 @@
     </div>
 
     <!-- Dashboard Info Cards -->
-    <div class="dashboard-cards-container mb-4">
-        <!-- Property Card -->
-        <div class="dashboard-card">
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-md-4">
             <div class="card info-card h-100 property-card">
                 <div class="card-body">
                     <div class="d-flex align-items-center mb-3">
@@ -153,9 +191,8 @@
                 </div>
             </div>
         </div>
-        
-        <!-- Unit Card -->
-        <div class="dashboard-card">
+
+        <div class="col-12 col-md-4">
             <div class="card info-card h-100 unit-card">
                 <div class="card-body">
                     <div class="d-flex align-items-center mb-3">
@@ -169,7 +206,7 @@
                             <span class="info-label fw-bold">Unit Number:</span>
                             <span class="info-value"><?php echo htmlspecialchars($unit['unit_number']); ?></span>
                         </div>
-                        <?php 
+                        <?php
                         // Get meter numbers from utilities
                         $meterNumbers = [];
                         if (!empty($utilities)) {
@@ -198,9 +235,8 @@
                 </div>
             </div>
         </div>
-        
-        <!-- Lease Card -->
-        <div class="dashboard-card">
+
+        <div class="col-12 col-md-4">
             <div class="card info-card h-100 lease-card">
                 <div class="card-body">
                     <div class="d-flex align-items-center mb-3">
@@ -235,7 +271,6 @@
                             <span class="info-value text-muted">No active lease.</span>
                         </div>
                     <?php endif; ?>
-                    </div>
                 </div>
             </div>
         </div>
@@ -921,6 +956,17 @@
             </div>
         </div>
     </div>
+
+    <footer class="mt-4 pt-3 border-top text-muted small">
+        <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center gap-2">
+            <div>
+                &copy; <?= date('Y') ?> <?= htmlspecialchars($siteName) ?>
+            </div>
+            <div class="text-center text-sm-end">
+                <a href="<?= BASE_URL ?>/tenant/dashboard" class="text-decoration-none text-muted">Dashboard</a>
+            </div>
+        </div>
+    </footer>
 </div>
 
 <!-- Maintenance Request Modal -->
