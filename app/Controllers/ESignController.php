@@ -87,7 +87,15 @@ class ESignController
 
     public function index()
     {
-        if (!$this->userId) { $_SESSION['flash_message'] = 'Please login'; redirect('/'); return; }
+        if (!$this->userId) {
+            if (!empty($_SESSION['tenant_id'])) {
+                redirect('/tenant/esign');
+                return;
+            }
+            $_SESSION['flash_message'] = 'Please login';
+            redirect('/');
+            return;
+        }
         $model = new ESignRequest();
         $requests = $model->listForUser((int)$this->userId);
         $sentCount = $model->countSentByUser((int)$this->userId);
@@ -97,7 +105,15 @@ class ESignController
 
     public function create()
     {
-        if (!$this->userId) { $_SESSION['flash_message'] = 'Please login'; redirect('/'); return; }
+        if (!$this->userId) {
+            if (!empty($_SESSION['tenant_id'])) {
+                redirect('/tenant/esign');
+                return;
+            }
+            $_SESSION['flash_message'] = 'Please login';
+            redirect('/');
+            return;
+        }
         $tenantModel = new Tenant();
         $tenants = $tenantModel->getAll($this->userId);
         // Users by selected roles
