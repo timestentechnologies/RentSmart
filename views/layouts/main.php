@@ -1425,13 +1425,7 @@ ob_clean();
                         <i class="bi bi-chat-dots me-2"></i> Messaging
                     </a>
                 </li>
-                <?php if (isset($_SESSION['user_role']) && in_array(strtolower($_SESSION['user_role']), ['manager','agent','landlord'], true)): ?>
-                    <li class="nav-item">
-                        <a href="<?= BASE_URL ?>/branding" class="nav-link <?= strpos($current_uri, 'branding') === 0 ? 'active' : '' ?>">
-                            <i class="bi bi-building me-2"></i> Company Branding
-                        </a>
-                    </li>
-                <?php endif; ?>
+            
                 <li class="nav-item">
                     <a href="<?= BASE_URL ?>/notices" class="nav-link <?= strpos($current_uri, 'notices') === 0 ? 'active' : '' ?>">
                         <i class="bi bi-megaphone me-2"></i> Notices
@@ -1444,7 +1438,16 @@ ob_clean();
                         </a>
                     </li>
                 <?php endif; ?>
-                
+                <li class="nav-item mt-3">
+                    <small class="nav-header text-uppercase px-3">Settings</small>
+                </li>
+                <?php if (isset($_SESSION['user_role']) && in_array(strtolower($_SESSION['user_role']), ['manager','agent','landlord'], true)): ?>
+                    <li class="nav-item">
+                        <a href="<?= BASE_URL ?>/branding" class="nav-link <?= strpos($current_uri, 'branding') === 0 ? 'active' : '' ?>">
+                            <i class="bi bi-building me-2"></i> Company Branding
+                        </a>
+                    </li>
+                <?php endif; ?>
                 <li class="nav-item mt-3">
                     <small class="nav-header text-uppercase px-3">BILLING & SUBSCRIPTION</small>
                 </li>

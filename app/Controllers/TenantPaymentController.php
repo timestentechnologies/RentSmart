@@ -1358,17 +1358,48 @@ class TenantPaymentController
             }
             $payment['property_owner_name'] = $ownerName;
             $payment['property_manager_name'] = $managerName;
-            
-            // Get logo path and embed as base64 data URI for dompdf
-            $logoPath = __DIR__ . '/../../public/assets/images/site_logo_1751627446.png';
+
+            // Company settings and logo (use property manager/owner branding when available)
+            $settingsModel = new \App\Models\Setting();
+            $settings = $settingsModel->getAllAsAssoc();
+
+            $siteName = $settings['site_name'] ?? 'RentSmart';
+            $logoFilename = $settings['site_logo'] ?? 'site_logo_1751627446.png';
+
+            $brandingUserId = 0;
+            if (!empty($payment['property_manager_id'])) {
+                $brandingUserId = (int)$payment['property_manager_id'];
+            } elseif (!empty($payment['property_owner_id'])) {
+                $brandingUserId = (int)$payment['property_owner_id'];
+            }
+
+            if ($brandingUserId > 0) {
+                $companyNameKey = 'company_name_user_' . $brandingUserId;
+                $companyLogoKey = 'company_logo_user_' . $brandingUserId;
+                $companyName = trim((string)($settings[$companyNameKey] ?? ''));
+                $companyLogo = trim((string)($settings[$companyLogoKey] ?? ''));
+                if ($companyName !== '') {
+                    $siteName = $companyName;
+                }
+                if ($companyLogo !== '') {
+                    $logoFilename = $companyLogo;
+                }
+            }
+
+            // Embed logo as base64 data URI for dompdf
+            $logoPath = __DIR__ . '/../../public/assets/images/' . $logoFilename;
             $logoDataUri = null;
             if (file_exists($logoPath)) {
                 $imageData = file_get_contents($logoPath);
                 $base64 = base64_encode($imageData);
-                $logoDataUri = 'data:image/png;base64,' . $base64;
+                $ext = strtolower((string)pathinfo($logoPath, PATHINFO_EXTENSION));
+                $mime = 'image/png';
+                if ($ext === 'jpg' || $ext === 'jpeg') { $mime = 'image/jpeg'; }
+                else if ($ext === 'gif') { $mime = 'image/gif'; }
+                else if ($ext === 'webp') { $mime = 'image/webp'; }
+                else if ($ext === 'svg') { $mime = 'image/svg+xml'; }
+                $logoDataUri = 'data:' . $mime . ';base64,' . $base64;
             }
-            
-            $siteName = 'RentSmart';
             
             // Generate PDF
             ob_start();

@@ -752,15 +752,42 @@ class PaymentsController
             echo 'Payment not found.';
             exit;
         }
-        // Get logo path and embed as base64 data URI for dompdf
-        $logoPath = __DIR__ . '/../../public/assets/images/site_logo_1751627446.png';
+        // Company settings and logo (allow per-user branding)
+        $settingsModel = new \App\Models\Setting();
+        $settings = $settingsModel->getAllAsAssoc();
+
+        $siteName = $settings['site_name'] ?? 'RentSmart';
+        $logoFilename = $settings['site_logo'] ?? 'site_logo_1751627446.png';
+
+        $role = strtolower((string)($_SESSION['user_role'] ?? ''));
+        $uid = (int)($_SESSION['user_id'] ?? 0);
+        if ($uid > 0 && in_array($role, ['manager', 'agent', 'landlord'], true)) {
+            $companyNameKey = 'company_name_user_' . $uid;
+            $companyLogoKey = 'company_logo_user_' . $uid;
+            $companyName = trim((string)($settings[$companyNameKey] ?? ''));
+            $companyLogo = trim((string)($settings[$companyLogoKey] ?? ''));
+            if ($companyName !== '') {
+                $siteName = $companyName;
+            }
+            if ($companyLogo !== '') {
+                $logoFilename = $companyLogo;
+            }
+        }
+
+        // Embed logo as base64 data URI for dompdf
+        $logoPath = __DIR__ . '/../../public/assets/images/' . $logoFilename;
         $logoDataUri = null;
         if (file_exists($logoPath)) {
             $imageData = file_get_contents($logoPath);
             $base64 = base64_encode($imageData);
-            $logoDataUri = 'data:image/png;base64,' . $base64;
+            $ext = strtolower((string)pathinfo($logoPath, PATHINFO_EXTENSION));
+            $mime = 'image/png';
+            if ($ext === 'jpg' || $ext === 'jpeg') { $mime = 'image/jpeg'; }
+            else if ($ext === 'gif') { $mime = 'image/gif'; }
+            else if ($ext === 'webp') { $mime = 'image/webp'; }
+            else if ($ext === 'svg') { $mime = 'image/svg+xml'; }
+            $logoDataUri = 'data:' . $mime . ';base64,' . $base64;
         }
-        $siteName = 'RentSmart';
         ob_start();
         include __DIR__ . '/../../views/payments/receipt_pdf.php';
         $html = ob_get_clean();

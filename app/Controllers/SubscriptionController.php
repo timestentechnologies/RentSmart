@@ -60,15 +60,38 @@ class SubscriptionController
             $settings = $settingModel->getAllAsAssoc();
             $user = $this->user->find($userId);
 
-            $logoDataUri = null;
-            if (!empty($settings['site_logo'])) {
-                $logoPath = __DIR__ . '/../../public/assets/images/' . $settings['site_logo'];
-                if (file_exists($logoPath)) {
-                    $imageData = file_get_contents($logoPath);
-                    $logoDataUri = 'data:image/png;base64,' . base64_encode($imageData);
+            $siteName = $settings['site_name'] ?? 'RentSmart';
+            $logoFilename = $settings['site_logo'] ?? '';
+
+            $role = strtolower((string)($_SESSION['user_role'] ?? ''));
+            $uid = (int)($_SESSION['user_id'] ?? 0);
+            if ($uid > 0 && in_array($role, ['manager', 'agent', 'landlord'], true)) {
+                $companyNameKey = 'company_name_user_' . $uid;
+                $companyLogoKey = 'company_logo_user_' . $uid;
+                $companyName = trim((string)($settings[$companyNameKey] ?? ''));
+                $companyLogo = trim((string)($settings[$companyLogoKey] ?? ''));
+                if ($companyName !== '') {
+                    $siteName = $companyName;
+                }
+                if ($companyLogo !== '') {
+                    $logoFilename = $companyLogo;
                 }
             }
-            $siteName = $settings['site_name'] ?? 'RentSmart';
+
+            $logoDataUri = null;
+            if (!empty($logoFilename)) {
+                $logoPath = __DIR__ . '/../../public/assets/images/' . $logoFilename;
+                if (file_exists($logoPath)) {
+                    $imageData = file_get_contents($logoPath);
+                    $ext = strtolower((string)pathinfo($logoPath, PATHINFO_EXTENSION));
+                    $mime = 'image/png';
+                    if ($ext === 'jpg' || $ext === 'jpeg') { $mime = 'image/jpeg'; }
+                    else if ($ext === 'gif') { $mime = 'image/gif'; }
+                    else if ($ext === 'webp') { $mime = 'image/webp'; }
+                    else if ($ext === 'svg') { $mime = 'image/svg+xml'; }
+                    $logoDataUri = 'data:' . $mime . ';base64,' . base64_encode($imageData);
+                }
+            }
 
             require_once __DIR__ . '/../../vendor/dompdf/dompdf/src/Dompdf.php';
 

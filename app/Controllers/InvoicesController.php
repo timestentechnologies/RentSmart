@@ -326,16 +326,39 @@ class InvoicesController
         if (!class_exists('Dompdf\\Dompdf')) {
             require_once __DIR__ . '/../../vendor/dompdf/dompdf/src/Dompdf.php';
         }
-        // Company settings and logo
+        // Company settings and logo (allow per-user branding)
         $settingsModel = new \App\Models\Setting();
         $settings = $settingsModel->getAllAsAssoc();
+
         $siteName = $settings['site_name'] ?? 'RentSmart';
-        $logoPath = __DIR__ . '/../../public/assets/images/' . ($settings['site_logo'] ?? 'site_logo_1751627446.png');
+        $logoFilename = $settings['site_logo'] ?? 'site_logo_1751627446.png';
+
+        $userId = (int)($_SESSION['user_id'] ?? 0);
+        $role = strtolower((string)($_SESSION['user_role'] ?? ''));
+        if ($userId > 0 && in_array($role, ['manager', 'agent', 'landlord'], true)) {
+            $companyNameKey = 'company_name_user_' . $userId;
+            $companyLogoKey = 'company_logo_user_' . $userId;
+            $companyName = trim((string)($settings[$companyNameKey] ?? ''));
+            $companyLogo = trim((string)($settings[$companyLogoKey] ?? ''));
+            if ($companyName !== '') {
+                $siteName = $companyName;
+            }
+            if ($companyLogo !== '') {
+                $logoFilename = $companyLogo;
+            }
+        }
+
+        $logoPath = __DIR__ . '/../../public/assets/images/' . $logoFilename;
         $logoDataUri = null;
         if (file_exists($logoPath)) {
             $imageData = file_get_contents($logoPath);
             $base64 = base64_encode($imageData);
-            $mime = 'image/' . (pathinfo($logoPath, PATHINFO_EXTENSION) ?: 'png');
+            $ext = strtolower((string)pathinfo($logoPath, PATHINFO_EXTENSION));
+            $mime = 'image/png';
+            if ($ext === 'jpg' || $ext === 'jpeg') { $mime = 'image/jpeg'; }
+            else if ($ext === 'gif') { $mime = 'image/gif'; }
+            else if ($ext === 'webp') { $mime = 'image/webp'; }
+            else if ($ext === 'svg') { $mime = 'image/svg+xml'; }
             $logoDataUri = 'data:' . $mime . ';base64,' . $base64;
         }
         // Refresh status before generating
@@ -478,16 +501,39 @@ class InvoicesController
             if (!$invoice) throw new \Exception('Invoice not found');
             if (empty($invoice['tenant_email'])) throw new \Exception('Tenant has no email');
 
-            // Build PDF HTML
+            // Build PDF HTML (allow per-user branding)
             $settingsModel = new \App\Models\Setting();
             $settings = $settingsModel->getAllAsAssoc();
+
             $siteName = $settings['site_name'] ?? 'RentSmart';
-            $logoPath = __DIR__ . '/../../public/assets/images/' . ($settings['site_logo'] ?? 'site_logo_1751627446.png');
+            $logoFilename = $settings['site_logo'] ?? 'site_logo_1751627446.png';
+
+            $userId = (int)($_SESSION['user_id'] ?? 0);
+            $role = strtolower((string)($_SESSION['user_role'] ?? ''));
+            if ($userId > 0 && in_array($role, ['manager', 'agent', 'landlord'], true)) {
+                $companyNameKey = 'company_name_user_' . $userId;
+                $companyLogoKey = 'company_logo_user_' . $userId;
+                $companyName = trim((string)($settings[$companyNameKey] ?? ''));
+                $companyLogo = trim((string)($settings[$companyLogoKey] ?? ''));
+                if ($companyName !== '') {
+                    $siteName = $companyName;
+                }
+                if ($companyLogo !== '') {
+                    $logoFilename = $companyLogo;
+                }
+            }
+
+            $logoPath = __DIR__ . '/../../public/assets/images/' . $logoFilename;
             $logoDataUri = null;
             if (file_exists($logoPath)) {
                 $imageData = file_get_contents($logoPath);
                 $base64 = base64_encode($imageData);
-                $mime = 'image/' . (pathinfo($logoPath, PATHINFO_EXTENSION) ?: 'png');
+                $ext = strtolower((string)pathinfo($logoPath, PATHINFO_EXTENSION));
+                $mime = 'image/png';
+                if ($ext === 'jpg' || $ext === 'jpeg') { $mime = 'image/jpeg'; }
+                else if ($ext === 'gif') { $mime = 'image/gif'; }
+                else if ($ext === 'webp') { $mime = 'image/webp'; }
+                else if ($ext === 'svg') { $mime = 'image/svg+xml'; }
                 $logoDataUri = 'data:' . $mime . ';base64,' . $base64;
             }
             // Ensure Dompdf is available
@@ -531,7 +577,8 @@ class InvoicesController
             $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
             $base = defined('BASE_URL') ? BASE_URL : '';
             $siteUrl = rtrim((string)($settings['site_url'] ?? ($scheme . '://' . $host . $base)), '/');
-            $logoUrl = isset($settings['site_logo']) && $settings['site_logo'] ? ($siteUrl . '/public/assets/images/' . $settings['site_logo']) : '';
+            $logoForEmail = $logoFilename ?? ($settings['site_logo'] ?? '');
+            $logoUrl = !empty($logoForEmail) ? ($siteUrl . '/public/assets/images/' . $logoForEmail) : '';
             $footer = '<div style="margin-top:30px;font-size:12px;color:#888;text-align:center;">Powered by <a href="https://timestentechnologies.co.ke" target="_blank" style="color:#888;text-decoration:none;">Timesten Technologies</a></div>';
             $plain = 'Dear ' . ($invoice['tenant_name'] ?? 'Customer') . ",\n\nPlease find attached your invoice " . ($invoice['number'] ?? ('#' . $invoice['id'])) . ".\nTotal Due: Ksh " . number_format((float)$invoice['total'], 2) . "\nDue Date: " . ($invoice['due_date'] ?? '-') . "\n\nRegards,\n" . $siteName;
             $html =
