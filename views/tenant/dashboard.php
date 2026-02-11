@@ -328,6 +328,147 @@
         </div>
     </div>
 
+    <div class="row mb-4">
+        <div class="col-lg-6 col-md-12 mb-3">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-pen me-2"></i>Signature Requests</h5>
+                    <a href="<?= BASE_URL ?>/esign" class="btn btn-sm btn-outline-primary" target="_blank">Open e‑Sign</a>
+                </div>
+                <div class="card-body">
+                    <?php if (empty($tenantESignRequests)): ?>
+                        <div class="text-muted">No signature requests yet.</div>
+                    <?php else: ?>
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Title</th>
+                                        <th>Status</th>
+                                        <th>From</th>
+                                        <th class="text-end">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach (array_slice($tenantESignRequests, 0, 6) as $r): ?>
+                                        <?php
+                                            $status = strtolower((string)($r['status'] ?? 'pending'));
+                                            $badge = 'secondary';
+                                            if ($status === 'pending') $badge = 'warning';
+                                            if ($status === 'signed') $badge = 'success';
+                                            if ($status === 'declined') $badge = 'danger';
+                                            if ($status === 'expired') $badge = 'dark';
+                                        ?>
+                                        <tr>
+                                            <td>
+                                                <div class="fw-semibold"><?= htmlspecialchars($r['title'] ?? '-') ?></div>
+                                                <div class="small text-muted"><?= htmlspecialchars(date('M j, Y', strtotime($r['created_at'] ?? 'now'))) ?></div>
+                                            </td>
+                                            <td><span class="badge bg-<?= $badge ?>"><?= htmlspecialchars(ucfirst($status)) ?></span></td>
+                                            <td><?= htmlspecialchars($r['requester_name'] ?? '-') ?></td>
+                                            <td class="text-end">
+                                                <?php if ($status === 'pending'): ?>
+                                                    <a class="btn btn-sm btn-primary" target="_blank" href="<?= BASE_URL ?>/esign/sign/<?= htmlspecialchars($r['token']) ?>">Sign</a>
+                                                <?php elseif (!empty($r['signed_document_path'])): ?>
+                                                    <a class="btn btn-sm btn-success" target="_blank" href="<?= BASE_URL ?>/public/<?= htmlspecialchars($r['signed_document_path']) ?>">Signed Copy</a>
+                                                <?php elseif (!empty($r['document_path'])): ?>
+                                                    <a class="btn btn-sm btn-outline-secondary" target="_blank" href="<?= BASE_URL ?>/public/<?= htmlspecialchars($r['document_path']) ?>">View</a>
+                                                <?php else: ?>
+                                                    <span class="text-muted small">-</span>
+                                                <?php endif; ?>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="small text-muted mt-2">Tip: If a request stays pending, refresh after signing to see the signed copy link.</div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6 col-md-12 mb-3">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-receipt me-2"></i>Your Invoices</h5>
+                </div>
+                <div class="card-body">
+                    <?php if (empty($tenantInvoices)): ?>
+                        <div class="text-muted">No invoices available.</div>
+                    <?php else: ?>
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle mb-0">
+                                <thead>
+                                    <tr>
+                                        <th>Invoice</th>
+                                        <th>Issue</th>
+                                        <th>Status</th>
+                                        <th class="text-end">Total</th>
+                                        <th class="text-end">Download</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach (array_slice($tenantInvoices, 0, 6) as $inv): ?>
+                                        <?php
+                                            $st = strtolower((string)($inv['status'] ?? 'sent'));
+                                            $b = 'secondary';
+                                            if ($st === 'paid') $b = 'success';
+                                            if ($st === 'partial') $b = 'warning';
+                                            if ($st === 'void') $b = 'danger';
+                                            if ($st === 'draft') $b = 'light text-dark';
+                                        ?>
+                                        <tr>
+                                            <td class="fw-semibold"><?= htmlspecialchars($inv['number'] ?? ('#' . (int)($inv['id'] ?? 0))) ?></td>
+                                            <td><?= htmlspecialchars($inv['issue_date'] ?? '-') ?></td>
+                                            <td><span class="badge bg-<?= $b ?>"><?= htmlspecialchars(ucfirst($st)) ?></span></td>
+                                            <td class="text-end">Ksh <?= number_format((float)($inv['total'] ?? 0), 2) ?></td>
+                                            <td class="text-end">
+                                                <a class="btn btn-sm btn-outline-primary" href="<?= BASE_URL ?>/tenant/invoices/pdf/<?= (int)($inv['id'] ?? 0) ?>">PDF</a>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="bi bi-file-earmark-text me-2"></i>Your Statement</h5>
+                </div>
+                <div class="card-body">
+                    <?php
+                        $stmtStartDefault = date('Y-m-01');
+                        $stmtEndDefault = date('Y-m-d');
+                    ?>
+                    <form class="row g-2 align-items-end" method="GET" action="<?= BASE_URL ?>/tenant/statements/pdf" target="_blank">
+                        <div class="col-md-4">
+                            <label class="form-label">Start Date</label>
+                            <input type="date" name="start" class="form-control" value="<?= htmlspecialchars($_GET['start'] ?? $stmtStartDefault) ?>">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">End Date</label>
+                            <input type="date" name="end" class="form-control" value="<?= htmlspecialchars($_GET['end'] ?? $stmtEndDefault) ?>">
+                        </div>
+                        <div class="col-md-4">
+                            <button type="submit" class="btn btn-outline-primary w-100">
+                                <i class="bi bi-download me-1"></i>Download Statement (PDF)
+                            </button>
+                        </div>
+                    </form>
+                    <div class="small text-muted mt-2">Statement includes payments for your active lease within the selected period.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Payment Section -->
     <div class="row mb-4">
         <div class="col-12">

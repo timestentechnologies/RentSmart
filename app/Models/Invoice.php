@@ -374,6 +374,18 @@ class Invoice extends Model
         return $invoice;
     }
 
+    public function listForTenant(int $tenantId, int $limit = 10)
+    {
+        $limit = max(1, min(100, (int)$limit));
+        $stmt = $this->db->prepare("SELECT id, number, issue_date, due_date, status, total
+                                    FROM {$this->table}
+                                    WHERE tenant_id = ?
+                                    ORDER BY issue_date DESC, id DESC
+                                    LIMIT {$limit}");
+        $stmt->execute([(int)$tenantId]);
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+    }
+
     public function markPosted($id)
     {
         $stmt = $this->db->prepare("UPDATE {$this->table} SET posted_at = NOW() WHERE id = ?");

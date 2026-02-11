@@ -93,6 +93,26 @@ class ESignRequest extends Model
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
 
+    public function listForTenantRecipient(int $tenantId, int $limit = 10)
+    {
+        $limit = max(1, min(100, (int)$limit));
+        $sql = "SELECT er.*,
+                       u.name AS requester_name,
+                       u.email AS requester_email,
+                       t.name AS recipient_name,
+                       t.email AS recipient_email
+                FROM {$this->table} er
+                LEFT JOIN users u ON er.requester_user_id = u.id
+                LEFT JOIN tenants t ON (er.recipient_type='tenant' AND er.recipient_id = t.id)
+                WHERE er.recipient_type = 'tenant'
+                  AND er.recipient_id = ?
+                ORDER BY er.created_at DESC
+                LIMIT {$limit}";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([(int)$tenantId]);
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+    }
+
     public function countSentByUser($userId)
     {
         $stmt = $this->db->prepare("SELECT COUNT(*) FROM {$this->table} WHERE requester_user_id = ?");
