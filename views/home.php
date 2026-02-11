@@ -1631,6 +1631,16 @@
                     bar.style.height = originalHeight;
                 }, 100);
             });
+
+            try {
+                var h = (window.location.hash || '').replace('#', '');
+                if (h === 'loginModal' || h === 'registerModal' || h === 'tenantLoginModal') {
+                    var el = document.getElementById(h);
+                    if (el && window.bootstrap && typeof window.bootstrap.Modal === 'function') {
+                        window.bootstrap.Modal.getOrCreateInstance(el).show();
+                    }
+                }
+            } catch (e) {}
         });
     </script>
 

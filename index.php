@@ -281,6 +281,13 @@ $routes = [
     'settings/testMpesa' => ['controller' => 'SettingsController', 'action' => 'testMpesa'],
     'settings/testStripe' => ['controller' => 'SettingsController', 'action' => 'testStripe'],
     'settings/testPaypal' => ['controller' => 'SettingsController', 'action' => 'testPaypal'],
+
+    'branding' => [
+        'GET' => ['controller' => 'BrandingController', 'action' => 'index'],
+        'POST' => ['controller' => 'BrandingController', 'action' => 'update'],
+    ],
+    'branding/update' => ['controller' => 'BrandingController', 'action' => 'update'],
+
     'ai/chat' => ['controller' => 'AiController', 'action' => 'chat'],
     // Accounting routes
     'accounting' => ['controller' => 'AccountingController', 'action' => 'index'],
@@ -552,6 +559,8 @@ $protectedRoutes = [
     'settings/testMpesa',
     'settings/testStripe',
     'settings/testPaypal',
+    'branding',
+    'branding/update',
     'leases',
     'leases/store',
     'leases/edit/(\d+)',

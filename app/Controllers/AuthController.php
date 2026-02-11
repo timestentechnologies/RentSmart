@@ -25,6 +25,18 @@ class AuthController
         $this->activityLog = new ActivityLog();
     }
 
+    public function showLogin()
+    {
+        header('Location: ' . BASE_URL . '/#loginModal');
+        exit;
+    }
+
+    public function showRegister()
+    {
+        header('Location: ' . BASE_URL . '/#registerModal');
+        exit;
+    }
+
     public function register()
     {
         try {
