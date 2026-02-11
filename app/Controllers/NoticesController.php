@@ -237,6 +237,12 @@ class NoticesController
 
     public function tenant()
     {
+        // If a staff user hits the tenant endpoint (e.g. due to cached links), redirect to staff notices
+        if (!empty($_SESSION['user_id']) && empty($_SESSION['impersonating'])) {
+            redirect('/notices');
+            return;
+        }
+
         // For tenant portal
         $tenantId = $_SESSION['tenant_id'] ?? null;
         if (!$tenantId) { redirect('/tenant/login'); return; }
