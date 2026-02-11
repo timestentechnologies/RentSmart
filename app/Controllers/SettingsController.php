@@ -585,10 +585,19 @@ class SettingsController
     public function publicPages()
     {
         try {
+            if (function_exists('opcache_invalidate')) {
+                $viewPath = __DIR__ . '/../../views/settings/public_pages.php';
+                @opcache_invalidate($viewPath, true);
+                @opcache_invalidate(__FILE__, true);
+            }
+            clearstatcache();
+
             $this->settings->ensureDefaultSettings();
             $settings = $this->settings->getAllAsAssoc();
             $this->seedPublicPagesDefaults($settings);
             $settings = $this->settings->getAllAsAssoc();
+
+            error_log('Public pages settings loaded keys count: ' . count($settings));
 
             echo view('settings/public_pages', [
                 'title' => 'Public Pages Content - RentSmart',
