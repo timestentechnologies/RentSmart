@@ -49,7 +49,7 @@ if (!defined('BASE_URL')) {
         require_once __DIR__ . '/../app/Models/Setting.php';
         $settingsModel = new \App\Models\Setting();
         $pageSettings = $settingsModel->getAllAsAssoc();
-    } catch (Throwable $e) {
+    } catch (\Throwable $e) {
         $pageSettings = [];
     }
     $termsTitle = isset($pageSettings['terms_title']) && $pageSettings['terms_title'] !== '' ? (string)$pageSettings['terms_title'] : 'Terms of Service';
