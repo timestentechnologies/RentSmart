@@ -63,6 +63,11 @@
                 justify-content: center;
             }
         }
+
+        .tenant-dashboard-wrap {
+            max-width: 1180px;
+            width: 100%;
+        }
         .card-icon {
             font-size: 2rem;
             color: #0d6efd;
@@ -83,7 +88,8 @@
     </style>
 </head>
 <body>
-<div class="container py-4 px-3 px-sm-4">
+<div class="container-fluid py-4 px-2 px-sm-3 px-lg-4">
+    <div class="tenant-dashboard-wrap mx-auto">
     <!-- Hero Section with Logo -->
     <div class="hero-section text-center mb-4 position-relative overflow-hidden" style="min-height: 320px;">
         <!-- Decorative SVG background -->
@@ -967,6 +973,7 @@
             </div>
         </div>
     </footer>
+    </div>
 </div>
 
 <!-- Maintenance Request Modal -->
