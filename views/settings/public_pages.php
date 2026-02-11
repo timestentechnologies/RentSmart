@@ -437,6 +437,49 @@ function setting_json_pretty($key, $defaultJson = '[]') {
                             </div>
                         </div>
 
+                        <h6 class="fw-bold mb-3">Footer</h6>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <label class="form-label">Footer Logo</label>
+                                <input type="file" class="form-control" name="footer_logo" accept="image/*">
+                                <?php if (!empty($settings['footer_logo'])): ?>
+                                    <div class="form-text">Current: <?= htmlspecialchars($settings['footer_logo']) ?></div>
+                                <?php endif; ?>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Footer About Text</label>
+                                <textarea class="form-control" name="footer_about_text" rows="3"><?= htmlspecialchars(setting_raw('footer_about_text', '')) ?></textarea>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Footer Tagline (right side)</label>
+                                <input type="text" class="form-control" name="footer_tagline" value="<?= htmlspecialchars(setting_raw('footer_tagline', '')) ?>">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Powered By Text</label>
+                                <input type="text" class="form-control" name="footer_powered_by_text" value="<?= htmlspecialchars(setting_raw('footer_powered_by_text', '')) ?>">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Powered By URL</label>
+                                <input type="text" class="form-control" name="footer_powered_by_url" value="<?= htmlspecialchars(setting_raw('footer_powered_by_url', '')) ?>">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Facebook URL</label>
+                                <input type="text" class="form-control" name="footer_social_facebook" value="<?= htmlspecialchars(setting_raw('footer_social_facebook', '')) ?>">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Twitter URL</label>
+                                <input type="text" class="form-control" name="footer_social_twitter" value="<?= htmlspecialchars(setting_raw('footer_social_twitter', '')) ?>">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">LinkedIn URL</label>
+                                <input type="text" class="form-control" name="footer_social_linkedin" value="<?= htmlspecialchars(setting_raw('footer_social_linkedin', '')) ?>">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Instagram URL</label>
+                                <input type="text" class="form-control" name="footer_social_instagram" value="<?= htmlspecialchars(setting_raw('footer_social_instagram', '')) ?>">
+                            </div>
+                        </div>
+
                     </div>
                 </div>
 
