@@ -65,6 +65,23 @@ class TenantPortalController
             ? BASE_URL . '/public/assets/images/' . $settings['site_favicon']
             : BASE_URL . '/public/assets/images/site_favicon_1750832003.png';
 
+        if (!empty($property)) {
+            foreach (['manager_id','owner_id','agent_id','caretaker_user_id'] as $k) {
+                if (empty($property[$k])) { continue; }
+                $uid = (int)$property[$k];
+                if ($uid <= 0) { continue; }
+                $logoKey = 'company_logo_user_' . $uid;
+                $logoFilename = trim((string)($settings[$logoKey] ?? ''));
+                if ($logoFilename !== '') {
+                    $logoPath = __DIR__ . '/../../public/assets/images/' . $logoFilename;
+                    if (file_exists($logoPath)) {
+                        $siteLogo = BASE_URL . '/public/assets/images/' . $logoFilename;
+                        break;
+                    }
+                }
+            }
+        }
+
         // Tenant notices
         $noticeModel = new Notice();
         $tenantNotices = $noticeModel->getVisibleForTenant((int)$tenantId);

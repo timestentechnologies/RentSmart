@@ -24,6 +24,13 @@
             max-height: 60px;
             margin-bottom: 1rem;
         }
+        .tenant-hero-logo {
+            max-height: 64px;
+            max-width: 240px;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+        }
         .dashboard-cards {
             gap: 1.5rem;
         }
@@ -53,6 +60,10 @@
         @media (max-width: 576px) {
             .hero-section {
                 padding: 1.5rem .75rem 1.25rem .75rem;
+            }
+            .tenant-hero-logo {
+                max-height: 54px;
+                max-width: 200px;
             }
             .hero-section .lead {
                 font-size: 1rem;
@@ -105,7 +116,7 @@
         </svg>
         <!-- Logo -->
         <div class="d-flex flex-column align-items-center justify-content-center position-relative" style="z-index:1;">
-            <img src="<?= htmlspecialchars($siteLogo) ?>" alt="Site Logo" class="dashboard-logo mb-3" style="max-height:70px;max-width:220px;object-fit:contain;">
+            <img src="<?= htmlspecialchars($siteLogo) ?>" alt="Logo" class="tenant-hero-logo mb-3">
             <h1 class="fw-bold mb-2" style="font-size:2.5rem;">Welcome, <?php echo htmlspecialchars($tenant['first_name'] . ' ' . $tenant['last_name']); ?></h1>
             <p class="lead mb-0">Your personal tenant portal for managing your property, lease, payments, and utilities.</p>
         </div>
