@@ -5,7 +5,6 @@ namespace App\Controllers;
 use App\Models\Lease;
 use App\Models\Payment;
 use App\Models\Setting;
-use App\Models\Property;
 use Dompdf\Dompdf;
 use Dompdf\Options;
 
@@ -93,33 +92,33 @@ class TenantStatementsController
 
         $brandingUserId = 0;
         try {
-            $propertyId = 0;
             if (!empty($lease['unit_id'])) {
-                $pStmt = $db->prepare("SELECT p.id, p.owner_id, p.manager_id FROM leases l JOIN units u ON l.unit_id = u.id JOIN properties p ON u.property_id = p.id WHERE l.id = ? LIMIT 1");
+                $pStmt = $db->prepare("SELECT p.id, p.owner_id, p.manager_id, p.agent_id, p.caretaker_user_id FROM leases l JOIN units u ON l.unit_id = u.id JOIN properties p ON u.property_id = p.id WHERE l.id = ? LIMIT 1");
                 $pStmt->execute([$leaseId]);
                 $pr = $pStmt->fetch(\PDO::FETCH_ASSOC) ?: [];
-                $propertyId = (int)($pr['id'] ?? 0);
-                if (!empty($pr['manager_id'])) {
-                    $brandingUserId = (int)$pr['manager_id'];
-                } elseif (!empty($pr['owner_id'])) {
-                    $brandingUserId = (int)$pr['owner_id'];
+
+                foreach (['manager_id','owner_id','agent_id','caretaker_user_id'] as $k) {
+                    if (!empty($pr[$k])) {
+                        $uid = (int)$pr[$k];
+                        $nameKey = 'company_name_user_' . $uid;
+                        $logoKey = 'company_logo_user_' . $uid;
+                        $companyName = trim((string)($settings[$nameKey] ?? ''));
+                        $companyLogo = trim((string)($settings[$logoKey] ?? ''));
+                        if ($companyName !== '' || $companyLogo !== '') {
+                            $brandingUserId = $uid;
+                            if ($companyName !== '') {
+                                $siteName = $companyName;
+                            }
+                            if ($companyLogo !== '') {
+                                $logoFilename = $companyLogo;
+                            }
+                            break;
+                        }
+                    }
                 }
             }
         } catch (\Throwable $e) {
             $brandingUserId = 0;
-        }
-
-        if ($brandingUserId > 0) {
-            $companyNameKey = 'company_name_user_' . $brandingUserId;
-            $companyLogoKey = 'company_logo_user_' . $brandingUserId;
-            $companyName = trim((string)($settings[$companyNameKey] ?? ''));
-            $companyLogo = trim((string)($settings[$companyLogoKey] ?? ''));
-            if ($companyName !== '') {
-                $siteName = $companyName;
-            }
-            if ($companyLogo !== '') {
-                $logoFilename = $companyLogo;
-            }
         }
 
         $logoDataUri = null;

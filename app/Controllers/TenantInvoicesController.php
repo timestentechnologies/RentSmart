@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use App\Models\Invoice;
 use App\Models\Setting;
+use App\Models\Lease;
 
 class TenantInvoicesController
 {
@@ -35,6 +36,46 @@ class TenantInvoicesController
 
         $siteName = $settings['site_name'] ?? 'RentSmart';
         $logoFilename = $settings['site_logo'] ?? '';
+
+        // Prefer property branding (owner/manager/agent/caretaker) for the tenant's lease at invoice time
+        try {
+            $issueDate = (string)($invoice['issue_date'] ?? '');
+            if ($issueDate === '') { $issueDate = date('Y-m-d'); }
+
+            $db = $invModel->getDb();
+            $leaseStmt = $db->prepare(
+                "SELECT l.id AS lease_id, p.owner_id, p.manager_id, p.agent_id, p.caretaker_user_id\n"
+                . "FROM leases l\n"
+                . "JOIN units u ON l.unit_id = u.id\n"
+                . "JOIN properties p ON u.property_id = p.id\n"
+                . "WHERE l.tenant_id = ?\n"
+                . "  AND l.start_date <= ?\n"
+                . "  AND (l.end_date IS NULL OR l.end_date = '' OR l.end_date >= ? OR l.status = 'active')\n"
+                . "ORDER BY l.start_date DESC, l.id DESC\n"
+                . "LIMIT 1"
+            );
+            $leaseStmt->execute([(int)$tenantId, $issueDate, $issueDate]);
+            $lr = $leaseStmt->fetch(\PDO::FETCH_ASSOC) ?: [];
+
+            $brandingUserId = 0;
+            foreach (['manager_id','owner_id','agent_id','caretaker_user_id'] as $k) {
+                if (!empty($lr[$k])) {
+                    $uid = (int)$lr[$k];
+                    $nameKey = 'company_name_user_' . $uid;
+                    $logoKey = 'company_logo_user_' . $uid;
+                    $companyName = trim((string)($settings[$nameKey] ?? ''));
+                    $companyLogo = trim((string)($settings[$logoKey] ?? ''));
+                    if ($companyName !== '' || $companyLogo !== '') {
+                        $brandingUserId = $uid;
+                        if ($companyName !== '') { $siteName = $companyName; }
+                        if ($companyLogo !== '') { $logoFilename = $companyLogo; }
+                        break;
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+            // Ignore branding issues; fallback to system branding
+        }
 
         $logoDataUri = null;
         if (!empty($logoFilename)) {
