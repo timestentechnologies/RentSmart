@@ -235,6 +235,7 @@
                             <span class="info-value text-muted">No active lease.</span>
                         </div>
                     <?php endif; ?>
+                    </div>
                 </div>
             </div>
         </div>
@@ -333,9 +334,13 @@
             <div class="card h-100">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0"><i class="bi bi-pen me-2"></i>Signature Requests</h5>
-                    <a href="<?= BASE_URL ?>/tenant/esign" class="btn btn-sm btn-outline-primary">Open e‑Sign</a>
+                    <div class="d-flex align-items-center gap-2">
+                        <a href="<?= BASE_URL ?>/tenant/esign" class="btn btn-sm btn-outline-primary">Open e‑Sign</a>
+                        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#tenantEsignCollapse" aria-expanded="true" aria-controls="tenantEsignCollapse" data-tenant-collapse-toggle="1">Collapse</button>
+                    </div>
                 </div>
-                <div class="card-body">
+                <div id="tenantEsignCollapse" class="collapse show">
+                    <div class="card-body">
                     <?php if (empty($tenantESignRequests)): ?>
                         <div class="text-muted">No signature requests yet.</div>
                     <?php else: ?>
@@ -384,6 +389,7 @@
                         </div>
                         <div class="small text-muted mt-2">Tip: If a request stays pending, refresh after signing to see the signed copy link.</div>
                     <?php endif; ?>
+                    </div>
                 </div>
             </div>
         </div>
@@ -392,8 +398,10 @@
             <div class="card h-100">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0"><i class="bi bi-receipt me-2"></i>Your Invoices</h5>
+                    <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#tenantInvoicesCollapse" aria-expanded="true" aria-controls="tenantInvoicesCollapse" data-tenant-collapse-toggle="1">Collapse</button>
                 </div>
-                <div class="card-body">
+                <div id="tenantInvoicesCollapse" class="collapse show">
+                    <div class="card-body">
                     <?php if (empty($tenantInvoices)): ?>
                         <div class="text-muted">No invoices available.</div>
                     <?php else: ?>
@@ -473,10 +481,12 @@
     <div class="row mb-4">
         <div class="col-12">
             <div class="card shadow-sm">
-                <div class="card-header bg-primary text-white">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                     <h5 class="mb-0"><i class="bi bi-credit-card me-2"></i>Make Payment</h5>
+                    <button class="btn btn-sm btn-light" type="button" data-bs-toggle="collapse" data-bs-target="#tenantPaymentsCollapse" aria-expanded="true" aria-controls="tenantPaymentsCollapse" data-tenant-collapse-toggle="1">Collapse</button>
                 </div>
-                <div class="card-body">
+                <div id="tenantPaymentsCollapse" class="collapse show">
+                    <div class="card-body">
                     <div class="row g-3">
                         <!-- Rent Payment -->
                         <div class="col-lg-4 col-md-6 mb-3">
@@ -707,200 +717,86 @@
                         <button type="button" class="btn btn-warning btn-sm w-100" <?= $grandTotalAll > 0 ? '' : 'disabled' ?>
                                 onclick="openPaymentModal('all', <?= htmlspecialchars(json_encode($paymentMethods)) ?>)">
                             <i class="bi bi-credit-card me-1"></i>Pay All
-                        </button>
+                        </div>
+                    </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Due Rent Card -->
-    <?php if (!empty($overdueRent)): ?>
-    <div class="alert alert-danger mb-4">
-        <strong>Lease Agreement:</strong>
-        <?php foreach ($overdueRent as $overdue): ?>
-            <div>
-                Lease Period: <?php echo htmlspecialchars($overdue['start_date']); ?> - <?php echo htmlspecialchars($overdue['end_date']); ?>
-            </div>
-        <?php endforeach; ?>
-        <?php if (!empty($missedRentMonths)): ?>
-            <div class="mt-2">
-                <div class="fw-bold">Missed Months:</div>
-                <?php foreach ($missedRentMonths as $mm): ?>
-                    <div>
-                        Month: <?php echo htmlspecialchars($mm['label']); ?> |
-                        Amount: <span class="fw-bold text-danger">Ksh <?php echo number_format($mm['amount'], 2); ?></span>
-                    </div>
-                <?php endforeach; ?>
-            </div>
-        <?php endif; ?>
-    </div>
-    <?php endif; ?>
-
-    <!-- Payments Table -->
-    <div class="card mb-4">
-        <div class="card-header fw-bold">Payment History</div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-striped mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Date</th>
-                            <th>Amount</th>
-                            <th>Type</th>
-                            <th>Method</th>
-                            <th>M-Pesa Code</th>
-                            <th>Phone Number</th>
-                            <th>Status</th>
-                            <th>Receipt</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    <?php if (!empty($rentPayments)): ?>
-                        <?php foreach ($rentPayments as $payment): ?>
-                            <?php
-                                $rawType = strtolower((string)($payment['payment_type'] ?? 'rent'));
-                                $notes = (string)($payment['notes'] ?? '');
-                                $amount = (float)($payment['amount'] ?? 0);
-                                $isMaintChargeRow = ($rawType === 'rent' && $amount < 0 && $notes !== '' && preg_match('/MAINT-\d+/i', $notes));
-                                if ($isMaintChargeRow) {
-                                    continue;
-                                }
-                            ?>
-                            <tr>
-                                <td><?php echo htmlspecialchars($payment['payment_date']); ?></td>
-                                <td>Ksh <?php echo number_format($payment['amount'], 2); ?></td>
-                                <td>
-                                    <?php 
-                                    $hasUtility = !empty($payment['utility_id']) || !empty($payment['utility_type']);
-                                    $isUtilByNotes = ($notes !== '' && preg_match('/\b(util|utility|water|electricity|gas|internet)\b/i', $notes));
-
-                                    // Normalize type to avoid everything showing as rent
-                                    if ($rawType === 'other' && ($notes !== '' && (stripos($notes, 'Maintenance payment:') !== false || preg_match('/MAINT-\d+/i', $notes)))) {
-                                        $typeClass = 'bg-warning text-dark';
-                                        $typeText = 'Maintenance';
-                                    } elseif ($rawType === 'utility' || $hasUtility || $isUtilByNotes) {
-                                        $typeClass = 'bg-info';
-                                        $typeText = !empty($payment['utility_type']) ? ucfirst((string)$payment['utility_type']) : 'Utility';
-                                    } else {
-                                        $typeClass = 'bg-success';
-                                        $typeText = 'Rent';
-                                    }
-                                    ?>
-                                    <span class="badge <?php echo $typeClass; ?>"><?php echo $typeText; ?></span>
-                                </td>
-                                <td>
-                                    <span class="badge bg-secondary"><?php echo htmlspecialchars($payment['payment_method'] ?? 'N/A'); ?></span>
-                                </td>
-                                <td>
-                                    <?php if (!empty($payment['transaction_code'])): ?>
-                                        <code class="text-primary"><?php echo htmlspecialchars($payment['transaction_code']); ?></code>
-                                    <?php else: ?>
-                                        <span class="text-muted">-</span>
-                                    <?php endif; ?>
-                                </td>
-                                <td>
-                                    <?php if (!empty($payment['phone_number'])): ?>
-                                        <span class="text-dark"><?php echo htmlspecialchars($payment['phone_number']); ?></span>
-                                    <?php else: ?>
-                                        <span class="text-muted">-</span>
-                                    <?php endif; ?>
-                                </td>
-                                <td>
-                                    <?php 
-                                    $status = $payment['status'] ?? 'completed';
-                                    $statusClass = 'bg-success';
-                                    $statusText = 'Paid';
-                                    
-                                    if ($status === 'pending_verification') {
-                                        $statusClass = 'bg-warning';
-                                        $statusText = 'Pending';
-                                    } elseif ($status === 'failed') {
-                                        $statusClass = 'bg-danger';
-                                        $statusText = 'Failed';
-                                    }
-                                    ?>
-                                    <span class="badge <?php echo $statusClass; ?>"><?php echo $statusText; ?></span>
-                                </td>
-                                <td>
-                                    <a href="<?= BASE_URL ?>/tenant/payment/receipt/<?php echo urlencode($payment['id']); ?>" class="btn btn-sm btn-primary" target="_blank">PDF</a>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                        <?php else: ?>
-                            <tr><td colspan="8" class="text-center">No payments found.</td></tr>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
+ 
 
     <!-- Utilities Table -->
     <div class="card mb-4">
-        <div class="card-header fw-bold">Utilities</div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-striped mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Type</th>
-                            <th>Meter Number</th>
-                            <th>Current Reading</th>
-                            <th>Previous Reading</th>
-                            <th>Amount Due</th>
-                            <th>Last Updated</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    <?php if (!empty($utilities)): ?>
-                        <?php foreach ($utilities as $utility): ?>
-                            <tr<?php if (isset($utility['net_amount']) && $utility['net_amount'] > 0) echo ' class="table-danger"'; ?>>
-                                <td>
-                                    <span class="badge bg-<?php echo $utility['utility_type'] === 'electricity' ? 'warning' : ($utility['utility_type'] === 'water' ? 'info' : 'secondary'); ?> text-dark">
-                                        <?php echo ucfirst($utility['utility_type']); ?>
-                                    </span>
-                                </td>
-                                <td>
-                                    <?php if ($utility['is_metered'] && !empty($utility['meter_number'])): ?>
-                                        <span class="fw-bold"><?php echo htmlspecialchars($utility['meter_number']); ?></span>
-                                    <?php else: ?>
-                                        <span class="text-muted">Flat Rate</span>
-                                    <?php endif; ?>
-                                </td>
-                                <td>
-                                    <?php if ($utility['is_metered']): ?>
-                                        <?php echo !empty($utility['reading_value']) ? number_format($utility['reading_value']) : 'N/A'; ?>
-                                    <?php else: ?>
-                                        <span class="text-muted">N/A</span>
-                                    <?php endif; ?>
-                                </td>
-                                <td>
-                                    <?php if ($utility['is_metered']): ?>
-                                        <?php echo !empty($utility['previous_reading_value']) ? number_format($utility['previous_reading_value']) : 'N/A'; ?>
-                                    <?php else: ?>
-                                        <span class="text-muted">N/A</span>
-                                    <?php endif; ?>
-                                </td>
-                                <td>
-                                    <span class="fw-bold text-<?php echo (isset($utility['net_amount']) && $utility['net_amount'] > 0) ? 'danger' : 'success'; ?>">
-                                        Ksh <?php echo number_format($utility['amount'] ?? 0, 2); ?>
-                                    </span>
-                                </td>
-                                <td>
-                                    <?php if (!empty($utility['reading_date'])): ?>
-                                        <?php echo date('M j, Y', strtotime($utility['reading_date'])); ?>
-                                    <?php else: ?>
-                                        <span class="text-muted">Never</span>
-                                    <?php endif; ?>
-                                </td>
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <div class="fw-bold">Utilities</div>
+            <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#tenantUtilitiesCollapse" aria-expanded="true" aria-controls="tenantUtilitiesCollapse" data-tenant-collapse-toggle="1">Collapse</button>
+        </div>
+        <div id="tenantUtilitiesCollapse" class="collapse show">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-striped mb-0">
+                        <thead class="bg-light">
+                            <tr>
+                                <th>Type</th>
+                                <th>Meter Number</th>
+                                <th>Current Reading</th>
+                                <th>Previous Reading</th>
+                                <th>Amount Due</th>
+                                <th>Last Updated</th>
                             </tr>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <tr><td colspan="6" class="text-center">No utilities found.</td></tr>
-                    <?php endif; ?>
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                        <?php if (!empty($utilities)): ?>
+                            <?php foreach ($utilities as $utility): ?>
+                                <tr<?php if (isset($utility['net_amount']) && $utility['net_amount'] > 0) echo ' class="table-danger"'; ?>>
+                                    <td>
+                                        <span class="badge bg-<?php echo $utility['utility_type'] === 'electricity' ? 'warning' : ($utility['utility_type'] === 'water' ? 'info' : 'secondary'); ?> text-dark">
+                                            <?php echo ucfirst($utility['utility_type']); ?>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <?php if ($utility['is_metered'] && !empty($utility['meter_number'])): ?>
+                                            <span class="fw-bold"><?php echo htmlspecialchars($utility['meter_number']); ?></span>
+                                        <?php else: ?>
+                                            <span class="text-muted">Flat Rate</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <?php if ($utility['is_metered']): ?>
+                                            <?php echo !empty($utility['reading_value']) ? number_format($utility['reading_value']) : 'N/A'; ?>
+                                        <?php else: ?>
+                                            <span class="text-muted">N/A</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <?php if ($utility['is_metered']): ?>
+                                            <?php echo !empty($utility['previous_reading_value']) ? number_format($utility['previous_reading_value']) : 'N/A'; ?>
+                                        <?php else: ?>
+                                            <span class="text-muted">N/A</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <span class="fw-bold text-<?php echo (isset($utility['net_amount']) && $utility['net_amount'] > 0) ? 'danger' : 'success'; ?>">
+                                            Ksh <?php echo number_format($utility['amount'] ?? 0, 2); ?>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <?php if (!empty($utility['reading_date'])): ?>
+                                            <?php echo date('M j, Y', strtotime($utility['reading_date'])); ?>
+                                        <?php else: ?>
+                                            <span class="text-muted">Never</span>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <tr><td colspan="6" class="text-center">No utilities found.</td></tr>
+                        <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
@@ -909,114 +805,119 @@
     <div class="card mb-4">
         <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="mb-0 fw-bold">Maintenance Requests</h5>
-            <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#maintenanceRequestModal">
-                <i class="bi bi-plus-lg me-1"></i>New Request
-            </button>
+            <div class="d-flex align-items-center gap-2">
+                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#tenantMaintenanceCollapse" aria-expanded="true" aria-controls="tenantMaintenanceCollapse" data-tenant-collapse-toggle="1">Collapse</button>
+                <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#maintenanceRequestModal">
+                    <i class="bi bi-plus-lg me-1"></i>New Request
+                </button>
+            </div>
         </div>
-        <div class="card-body p-0">
-            <div class="table-responsive">
-                <table class="table table-striped mb-0">
-                    <thead class="table-light">
-                        <tr>
-                            <th>Title</th>
-                            <th>Unit</th>
-                            <th>Category</th>
-                            <th>Priority</th>
-                            <th>Status</th>
-                            <th>Requested Date</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="maintenanceRequestsTable">
-                        <?php if (empty($maintenanceRequests)): ?>
+        <div id="tenantMaintenanceCollapse" class="collapse show">
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
                             <tr>
-                                <td colspan="7" class="text-center py-4">
-                                    <i class="bi bi-tools display-4 text-muted mb-3 d-block"></i>
-                                    <h5>No maintenance requests found</h5>
-                                    <p class="text-muted">Submit your first maintenance request</p>
-                                </td>
+                                <th>Request</th>
+                                <th>Unit</th>
+                                <th>Category</th>
+                                <th>Priority</th>
+                                <th>Status</th>
+                                <th>Requested</th>
+                                <th>Actions</th>
                             </tr>
-                        <?php else: ?>
-                            <?php foreach ($maintenanceRequests as $request): ?>
+                        </thead>
+                        <tbody id="maintenanceRequestsTable">
+                            <?php if (empty($maintenanceRequests)): ?>
                                 <tr>
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            <div class="me-2">
-                                                <?php
-                                                $categoryIcons = [
-                                                    'plumbing' => 'bi-droplet',
-                                                    'electrical' => 'bi-lightning',
-                                                    'hvac' => 'bi-thermometer',
-                                                    'appliance' => 'bi-gear',
-                                                    'structural' => 'bi-building',
-                                                    'pest_control' => 'bi-bug',
-                                                    'cleaning' => 'bi-broom',
-                                                    'other' => 'bi-tools'
-                                                ];
-                                                $icon = $categoryIcons[$request['category']] ?? 'bi-tools';
-                                                ?>
-                                                <i class="bi <?= $icon ?> text-primary"></i>
-                                            </div>
-                                            <div>
-                                                <strong><?= htmlspecialchars($request['title']) ?></strong>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-info text-white">
-                                            <?= htmlspecialchars($request['unit_number'] ?? 'N/A') ?>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <span class="badge bg-light text-dark">
-                                            <?= ucwords(str_replace('_', ' ', $request['category'])) ?>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <?php
-                                        $priorityColors = [
-                                            'urgent' => 'danger',
-                                            'high' => 'warning',
-                                            'medium' => 'info',
-                                            'low' => 'secondary'
-                                        ];
-                                        $priorityColor = $priorityColors[$request['priority']] ?? 'secondary';
-                                        ?>
-                                        <span class="badge bg-<?= $priorityColor ?>">
-                                            <?= ucfirst($request['priority']) ?>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <?php
-                                        $statusColors = [
-                                            'completed' => 'success',
-                                            'in_progress' => 'primary',
-                                            'pending' => 'warning',
-                                            'cancelled' => 'danger'
-                                        ];
-                                        $statusColor = $statusColors[$request['status']] ?? 'secondary';
-                                        ?>
-                                        <span class="badge bg-<?= $statusColor ?>">
-                                            <?= ucwords(str_replace('_', ' ', $request['status'])) ?>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <?= date('M j, Y', strtotime($request['requested_date'])) ?>
-                                        <br>
-                                        <small class="text-muted"><?= date('g:i A', strtotime($request['requested_date'])) ?></small>
-                                    </td>
-                                    <td>
-                                        <div class="btn-group">
-                                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="showMaintenanceRequestDetails(<?= $request['id'] ?>)">
-                                                <i class="bi bi-eye"></i>
-                                            </button>
-                                        </div>
+                                    <td colspan="7" class="text-center py-4">
+                                        <i class="bi bi-tools display-4 text-muted mb-3 d-block"></i>
+                                        <h5>No maintenance requests found</h5>
+                                        <p class="text-muted">Submit your first maintenance request</p>
                                     </td>
                                 </tr>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
+                            <?php else: ?>
+                                <?php foreach ($maintenanceRequests as $request): ?>
+                                    <tr>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="me-2">
+                                                    <?php
+                                                    $categoryIcons = [
+                                                        'plumbing' => 'bi-droplet',
+                                                        'electrical' => 'bi-lightning',
+                                                        'hvac' => 'bi-thermometer',
+                                                        'appliance' => 'bi-gear',
+                                                        'structural' => 'bi-building',
+                                                        'pest_control' => 'bi-bug',
+                                                        'cleaning' => 'bi-broom',
+                                                        'other' => 'bi-tools'
+                                                    ];
+                                                    $icon = $categoryIcons[$request['category']] ?? 'bi-tools';
+                                                    ?>
+                                                    <i class="bi <?= $icon ?> text-primary"></i>
+                                                </div>
+                                                <div>
+                                                    <strong><?= htmlspecialchars($request['title']) ?></strong>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-info text-white">
+                                                <?= htmlspecialchars($request['unit_number'] ?? 'N/A') ?>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-light text-dark">
+                                                <?= ucwords(str_replace('_', ' ', $request['category'])) ?>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <?php
+                                            $priorityColors = [
+                                                'urgent' => 'danger',
+                                                'high' => 'warning',
+                                                'medium' => 'info',
+                                                'low' => 'secondary'
+                                            ];
+                                            $priorityColor = $priorityColors[$request['priority']] ?? 'secondary';
+                                            ?>
+                                            <span class="badge bg-<?= $priorityColor ?>">
+                                                <?= ucfirst($request['priority']) ?>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <?php
+                                            $statusColors = [
+                                                'completed' => 'success',
+                                                'in_progress' => 'primary',
+                                                'pending' => 'warning',
+                                                'cancelled' => 'danger'
+                                            ];
+                                            $statusColor = $statusColors[$request['status']] ?? 'secondary';
+                                            ?>
+                                            <span class="badge bg-<?= $statusColor ?>">
+                                                <?= ucwords(str_replace('_', ' ', $request['status'])) ?>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <?= date('M j, Y', strtotime($request['requested_date'])) ?>
+                                            <br>
+                                            <small class="text-muted"><?= date('g:i A', strtotime($request['requested_date'])) ?></small>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group">
+                                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="showMaintenanceRequestDetails(<?= $request['id'] ?>)">
+                                                    <i class="bi bi-eye"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
@@ -1565,6 +1466,34 @@
 
       refreshBadge();
       setInterval(refreshBadge, 45000);
+    } catch (e) {}
+  })();
+</script>
+
+<script>
+  (function(){
+    try {
+      var buttons = Array.prototype.slice.call(document.querySelectorAll('button[data-tenant-collapse-toggle][data-bs-target]'));
+      if (!buttons.length) return;
+
+      var setLabel = function(btn, expanded){
+        try {
+          btn.textContent = expanded ? 'Collapse' : 'Expand';
+        } catch (e) {}
+      };
+
+      buttons.forEach(function(btn){
+        var targetSel = btn.getAttribute('data-bs-target');
+        if (!targetSel) return;
+        var target = document.querySelector(targetSel);
+        if (!target) return;
+
+        // initial
+        setLabel(btn, target.classList.contains('show'));
+
+        target.addEventListener('shown.bs.collapse', function(){ setLabel(btn, true); });
+        target.addEventListener('hidden.bs.collapse', function(){ setLabel(btn, false); });
+      });
     } catch (e) {}
   })();
 </script>
