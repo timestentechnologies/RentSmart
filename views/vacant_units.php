@@ -1,5 +1,6 @@
 <?php
 // Expect: $vacantUnits, $siteName, $favicon
+if (!defined('BASE_URL')) { define('BASE_URL', ''); }
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -7,10 +8,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= htmlspecialchars($siteName) ?> | Vacant Units</title>
-    <?php
-    $faviconUrl = $favicon ? BASE_URL . '/public/assets/images/' . $favicon : BASE_URL . '/public/assets/images/site_favicon_1750832003.png';
-    ?>
+    <?php $faviconUrl = site_setting_image_url('site_favicon', BASE_URL . '/public/assets/images/site_favicon_1750832003.png'); ?>
     <link rel="icon" type="image/png" sizes="32x32" href="<?= htmlspecialchars($faviconUrl) ?>">
+    <link rel="icon" type="image/png" sizes="96x96" href="<?= htmlspecialchars($faviconUrl) ?>">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
     <style>
@@ -43,20 +43,31 @@
             box-shadow: 0 2px 6px rgba(0,0,0,0.25);
         }
     </style>
-    <?php if (!defined('BASE_URL')) { define('BASE_URL', ''); } ?>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg">
+    <nav class="navbar navbar-expand-lg navbar-light sticky-top">
         <div class="container">
-            <a class="navbar-brand d-flex align-items-center" href="<?= BASE_URL ?>/home">
-                <?php if (!empty($siteLogo)): ?>
-                    <img src="<?= htmlspecialchars($siteLogo) ?>" alt="<?= htmlspecialchars($siteName) ?> Logo" style="height:40px;">
-                <?php endif; ?>
+            <a class="navbar-brand d-flex align-items-center" href="<?= BASE_URL ?>/">
+                <img src="<?= asset('images/site_logo_1751627446.png') ?>" alt="<?= htmlspecialchars($siteName) ?> Logo" style="height:40px;">
             </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav"><span class="navbar-toggler-icon"></span></button>
-            <div id="nav" class="collapse navbar-collapse">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>/home">Home</a></li>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div id="navbarNav" class="collapse navbar-collapse">
+                <ul class="navbar-nav ms-auto align-items-lg-center">
+                    <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>/">Home</a></li>
+                    <li class="nav-item"><a class="nav-link active" href="<?= BASE_URL ?>/vacant-units">Vacant Units</a></li>
+                    <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>/#features">Features</a></li>
+                    <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>/#pricing">Pricing</a></li>
+                    <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>/#testimonials">Testimonials</a></li>
+                    <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>/#faq">FAQs</a></li>
+                    <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>/contact">Contact Us</a></li>
+                    <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>/docs">Documentation</a></li>
+                    <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>/terms">Terms</a></li>
+                    <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>/privacy-policy">Privacy</a></li>
+                    <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>/login">Login</a></li>
+                    <li class="nav-item ms-lg-2"><a class="btn btn-outline-primary" href="<?= BASE_URL ?>/">Home</a></li>
+                    <li class="nav-item ms-lg-2"><a class="btn btn-gradient" href="<?= BASE_URL ?>/register">Get Started - 7 Days Free</a></li>
                 </ul>
             </div>
         </div>
