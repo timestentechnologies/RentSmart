@@ -30,8 +30,8 @@
 
   <header class="docs-hero">
     <div class="container">
-      <h1 class="display-6 fw-bold mb-2">RentSmart Documentation</h1>
-      <p class="lead mb-0">Comprehensive guide for landlords, property managers, agents, caretakers, tenants, and administrators.</p>
+      <h1 class="display-6 fw-bold mb-2"><?= htmlspecialchars(site_setting('docs_hero_title', 'RentSmart Documentation')) ?></h1>
+      <p class="lead mb-0"><?= htmlspecialchars(site_setting('docs_hero_subtitle', 'Comprehensive guide for landlords, property managers, agents, caretakers, tenants, and administrators.')) ?></p>
     </div>
   </header>
 
@@ -69,6 +69,11 @@
       <main class="col-lg-9">
         <div class="card docs-card mb-4">
           <div class="card-body">
+
+            <?php
+            $docsBodyDefault = '';
+            ob_start();
+            ?>
 
             <!-- Getting Started -->
             <section id="getting-started">
@@ -301,6 +306,11 @@
                 <li>Visit the Contact page for additional resources.</li>
               </ul>
             </section>
+
+            <?php
+            $docsBodyDefault = ob_get_clean();
+            echo site_setting('docs_body_html', $docsBodyDefault);
+            ?>
 
           </div>
         </div>

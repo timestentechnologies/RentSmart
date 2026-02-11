@@ -687,6 +687,82 @@ class SettingsController
 
             'terms_header' => 'Terms of Service',
             'privacy_header' => 'Privacy Policy',
+
+            'terms_body_html' => '<p class="lead">Last updated: ' . date('F d, Y') . '</p>'
+                . '<h2>1. Acceptance of Terms</h2><p>By accessing and using RentSmart, you accept and agree to be bound by the terms and conditions of this agreement.</p>'
+                . '<h2>2. Description of Service</h2><p>RentSmart provides property management software services including:</p>'
+                . '<ul><li>Property and tenant management</li><li>Rent collection and payment processing</li><li>Financial reporting</li><li>Document management</li></ul>'
+                . '<h2>3. User Accounts</h2><p>To use RentSmart, you must:</p>'
+                . '<ul><li>Create an account with accurate information</li><li>Maintain the security of your account</li><li>Notify us of any unauthorized access</li><li>Be at least 18 years old</li></ul>'
+                . '<h2>4. Subscription and Payments</h2><p>Our service is provided on a subscription basis:</p>'
+                . '<ul><li>Subscription fees are billed monthly or annually</li><li>Payments are non-refundable</li><li>We may change pricing with 30 days notice</li><li>Free trial periods are available for new users</li></ul>'
+                . '<h2>5. User Responsibilities</h2><p>You agree to:</p>'
+                . '<ul><li>Comply with all applicable laws</li><li>Maintain accurate records</li><li>Protect tenant privacy</li><li>Use the service responsibly</li></ul>'
+                . '<h2>6. Data Ownership</h2><p>You retain all rights to your data. We will:</p>'
+                . '<ul><li>Protect your data security</li><li>Not access your data without permission</li><li>Delete your data upon account termination</li><li>Allow data export in standard formats</li></ul>'
+                . '<h2>7. Service Availability</h2><p>While we strive for 99.9% uptime:</p>'
+                . '<ul><li>We may perform scheduled maintenance</li><li>Service may be occasionally interrupted</li><li>We\'re not liable for downtime beyond our control</li></ul>'
+                . '<h2>8. Termination</h2><p>We may terminate service if you:</p>'
+                . '<ul><li>Violate these terms</li><li>Fail to pay subscription fees</li><li>Engage in fraudulent activity</li><li>Abuse the service</li></ul>'
+                . '<h2>9. Contact Information</h2><p>For questions about these terms, contact us at:</p>'
+                . '<ul><li>Email: legal@rentsmart.com</li><li>Phone: +254 700 000000</li><li>Address: Nairobi, Kenya</li></ul>',
+
+            'privacy_body_html' => '<p class="lead">Last updated: ' . date('F d, Y') . '</p>'
+                . '<h2>1. Information We Collect</h2><p>We collect information that you provide directly to us, including:</p>'
+                . '<ul><li>Name and contact information</li><li>Property management details</li><li>Payment information</li><li>Communication preferences</li></ul>'
+                . '<h2>2. How We Use Your Information</h2><p>We use the information we collect to:</p>'
+                . '<ul><li>Provide and maintain our services</li><li>Process your transactions</li><li>Send you important updates</li><li>Improve our services</li><li>Comply with legal obligations</li></ul>'
+                . '<h2>3. Information Sharing</h2><p>We do not sell your personal information. We may share your information with:</p>'
+                . '<ul><li>Service providers who assist in our operations</li><li>Legal authorities when required by law</li><li>Business partners with your consent</li></ul>'
+                . '<h2>4. Data Security</h2><p>We implement appropriate security measures to protect your personal information, including:</p>'
+                . '<ul><li>Encryption of sensitive data</li><li>Regular security assessments</li><li>Access controls and authentication</li><li>Secure data storage</li></ul>'
+                . '<h2>5. Your Rights</h2><p>You have the right to:</p>'
+                . '<ul><li>Access your personal information</li><li>Correct inaccurate data</li><li>Request deletion of your data</li><li>Opt-out of marketing communications</li></ul>'
+                . '<h2>6. Contact Us</h2><p>If you have any questions about this Privacy Policy, please contact us at:</p>'
+                . '<ul><li>Email: privacy@rentsmart.com</li><li>Phone: +254 700 000000</li><li>Address: Nairobi, Kenya</li></ul>',
+
+            'contact_phone' => '+254 795 155 230',
+            'contact_email' => 'rentsmart@timestentechnologies.co.ke',
+            'contact_address' => 'Nairobi, Kenya',
+
+            'docs_hero_title' => 'RentSmart Documentation',
+            'docs_hero_subtitle' => 'Comprehensive guide for landlords, property managers, agents, caretakers, tenants, and administrators.',
+            'docs_body_html' => '<section id="getting-started"><h2>Getting Started</h2><p>Sign up for a free trial, configure your company profile, add properties and units, and invite team members.</p>'
+                . '<ol><li>Register an account from the homepage.</li><li>Go to Settings → update Company name, logo, email, and phone.</li><li>Add Properties and Units; set rent amounts and occupancy details.</li><li>Add Tenants and create Leases for units.</li><li>Invite your team with role-specific permissions.</li></ol></section><hr>'
+                . '<section id="user-roles"><h2>User Roles & Permissions</h2><p>Assign roles to users to control access:</p>'
+                . '<ul><li><strong>Admin:</strong> Full access to system features, reporting, user management.</li><li><strong>Landlord:</strong> Monitor properties, tenants, leases, payments, notices.</li><li><strong>Property Manager / Agent:</strong> Manage properties, leases, tenants, maintenance, and notices.</li><li><strong>Caretaker:</strong> Update unit status, submit maintenance updates.</li><li><strong>Tenant:</strong> Access lease details, make payments, submit maintenance requests, and view notices.</li></ul>'
+                . '<p><em>Tip:</em> Use role-based permissions to maintain security and ensure accountability.</p></section><hr>'
+                . '<section id="properties"><h2>Properties & Units</h2><p>Manage property and unit details efficiently:</p>'
+                . '<ul><li><strong>Properties:</strong> Create, edit, and upload documents or images for each property.</li><li><strong>Units:</strong> Add multiple units, assign rent, occupancy status, and link tenants via leases.</li><li>Track vacant and occupied units for better occupancy management.</li></ul>'
+                . '<p><em>Tip:</em> Update unit details whenever tenants move in/out to keep records accurate.</p></section><hr>'
+                . '<section id="tenants"><h2>Tenants & Leases</h2><p>Create and manage tenants and their leases:</p>'
+                . '<ul><li>Link active leases to units, setting rent, deposit, and lease duration.</li><li>Track tenant payment history, arrears, and lease expiry.</li><li>Generate reports for tenant balances and overdue payments.</li></ul></section><hr>'
+                . '<section id="payments"><h2>Payments & Invoices</h2><p>Track all payments and generate invoices:</p>'
+                . '<ul><li>Record rent and utility payments (supports M-PESA manual logs).</li><li>Create invoices with multiple line items, apply tax, and post to ledger.</li><li>Download or email invoices in PDF format to tenants.</li><li>Automatic ledger posting ensures accounting consistency.</li></ul>'
+                . '<p><em>Tip:</em> Reconcile payments weekly to avoid discrepancies.</p></section><hr>'
+                . '<section id="maintenance"><h2>Maintenance</h2><p>Track maintenance requests and costs:</p>'
+                . '<ul><li>Tenants or caretakers can submit requests via the system.</li><li>Record actual maintenance cost; optionally deduct from tenant rent balance.</li><li>Track maintenance status and completion dates for reporting.</li></ul></section><hr>'
+                . '<section id="utilities"><h2>Utilities</h2><p>Manage utilities efficiently:</p>'
+                . '<ul><li>Add metered or flat utilities per unit.</li><li>Record readings or monthly charges.</li><li>Include utilities in tenant invoices for accurate billing.</li></ul></section><hr>'
+                . '<section id="messaging"><h2>Messaging</h2><p>Communicate securely within RentSmart:</p>'
+                . '<ul><li>Chat with tenants, managers, caretakers, and admins in real-time.</li><li>Broadcast notices or individual messages.</li><li>Keep all communication centralized for auditing and tracking.</li></ul></section><hr>'
+                . '<section id="notices"><h2>Notices</h2><p>Broadcast or schedule notices to tenants and staff:</p>'
+                . '<ul><li>Send notices by property, unit, or individual tenant.</li><li>Schedule future notifications for rent reminders or announcements.</li><li>Track which tenants have read the notices.</li></ul></section><hr>'
+                . '<section id="accounting"><h2>Accounting</h2><p>Comprehensive accounting module:</p>'
+                . '<ul><li>Chart of Accounts, General Ledger, Trial Balance.</li><li>Profit & Loss, Balance Sheet reporting.</li><li>Invoices automatically post to accounts receivable/revenue.</li></ul></section><hr>'
+                . '<section id="esign"><h2>E‑Signatures</h2><p>Digitally sign documents securely:</p>'
+                . '<ul><li>Create signature requests for tenants, managers, or staff.</li><li>Share public links for document signing.</li><li>Track signature status and download signed documents.</li></ul></section><hr>'
+                . '<section id="tenant-portal"><h2>Tenant Portal</h2><p>Tenant self-service portal:</p>'
+                . '<ul><li>View active lease, rent due, and payment history.</li><li>Submit maintenance requests and track progress.</li><li>Receive notices and communicate with property managers.</li></ul></section><hr>'
+                . '<section id="reports"><h2>Reports & Analytics</h2><p>Generate detailed reports for operational insights:</p>'
+                . '<ul><li>Occupancy & vacancy reports per property/unit.</li><li>Tenant payment history & arrears.</li><li>Maintenance cost and completion analytics.</li><li>Revenue, Profit & Loss, Trial Balance, Balance Sheet.</li><li>Export reports in PDF, Excel, or CSV format.</li></ul></section><hr>'
+                . '<section id="notifications"><h2>Notifications & Alerts</h2><p>Automated alerts for timely actions:</p>'
+                . '<ul><li>Upcoming rent due notifications for tenants.</li><li>Lease expiry alerts for managers and landlords.</li><li>Maintenance updates and completion notifications.</li><li>System alerts for unpaid balances or failed payments.</li></ul></section><hr>'
+                . '<section id="mobile-access"><h2>Mobile & Accessibility</h2><p>RentSmart is fully responsive and mobile-friendly:</p>'
+                . '<ul><li>Access all core features on tablets and smartphones.</li><li>Tenants can pay rent and submit requests on the go.</li><li>Receive push notifications for alerts and updates.</li></ul></section><hr>'
+                . '<section id="tips-best-practices"><h2>Tips & Best Practices</h2><ul><li>Update property and unit details regularly for accurate records.</li><li>Use scheduled maintenance tracking to prevent overdue repairs.</li><li>Reconcile payments weekly to avoid accounting errors.</li><li>Encourage tenants to use the portal for payments and requests.</li><li>Regularly back up system data and maintain user role security.</li></ul></section><hr>'
+                . '<section id="faq"><h2>FAQ & Support</h2><p>For questions or help, contact:</p>'
+                . '<ul><li>Email: <a href="mailto:rentsmart@timestentechnologies.co.ke">rentsmart@timestentechnologies.co.ke</a></li><li>Phone: +254 795 155 230</li><li>In-app Messaging for real-time support</li><li>Visit the Contact page for additional resources.</li></ul></section>',
         ];
 
         foreach ($defaults as $key => $value) {
@@ -745,8 +821,19 @@ class SettingsController
                 'contact_hero_title',
                 'contact_hero_subtitle',
 
+                'contact_phone',
+                'contact_email',
+                'contact_address',
+
                 'terms_header',
                 'privacy_header',
+
+                'terms_body_html',
+                'privacy_body_html',
+
+                'docs_hero_title',
+                'docs_hero_subtitle',
+                'docs_body_html',
             ];
 
             foreach ($allowedTextKeys as $key) {
