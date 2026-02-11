@@ -42,6 +42,9 @@ register_shutdown_function(function () {
 
         $debugFile = rtrim(sys_get_temp_dir(), '/\\') . DIRECTORY_SEPARATOR . 'rentsmart_last_error.json';
         @file_put_contents($debugFile, json_encode($payload));
+
+        $debugFile2 = __DIR__ . DIRECTORY_SEPARATOR . 'logs' . DIRECTORY_SEPARATOR . 'rentsmart_last_error.json';
+        @file_put_contents($debugFile2, json_encode($payload));
     } catch (\Throwable $ignore) {
     }
 });
@@ -861,6 +864,9 @@ try {
         ];
         $debugFile = rtrim(sys_get_temp_dir(), '/\\') . DIRECTORY_SEPARATOR . 'rentsmart_last_error.json';
         @file_put_contents($debugFile, json_encode($debugPayload));
+
+        $debugFile2 = __DIR__ . DIRECTORY_SEPARATOR . 'logs' . DIRECTORY_SEPARATOR . 'rentsmart_last_error.json';
+        @file_put_contents($debugFile2, json_encode($debugPayload));
     } catch (\Throwable $ignore) {
     }
 
