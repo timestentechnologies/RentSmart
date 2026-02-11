@@ -12,6 +12,8 @@ use App\Models\MaintenanceRequest;
 use App\Models\PaymentMethod;
 use App\Models\Notice;
 use App\Models\Message;
+use App\Models\ESignRequest;
+use App\Models\Invoice;
 
 class TenantPortalController
 {
@@ -72,6 +74,14 @@ class TenantPortalController
         $stmt = $msgModel->getDb()->prepare("SELECT * FROM messages WHERE (receiver_type = 'tenant' AND receiver_id = ?) OR (sender_type = 'tenant' AND sender_id = ?) ORDER BY created_at DESC LIMIT 10");
         $stmt->execute([(int)$tenantId, (int)$tenantId]);
         $tenantMessages = $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+
+        // E-signature requests received by this tenant
+        $esignModel = new ESignRequest();
+        $tenantESignRequests = $esignModel->listForTenantRecipient((int)$tenantId, 10);
+
+        // Tenant invoices
+        $invoiceModel = new Invoice();
+        $tenantInvoices = $invoiceModel->listForTenant((int)$tenantId, 10);
         require_once __DIR__ . '/../../views/tenant/dashboard.php';
     }
 } 

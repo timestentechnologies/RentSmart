@@ -414,6 +414,10 @@ $routes = [
     'tenant/payment/stk-callback' => ['controller' => 'TenantPaymentController', 'action' => 'handleSTKCallback'],
     'tenant/payment/history' => ['controller' => 'TenantPaymentController', 'action' => 'history'],
     'tenant/payment/receipt/(\d+)' => ['controller' => 'TenantPaymentController', 'action' => 'receipt'],
+
+    'tenant/invoices/pdf/(\d+)' => ['controller' => 'TenantInvoicesController', 'action' => 'pdf'],
+
+    'tenant/statements/pdf' => ['controller' => 'TenantStatementsController', 'action' => 'pdf'],
     
     // Admin Maintenance routes
     'maintenance' => ['controller' => 'MaintenanceController', 'action' => 'index'],
