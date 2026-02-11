@@ -118,6 +118,70 @@ if (!function_exists('asset')) {
     }
 }
 
+if (!function_exists('site_settings_all')) {
+    function site_settings_all()
+    {
+        static $cache = null;
+        if (is_array($cache)) {
+            return $cache;
+        }
+
+        try {
+            if (!class_exists('App\\Models\\Setting')) {
+                require_once __DIR__ . '/Models/Setting.php';
+            }
+            $settingsModel = new \App\Models\Setting();
+            $cache = $settingsModel->getAllAsAssoc();
+            if (!is_array($cache)) {
+                $cache = [];
+            }
+        } catch (\Exception $e) {
+            error_log('site_settings_all failed: ' . $e->getMessage());
+            $cache = [];
+        }
+
+        return $cache;
+    }
+}
+
+if (!function_exists('site_setting')) {
+    function site_setting($key, $default = '')
+    {
+        $settings = site_settings_all();
+        if (isset($settings[$key]) && $settings[$key] !== '') {
+            return $settings[$key];
+        }
+        return $default;
+    }
+}
+
+if (!function_exists('site_setting_image_url')) {
+    function site_setting_image_url($key, $defaultUrl = '')
+    {
+        $filename = trim((string)site_setting($key, ''));
+        if ($filename !== '') {
+            return BASE_URL . '/public/assets/images/' . ltrim($filename, '/');
+        }
+        return $defaultUrl;
+    }
+}
+
+if (!function_exists('site_setting_json')) {
+    function site_setting_json($key, $default = [])
+    {
+        $raw = site_setting($key, '');
+        if ($raw === '' || $raw === null) {
+            return $default;
+        }
+
+        $decoded = json_decode((string)$raw, true);
+        if (json_last_error() !== JSON_ERROR_NONE || $decoded === null) {
+            return $default;
+        }
+        return $decoded;
+    }
+}
+
 // Polyfill for getallheaders on environments where it's unavailable
 if (!function_exists('getallheaders')) {
     function getallheaders()

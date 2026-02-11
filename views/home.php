@@ -735,6 +735,76 @@
     if (!defined('BASE_URL')) {
         define('BASE_URL', '/rentsmart');
     }
+
+    $heroTitle = site_setting('home_hero_title', 'Property Management Made Easy');
+    $heroSubtitle = site_setting('home_hero_subtitle', 'Streamline your property management with RentSmart. The all-in-one solution for landlords and property managers.');
+    $heroPrimaryText = site_setting('home_hero_primary_text', 'Start 7-Day Free Trial');
+    $heroSecondaryText = site_setting('home_hero_secondary_text', 'Learn More');
+
+    $stats = [
+        [
+            'number' => site_setting('home_stat1_number', '500+'),
+            'label' => site_setting('home_stat1_label', 'Properties Managed'),
+        ],
+        [
+            'number' => site_setting('home_stat2_number', '500+'),
+            'label' => site_setting('home_stat2_label', 'Happy Clients'),
+        ],
+        [
+            'number' => site_setting('home_stat3_number', '99%'),
+            'label' => site_setting('home_stat3_label', 'Customer Satisfaction'),
+        ],
+        [
+            'number' => site_setting('home_stat4_number', '24/7'),
+            'label' => site_setting('home_stat4_label', 'Support Available'),
+        ],
+    ];
+
+    $splitBadge = site_setting('home_split_badge', 'All-in-one platform');
+    $splitTitle = site_setting('home_split_title', 'Manage Rent, Utilities & Maintenance in One Place');
+    $splitDescription = site_setting('home_split_description', 'Track payments, utilities, and maintenance requests with clear records and automated invoicing—so landlords and tenants always know what is due and what has been paid.');
+    $splitImage = site_setting('home_split_image', '');
+    $splitImageUrl = $splitImage !== '' ? asset('images/' . $splitImage) : asset('images/new.png');
+    $splitBullets = site_setting_json('home_split_bullets_json', [
+        ['title' => 'Accurate payment types', 'text' => 'Rent, utilities, and maintenance always recorded correctly.'],
+        ['title' => 'Automated invoicing', 'text' => 'Invoices update based on what was paid—no confusion.'],
+        ['title' => 'Tenant self-service', 'text' => 'Tenants can pay and track balances from the portal.'],
+    ]);
+
+    $whyTitle = site_setting('home_why_title', 'Why Choose RentSmart for Property Management?');
+    $whySubtitle = site_setting('home_why_subtitle', 'A modern, Kenyan-ready platform for landlords, managers, and agents—built for speed, clarity, and accurate records.');
+    $whyCards = site_setting_json('home_why_cards_json', [
+        ['title' => 'M-PESA ready', 'text' => 'Accept payments and keep references organized for quick verification and reporting.'],
+        ['title' => 'Secure & reliable', 'text' => 'Keep your tenant and payment records safe with a cloud-ready setup and clear audit trails.'],
+        ['title' => 'Clear dashboards', 'text' => 'See what is due, what was paid, and what needs action—without digging through spreadsheets.'],
+        ['title' => 'Accurate invoicing', 'text' => 'Rent, utilities, and maintenance are tracked separately so invoices and balances remain correct.'],
+    ]);
+
+    $testimonialsTitle = site_setting('home_testimonials_title', 'Trusted by Property Managers Across Kenya');
+    $testimonialsSubtitle = site_setting('home_testimonials_subtitle', 'See how landlords and real estate professionals are transforming their property management with RentSmart');
+    $testimonials = site_setting_json('home_testimonials_json', [
+        ['name' => 'Mercy Wanjiru', 'role' => 'Property Manager', 'text' => '"RentSmart has completely transformed how we manage our properties. The automated rent collection and reporting features save us hours every week."'],
+        ['name' => 'James Kamau', 'role' => 'Landlord', 'text' => '"The tenant portal has made communication so much easier. My tenants love being able to pay rent and submit maintenance requests online."'],
+        ['name' => 'David Kibara', 'role' => 'Real Estate Agent', 'text' => '"The financial reports and analytics help me make data-driven decisions. RentSmart has helped us increase our property portfolio\'s performance."'],
+    ]);
+
+    $faqTitle = site_setting('home_faq_title', 'Frequently Asked Questions');
+    $faqSubtitle = site_setting('home_faq_subtitle', 'Everything you need to know about RentSmart property management software');
+    $faqItems = site_setting_json('home_faq_items_json', [
+        ['q' => 'What is RentSmart property management software?', 'a' => 'RentSmart is a comprehensive cloud-based property management system designed for landlords, property managers, and real estate agents in Kenya. It helps you manage properties, tenants, rent collection, maintenance, utilities, and financial reporting all in one platform. With M-PESA integration and automated features, RentSmart simplifies rental property management.'],
+        ['q' => 'How long is the free trial period?', 'a' => 'RentSmart offers a generous 7-day free trial with full access to all features. No credit card required to start. You can explore all property management features, add properties and tenants, collect rent, and generate reports during the trial period. After 7-day, you can choose a plan that fits your needs.'],
+        ['q' => 'Does RentSmart integrate with M-PESA?', 'a' => 'Yes! RentSmart has full M-PESA integration for seamless rent collection. Tenants can pay rent directly through M-PESA, and payments are automatically recorded in the system. You\'ll receive instant notifications when payments are made, and the system automatically reconciles payments with tenant accounts.'],
+        ['q' => 'How many properties can I manage with RentSmart?', 'a' => 'The number of properties you can manage depends on your subscription plan. Our Basic plan supports up to 10 properties, Professional plan up to 50 properties, and Enterprise plan offers unlimited properties. Each property can have multiple units, and you can manage all of them from a single dashboard.'],
+        ['q' => 'Can tenants access the system?', 'a' => 'Yes! RentSmart includes a dedicated tenant portal where tenants can log in to view their lease details, make rent payments, submit maintenance requests, and access important documents. This self-service portal reduces your workload and improves tenant satisfaction.'],
+        ['q' => 'Is my data secure with RentSmart?', 'a' => 'Absolutely! RentSmart uses bank-level security with SSL encryption to protect your data. All information is stored on secure cloud servers with automatic daily backups. We comply with data protection regulations and never share your information with third parties. Your property and tenant data is safe with us.'],
+        ['q' => 'What kind of reports can I generate?', 'a' => 'RentSmart provides comprehensive financial and operational reports including: income statements, rent collection reports, occupancy reports, expense tracking, tenant payment history, maintenance reports, utility billing reports, and property performance analytics. All reports can be exported to PDF or Excel for easy sharing.'],
+        ['q' => 'Do you offer customer support?', 'a' => 'Yes! We provide excellent customer support through email at rentsmart@timestentechnologies.co.ke and phone at +254 795 155 230. Our Kenyan support team is ready to help you with setup, training, and any questions you may have. We also offer video tutorials and documentation to help you get started.'],
+    ]);
+
+    $ctaTitle = site_setting('home_cta_title', 'Transform Your Property Management Today');
+    $ctaDescription = site_setting('home_cta_description', 'Join hundreds of landlords and property managers in Kenya who are simplifying their rental business with RentSmart. Start your free trial now!');
+    $ctaButtonText = site_setting('home_cta_button_text', 'Start Your 7-Day Free Trial');
+    $ctaFootnote = site_setting('home_cta_footnote', 'No credit card required');
     ?>
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-light fixed-top">
@@ -788,13 +858,13 @@
         <div class="container">
             <div class="row align-items-center">
                 <div class="col-lg-6">
-                    <h1 class="display-4 fw-bold">Property Management Made Easy</h1>
-                    <p class="lead">Streamline your property management with RentSmart. The all-in-one solution for landlords and property managers.</p>
+                    <h1 class="display-4 fw-bold"><?= htmlspecialchars($heroTitle) ?></h1>
+                    <p class="lead"><?= htmlspecialchars($heroSubtitle) ?></p>
                     <div class="d-flex flex-wrap gap-2">
                         <a href="#" class="btn btn-accent btn-lg" data-bs-toggle="modal" data-bs-target="#registerModal">
-                            <i class="bi bi-rocket-takeoff me-2"></i>Start 7-Day Free Trial
+                            <i class="bi bi-rocket-takeoff me-2"></i><?= htmlspecialchars($heroPrimaryText) ?>
                         </a>
-                        <a href="#features" class="btn btn-outline-accent btn-lg">Learn More</a>
+                        <a href="#features" class="btn btn-outline-accent btn-lg"><?= htmlspecialchars($heroSecondaryText) ?></a>
                     </div>
                     <a href="#" class="btn btn-accent btn-lg" style="margin: 20px 0;" data-bs-toggle="modal" data-bs-target="#tenantLoginModal">Tenant Portal</a>
                 </div>
@@ -879,30 +949,14 @@
     <section class="py-5">
         <div class="container">
             <div class="row g-4">
-                <div class="col-md-3">
-                    <div class="stats-card">
-                        <div class="stats-number">500+</div>
-                        <div class="stats-label">Properties Managed</div>
+                <?php foreach ($stats as $s): ?>
+                    <div class="col-md-3">
+                        <div class="stats-card">
+                            <div class="stats-number"><?= htmlspecialchars((string)($s['number'] ?? '')) ?></div>
+                            <div class="stats-label"><?= htmlspecialchars((string)($s['label'] ?? '')) ?></div>
+                        </div>
                     </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="stats-card">
-                        <div class="stats-number">500+</div>
-                        <div class="stats-label">Happy Clients</div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="stats-card">
-                        <div class="stats-number">99%</div>
-                        <div class="stats-label">Customer Satisfaction</div>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="stats-card">
-                        <div class="stats-number">24/7</div>
-                        <div class="stats-label">Support Available</div>
-                    </div>
-                </div>
+                <?php endforeach; ?>
             </div>
         </div>
     </section>
@@ -912,21 +966,27 @@
             <div class="row align-items-center g-4">
                 <div class="col-lg-6">
                     <div style="background: transparent !important;">
-                    <img src="<?= asset('images/new.png') ?>" alt="RentSmart" class="img-fluid">
+                    <img src="<?= htmlspecialchars($splitImageUrl) ?>" alt="RentSmart" class="img-fluid">
                 </div>
 
                 </div>
                 <div class="col-lg-6">
                     <div class="split-badge mb-3">
                         <i class="bi bi-lightning-charge-fill"></i>
-                        <span>All-in-one platform</span>
+                        <span><?= htmlspecialchars($splitBadge) ?></span>
                     </div>
-                    <h2 class="fw-bold mb-3 split-title">Manage Rent, Utilities & Maintenance in One Place</h2>
-                    <p class="text-muted mb-4">Track payments, utilities, and maintenance requests with clear records and automated invoicing—so landlords and tenants always know what is due and what has been paid.</p>
+                    <h2 class="fw-bold mb-3 split-title"><?= htmlspecialchars($splitTitle) ?></h2>
+                    <p class="text-muted mb-4"><?= htmlspecialchars($splitDescription) ?></p>
                     <ul class="split-list mb-4">
-                        <li><i class="bi bi-check-circle-fill"></i><div><strong>Accurate payment types</strong><br><span class="text-muted">Rent, utilities, and maintenance always recorded correctly.</span></div></li>
-                        <li><i class="bi bi-check-circle-fill"></i><div><strong>Automated invoicing</strong><br><span class="text-muted">Invoices update based on what was paid—no confusion.</span></div></li>
-                        <li><i class="bi bi-check-circle-fill"></i><div><strong>Tenant self-service</strong><br><span class="text-muted">Tenants can pay and track balances from the portal.</span></div></li>
+                        <?php foreach ($splitBullets as $b): ?>
+                            <li>
+                                <i class="bi bi-check-circle-fill"></i>
+                                <div>
+                                    <strong><?= htmlspecialchars((string)($b['title'] ?? '')) ?></strong><br>
+                                    <span class="text-muted"><?= htmlspecialchars((string)($b['text'] ?? '')) ?></span>
+                                </div>
+                            </li>
+                        <?php endforeach; ?>
                     </ul>
                     <div class="d-flex flex-wrap gap-2">
                         <a href="#" class="btn btn-gradient" data-bs-toggle="modal" data-bs-target="#registerModal">Get Started</a>
@@ -945,57 +1005,27 @@
                     <i class="bi bi-stars"></i>
                     <span>Why RentSmart</span>
                 </div>
-                <h2 class="display-5 fw-bold">Why Choose RentSmart for Property Management?</h2>
-                <p class="lead text-muted mb-0">A modern, Kenyan-ready platform for landlords, managers, and agents—built for speed, clarity, and accurate records.</p>
+                <h2 class="display-5 fw-bold"><?= htmlspecialchars($whyTitle) ?></h2>
+                <p class="lead text-muted mb-0"><?= htmlspecialchars($whySubtitle) ?></p>
             </div>
 
             <div class="row g-4 align-items-stretch">
                 <div class="col-lg-8">
                     <div class="row g-4">
-                        <div class="col-md-6">
-                            <div class="why-card">
-                                <div class="d-flex align-items-start gap-3">
-                                    <div class="why-icon"><i class="bi bi-phone"></i></div>
-                                    <div>
-                                        <h5 class="mb-1">M-PESA ready</h5>
-                                        <p class="text-muted mb-0">Accept payments and keep references organized for quick verification and reporting.</p>
+                        <?php foreach ($whyCards as $idx => $card): ?>
+                            <?php if ($idx >= 4) { break; } ?>
+                            <div class="col-md-6">
+                                <div class="why-card">
+                                    <div class="d-flex align-items-start gap-3">
+                                        <div class="why-icon"><i class="bi bi-check2-circle"></i></div>
+                                        <div>
+                                            <h5 class="mb-1"><?= htmlspecialchars((string)($card['title'] ?? '')) ?></h5>
+                                            <p class="text-muted mb-0"><?= htmlspecialchars((string)($card['text'] ?? '')) ?></p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="why-card">
-                                <div class="d-flex align-items-start gap-3">
-                                    <div class="why-icon"><i class="bi bi-shield-check"></i></div>
-                                    <div>
-                                        <h5 class="mb-1">Secure & reliable</h5>
-                                        <p class="text-muted mb-0">Keep your tenant and payment records safe with a cloud-ready setup and clear audit trails.</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="why-card">
-                                <div class="d-flex align-items-start gap-3">
-                                    <div class="why-icon"><i class="bi bi-graph-up"></i></div>
-                                    <div>
-                                        <h5 class="mb-1">Clear dashboards</h5>
-                                        <p class="text-muted mb-0">See what is due, what was paid, and what needs action—without digging through spreadsheets.</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="why-card">
-                                <div class="d-flex align-items-start gap-3">
-                                    <div class="why-icon"><i class="bi bi-receipt"></i></div>
-                                    <div>
-                                        <h5 class="mb-1">Accurate invoicing</h5>
-                                        <p class="text-muted mb-0">Rent, utilities, and maintenance are tracked separately so invoices and balances remain correct.</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                        <?php endforeach; ?>
                     </div>
                 </div>
 
@@ -1208,52 +1238,26 @@
     <section id="testimonials" class="py-5">
         <div class="container">
             <div class="text-center mb-5">
-                <h2 class="display-5 fw-bold">Trusted by Property Managers Across Kenya</h2>
-                <p class="lead text-muted">See how landlords and real estate professionals are transforming their property management with RentSmart</p>
+                <h2 class="display-5 fw-bold"><?= htmlspecialchars($testimonialsTitle) ?></h2>
+                <p class="lead text-muted"><?= htmlspecialchars($testimonialsSubtitle) ?></p>
             </div>
             <div class="row g-4">
-                <div class="col-md-4">
-                    <div class="testimonial-card">
-                        <div class="d-flex align-items-center mb-3">
-                            <div class="testimonial-avatar">
-                                <i class="bi bi-person"></i>
+                <?php foreach ($testimonials as $t): ?>
+                    <div class="col-md-4">
+                        <div class="testimonial-card">
+                            <div class="d-flex align-items-center mb-3">
+                                <div class="testimonial-avatar">
+                                    <i class="bi bi-person"></i>
+                                </div>
+                                <div>
+                                    <h5 class="mb-0"><?= htmlspecialchars((string)($t['name'] ?? '')) ?></h5>
+                                    <small class="text-muted"><?= htmlspecialchars((string)($t['role'] ?? '')) ?></small>
+                                </div>
                             </div>
-                            <div>
-                                <h5 class="mb-0">Mercy Wanjiru</h5>
-                                <small class="text-muted">Property Manager</small>
-                            </div>
+                            <p><?= htmlspecialchars((string)($t['text'] ?? '')) ?></p>
                         </div>
-                        <p>"RentSmart has completely transformed how we manage our properties. The automated rent collection and reporting features save us hours every week."</p>
                     </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="testimonial-card">
-                        <div class="d-flex align-items-center mb-3">
-                            <div class="testimonial-avatar">
-                                <i class="bi bi-person"></i>
-                            </div>
-                            <div>
-                                <h5 class="mb-0">James Kamau</h5>
-                                <small class="text-muted">Landlord</small>
-                            </div>
-                        </div>
-                        <p>"The tenant portal has made communication so much easier. My tenants love being able to pay rent and submit maintenance requests online."</p>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="testimonial-card">
-                        <div class="d-flex align-items-center mb-3">
-                            <div class="testimonial-avatar">
-                                <i class="bi bi-person"></i>
-                            </div>
-                            <div>
-                                <h5 class="mb-0">David Kibara</h5>
-                                <small class="text-muted">Real Estate Agent</small>
-                            </div>
-                        </div>
-                        <p>"The financial reports and analytics help me make data-driven decisions. RentSmart has helped us increase our property portfolio's performance."</p>
-                    </div>
-                </div>
+                <?php endforeach; ?>
             </div>
         </div>
     </section>
@@ -1262,123 +1266,30 @@
     <section id="faq" class="py-5 bg-light">
         <div class="container">
             <div class="text-center mb-5">
-                <h2 class="display-5 fw-bold">Frequently Asked Questions</h2>
-                <p class="lead text-muted">Everything you need to know about RentSmart property management software</p>
+                <h2 class="display-5 fw-bold"><?= htmlspecialchars($faqTitle) ?></h2>
+                <p class="lead text-muted"><?= htmlspecialchars($faqSubtitle) ?></p>
             </div>
             <div class="row justify-content-center">
                 <div class="col-lg-10">
                     <div class="accordion" id="faqAccordion">
-                        <!-- FAQ 1 -->
-                        <div class="accordion-item mb-3 border-0 shadow-sm">
-                            <h3 class="accordion-header">
-                                <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#faq1">
-                                    What is RentSmart property management software?
-                                </button>
-                            </h3>
-                            <div id="faq1" class="accordion-collapse collapse show" data-bs-parent="#faqAccordion">
-                                <div class="accordion-body">
-                                    RentSmart is a comprehensive cloud-based property management system designed for landlords, property managers, and real estate agents in Kenya. It helps you manage properties, tenants, rent collection, maintenance, utilities, and financial reporting all in one platform. With M-PESA integration and automated features, RentSmart simplifies rental property management.
+                        <?php foreach (array_values($faqItems) as $i => $item): ?>
+                            <?php
+                                $collapseId = 'faq' . ($i + 1);
+                                $isFirst = $i === 0;
+                            ?>
+                            <div class="accordion-item mb-3 border-0 shadow-sm">
+                                <h3 class="accordion-header">
+                                    <button class="accordion-button <?= $isFirst ? '' : 'collapsed' ?>" type="button" data-bs-toggle="collapse" data-bs-target="#<?= htmlspecialchars($collapseId) ?>">
+                                        <?= htmlspecialchars((string)($item['q'] ?? '')) ?>
+                                    </button>
+                                </h3>
+                                <div id="<?= htmlspecialchars($collapseId) ?>" class="accordion-collapse collapse <?= $isFirst ? 'show' : '' ?>" data-bs-parent="#faqAccordion">
+                                    <div class="accordion-body">
+                                        <?= htmlspecialchars((string)($item['a'] ?? '')) ?>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-
-                        <!-- FAQ 2 -->
-                        <div class="accordion-item mb-3 border-0 shadow-sm">
-                            <h3 class="accordion-header">
-                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq2">
-                                    How long is the free trial period?
-                                </button>
-                            </h3>
-                            <div id="faq2" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
-                                <div class="accordion-body">
-                                    RentSmart offers a generous 7-day free trial with full access to all features. No credit card required to start. You can explore all property management features, add properties and tenants, collect rent, and generate reports during the trial period. After 7-day, you can choose a plan that fits your needs.
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- FAQ 3 -->
-                        <div class="accordion-item mb-3 border-0 shadow-sm">
-                            <h3 class="accordion-header">
-                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq3">
-                                    Does RentSmart integrate with M-PESA?
-                                </button>
-                            </h3>
-                            <div id="faq3" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
-                                <div class="accordion-body">
-                                    Yes! RentSmart has full M-PESA integration for seamless rent collection. Tenants can pay rent directly through M-PESA, and payments are automatically recorded in the system. You'll receive instant notifications when payments are made, and the system automatically reconciles payments with tenant accounts.
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- FAQ 4 -->
-                        <div class="accordion-item mb-3 border-0 shadow-sm">
-                            <h3 class="accordion-header">
-                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq4">
-                                    How many properties can I manage with RentSmart?
-                                </button>
-                            </h3>
-                            <div id="faq4" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
-                                <div class="accordion-body">
-                                    The number of properties you can manage depends on your subscription plan. Our Basic plan supports up to 10 properties, Professional plan up to 50 properties, and Enterprise plan offers unlimited properties. Each property can have multiple units, and you can manage all of them from a single dashboard.
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- FAQ 5 -->
-                        <div class="accordion-item mb-3 border-0 shadow-sm">
-                            <h3 class="accordion-header">
-                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq5">
-                                    Can tenants access the system?
-                                </button>
-                            </h3>
-                            <div id="faq5" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
-                                <div class="accordion-body">
-                                    Yes! RentSmart includes a dedicated tenant portal where tenants can log in to view their lease details, make rent payments, submit maintenance requests, and access important documents. This self-service portal reduces your workload and improves tenant satisfaction.
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- FAQ 6 -->
-                        <div class="accordion-item mb-3 border-0 shadow-sm">
-                            <h3 class="accordion-header">
-                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq6">
-                                    Is my data secure with RentSmart?
-                                </button>
-                            </h3>
-                            <div id="faq6" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
-                                <div class="accordion-body">
-                                    Absolutely! RentSmart uses bank-level security with SSL encryption to protect your data. All information is stored on secure cloud servers with automatic daily backups. We comply with data protection regulations and never share your information with third parties. Your property and tenant data is safe with us.
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- FAQ 7 -->
-                        <div class="accordion-item mb-3 border-0 shadow-sm">
-                            <h3 class="accordion-header">
-                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq7">
-                                    What kind of reports can I generate?
-                                </button>
-                            </h3>
-                            <div id="faq7" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
-                                <div class="accordion-body">
-                                    RentSmart provides comprehensive financial and operational reports including: income statements, rent collection reports, occupancy reports, expense tracking, tenant payment history, maintenance reports, utility billing reports, and property performance analytics. All reports can be exported to PDF or Excel for easy sharing.
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- FAQ 8 -->
-                        <div class="accordion-item mb-3 border-0 shadow-sm">
-                            <h3 class="accordion-header">
-                                <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#faq8">
-                                    Do you offer customer support?
-                                </button>
-                            </h3>
-                            <div id="faq8" class="accordion-collapse collapse" data-bs-parent="#faqAccordion">
-                                <div class="accordion-body">
-                                    Yes! We provide excellent customer support through email at <a href="mailto:rentsmart@timestentechnologies.co.ke">rentsmart@timestentechnologies.co.ke</a> and phone at <a href="tel:+254795155230">+254 795 155 230</a>. Our Kenyan support team is ready to help you with setup, training, and any questions you may have. We also offer video tutorials and documentation to help you get started.
-                                </div>
-                            </div>
-                        </div>
+                        <?php endforeach; ?>
                     </div>
                 </div>
             </div>
@@ -1388,13 +1299,13 @@
     <!-- CTA Section -->
     <section class="cta-section">
         <div class="container text-center">
-            <h2 class="display-5 fw-bold mb-4">Transform Your Property Management Today</h2>
-            <p class="lead mb-4">Join hundreds of landlords and property managers in Kenya who are simplifying their rental business with RentSmart. Start your free trial now!</p>
+            <h2 class="display-5 fw-bold mb-4"><?= htmlspecialchars($ctaTitle) ?></h2>
+            <p class="lead mb-4"><?= htmlspecialchars($ctaDescription) ?></p>
             <a class="btn btn-gradient btn-lg" href="#" data-bs-toggle="modal" data-bs-target="#registerModal">
-                <i class="bi bi-rocket-takeoff me-2"></i>Start Your 7-Day Free Trial
+                <i class="bi bi-rocket-takeoff me-2"></i><?= htmlspecialchars($ctaButtonText) ?>
             </a>
             
-            <p class="mt-3 text-muted">No credit card required</p>
+            <p class="mt-3 text-muted"><?= htmlspecialchars($ctaFootnote) ?></p>
         </div>
     </section>
 

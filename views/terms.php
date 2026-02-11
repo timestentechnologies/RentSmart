@@ -56,7 +56,7 @@ if (!defined('BASE_URL')) {
 
     <div class="policy-content">
         <div class="container">
-            <h1 class="mb-4">Terms of Service</h1>
+            <h1 class="mb-4"><?= htmlspecialchars(site_setting('terms_header', 'Terms of Service')) ?></h1>
             
             <p class="lead">Last updated: <?= date('F d, Y') ?></p>
 

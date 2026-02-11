@@ -24,8 +24,8 @@
 
   <section class="contact-hero">
     <div class="container">
-      <h1 class="display-6">Contact Sales & Support</h1>
-      <p class="lead mb-0">We'd love to hear from you. Send us a message and we'll respond shortly.</p>
+      <h1 class="display-6"><?= htmlspecialchars(site_setting('contact_hero_title', 'Contact Sales & Support')) ?></h1>
+      <p class="lead mb-0"><?= htmlspecialchars(site_setting('contact_hero_subtitle', "We'd love to hear from you. Send us a message and we'll respond shortly.")) ?></p>
     </div>
   </section>
 

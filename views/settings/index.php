@@ -95,6 +95,13 @@ if (empty($settings)) {
                             </div>
                             <i class="bi bi-chevron-right"></i>
                         </a>
+                        <a href="<?= BASE_URL ?>/settings/public-pages" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+                            <div>
+                                <i class="bi bi-layout-text-window-reverse me-2"></i>
+                                Public Pages Content
+                            </div>
+                            <i class="bi bi-chevron-right"></i>
+                        </a>
                         <a href="<?= BASE_URL ?>/settings/ai" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
                             <div>
                                 <i class="bi bi-robot me-2"></i>
