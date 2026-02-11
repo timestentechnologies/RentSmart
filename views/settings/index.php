@@ -102,20 +102,6 @@ if (empty($settings)) {
                             </div>
                             <i class="bi bi-chevron-right"></i>
                         </a>
-                        <a href="<?= BASE_URL ?>/settings/homepage" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-                            <div>
-                                <i class="bi bi-house-gear me-2"></i>
-                                Homepage Content
-                            </div>
-                            <i class="bi bi-chevron-right"></i>
-                        </a>
-                        <a href="<?= BASE_URL ?>/settings/public-pages" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
-                            <div>
-                                <i class="bi bi-globe2 me-2"></i>
-                                Public Pages Content
-                            </div>
-                            <i class="bi bi-chevron-right"></i>
-                        </a>
                         <a href="#" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" data-bs-toggle="modal" data-bs-target="#backupModal">
                             <div>
                                 <i class="bi bi-cloud-download me-2"></i>

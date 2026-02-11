@@ -16,39 +16,6 @@ function customErrorHandler($errno, $errstr, $errfile, $errline) {
 }
 set_error_handler('customErrorHandler');
 
-// Capture fatal errors on shutdown (e.g. parse errors, memory errors, etc.)
-register_shutdown_function(function () {
-    try {
-        $err = error_get_last();
-        if (!is_array($err) || empty($err)) {
-            return;
-        }
-
-        $fatalTypes = [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR];
-        if (!isset($err['type']) || !in_array((int)$err['type'], $fatalTypes, true)) {
-            return;
-        }
-
-        $payload = [
-            'ts' => date('c'),
-            'kind' => 'fatal',
-            'type' => (int)($err['type'] ?? 0),
-            'message' => (string)($err['message'] ?? ''),
-            'file' => (string)($err['file'] ?? ''),
-            'line' => (int)($err['line'] ?? 0),
-            'request_uri' => (string)($_SERVER['REQUEST_URI'] ?? ''),
-            'method' => (string)($_SERVER['REQUEST_METHOD'] ?? ''),
-        ];
-
-        $debugFile = rtrim(sys_get_temp_dir(), '/\\') . DIRECTORY_SEPARATOR . 'rentsmart_last_error.json';
-        @file_put_contents($debugFile, json_encode($payload));
-
-        $debugFile2 = __DIR__ . DIRECTORY_SEPARATOR . 'logs' . DIRECTORY_SEPARATOR . 'rentsmart_last_error.json';
-        @file_put_contents($debugFile2, json_encode($payload));
-    } catch (\Throwable $ignore) {
-    }
-});
-
 require_once __DIR__ . '/vendor/autoload.php';
 require_once __DIR__ . '/config/database.php';
 require_once __DIR__ . '/app/helpers.php';
@@ -121,9 +88,6 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 // Routes
 $routes = [
-
-    // Debug (token protected)
-    'debug/last-error' => ['controller' => 'DebugController', 'action' => 'lastError'],
     // M-Pesa routes
     'subscription/initiate-stk' => ['controller' => 'MpesaController', 'action' => 'initiateSTK'],
     'mpesa/callback' => ['controller' => 'MpesaController', 'action' => 'handleCallback'],
@@ -300,14 +264,10 @@ $routes = [
     'settings' => ['controller' => 'SettingsController', 'action' => 'index'],
     'settings/email' => ['controller' => 'SettingsController', 'action' => 'email'],
     'settings/ai' => ['controller' => 'SettingsController', 'action' => 'ai'],
-    'settings/homepage' => ['controller' => 'SettingsController', 'action' => 'homepage'],
-    'settings/public-pages' => ['controller' => 'SettingsController', 'action' => 'publicPages'],
     'settings/update' => ['controller' => 'SettingsController', 'action' => 'update'],
     'settings/updateProfile' => ['controller' => 'SettingsController', 'action' => 'updateProfile'],
     'settings/updateMail' => ['controller' => 'SettingsController', 'action' => 'updateMail'],
     'settings/updateAI' => ['controller' => 'SettingsController', 'action' => 'updateAI'],
-    'settings/updateHomepage' => ['controller' => 'SettingsController', 'action' => 'updateHomepage'],
-    'settings/updatePublicPages' => ['controller' => 'SettingsController', 'action' => 'updatePublicPages'],
     'settings/testEmail' => ['controller' => 'SettingsController', 'action' => 'testEmail'],
     'settings/testSMS' => ['controller' => 'SettingsController', 'action' => 'testSMS'],
     'settings/backup' => ['controller' => 'SettingsController', 'action' => 'backup'],
@@ -571,14 +531,10 @@ $protectedRoutes = [
     'reports/tenant-balances',
     'reports/generate',
     'settings',
-    'settings/public-pages',
     'settings/email',
-    'settings/homepage',
     'settings/update',
-    'settings/updateProfile'',
-    'settings/updatePublicPages,
+    'settings/updateProfile',
     'settings/updateMail',
-    'settings/updateHomepage',
     'settings/testEmail',
     'settings/testSMS',
     'settings/backup',
@@ -838,55 +794,11 @@ try {
         $globalErrorId = (string)time();
     }
 
-    $requestPath = '';
-    try {
-        $requestPath = trim((string)parse_url((string)($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH), '/');
-    } catch (\Throwable $ignore) {
-        $requestPath = '';
-    }
-
     error_log("Error in routing | error_id={$globalErrorId} | msg=" . $e->getMessage());
     error_log("Error in routing | error_id={$globalErrorId} | trace=" . $e->getTraceAsString());
 
-    // Persist last error for production debugging (token-gated endpoint will read this)
     try {
-        $debugPayload = [
-            'ts' => date('c'),
-            'kind' => 'exception',
-            'error_id' => $globalErrorId,
-            'message' => $e->getMessage(),
-            'file' => $e->getFile(),
-            'line' => $e->getLine(),
-            'trace' => $e->getTraceAsString(),
-            'request_uri' => (string)($_SERVER['REQUEST_URI'] ?? ''),
-            'method' => (string)($_SERVER['REQUEST_METHOD'] ?? ''),
-            'get' => $_GET ?? null,
-        ];
-        $debugFile = rtrim(sys_get_temp_dir(), '/\\') . DIRECTORY_SEPARATOR . 'rentsmart_last_error.json';
-        @file_put_contents($debugFile, json_encode($debugPayload));
-
-        $debugFile2 = __DIR__ . DIRECTORY_SEPARATOR . 'logs' . DIRECTORY_SEPARATOR . 'rentsmart_last_error.json';
-        @file_put_contents($debugFile2, json_encode($debugPayload));
-    } catch (\Throwable $ignore) {
-    }
-
-    // Make the debug endpoint usable even when APP_ENV=development.
-    // If routing fails while calling /debug/last-error, return the exception payload as JSON.
-    if ($requestPath === 'debug/last-error') {
-        header('Content-Type: application/json');
-        http_response_code(500);
-        echo json_encode([
-            'success' => false,
-            'error_id' => $globalErrorId,
-            'message' => $e->getMessage(),
-            'file' => $e->getFile(),
-            'line' => $e->getLine(),
-            'trace' => $e->getTraceAsString(),
-        ]);
-        exit;
-    }
-
-    try {
+        $requestPath = trim((string)parse_url((string)($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH), '/');
         if ($requestPath === 'tenant/payment/process') {
             $debugPayload = [
                 'ts' => date('c'),
