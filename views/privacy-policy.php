@@ -58,61 +58,23 @@ if (!defined('BASE_URL')) {
     <div class="policy-content">
         <div class="container">
             <h1 class="mb-4"><?= htmlspecialchars(site_setting('privacy_header', 'Privacy Policy')) ?></h1>
-            
-            <p class="lead">Last updated: <?= date('F d, Y') ?></p>
 
-            <h2>1. Information We Collect</h2>
-            <p>We collect information that you provide directly to us, including:</p>
-            <ul>
-                <li>Name and contact information</li>
-                <li>Property management details</li>
-                <li>Payment information</li>
-                <li>Communication preferences</li>
-            </ul>
-
-            <h2>2. How We Use Your Information</h2>
-            <p>We use the information we collect to:</p>
-            <ul>
-                <li>Provide and maintain our services</li>
-                <li>Process your transactions</li>
-                <li>Send you important updates</li>
-                <li>Improve our services</li>
-                <li>Comply with legal obligations</li>
-            </ul>
-
-            <h2>3. Information Sharing</h2>
-            <p>We do not sell your personal information. We may share your information with:</p>
-            <ul>
-                <li>Service providers who assist in our operations</li>
-                <li>Legal authorities when required by law</li>
-                <li>Business partners with your consent</li>
-            </ul>
-
-            <h2>4. Data Security</h2>
-            <p>We implement appropriate security measures to protect your personal information, including:</p>
-            <ul>
-                <li>Encryption of sensitive data</li>
-                <li>Regular security assessments</li>
-                <li>Access controls and authentication</li>
-                <li>Secure data storage</li>
-            </ul>
-
-            <h2>5. Your Rights</h2>
-            <p>You have the right to:</p>
-            <ul>
-                <li>Access your personal information</li>
-                <li>Correct inaccurate data</li>
-                <li>Request deletion of your data</li>
-                <li>Opt-out of marketing communications</li>
-            </ul>
-
-            <h2>6. Contact Us</h2>
-            <p>If you have any questions about this Privacy Policy, please contact us at:</p>
-            <ul>
-                <li>Email: privacy@rentsmart.com</li>
-                <li>Phone: +254 700 000000</li>
-                <li>Address: Nairobi, Kenya</li>
-            </ul>
+            <?php
+            $privacyBodyDefault = '<p class="lead">Last updated: ' . date('F d, Y') . '</p>'
+                . '<h2>1. Information We Collect</h2><p>We collect information that you provide directly to us, including:</p>'
+                . '<ul><li>Name and contact information</li><li>Property management details</li><li>Payment information</li><li>Communication preferences</li></ul>'
+                . '<h2>2. How We Use Your Information</h2><p>We use the information we collect to:</p>'
+                . '<ul><li>Provide and maintain our services</li><li>Process your transactions</li><li>Send you important updates</li><li>Improve our services</li><li>Comply with legal obligations</li></ul>'
+                . '<h2>3. Information Sharing</h2><p>We do not sell your personal information. We may share your information with:</p>'
+                . '<ul><li>Service providers who assist in our operations</li><li>Legal authorities when required by law</li><li>Business partners with your consent</li></ul>'
+                . '<h2>4. Data Security</h2><p>We implement appropriate security measures to protect your personal information, including:</p>'
+                . '<ul><li>Encryption of sensitive data</li><li>Regular security assessments</li><li>Access controls and authentication</li><li>Secure data storage</li></ul>'
+                . '<h2>5. Your Rights</h2><p>You have the right to:</p>'
+                . '<ul><li>Access your personal information</li><li>Correct inaccurate data</li><li>Request deletion of your data</li><li>Opt-out of marketing communications</li></ul>'
+                . '<h2>6. Contact Us</h2><p>If you have any questions about this Privacy Policy, please contact us at:</p>'
+                . '<ul><li>Email: privacy@rentsmart.com</li><li>Phone: +254 700 000000</li><li>Address: Nairobi, Kenya</li></ul>';
+            echo site_setting('privacy_body_html', $privacyBodyDefault);
+            ?>
         </div>
     </div>
 
