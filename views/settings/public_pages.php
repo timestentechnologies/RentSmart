@@ -115,6 +115,7 @@ function setting_json_pretty($key, $defaultJson = '[]') {
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
             <h4 class="mb-0">Public Pages Content</h4>
+            <div class="text-muted" style="font-size: 12px;">Template version: 2026-02-11-01</div>
             <p class="text-muted">Manage homepage and public page text/images. If a field is left blank, the existing hardcoded content remains as fallback.</p>
         </div>
         <a href="<?= BASE_URL ?>/settings" class="btn btn-outline-primary">
