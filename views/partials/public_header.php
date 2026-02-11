@@ -56,8 +56,8 @@ $faviconUrl = $faviconUrl ?? site_setting_image_url('site_favicon', BASE_URL . '
         <li class="nav-item"><a class="nav-link" data-public-section="testimonials" href="<?= BASE_URL ?>/#testimonials">Testimonials</a></li>
         <li class="nav-item"><a class="nav-link" data-public-section="faq" href="<?= BASE_URL ?>/#faq">FAQs</a></li>
         <li class="nav-item"><a class="nav-link <?= $activePage === 'contact' ? 'active' : '' ?>" href="<?= BASE_URL ?>/contact">Contact Us</a></li>
-        <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>/login">Login</a></li>
-        <li class="nav-item ms-lg-2"><a class="btn btn-gradient" href="<?= BASE_URL ?>/register">Get Started - 7 Days Free</a></li>
+        <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>/#loginModal">Login</a></li>
+        <li class="nav-item ms-lg-2"><a class="btn btn-gradient" href="<?= BASE_URL ?>/#registerModal">Get Started - 7 Days Free</a></li>
       </ul>
     </div>
   </div>

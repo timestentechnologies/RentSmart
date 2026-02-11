@@ -64,6 +64,23 @@ try {
     $siteName = $settings['site_name'] ?? 'RentSmart';
     $siteDescription = $settings['site_description'] ?? 'Property Management System';
     $siteLogo = $settings['site_logo'] ? BASE_URL . '/public/assets/images/' . $settings['site_logo'] : BASE_URL . '/public/assets/images/logo.svg';
+
+    // Per-user company branding override (manager/agent/landlord only)
+    $role = strtolower((string)($_SESSION['user_role'] ?? ''));
+    $userId = (int)($_SESSION['user_id'] ?? 0);
+    if ($userId > 0 && in_array($role, ['manager', 'agent', 'landlord'], true)) {
+        $companyNameKey = 'company_name_user_' . $userId;
+        $companyLogoKey = 'company_logo_user_' . $userId;
+        $companyName = trim((string)($settings[$companyNameKey] ?? ''));
+        $companyLogo = trim((string)($settings[$companyLogoKey] ?? ''));
+
+        if ($companyName !== '') {
+            $siteName = $companyName;
+        }
+        if ($companyLogo !== '') {
+            $siteLogo = BASE_URL . '/public/assets/images/' . ltrim($companyLogo, '/');
+        }
+    }
 } catch (Exception $e) {
     error_log("Error loading settings: " . $e->getMessage());
     $siteName = 'RentSmart';
@@ -1408,6 +1425,13 @@ ob_clean();
                         <i class="bi bi-chat-dots me-2"></i> Messaging
                     </a>
                 </li>
+                <?php if (isset($_SESSION['user_role']) && in_array(strtolower($_SESSION['user_role']), ['manager','agent','landlord'], true)): ?>
+                    <li class="nav-item">
+                        <a href="<?= BASE_URL ?>/branding" class="nav-link <?= strpos($current_uri, 'branding') === 0 ? 'active' : '' ?>">
+                            <i class="bi bi-building me-2"></i> Company Branding
+                        </a>
+                    </li>
+                <?php endif; ?>
                 <li class="nav-item">
                     <a href="<?= BASE_URL ?>/notices" class="nav-link <?= strpos($current_uri, 'notices') === 0 ? 'active' : '' ?>">
                         <i class="bi bi-megaphone me-2"></i> Notices
