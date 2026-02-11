@@ -763,6 +763,16 @@ class SettingsController
                 . '<section id="tips-best-practices"><h2>Tips & Best Practices</h2><ul><li>Update property and unit details regularly for accurate records.</li><li>Use scheduled maintenance tracking to prevent overdue repairs.</li><li>Reconcile payments weekly to avoid accounting errors.</li><li>Encourage tenants to use the portal for payments and requests.</li><li>Regularly back up system data and maintain user role security.</li></ul></section><hr>'
                 . '<section id="faq"><h2>FAQ & Support</h2><p>For questions or help, contact:</p>'
                 . '<ul><li>Email: <a href="mailto:rentsmart@timestentechnologies.co.ke">rentsmart@timestentechnologies.co.ke</a></li><li>Phone: +254 795 155 230</li><li>In-app Messaging for real-time support</li><li>Visit the Contact page for additional resources.</li></ul></section>',
+
+            'footer_logo' => 'site_logo_1751627446.png',
+            'footer_about_text' => "Kenya's leading property and rental management software. Trusted by landlords, property managers, and real estate professionals.",
+            'footer_tagline' => 'Property Management System | Rental Management Software | Real Estate Management',
+            'footer_powered_by_text' => 'Timesten Technologies',
+            'footer_powered_by_url' => 'https://timestentechnologies.co.ke',
+            'footer_social_facebook' => 'https://www.facebook.com/RentSmartKE',
+            'footer_social_twitter' => 'https://twitter.com/RentSmartKE',
+            'footer_social_linkedin' => 'https://www.linkedin.com/posts/timestentechnologies_proptech-propertymanagement-rentsmart-activity-7413190378020925440-JRdI?utm_source=share&utm_medium=member_desktop&rcm=ACoAADXDMdEBsC18bIJ4cOHS2WbzS9hlKU1YxY4',
+            'footer_social_instagram' => 'https://www.instagram.com/rentsmartke',
         ];
 
         foreach ($defaults as $key => $value) {
@@ -834,6 +844,15 @@ class SettingsController
                 'docs_hero_title',
                 'docs_hero_subtitle',
                 'docs_body_html',
+
+                'footer_about_text',
+                'footer_tagline',
+                'footer_powered_by_text',
+                'footer_powered_by_url',
+                'footer_social_facebook',
+                'footer_social_twitter',
+                'footer_social_linkedin',
+                'footer_social_instagram',
             ];
 
             foreach ($allowedTextKeys as $key) {
@@ -891,6 +910,33 @@ class SettingsController
                 }
 
                 $this->settings->updateByKey('home_split_image', $newName);
+            }
+
+            // Handle footer logo upload
+            if (isset($_FILES['footer_logo']) && $_FILES['footer_logo']['error'] === UPLOAD_ERR_OK) {
+                $file = $_FILES['footer_logo'];
+                $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+                $allowed = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+                if (!in_array($ext, $allowed, true)) {
+                    throw new Exception('Invalid image type for footer logo');
+                }
+
+                $newName = 'footer_logo_' . time() . '.' . $ext;
+                $targetPath = __DIR__ . '/../../public/assets/images/' . $newName;
+                if (!move_uploaded_file($file['tmp_name'], $targetPath)) {
+                    throw new Exception('Failed to upload footer logo');
+                }
+
+                // Delete old file if exists
+                $old = $this->settings->get('footer_logo');
+                if (!empty($old) && $old !== 'site_logo_1751627446.png') {
+                    $oldPath = __DIR__ . '/../../public/assets/images/' . $old;
+                    if (file_exists($oldPath)) {
+                        @unlink($oldPath);
+                    }
+                }
+
+                $this->settings->updateByKey('footer_logo', $newName);
             }
 
             $_SESSION['flash_message'] = 'Public pages content updated successfully';
