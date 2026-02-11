@@ -16,6 +16,36 @@ function customErrorHandler($errno, $errstr, $errfile, $errline) {
 }
 set_error_handler('customErrorHandler');
 
+// Capture fatal errors on shutdown (e.g. parse errors, memory errors, etc.)
+register_shutdown_function(function () {
+    try {
+        $err = error_get_last();
+        if (!is_array($err) || empty($err)) {
+            return;
+        }
+
+        $fatalTypes = [E_ERROR, E_PARSE, E_CORE_ERROR, E_COMPILE_ERROR, E_USER_ERROR];
+        if (!isset($err['type']) || !in_array((int)$err['type'], $fatalTypes, true)) {
+            return;
+        }
+
+        $payload = [
+            'ts' => date('c'),
+            'kind' => 'fatal',
+            'type' => (int)($err['type'] ?? 0),
+            'message' => (string)($err['message'] ?? ''),
+            'file' => (string)($err['file'] ?? ''),
+            'line' => (int)($err['line'] ?? 0),
+            'request_uri' => (string)($_SERVER['REQUEST_URI'] ?? ''),
+            'method' => (string)($_SERVER['REQUEST_METHOD'] ?? ''),
+        ];
+
+        $debugFile = rtrim(sys_get_temp_dir(), '/\\') . DIRECTORY_SEPARATOR . 'rentsmart_last_error.json';
+        @file_put_contents($debugFile, json_encode($payload));
+    } catch (\Throwable $ignore) {
+    }
+});
+
 require_once __DIR__ . '/vendor/autoload.php';
 require_once __DIR__ . '/config/database.php';
 require_once __DIR__ . '/app/helpers.php';
@@ -88,6 +118,9 @@ $method = $_SERVER['REQUEST_METHOD'];
 
 // Routes
 $routes = [
+
+    // Debug (token protected)
+    'debug/last-error' => ['controller' => 'DebugController', 'action' => 'lastError'],
     // M-Pesa routes
     'subscription/initiate-stk' => ['controller' => 'MpesaController', 'action' => 'initiateSTK'],
     'mpesa/callback' => ['controller' => 'MpesaController', 'action' => 'handleCallback'],
@@ -804,6 +837,25 @@ try {
 
     error_log("Error in routing | error_id={$globalErrorId} | msg=" . $e->getMessage());
     error_log("Error in routing | error_id={$globalErrorId} | trace=" . $e->getTraceAsString());
+
+    // Persist last error for production debugging (token-gated endpoint will read this)
+    try {
+        $debugPayload = [
+            'ts' => date('c'),
+            'kind' => 'exception',
+            'error_id' => $globalErrorId,
+            'message' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'trace' => $e->getTraceAsString(),
+            'request_uri' => (string)($_SERVER['REQUEST_URI'] ?? ''),
+            'method' => (string)($_SERVER['REQUEST_METHOD'] ?? ''),
+            'get' => $_GET ?? null,
+        ];
+        $debugFile = rtrim(sys_get_temp_dir(), '/\\') . DIRECTORY_SEPARATOR . 'rentsmart_last_error.json';
+        @file_put_contents($debugFile, json_encode($debugPayload));
+    } catch (\Throwable $ignore) {
+    }
 
     try {
         $requestPath = trim((string)parse_url((string)($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH), '/');
