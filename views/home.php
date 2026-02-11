@@ -839,7 +839,7 @@
                     $stats = [];
                     try {
                         $stats = json_decode((string)($settings['homepage_stats_json'] ?? '[]'), true);
-                    } catch (Throwable $e) { $stats = []; }
+                    } catch (\Throwable $e) { $stats = []; }
                     if (!is_array($stats) || empty($stats)) {
                         $stats = [
                             [ 'number' => '500+', 'label' => 'Properties Managed' ],
@@ -886,11 +886,11 @@
                             $splitList = [];
                             try {
                                 $splitList = json_decode((string)($settings['homepage_split_list_json'] ?? '[]'), true);
-                            } catch (Throwable $e) { $splitList = []; }
+                            } catch (\Throwable $e) { $splitList = []; }
                             if (!is_array($splitList) || empty($splitList)) {
                                 $splitList = [
                                     [ 'title' => 'Accurate payment types', 'text' => 'Rent, utilities, and maintenance always recorded correctly.' ],
-                                    [ 'title' => 'Automated invoicing', 'text' => 'Invoices update based on what was paid—no confusion.' ],
+                                    [ 'title' => 'Automated reminders', 'text' => 'Reduce arrears with timely SMS and email notifications.' ],
                                     [ 'title' => 'Tenant self-service', 'text' => 'Tenants can pay and track balances from the portal.' ],
                                 ];
                             }
@@ -927,11 +927,11 @@
                             $whyCards = [];
                             try {
                                 $whyCards = json_decode((string)($settings['homepage_why_cards_json'] ?? '[]'), true);
-                            } catch (Throwable $e) { $whyCards = []; }
+                            } catch (\Throwable $e) { $whyCards = []; }
                             if (!is_array($whyCards) || empty($whyCards)) {
                                 $whyCards = [
                                     [ 'icon' => 'bi-phone', 'title' => 'M-PESA ready', 'text' => 'Accept payments and keep references organized for quick verification and reporting.' ],
-                                    [ 'icon' => 'bi-shield-check', 'title' => 'Secure & reliable', 'text' => 'Keep your tenant and payment records safe with a cloud-ready setup and clear audit trails.' ],
+                                    [ 'icon' => 'bi-shield-check', 'title' => 'Accurate & secure', 'text' => 'Clear audit trail for invoices, receipts, and tenant statements.' ],
                                     [ 'icon' => 'bi-graph-up', 'title' => 'Clear dashboards', 'text' => 'See what is due, what was paid, and what needs action—without digging through spreadsheets.' ],
                                     [ 'icon' => 'bi-receipt', 'title' => 'Accurate invoicing', 'text' => 'Rent, utilities, and maintenance are tracked separately so invoices and balances remain correct.' ],
                                 ];
@@ -1178,7 +1178,7 @@
                     $tests = [];
                     try {
                         $tests = json_decode((string)($settings['homepage_testimonials_json'] ?? ''), true);
-                    } catch (Throwable $e) {
+                    } catch (\Throwable $e) {
                         $tests = [];
                     }
                     if (!is_array($tests) || empty($tests)) {
@@ -1235,7 +1235,7 @@
                             $faqs = [];
                             try {
                                 $faqs = json_decode((string)($settings['homepage_faqs_json'] ?? '[]'), true);
-                            } catch (Throwable $e) { $faqs = []; }
+                            } catch (\Throwable $e) { $faqs = []; }
                             if (!is_array($faqs) || empty($faqs)) {
                                 $faqs = [
                                     [ 'q' => 'What is RentSmart property management software?', 'a' => 'RentSmart is a comprehensive cloud-based property management system designed for landlords, property managers, and real estate agents in Kenya. It helps you manage properties, tenants, rent collection, maintenance, utilities, and financial reporting all in one platform. With M-PESA integration and automated features, RentSmart simplifies rental property management.' ],

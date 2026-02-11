@@ -18,7 +18,7 @@
       require_once __DIR__ . '/../../app/Models/Setting.php';
       $settingsModel = new \App\Models\Setting();
       $pageSettings = $settingsModel->getAllAsAssoc();
-    } catch (Throwable $e) {
+    } catch (\Throwable $e) {
       $pageSettings = [];
     }
     $contactHeroTitle = isset($pageSettings['contact_hero_title']) && $pageSettings['contact_hero_title'] !== '' ? (string)$pageSettings['contact_hero_title'] : 'Contact Sales & Support';

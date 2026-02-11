@@ -50,7 +50,7 @@ if (!defined('BASE_URL')) {
         require_once __DIR__ . '/../app/Models/Setting.php';
         $settingsModel = new \App\Models\Setting();
         $pageSettings = $settingsModel->getAllAsAssoc();
-    } catch (Throwable $e) {
+    } catch (\Throwable $e) {
         $pageSettings = [];
     }
     $privacyTitle = isset($pageSettings['privacy_title']) && $pageSettings['privacy_title'] !== '' ? (string)$pageSettings['privacy_title'] : 'Privacy Policy';
