@@ -1652,6 +1652,7 @@ ob_clean();
                     <div id="notifList" class="list-group"></div>
                 </div>
                 <div class="modal-footer">
+                    <button type="button" class="btn btn-notif-action" id="notifEnablePushBtn">Enable device notifications</button>
                     <button type="button" class="btn btn-notif-close" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
@@ -1759,10 +1760,12 @@ ob_clean();
           const badge = document.getElementById('notifBadge');
           const list = document.getElementById('notifList');
           const markAllBtn = document.getElementById('notifMarkAllBtn');
+          const enablePushBtn = document.getElementById('notifEnablePushBtn');
           const filterBtns = modalEl.querySelectorAll('[data-notif-filter]');
-          if (!badge || !list || !markAllBtn || !filterBtns || !filterBtns.length) return;
+          if (!badge || !list || !markAllBtn || !enablePushBtn || !filterBtns || !filterBtns.length) return;
 
           let currentFilter = 'unread';
+          let lastToastNotifId = 0;
 
           function esc(s){
             return (s||'').toString().replace(/[&<>"']/g, function(c){
@@ -1837,6 +1840,14 @@ ob_clean();
               }
               const data = await res.json();
               const items = (data && data.success && Array.isArray(data.items)) ? data.items : [];
+              try {
+                if (currentFilter === 'unread' && items.length) {
+                  const topId = parseInt(items[0].id, 10) || 0;
+                  if (topId > lastToastNotifId) {
+                    lastToastNotifId = topId;
+                  }
+                }
+              } catch (e) {}
               if (!items.length) {
                 setEmptyState(currentFilter === 'read' ? 'No read notifications' : (currentFilter === 'all' ? 'No notifications' : 'No unread notifications'));
               } else {
@@ -1845,6 +1856,92 @@ ob_clean();
             } catch (e) {
               console.warn('notifications/list error', e);
               setEmptyState('Unable to load notifications');
+            }
+          }
+
+          async function pollForToast(){
+            try {
+              if (!window.Swal || !window.showAlert) return;
+              const res = await fetch(window.BASE_URL + '/notifications/list?status=unread&limit=1', { credentials: 'same-origin' });
+              if (!res.ok) return;
+              const ct = (res.headers.get('content-type') || '').toLowerCase();
+              if (ct.indexOf('application/json') === -1) return;
+              const data = await res.json();
+              const items = (data && data.success && Array.isArray(data.items)) ? data.items : [];
+              if (!items.length) return;
+              const top = items[0];
+              const topId = parseInt(top.id, 10) || 0;
+              if (!lastToastNotifId) {
+                lastToastNotifId = topId;
+                return;
+              }
+              if (topId > lastToastNotifId) {
+                lastToastNotifId = topId;
+                showAlert('info', (top.title || 'Notification') + (top.body ? (': ' + top.body) : ''), true);
+              }
+            } catch (e) {
+            }
+          }
+
+          async function enablePush(){
+            try {
+              if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+                showAlert('warning', 'Push notifications are not supported on this device/browser.', true);
+                return;
+              }
+              if (!isSecureContextLike) {
+                showAlert('warning', 'Push notifications require HTTPS.', true);
+                return;
+              }
+              const keyRes = await fetch(window.BASE_URL + '/push/vapid-public-key', { credentials: 'same-origin' });
+              if (!keyRes.ok) {
+                showAlert('warning', 'Push is not configured yet.', true);
+                return;
+              }
+              const keyData = await keyRes.json();
+              const publicKey = (keyData && keyData.success) ? (keyData.publicKey || '') : '';
+              if (!publicKey) {
+                showAlert('warning', 'Push is not configured yet.', true);
+                return;
+              }
+
+              const perm = await Notification.requestPermission();
+              if (perm !== 'granted') {
+                showAlert('warning', 'Permission denied. Please allow notifications in your browser settings.', true);
+                return;
+              }
+
+              function urlBase64ToUint8Array(base64String) {
+                const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+                const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+                const rawData = window.atob(base64);
+                const outputArray = new Uint8Array(rawData.length);
+                for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+                return outputArray;
+              }
+
+              const reg = await navigator.serviceWorker.ready;
+              const existing = await reg.pushManager.getSubscription();
+              const sub = existing || await reg.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(publicKey)
+              });
+
+              const payload = sub.toJSON();
+              payload.contentEncoding = 'aesgcm';
+              const saveRes = await fetch(window.BASE_URL + '/push/subscribe', {
+                method: 'POST',
+                credentials: 'same-origin',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+              });
+              if (!saveRes.ok) {
+                showAlert('warning', 'Unable to enable device notifications.', true);
+                return;
+              }
+              showAlert('success', 'Device notifications enabled.', true);
+            } catch (e) {
+              showAlert('warning', 'Unable to enable device notifications.', true);
             }
           }
 
@@ -1895,6 +1992,10 @@ ob_clean();
             await loadList();
           });
 
+          enablePushBtn.addEventListener('click', function(){
+            enablePush();
+          });
+
           list.addEventListener('click', async function(ev){
             const a = ev.target && ev.target.closest ? ev.target.closest('[data-notif-id]') : null;
             if (!a) return;
@@ -1916,6 +2017,7 @@ ob_clean();
 
           refreshBadge();
           setInterval(refreshBadge, 45000);
+          setInterval(pollForToast, 15000);
         } catch(e) { /* no-op */ }
       })();
     </script>

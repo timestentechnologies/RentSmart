@@ -117,6 +117,7 @@
                     <div id="tenantNotifList" class="list-group"></div>
                 </div>
                 <div class="modal-footer">
+                    <button type="button" class="btn btn-notif-action" id="tenantNotifEnablePushBtn">Enable device notifications</button>
                     <button type="button" class="btn btn-notif-close" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
@@ -1491,6 +1492,99 @@
       });
     }
   });
+</script>
+
+<script>
+  (function(){
+    try {
+      var btn = document.getElementById('tenantNotifEnablePushBtn');
+      if (!btn) return;
+      btn.addEventListener('click', async function(){
+        try {
+          if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+            if (window.showAlert) showAlert('warning', 'Push notifications are not supported on this device/browser.', true);
+            return;
+          }
+          const isSecureContextLike = (location.protocol === 'https:' || location.hostname === 'localhost');
+          if (!isSecureContextLike) {
+            if (window.showAlert) showAlert('warning', 'Push notifications require HTTPS.', true);
+            return;
+          }
+          var keyRes = await fetch('<?= BASE_URL ?>/tenant/push/vapid-public-key', { credentials: 'same-origin' });
+          if (!keyRes.ok) {
+            if (window.showAlert) showAlert('warning', 'Push is not configured yet.', true);
+            return;
+          }
+          var keyData = await keyRes.json();
+          var publicKey = (keyData && keyData.success) ? (keyData.publicKey || '') : '';
+          if (!publicKey) {
+            if (window.showAlert) showAlert('warning', 'Push is not configured yet.', true);
+            return;
+          }
+          var perm = await Notification.requestPermission();
+          if (perm !== 'granted') {
+            if (window.showAlert) showAlert('warning', 'Permission denied. Please allow notifications in your browser settings.', true);
+            return;
+          }
+          var reg = await navigator.serviceWorker.ready;
+          var existing = await reg.pushManager.getSubscription();
+          function urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+            const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+            const rawData = window.atob(base64);
+            const outputArray = new Uint8Array(rawData.length);
+            for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+            return outputArray;
+          }
+          var sub = existing || await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(publicKey)
+          });
+          var payload = sub.toJSON();
+          payload.contentEncoding = 'aesgcm';
+          var saveRes = await fetch('<?= BASE_URL ?>/tenant/push/subscribe', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          if (!saveRes.ok) {
+            if (window.showAlert) showAlert('warning', 'Unable to enable device notifications.', true);
+            return;
+          }
+          if (window.showAlert) showAlert('success', 'Device notifications enabled.', true);
+        } catch (e) {
+          if (window.showAlert) showAlert('warning', 'Unable to enable device notifications.', true);
+        }
+      });
+
+      // In-page toast for new notifications (tenant)
+      var lastToastNotifId = 0;
+      async function pollTenantToast(){
+        try {
+          if (!window.showAlert) return;
+          var res = await fetch('<?= BASE_URL ?>/tenant/notifications/list?status=unread&limit=1', { credentials: 'same-origin' });
+          if (!res.ok) return;
+          var ct = (res.headers.get('content-type') || '').toLowerCase();
+          if (ct.indexOf('application/json') === -1) return;
+          var data = await res.json();
+          var items = (data && data.success && Array.isArray(data.items)) ? data.items : [];
+          if (!items.length) return;
+          var top = items[0];
+          var topId = parseInt(top.id, 10) || 0;
+          if (!lastToastNotifId) {
+            lastToastNotifId = topId;
+            return;
+          }
+          if (topId > lastToastNotifId) {
+            lastToastNotifId = topId;
+            showAlert('info', (top.title || 'Notification') + (top.body ? (': ' + top.body) : ''), true);
+          }
+        } catch (e) {}
+      }
+      setInterval(pollTenantToast, 15000);
+    } catch (e) {}
+  })();
 </script>
 
 <style>

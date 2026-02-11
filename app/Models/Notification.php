@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Services\WebPushService;
+
 class Notification extends Model
 {
     protected $table = 'notifications';
@@ -61,7 +63,27 @@ class Notification extends Model
             $payload,
         ]);
 
-        return (int)$this->db->lastInsertId();
+        $id = (int)$this->db->lastInsertId();
+
+        // Best-effort Web Push (never block core flow)
+        try {
+            $push = new WebPushService();
+            $push->sendToRecipient(
+                (string)$data['recipient_type'],
+                (int)$data['recipient_id'],
+                [
+                    'id' => $id,
+                    'title' => (string)($data['title'] ?? ''),
+                    'body' => (string)($data['body'] ?? ''),
+                    'link' => (string)($data['link'] ?? ''),
+                    'entity_type' => $data['entity_type'] ?? null,
+                    'entity_id' => isset($data['entity_id']) ? (int)$data['entity_id'] : null,
+                ]
+            );
+        } catch (\Throwable $t) {
+        }
+
+        return $id;
     }
 
     public function getUnreadCount(string $recipientType, int $recipientId)

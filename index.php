@@ -328,6 +328,9 @@ $routes = [
     'notifications/feed' => ['controller' => 'NotificationsController', 'action' => 'feed'],
     'notifications/unread-count' => ['controller' => 'NotificationsController', 'action' => 'unreadCount'],
     'notifications/list' => ['controller' => 'NotificationsController', 'action' => 'list'],
+    'push/vapid-public-key' => ['controller' => 'PushController', 'action' => 'vapidPublicKey'],
+    'push/subscribe' => ['controller' => 'PushController', 'action' => 'subscribe'],
+    'push/unsubscribe' => ['controller' => 'PushController', 'action' => 'unsubscribe'],
     'notifications/mark-read' => [
         'POST' => ['controller' => 'NotificationsController', 'action' => 'markRead'],
     ],
@@ -390,6 +393,10 @@ $routes = [
     'tenant/notifications/list' => ['controller' => 'NotificationsController', 'action' => 'tenantList'],
     'tenant/notifications/mark-read' => ['controller' => 'NotificationsController', 'action' => 'tenantMarkRead'],
     'tenant/notifications/mark-all-read' => ['controller' => 'NotificationsController', 'action' => 'tenantMarkAllRead'],
+    // Tenant Web Push
+    'tenant/push/vapid-public-key' => ['controller' => 'PushController', 'action' => 'tenantVapidPublicKey'],
+    'tenant/push/subscribe' => ['controller' => 'PushController', 'action' => 'tenantSubscribe'],
+    'tenant/push/unsubscribe' => ['controller' => 'PushController', 'action' => 'tenantUnsubscribe'],
     'tenant/payment/process' => ['controller' => 'TenantPaymentController', 'action' => 'process'],
     'tenant/payment/initiate-stk' => ['controller' => 'TenantPaymentController', 'action' => 'initiateSTK'],
     'tenant/payment/check-stk-status' => ['controller' => 'TenantPaymentController', 'action' => 'checkSTKStatus'],
@@ -567,6 +574,10 @@ $protectedRoutes = [
     'notifications/list',
     'notifications/mark-read',
     'notifications/mark-all-read',
+    // Web Push
+    'push/vapid-public-key',
+    'push/subscribe',
+    'push/unsubscribe',
     'notices',
     'notices/store',
     'notices/delete/(\d+)',
