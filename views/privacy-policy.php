@@ -45,17 +45,6 @@ if (!defined('BASE_URL')) {
 
 </head>
 <body>
-    <?php
-    try {
-        require_once __DIR__ . '/../app/Models/Setting.php';
-        $settingsModel = new \App\Models\Setting();
-        $pageSettings = $settingsModel->getAllAsAssoc();
-    } catch (\Throwable $e) {
-        $pageSettings = [];
-    }
-    $privacyTitle = isset($pageSettings['privacy_title']) && $pageSettings['privacy_title'] !== '' ? (string)$pageSettings['privacy_title'] : 'Privacy Policy';
-    $privacyEmail = isset($pageSettings['privacy_contact_email']) && $pageSettings['privacy_contact_email'] !== '' ? (string)$pageSettings['privacy_contact_email'] : 'privacy@rentsmart.com';
-    ?>
     <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-light fixed-top">
         <div class="container">
@@ -68,7 +57,7 @@ if (!defined('BASE_URL')) {
 
     <div class="policy-content">
         <div class="container">
-            <h1 class="mb-4"><?= htmlspecialchars($privacyTitle) ?></h1>
+            <h1 class="mb-4">Privacy Policy</h1>
             
             <p class="lead">Last updated: <?= date('F d, Y') ?></p>
 
@@ -120,7 +109,7 @@ if (!defined('BASE_URL')) {
             <h2>6. Contact Us</h2>
             <p>If you have any questions about this Privacy Policy, please contact us at:</p>
             <ul>
-                <li>Email: <?= htmlspecialchars($privacyEmail) ?></li>
+                <li>Email: privacy@rentsmart.com</li>
                 <li>Phone: +254 700 000000</li>
                 <li>Address: Nairobi, Kenya</li>
             </ul>

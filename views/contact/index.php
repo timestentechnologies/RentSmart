@@ -13,20 +13,6 @@
   </style>
 </head>
 <body>
-  <?php
-    try {
-      require_once __DIR__ . '/../../app/Models/Setting.php';
-      $settingsModel = new \App\Models\Setting();
-      $pageSettings = $settingsModel->getAllAsAssoc();
-    } catch (\Throwable $e) {
-      $pageSettings = [];
-    }
-    $contactHeroTitle = isset($pageSettings['contact_hero_title']) && $pageSettings['contact_hero_title'] !== '' ? (string)$pageSettings['contact_hero_title'] : 'Contact Sales & Support';
-    $contactHeroSubtitle = isset($pageSettings['contact_hero_subtitle']) && $pageSettings['contact_hero_subtitle'] !== '' ? (string)$pageSettings['contact_hero_subtitle'] : "We'd love to hear from you. Send us a message and we'll respond shortly.";
-    $contactPhone = isset($pageSettings['contact_phone']) && $pageSettings['contact_phone'] !== '' ? (string)$pageSettings['contact_phone'] : '+254 795 155 230';
-    $contactEmail = isset($pageSettings['contact_email']) && $pageSettings['contact_email'] !== '' ? (string)$pageSettings['contact_email'] : 'rentsmart@timestentechnologies.co.ke';
-    $contactLocation = isset($pageSettings['contact_location']) && $pageSettings['contact_location'] !== '' ? (string)$pageSettings['contact_location'] : 'Nairobi, Kenya';
-  ?>
   <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm">
     <div class="container">
       <a class="navbar-brand" href="<?= BASE_URL ?>/">
@@ -38,8 +24,8 @@
 
   <section class="contact-hero">
     <div class="container">
-      <h1 class="display-6"><?= htmlspecialchars($contactHeroTitle) ?></h1>
-      <p class="lead mb-0"><?= htmlspecialchars($contactHeroSubtitle) ?></p>
+      <h1 class="display-6">Contact Sales & Support</h1>
+      <p class="lead mb-0">We'd love to hear from you. Send us a message and we'll respond shortly.</p>
     </div>
   </section>
 
@@ -91,9 +77,9 @@
         <div class="card contact-card">
           <div class="card-body p-4">
             <h5 class="mb-3">Contact Details</h5>
-            <p class="mb-2"><i class="bi bi-telephone me-2"></i><?= htmlspecialchars($contactPhone) ?></p>
-            <p class="mb-2"><i class="bi bi-envelope me-2"></i><?= htmlspecialchars($contactEmail) ?></p>
-            <p class="mb-0"><i class="bi bi-geo-alt me-2"></i><?= htmlspecialchars($contactLocation) ?></p>
+            <p class="mb-2"><i class="bi bi-telephone me-2"></i>+254 795 155 230</p>
+            <p class="mb-2"><i class="bi bi-envelope me-2"></i>rentsmart@timestentechnologies.co.ke</p>
+            <p class="mb-0"><i class="bi bi-geo-alt me-2"></i>Nairobi, Kenya</p>
           </div>
         </div>
       </div>
