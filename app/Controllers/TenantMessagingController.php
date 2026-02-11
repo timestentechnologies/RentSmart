@@ -25,6 +25,12 @@ class TenantMessagingController
 
     private function requireTenant()
     {
+        // If a staff user hits the tenant endpoint (e.g. due to cached links), redirect to staff messaging
+        if (!empty($_SESSION['user_id']) && empty($_SESSION['impersonating'])) {
+            header('Location: ' . BASE_URL . '/messaging');
+            exit;
+        }
+
         if (!$this->tenantId) {
             header('Location: ' . BASE_URL . '/');
             exit;
