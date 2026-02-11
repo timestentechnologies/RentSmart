@@ -778,6 +778,62 @@ class TenantsController
         exit;
     }
 
+    public function whatsappCredentials($id)
+    {
+        $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+
+        try {
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                throw new \Exception('Invalid request method');
+            }
+
+            if (empty($_SESSION['user_id'])) {
+                throw new \Exception('Unauthorized');
+            }
+
+            $userId = (int)$_SESSION['user_id'];
+            $tenantId = (int)$id;
+            if ($tenantId <= 0) {
+                throw new \Exception('Invalid tenant');
+            }
+
+            $tenant = $this->tenant->getById($tenantId, $userId);
+            if (!$tenant) {
+                throw new \Exception('Tenant not found');
+            }
+
+            $plainPassword = bin2hex(random_bytes(4));
+            $hash = password_hash($plainPassword, PASSWORD_DEFAULT);
+            $ok = $this->tenant->update($tenantId, ['password' => $hash]);
+            if (!$ok) {
+                throw new \Exception('Failed to reset tenant password');
+            }
+
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => true,
+                'credentials' => [
+                    'name' => (string)($tenant['name'] ?? ''),
+                    'email' => (string)($tenant['email'] ?? ''),
+                    'phone' => (string)($tenant['phone'] ?? ''),
+                    'password' => $plainPassword,
+                    'portal_url' => 'https://rentsmart.timestentechnologies.co.ke/'
+                ]
+            ]);
+            exit;
+        } catch (\Exception $e) {
+            if (!$isAjax) {
+                $_SESSION['flash_message'] = $e->getMessage();
+                $_SESSION['flash_type'] = 'danger';
+                redirect('/tenants');
+            }
+
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+            exit;
+        }
+    }
+
     public function export($format = 'csv')
     {
         try {
