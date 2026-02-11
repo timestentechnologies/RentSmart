@@ -15,15 +15,32 @@ class AccountingController
 {
     private $userId;
 
-    private function getLogoDataUri(): ?string
+    private function getBranding(): array
     {
         try {
             $settingsModel = new Setting();
             $settings = $settingsModel->getAllAsAssoc();
+
+            $siteName = $settings['site_name'] ?? 'RentSmart';
             $logo = $settings['site_logo'] ?? '';
 
+            $role = strtolower((string)($_SESSION['user_role'] ?? ''));
+            $uid = (int)($_SESSION['user_id'] ?? 0);
+            if ($uid > 0 && in_array($role, ['manager', 'agent', 'landlord'], true)) {
+                $companyNameKey = 'company_name_user_' . $uid;
+                $companyLogoKey = 'company_logo_user_' . $uid;
+                $companyName = trim((string)($settings[$companyNameKey] ?? ''));
+                $companyLogo = trim((string)($settings[$companyLogoKey] ?? ''));
+                if ($companyName !== '') {
+                    $siteName = $companyName;
+                }
+                if ($companyLogo !== '') {
+                    $logo = $companyLogo;
+                }
+            }
+
             $publicPath = realpath(__DIR__ . '/../../public');
-            if (!$publicPath) return null;
+            if (!$publicPath) return ['siteName' => $siteName, 'logoDataUri' => null];
 
             $path = null;
             if (!empty($logo)) {
@@ -38,7 +55,7 @@ class AccountingController
                     $path = $fallbackSvg;
                 }
             }
-            if (!$path) return null;
+            if (!$path) return ['siteName' => $siteName, 'logoDataUri' => null];
 
             $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
             $mime = 'image/png';
@@ -48,11 +65,11 @@ class AccountingController
             if ($ext === 'svg') $mime = 'image/svg+xml';
 
             $bytes = @file_get_contents($path);
-            if ($bytes === false) return null;
+            if ($bytes === false) return ['siteName' => $siteName, 'logoDataUri' => null];
 
-            return 'data:' . $mime . ';base64,' . base64_encode($bytes);
+            return ['siteName' => $siteName, 'logoDataUri' => 'data:' . $mime . ';base64,' . base64_encode($bytes)];
         } catch (\Throwable $e) {
-            return null;
+            return ['siteName' => 'RentSmart', 'logoDataUri' => null];
         }
     }
 
@@ -315,7 +332,9 @@ class AccountingController
         $end = $_GET['end'] ?? date('Y-m-d');
         $data = $this->buildStatementData($start, $end);
 
-        $logoDataUri = $this->getLogoDataUri();
+        $branding = $this->getBranding();
+        $logoDataUri = $branding['logoDataUri'] ?? null;
+        $siteName = $branding['siteName'] ?? 'RentSmart';
 
         $rowsHtml = '';
         foreach (($data['transactions'] ?? []) as $t) {
@@ -331,13 +350,13 @@ class AccountingController
                 . '</tr>';
         }
 
-        $headerHtml = '';
-        if ($logoDataUri) {
-            $headerHtml = '<div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">'
-                . '<img src="' . $logoDataUri . '" style="height:40px;" />'
-                . '<div style="font-size:16px; font-weight:bold;">Statement</div>'
-                . '</div>';
-        }
+        $headerHtml = '<div style="display:flex; align-items:center; gap:10px; margin-bottom:10px;">'
+            . ($logoDataUri ? ('<img src="' . $logoDataUri . '" style="height:40px;" />') : '')
+            . '<div>'
+            . '<div style="font-size:16px; font-weight:bold;">' . htmlspecialchars((string)$siteName) . '</div>'
+            . '<div style="font-size:12px; color:#555;">Statement</div>'
+            . '</div>'
+            . '</div>';
 
         $html = '<html><head><meta charset="utf-8">'
             . '<style>'
