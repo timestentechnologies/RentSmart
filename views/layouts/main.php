@@ -1403,7 +1403,7 @@ ob_clean();
                         <i class="bi bi-envelope-open me-2"></i> Inquiries
                     </a>
                 </li>
-                <?php $isTenantSession = !empty($_SESSION['tenant_id']); ?>
+                <?php $isTenantSession = !empty($_SESSION['tenant_id']) && (empty($_SESSION['user_id']) || !empty($_SESSION['impersonating'])); ?>
                 <li class="nav-item">
                     <a href="<?= BASE_URL ?><?= $isTenantSession ? '/tenant/messaging' : '/messaging' ?>" class="nav-link <?= strpos($current_uri, $isTenantSession ? 'tenant/messaging' : 'messaging') === 0 ? 'active' : '' ?>">
                         <i class="bi bi-chat-dots me-2"></i> Messaging
