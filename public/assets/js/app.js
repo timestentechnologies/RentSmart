@@ -303,16 +303,21 @@ document.addEventListener('DOMContentLoaded', function() {
             swSupported: 'serviceWorker' in navigator
         });
 
-        // Fallback: if not secure (so native prompt won't fire) show banner after a short delay
-        if (!isSecureContextLike) {
-            setTimeout(function(){
+        // Fallback: show banner even if beforeinstallprompt doesn't fire.
+        // Clicking "Install App" will either prompt (if available) or show manual instructions.
+        setTimeout(function(){
+            try {
+                const isStandalone = (
+                    (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+                    (window.navigator && window.navigator.standalone)
+                );
                 const pwaBanner = document.getElementById('pwaInstallBanner');
-                if (pwaBanner && !hasShownBanner) {
+                if (pwaBanner && !hasShownBanner && !isStandalone) {
                     pwaBanner.classList.remove('d-none');
                     hasShownBanner = true;
                 }
-            }, 1200);
-        }
+            } catch (e) {}
+        }, 1200);
     } catch (e) {}
 });
 
