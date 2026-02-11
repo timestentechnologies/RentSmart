@@ -113,6 +113,23 @@ function setting_json_pretty($key, $defaultJson = '[]') {
                     </div>
                 </div>
 
+                <h6 class="fw-bold mb-3">Homepage - Features</h6>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label">Section Title</label>
+                        <input type="text" class="form-control" name="home_features_title" value="<?= htmlspecialchars(setting_raw('home_features_title', '')) ?>">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Section Subtitle</label>
+                        <input type="text" class="form-control" name="home_features_subtitle" value="<?= htmlspecialchars(setting_raw('home_features_subtitle', '')) ?>">
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label">Feature Cards (JSON array)</label>
+                        <textarea class="form-control font-monospace" name="home_features_cards_json" rows="12" placeholder='[{"icon":"bi bi-house-door","title":"Property Management","text":"..."}]'><?= htmlspecialchars(setting_json_pretty('home_features_cards_json', '[]')) ?></textarea>
+                        <div class="form-text">Example: [{"icon":"bi bi-cash-coin","title":"Rent Collection","text":"Collect rent via M-PESA..."}]</div>
+                    </div>
+                </div>
+
                 <h6 class="fw-bold mb-3">Homepage - Testimonials</h6>
                 <div class="row g-3 mb-4">
                     <div class="col-md-6">
