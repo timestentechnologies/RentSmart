@@ -6,6 +6,21 @@ $faviconUrl = $faviconUrl ?? site_setting_image_url('site_favicon', BASE_URL . '
 ?>
 <style>
   :root { --primary-color:#6B3E99; --secondary-color:#8E5CC4; }
+  .navbar .nav-link {
+    color: #111827;
+    border-radius: .5rem;
+    padding: .45rem .7rem;
+    transition: background-color .15s ease, color .15s ease;
+  }
+  .navbar .nav-link:hover {
+    background: rgba(107, 62, 153, 0.10);
+    color: var(--primary-color);
+  }
+  .navbar .nav-link.active {
+    background: rgba(107, 62, 153, 0.12);
+    color: var(--primary-color);
+    font-weight: 600;
+  }
   .btn-gradient {
     background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
     color: white;

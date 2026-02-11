@@ -236,7 +236,7 @@
             background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
             padding: 50px 0;
             color: white;
-            margin-top: 76px;
+            margin-top: 0;
         }
 
         .hero-section h1 {
