@@ -835,6 +835,13 @@ try {
         $globalErrorId = (string)time();
     }
 
+    $requestPath = '';
+    try {
+        $requestPath = trim((string)parse_url((string)($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH), '/');
+    } catch (\Throwable $ignore) {
+        $requestPath = '';
+    }
+
     error_log("Error in routing | error_id={$globalErrorId} | msg=" . $e->getMessage());
     error_log("Error in routing | error_id={$globalErrorId} | trace=" . $e->getTraceAsString());
 
@@ -857,8 +864,23 @@ try {
     } catch (\Throwable $ignore) {
     }
 
+    // Make the debug endpoint usable even when APP_ENV=development.
+    // If routing fails while calling /debug/last-error, return the exception payload as JSON.
+    if ($requestPath === 'debug/last-error') {
+        header('Content-Type: application/json');
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'error_id' => $globalErrorId,
+            'message' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'trace' => $e->getTraceAsString(),
+        ]);
+        exit;
+    }
+
     try {
-        $requestPath = trim((string)parse_url((string)($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH), '/');
         if ($requestPath === 'tenant/payment/process') {
             $debugPayload = [
                 'ts' => date('c'),
