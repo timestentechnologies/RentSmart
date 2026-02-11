@@ -282,6 +282,9 @@ ob_start();
                                         <i class="bi bi-person-check"></i>
                                     </a>
                                     <?php endif; ?>
+                                    <button type="button" class="btn btn-sm btn-outline-success btn-wa-tenant" data-id="<?= (int)$tenant['id'] ?>" title="Send credentials via WhatsApp">
+                                        <i class="bi bi-whatsapp"></i>
+                                    </button>
                                     <button type="button" class="btn btn-sm btn-outline-primary btn-edit-tenant" data-id="<?= $tenant['id'] ?>">
                                         <i class="bi bi-pencil"></i>
                                     </button>
@@ -677,6 +680,9 @@ document.addEventListener('DOMContentLoaded', function() {
                             </td>
                             <td>
                                 <div class="btn-group">
+                                    <button type="button" class="btn btn-sm btn-outline-success btn-wa-tenant" data-id="${tenant.id}" title="Send credentials via WhatsApp">
+                                        <i class="bi bi-whatsapp"></i>
+                                    </button>
                                     <a href="${BASE_URL}/tenants/edit/${tenant.id}" class="btn btn-sm btn-outline-primary">
                                         <i class="bi bi-pencil"></i>
                                     </a>
@@ -782,6 +788,72 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
         });
     });
+
+    function normalizePhone(p) {
+        const digits = String(p || '').replace(/[^0-9]/g, '');
+        if (!digits) return '';
+        if (digits.startsWith('254')) return digits;
+        if (digits.startsWith('0') && digits.length === 10) return '254' + digits.slice(1);
+        if (digits.length === 12 && digits.startsWith('254')) return digits;
+        return digits;
+    }
+
+    function attachWhatsAppHandlers() {
+        document.querySelectorAll('.btn-wa-tenant').forEach(btn => {
+            if (btn.dataset.bound === '1') return;
+            btn.dataset.bound = '1';
+            btn.addEventListener('click', function() {
+                const tenantId = this.getAttribute('data-id');
+                if (!tenantId) return;
+
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Send WhatsApp Credentials',
+                    text: 'This will reset the tenant portal password and generate new credentials. Continue?',
+                    showCancelButton: true,
+                    confirmButtonText: 'Continue',
+                    cancelButtonText: 'Cancel'
+                }).then((res) => {
+                    if (!res.isConfirmed) return;
+                    return fetch(`${BASE_URL}/tenants/whatsapp-credentials/${tenantId}`, {
+                        method: 'POST',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'X-CSRF-TOKEN': '<?= csrf_token() ?>'
+                        }
+                    })
+                    .then(r => r.json())
+                    .then(data => {
+                        if (!data || !data.success || !data.credentials) {
+                            throw new Error((data && data.message) ? data.message : 'Failed to generate credentials');
+                        }
+                        const creds = data.credentials;
+                        const phone = normalizePhone(creds.phone);
+                        const msg = `Hello ${creds.name || ''},\n\nYour tenant portal login credentials have been generated.\n\nLogin Email: ${creds.email}\nPassword: ${creds.password}\nPortal: ${creds.portal_url || 'https://rentsmart.timestentechnologies.co.ke/'}\n\nPlease change your password after first login.`;
+                        const waUrl = phone ? (`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`) : '';
+                        if (!waUrl) {
+                            Swal.fire({
+                                icon: 'warning',
+                                title: 'Missing phone number',
+                                text: 'Tenant phone number is missing or invalid for WhatsApp link.'
+                            });
+                            return;
+                        }
+                        window.open(waUrl, '_blank');
+                    })
+                    .catch(err => {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: err && err.message ? err.message : 'Failed to generate WhatsApp credentials.'
+                        });
+                    });
+                });
+            });
+        });
+    }
+
+    attachWhatsAppHandlers();
 
     function loadUnitsForProperty(propertyId, selectedUnitId = null) {
         const unitSelect = document.getElementById('edit_unit_id');

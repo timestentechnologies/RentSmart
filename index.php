@@ -222,6 +222,7 @@ $routes = [
     'tenants/update/(\d+)' => ['controller' => 'TenantsController', 'action' => 'update'],
     'tenants/delete/(\d+)' => ['controller' => 'TenantsController', 'action' => 'delete'],
     'tenants/get/(\d+)' => ['controller' => 'TenantsController', 'action' => 'get'],
+    'tenants/whatsapp-credentials/(\d+)' => ['controller' => 'TenantsController', 'action' => 'whatsappCredentials'],
     'admin/tenants/login-as/(\d+)' => ['controller' => 'TenantAuthController', 'action' => 'loginAsTenant', 'params' => ['id']],
     'admin/switch-back' => ['controller' => 'TenantAuthController', 'action' => 'switchBack'],
     'payments' => ['controller' => 'PaymentsController', 'action' => 'index'],
