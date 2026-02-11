@@ -3,6 +3,8 @@ ob_start();
 
 $settings = $settings ?? [];
 
+$GLOBALS['__public_pages_settings'] = $settings;
+
 $publicDefaults = [
     'home_hero_title' => 'Property Management Made Easy',
     'home_hero_subtitle' => 'Streamline your property management with RentSmart. The all-in-one solution for landlords and property managers.',
@@ -79,9 +81,11 @@ $publicDefaults = [
     'privacy_header' => 'Privacy Policy',
 ];
 
+$GLOBALS['__public_pages_defaults'] = $publicDefaults;
+
 function setting_raw($key, $default = '') {
-    global $settings;
-    global $publicDefaults;
+    $settings = $GLOBALS['__public_pages_settings'] ?? [];
+    $publicDefaults = $GLOBALS['__public_pages_defaults'] ?? [];
     if (isset($settings[$key]) && $settings[$key] !== '') {
         return $settings[$key];
     }
