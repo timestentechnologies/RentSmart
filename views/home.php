@@ -780,6 +780,19 @@
         ['title' => 'Accurate invoicing', 'text' => 'Rent, utilities, and maintenance are tracked separately so invoices and balances remain correct.'],
     ]);
 
+    $featuresTitle = site_setting('home_features_title', 'Complete Property Management Software Features');
+    $featuresSubtitle = site_setting('home_features_subtitle', 'Streamline your rental business with our comprehensive property management tools designed for landlords and real estate professionals in Kenya');
+    $featuresCards = site_setting_json('home_features_cards_json', [
+        ['icon' => 'bi bi-house-door', 'title' => 'Property Management', 'text' => 'Manage unlimited properties, units, and tenants from one centralized dashboard. Track occupancy rates, rental income, and property performance in real-time.'],
+        ['icon' => 'bi bi-cash-coin', 'title' => 'Rent Collection & Tenant Portal', 'text' => 'Collect rent via M-PESA and give tenants self-service access to pay, view balances, and track payment history—anytime, anywhere.'],
+        ['icon' => 'bi bi-file-earmark-text', 'title' => 'Lease Management System', 'text' => 'Create digital lease agreements, track lease terms, and receive automated renewal reminders. Simplify tenant onboarding and documentation.'],
+        ['icon' => 'bi bi-graph-up', 'title' => 'Invoices & Financial Reports', 'text' => 'Generate invoices and receipts, and access clear reporting on income, expenses, and performance for confident decision-making.'],
+        ['icon' => 'bi bi-bell', 'title' => 'Automated Notifications', 'text' => 'Stay informed with automated SMS and email notifications for rent due dates, maintenance updates, lease renewals, and payment confirmations.'],
+        ['icon' => 'bi bi-lightning-charge', 'title' => 'Utilities Management', 'text' => 'Track metered and flat-rate utilities, readings, charges, and payments—so utilities are always clearly separated from rent.'],
+        ['icon' => 'bi bi-tools', 'title' => 'Maintenance Management', 'text' => 'Log requests, assign work, track progress, and record maintenance costs with clear references for invoices and statements.'],
+        ['icon' => 'bi bi-cash-stack', 'title' => 'Expense Tracking', 'text' => 'Record property expenses and keep a clear view of profitability with statements and reports by property and time period.'],
+    ]);
+
     $testimonialsTitle = site_setting('home_testimonials_title', 'Trusted by Property Managers Across Kenya');
     $testimonialsSubtitle = site_setting('home_testimonials_subtitle', 'See how landlords and real estate professionals are transforming their property management with RentSmart');
     $testimonials = site_setting_json('home_testimonials_json', [
@@ -1082,85 +1095,21 @@
     <section class="features-section py-5" id="features">
         <div class="container">
             <div class="text-center mb-5">
-                <h2 class="display-5 fw-bold">Complete Property Management Software Features</h2>
-                <p class="lead text-muted">Streamline your rental business with our comprehensive property management tools designed for landlords and real estate professionals in Kenya</p>
+                <h2 class="display-5 fw-bold"><?= htmlspecialchars($featuresTitle) ?></h2>
+                <p class="lead text-muted"><?= htmlspecialchars($featuresSubtitle) ?></p>
             </div>
             <div class="row g-4">
-                <div class="col-12 col-md-6 col-lg-3">
-                    <div class="feature-card text-center p-4">
-                        <div class="feature-icon-circle mx-auto">
-                            <i class="bi bi-house-door"></i>
+                <?php foreach ($featuresCards as $card): ?>
+                    <div class="col-12 col-md-6 col-lg-3">
+                        <div class="feature-card text-center p-4">
+                            <div class="feature-icon-circle mx-auto">
+                                <i class="<?= htmlspecialchars((string)($card['icon'] ?? 'bi bi-star')) ?>"></i>
+                            </div>
+                            <h3><?= htmlspecialchars((string)($card['title'] ?? '')) ?></h3>
+                            <p><?= htmlspecialchars((string)($card['text'] ?? '')) ?></p>
                         </div>
-                        <h3>Property Management</h3>
-                        <p>Manage unlimited properties, units, and tenants from one centralized dashboard. Track occupancy rates, rental income, and property performance in real-time.</p>
                     </div>
-                </div>
-                <div class="col-12 col-md-6 col-lg-3">
-                    <div class="feature-card text-center p-4">
-                        <div class="feature-icon-circle mx-auto">
-                            <i class="bi bi-cash-coin"></i>
-                        </div>
-                        <h3>Rent Collection & Tenant Portal</h3>
-                        <p>Collect rent via M-PESA and give tenants self-service access to pay, view balances, and track payment history—anytime, anywhere.</p>
-                    </div>
-                </div>
-                <div class="col-12 col-md-6 col-lg-3">
-                    <div class="feature-card text-center p-4">
-                        <div class="feature-icon-circle mx-auto">
-                            <i class="bi bi-file-earmark-text"></i>
-                        </div>
-                        <h3>Lease Management System</h3>
-                        <p>Create digital lease agreements, track lease terms, and receive automated renewal reminders. Simplify tenant onboarding and documentation.</p>
-                    </div>
-                </div>
-                <div class="col-12 col-md-6 col-lg-3">
-                    <div class="feature-card text-center p-4">
-                        <div class="feature-icon-circle mx-auto">
-                            <i class="bi bi-graph-up"></i>
-                        </div>
-                        <h3>Invoices & Financial Reports</h3>
-                        <p>Generate invoices and receipts, and access clear reporting on income, expenses, and performance for confident decision-making.</p>
-                    </div>
-                </div>
-                <div class="col-12 col-md-6 col-lg-3">
-                    <div class="feature-card text-center p-4">
-                        <div class="feature-icon-circle mx-auto">
-                            <i class="bi bi-bell"></i>
-                        </div>
-                        <h3>Automated Notifications</h3>
-                        <p>Stay informed with automated SMS and email notifications for rent due dates, maintenance updates, lease renewals, and payment confirmations.</p>
-                    </div>
-                </div>
-
-                <div class="col-12 col-md-6 col-lg-3">
-                    <div class="feature-card text-center p-4">
-                        <div class="feature-icon-circle mx-auto">
-                            <i class="bi bi-lightning-charge"></i>
-                        </div>
-                        <h3>Utilities Management</h3>
-                        <p>Track metered and flat-rate utilities, readings, charges, and payments—so utilities are always clearly separated from rent.</p>
-                    </div>
-                </div>
-
-                <div class="col-12 col-md-6 col-lg-3">
-                    <div class="feature-card text-center p-4">
-                        <div class="feature-icon-circle mx-auto">
-                            <i class="bi bi-tools"></i>
-                        </div>
-                        <h3>Maintenance Management</h3>
-                        <p>Log requests, assign work, track progress, and record maintenance costs with clear references for invoices and statements.</p>
-                    </div>
-                </div>
-
-                <div class="col-12 col-md-6 col-lg-3">
-                    <div class="feature-card text-center p-4">
-                        <div class="feature-icon-circle mx-auto">
-                            <i class="bi bi-cash-stack"></i>
-                        </div>
-                        <h3>Expense Tracking</h3>
-                        <p>Record property expenses and keep a clear view of profitability with statements and reports by property and time period.</p>
-                    </div>
-                </div>
+                <?php endforeach; ?>
             </div>
         </div>
     </section>
