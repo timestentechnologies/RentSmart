@@ -16,29 +16,7 @@
   </style>
 </head>
 <body>
-  <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
-    <div class="container">
-      <a class="navbar-brand" href="<?= BASE_URL ?>/">
-        <img src="<?= asset('images/site_logo_1751627446.png') ?>" alt="RentSmart Logo" height="40">
-      </a>
-      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-        <span class="navbar-toggler-icon"></span>
-      </button>
-      <div class="collapse navbar-collapse" id="navbarNav">
-        <ul class="navbar-nav ms-auto">
-          <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>/vacant-units">Vacant Units</a></li>
-          <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>/#features">Features</a></li>
-          <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>/#pricing">Pricing</a></li>
-          <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>/#testimonials">Testimonials</a></li>
-          <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>/#faq">FAQs</a></li>
-          <li class="nav-item"><a class="nav-link active" href="<?= BASE_URL ?>/contact">Contact Us</a></li>
-          <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>/docs">Documentation</a></li>
-          <li class="nav-item"><a class="nav-link" href="<?= BASE_URL ?>/login">Login</a></li>
-          <li class="nav-item"><a class="btn btn-gradient ms-2" href="<?= BASE_URL ?>/register">Get Started - 7 Days Free</a></li>
-        </ul>
-      </div>
-    </div>
-  </nav>
+  <?php $activePage = 'contact'; require __DIR__ . '/../partials/public_header.php'; ?>
 
   <section class="contact-hero">
     <div class="container">
@@ -103,5 +81,6 @@
       </div>
     </div>
   </div>
+  <?php require __DIR__ . '/../partials/public_footer.php'; ?>
 </body>
 </html>
