@@ -137,6 +137,221 @@ class SettingsController
         redirect('/settings/ai');
     }
 
+    public function homepage()
+    {
+        try {
+            $this->settings->ensureDefaultSettings();
+            $settings = $this->settings->getAllAsAssoc();
+
+            ob_start();
+            echo view('settings/homepage', [
+                'title' => 'Homepage Content - RentSmart',
+                'settings' => $settings
+            ]);
+            $content = ob_get_clean();
+
+            echo view('layouts/main', [
+                'title' => 'Homepage Content - RentSmart',
+                'content' => $content,
+                'siteName' => $settings['site_name'] ?? 'RentSmart',
+                'siteLogo' => asset('images/' . ($settings['site_logo'] ?? 'default-logo.png')),
+                'current_uri' => current_uri()
+            ]);
+        } catch (Exception $e) {
+            error_log('Error loading homepage settings: ' . $e->getMessage());
+            echo view('errors/500', [
+                'title' => '500 Internal Server Error'
+            ]);
+        }
+    }
+
+    public function updateHomepage()
+    {
+        try {
+            if (!verify_csrf_token()) {
+                $_SESSION['flash_message'] = 'Invalid security token';
+                $_SESSION['flash_type'] = 'danger';
+                redirect('/settings/homepage');
+            }
+
+            $textKeys = [
+                'homepage_hero_title',
+                'homepage_hero_subtitle',
+                'homepage_split_badge',
+                'homepage_split_title',
+                'homepage_split_text',
+                'homepage_why_title',
+                'homepage_why_subtitle',
+            ];
+
+            foreach ($textKeys as $k) {
+                if (isset($_POST[$k])) {
+                    $this->settings->updateByKey($k, (string)$_POST[$k]);
+                }
+            }
+
+            $statsNumber = isset($_POST['stats_number']) && is_array($_POST['stats_number']) ? $_POST['stats_number'] : [];
+            $statsLabel  = isset($_POST['stats_label']) && is_array($_POST['stats_label']) ? $_POST['stats_label'] : [];
+            $stats = [];
+            for ($i = 0; $i < 4; $i++) {
+                $stats[] = [
+                    'number' => isset($statsNumber[$i]) ? trim((string)$statsNumber[$i]) : '',
+                    'label' => isset($statsLabel[$i]) ? trim((string)$statsLabel[$i]) : '',
+                ];
+            }
+            $this->settings->updateByKey('homepage_stats_json', json_encode($stats));
+
+            $splitTitles = isset($_POST['split_item_title']) && is_array($_POST['split_item_title']) ? $_POST['split_item_title'] : [];
+            $splitTexts  = isset($_POST['split_item_text']) && is_array($_POST['split_item_text']) ? $_POST['split_item_text'] : [];
+            $splitList = [];
+            for ($i = 0; $i < 3; $i++) {
+                $splitList[] = [
+                    'title' => isset($splitTitles[$i]) ? trim((string)$splitTitles[$i]) : '',
+                    'text' => isset($splitTexts[$i]) ? trim((string)$splitTexts[$i]) : '',
+                ];
+            }
+            $this->settings->updateByKey('homepage_split_list_json', json_encode($splitList));
+
+            $whyIcons = isset($_POST['why_icon']) && is_array($_POST['why_icon']) ? $_POST['why_icon'] : [];
+            $whyTitles = isset($_POST['why_title']) && is_array($_POST['why_title']) ? $_POST['why_title'] : [];
+            $whyTexts = isset($_POST['why_text']) && is_array($_POST['why_text']) ? $_POST['why_text'] : [];
+            $whyCards = [];
+            for ($i = 0; $i < 4; $i++) {
+                $whyCards[] = [
+                    'icon' => isset($whyIcons[$i]) ? trim((string)$whyIcons[$i]) : '',
+                    'title' => isset($whyTitles[$i]) ? trim((string)$whyTitles[$i]) : '',
+                    'text' => isset($whyTexts[$i]) ? trim((string)$whyTexts[$i]) : '',
+                ];
+            }
+            $this->settings->updateByKey('homepage_why_cards_json', json_encode($whyCards));
+
+            $faqQs = isset($_POST['faq_q']) && is_array($_POST['faq_q']) ? $_POST['faq_q'] : [];
+            $faqAs = isset($_POST['faq_a']) && is_array($_POST['faq_a']) ? $_POST['faq_a'] : [];
+            $faqs = [];
+            for ($i = 0; $i < 8; $i++) {
+                $faqs[] = [
+                    'q' => isset($faqQs[$i]) ? trim((string)$faqQs[$i]) : '',
+                    'a' => isset($faqAs[$i]) ? trim((string)$faqAs[$i]) : '',
+                ];
+            }
+            $this->settings->updateByKey('homepage_faqs_json', json_encode($faqs));
+
+            if (isset($_FILES['homepage_split_image']) && $_FILES['homepage_split_image']['error'] === UPLOAD_ERR_OK) {
+                $file = $_FILES['homepage_split_image'];
+                $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+                $allowed = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+                if (in_array($ext, $allowed)) {
+                    $newName = 'homepage_split_image_' . time() . '.' . $ext;
+                    $targetPath = __DIR__ . '/../../public/assets/images/' . $newName;
+                    if (move_uploaded_file($file['tmp_name'], $targetPath)) {
+                        $old = $this->settings->get('homepage_split_image');
+                        if ($old) {
+                            $oldPath = __DIR__ . '/../../public/assets/images/' . $old;
+                            if (file_exists($oldPath)) {
+                                unlink($oldPath);
+                            }
+                        }
+                        $this->settings->updateByKey('homepage_split_image', $newName);
+                    }
+                }
+            }
+
+            $_SESSION['flash_message'] = 'Homepage content updated successfully!';
+            $_SESSION['flash_type'] = 'success';
+        } catch (Exception $e) {
+            error_log('Error updating homepage settings: ' . $e->getMessage());
+            $_SESSION['flash_message'] = 'Error updating homepage content: ' . $e->getMessage();
+            $_SESSION['flash_type'] = 'danger';
+        }
+
+        redirect('/settings/homepage');
+    }
+
+    public function publicPages()
+    {
+        try {
+            // Do NOT force defaults for public pages so empty values keep existing hardcoded fallbacks.
+            $settings = $this->settings->getAllAsAssoc();
+
+            ob_start();
+            echo view('settings/public_pages', [
+                'title' => 'Public Pages Content - RentSmart',
+                'settings' => $settings
+            ]);
+            $content = ob_get_clean();
+
+            echo view('layouts/main', [
+                'title' => 'Public Pages Content - RentSmart',
+                'content' => $content,
+                'siteName' => $settings['site_name'] ?? 'RentSmart',
+                'siteLogo' => asset('images/' . ($settings['site_logo'] ?? 'default-logo.png')),
+                'current_uri' => current_uri()
+            ]);
+        } catch (Exception $e) {
+            error_log('Error loading public pages settings: ' . $e->getMessage());
+            echo view('errors/500', [
+                'title' => '500 Internal Server Error'
+            ]);
+        }
+    }
+
+    public function updatePublicPages()
+    {
+        try {
+            if (!verify_csrf_token()) {
+                $_SESSION['flash_message'] = 'Invalid security token';
+                $_SESSION['flash_type'] = 'danger';
+                redirect('/settings/public-pages');
+            }
+
+            $textKeys = [
+                'contact_hero_title',
+                'contact_hero_subtitle',
+                'contact_phone',
+                'contact_email',
+                'contact_location',
+                'terms_title',
+                'terms_contact_email',
+                'privacy_title',
+                'privacy_contact_email',
+                'homepage_testimonials_title',
+                'homepage_testimonials_subtitle',
+                'homepage_cta_title',
+                'homepage_cta_subtitle',
+                'homepage_cta_button',
+                'homepage_cta_note',
+            ];
+
+            foreach ($textKeys as $k) {
+                if (isset($_POST[$k])) {
+                    $this->settings->updateByKey($k, (string)$_POST[$k]);
+                }
+            }
+
+            $names = isset($_POST['test_name']) && is_array($_POST['test_name']) ? $_POST['test_name'] : [];
+            $roles = isset($_POST['test_role']) && is_array($_POST['test_role']) ? $_POST['test_role'] : [];
+            $texts = isset($_POST['test_text']) && is_array($_POST['test_text']) ? $_POST['test_text'] : [];
+            $tests = [];
+            for ($i = 0; $i < 3; $i++) {
+                $tests[] = [
+                    'name' => isset($names[$i]) ? trim((string)$names[$i]) : '',
+                    'role' => isset($roles[$i]) ? trim((string)$roles[$i]) : '',
+                    'text' => isset($texts[$i]) ? trim((string)$texts[$i]) : '',
+                ];
+            }
+            $this->settings->updateByKey('homepage_testimonials_json', json_encode($tests));
+
+            $_SESSION['flash_message'] = 'Public pages content updated successfully!';
+            $_SESSION['flash_type'] = 'success';
+        } catch (Exception $e) {
+            error_log('Error updating public pages settings: ' . $e->getMessage());
+            $_SESSION['flash_message'] = 'Error updating public pages content: ' . $e->getMessage();
+            $_SESSION['flash_type'] = 'danger';
+        }
+
+        redirect('/settings/public-pages');
+    }
+
     public function index()
     {
         try {
