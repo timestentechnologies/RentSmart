@@ -324,7 +324,6 @@
                         <?php endif; ?>
                     </div>
                 </div>
-                </div>
             </div>
         </div>
     </div>
@@ -334,14 +333,8 @@
             <div class="card h-100">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0"><i class="bi bi-pen me-2"></i>Signature Requests</h5>
-                    <div class="d-flex gap-2 align-items-center">
-                        <a href="<?= BASE_URL ?>/tenant/esign" class="btn btn-sm btn-outline-primary">Open e‑Sign</a>
-                        <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#tenantSigCollapse" aria-expanded="true" aria-controls="tenantSigCollapse" data-chevron-target="#tenantSigChevron">
-                            <i class="bi bi-chevron-up" id="tenantSigChevron"></i>
-                        </button>
-                    </div>
+                    <a href="<?= BASE_URL ?>/tenant/esign" class="btn btn-sm btn-outline-primary">Open e‑Sign</a>
                 </div>
-                <div class="collapse show" id="tenantSigCollapse">
                 <div class="card-body">
                     <?php if (empty($tenantESignRequests)): ?>
                         <div class="text-muted">No signature requests yet.</div>
@@ -392,7 +385,6 @@
                         <div class="small text-muted mt-2">Tip: If a request stays pending, refresh after signing to see the signed copy link.</div>
                     <?php endif; ?>
                 </div>
-                </div>
             </div>
         </div>
 
@@ -400,11 +392,7 @@
             <div class="card h-100">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0"><i class="bi bi-receipt me-2"></i>Your Invoices</h5>
-                    <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#tenantInvoicesCollapse" aria-expanded="true" aria-controls="tenantInvoicesCollapse" data-chevron-target="#tenantInvoicesChevron">
-                        <i class="bi bi-chevron-up" id="tenantInvoicesChevron"></i>
-                    </button>
                 </div>
-                <div class="collapse show" id="tenantInvoicesCollapse">
                 <div class="card-body">
                     <?php if (empty($tenantInvoices)): ?>
                         <div class="text-muted">No invoices available.</div>
@@ -445,7 +433,6 @@
                         </div>
                     <?php endif; ?>
                 </div>
-                </div>
             </div>
         </div>
     </div>
@@ -455,11 +442,7 @@
             <div class="card h-100">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0"><i class="bi bi-file-earmark-text me-2"></i>Your Statement</h5>
-                    <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#tenantStatementCollapse" aria-expanded="true" aria-controls="tenantStatementCollapse" data-chevron-target="#tenantStatementChevron">
-                        <i class="bi bi-chevron-up" id="tenantStatementChevron"></i>
-                    </button>
                 </div>
-                <div class="collapse show" id="tenantStatementCollapse">
                 <div class="card-body">
                     <?php
                         $stmtStartDefault = date('Y-m-01');
@@ -482,7 +465,6 @@
                     </form>
                     <div class="small text-muted mt-2">Statement includes payments for your active lease within the selected period.</div>
                 </div>
-                </div>
             </div>
         </div>
     </div>
@@ -492,14 +474,8 @@
         <div class="col-12">
             <div class="card shadow-sm">
                 <div class="card-header bg-primary text-white">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0"><i class="bi bi-credit-card me-2"></i>Make Payment</h5>
-                        <button class="btn btn-sm btn-outline-light" type="button" data-bs-toggle="collapse" data-bs-target="#tenantPaymentsCollapse" aria-expanded="true" aria-controls="tenantPaymentsCollapse" data-chevron-target="#tenantPaymentsChevron">
-                            <i class="bi bi-chevron-up" id="tenantPaymentsChevron"></i>
-                        </button>
-                    </div>
+                    <h5 class="mb-0"><i class="bi bi-credit-card me-2"></i>Make Payment</h5>
                 </div>
-                <div class="collapse show" id="tenantPaymentsCollapse">
                 <div class="card-body">
                     <div class="row g-3">
                         <!-- Rent Payment -->
