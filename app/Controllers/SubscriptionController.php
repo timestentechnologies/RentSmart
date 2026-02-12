@@ -6,6 +6,7 @@ use App\Models\Subscription;
 use App\Models\User;
 use App\Models\Payment;
 use App\Models\Setting;
+use App\Models\PaymentMethod;
 use Exception;
 use DateTime;
 
@@ -128,11 +129,15 @@ class SubscriptionController
             $plans = $this->subscription->getAllPlans();
             $payments = $this->payment->getUserPayments($userId);
 
+            $paymentMethodModel = new PaymentMethod();
+            $subscriptionPaymentMethods = $paymentMethodModel->getActiveForScope('subscription');
+
             echo view('subscription/renew', [
                 'title' => 'Renew Subscription - RentSmart',
                 'subscription' => $subscription,
                 'plans' => $plans,
-                'payments' => $payments
+                'payments' => $payments,
+                'subscriptionPaymentMethods' => $subscriptionPaymentMethods
             ]);
         } catch (Exception $e) {
             error_log($e->getMessage());

@@ -6,13 +6,27 @@ class PaymentMethod extends Model
 {
     protected $table = 'payment_methods';
 
+    private function ensureScopeColumn()
+    {
+        try {
+            $col = $this->db->query("SHOW COLUMNS FROM {$this->table} LIKE 'scope'")->fetch(\PDO::FETCH_ASSOC);
+            if (!$col) {
+                $this->db->exec("ALTER TABLE {$this->table} ADD COLUMN scope VARCHAR(32) NULL DEFAULT 'tenant'");
+            }
+        } catch (\Exception $e) {
+            // Swallow errors to avoid breaking existing installs
+        }
+    }
+
     public function create($data)
     {
+        $this->ensureScopeColumn();
         return $this->insert($data);
     }
 
     public function update($id, $data)
     {
+        $this->ensureScopeColumn();
         return $this->updateById($id, $data);
     }
 
@@ -23,27 +37,51 @@ class PaymentMethod extends Model
 
     public function getById($id)
     {
+        $this->ensureScopeColumn();
         return $this->find($id);
     }
 
     public function getAll()
     {
+        $this->ensureScopeColumn();
         $sql = "SELECT * FROM {$this->table} ORDER BY name ASC";
         $stmt = $this->db->prepare($sql);
         $stmt->execute();
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
 
+    public function getAllForScope($scope)
+    {
+        $this->ensureScopeColumn();
+        $scope = strtolower(trim((string)$scope));
+        $sql = "SELECT * FROM {$this->table} WHERE COALESCE(scope, 'tenant') = ? ORDER BY name ASC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([$scope]);
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+    }
+
     public function getActive()
     {
+        $this->ensureScopeColumn();
         $sql = "SELECT * FROM {$this->table} WHERE is_active = 1 ORDER BY name ASC";
         $stmt = $this->db->prepare($sql);
         $stmt->execute();
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
 
+    public function getActiveForScope($scope)
+    {
+        $this->ensureScopeColumn();
+        $scope = strtolower(trim((string)$scope));
+        $sql = "SELECT * FROM {$this->table} WHERE is_active = 1 AND COALESCE(scope, 'tenant') = ? ORDER BY name ASC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([$scope]);
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+    }
+
     public function getByType($type)
     {
+        $this->ensureScopeColumn();
         $sql = "SELECT * FROM {$this->table} WHERE type = ? AND is_active = 1 ORDER BY name ASC";
         $stmt = $this->db->prepare($sql);
         $stmt->execute([$type]);
@@ -53,6 +91,7 @@ class PaymentMethod extends Model
     // Return active methods owned by any of the given user IDs (owner/manager/agent)
     public function getActiveForUsers(array $userIds)
     {
+        $this->ensureScopeColumn();
         try {
             $userIds = array_values(array_filter(array_map('intval', $userIds)));
             if (empty($userIds)) {
@@ -60,7 +99,7 @@ class PaymentMethod extends Model
             }
             // Build placeholders e.g. IN (?, ?, ?)
             $placeholders = implode(',', array_fill(0, count($userIds), '?'));
-            $sql = "SELECT * FROM {$this->table} WHERE is_active = 1 AND owner_user_id IN ($placeholders) ORDER BY name ASC";
+            $sql = "SELECT * FROM {$this->table} WHERE is_active = 1 AND owner_user_id IN ($placeholders) AND COALESCE(scope, 'tenant') = 'tenant' ORDER BY name ASC";
             $stmt = $this->db->prepare($sql);
             $stmt->execute($userIds);
             $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
@@ -74,8 +113,9 @@ class PaymentMethod extends Model
     // Return all methods for a single user (owner panel)
     public function getByUser($userId)
     {
+        $this->ensureScopeColumn();
         try {
-            $sql = "SELECT * FROM {$this->table} WHERE owner_user_id = ? ORDER BY name ASC";
+            $sql = "SELECT * FROM {$this->table} WHERE owner_user_id = ? AND COALESCE(scope, 'tenant') = 'tenant' ORDER BY name ASC";
             $stmt = $this->db->prepare($sql);
             $stmt->execute([intval($userId)]);
             return $stmt->fetchAll(\PDO::FETCH_ASSOC);
@@ -144,11 +184,12 @@ class PaymentMethod extends Model
     public function getActiveForProperty($propertyId)
     {
         $this->ensureLinkTable();
+        $this->ensureScopeColumn();
         try {
             $sql = "SELECT pm.*
                     FROM {$this->table} pm
                     INNER JOIN payment_method_properties pmp ON pmp.payment_method_id = pm.id
-                    WHERE pm.is_active = 1 AND pmp.property_id = ?
+                    WHERE pm.is_active = 1 AND pmp.property_id = ? AND COALESCE(pm.scope, 'tenant') = 'tenant'
                     ORDER BY pm.name ASC";
             $stmt = $this->db->prepare($sql);
             $stmt->execute([(int)$propertyId]);

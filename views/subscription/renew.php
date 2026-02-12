@@ -165,6 +165,24 @@ ob_start();
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
+                <?php
+                    $subscriptionPaymentMethods = $subscriptionPaymentMethods ?? [];
+                    $subMpesaManual = null;
+                    $subMpesaStk = null;
+                    foreach ($subscriptionPaymentMethods as $m) {
+                        $t = strtolower((string)($m['type'] ?? ''));
+                        if ($t === 'mpesa_manual' && !$subMpesaManual) {
+                            $subMpesaManual = $m;
+                        }
+                        if ($t === 'mpesa_stk' && !$subMpesaStk) {
+                            $subMpesaStk = $m;
+                        }
+                    }
+                    $subManualDetails = [];
+                    if ($subMpesaManual && !empty($subMpesaManual['details'])) {
+                        $subManualDetails = json_decode((string)$subMpesaManual['details'], true) ?: [];
+                    }
+                ?>
                 <div class="mb-4">
                     <h6>Selected Plan: <span id="selectedPlanName"></span></h6>
                     <h6>Amount: Ksh<span id="selectedPlanPrice"></span>Month</h6>
@@ -192,14 +210,14 @@ ob_start();
                     <div class="mb-3">
                         <label class="form-label">M-Pesa Payment Method</label>
                         <div class="form-check mb-2">
-                            <input class="form-check-input" type="radio" name="mpesaMethodRadio" id="mpesaStkRadio" value="stk" checked>
+                            <input class="form-check-input" type="radio" name="mpesaMethodRadio" id="mpesaStkRadio" value="stk" <?= $subMpesaStk ? 'checked' : (!$subMpesaManual ? 'checked' : '') ?> <?= $subMpesaStk ? '' : 'disabled' ?>>
                             <label class="form-check-label" for="mpesaStkRadio">
                                 STK Push (Automatic)
                             </label>
                             <small class="d-block text-muted">Receive payment prompt on your phone</small>
                         </div>
                         <div class="form-check">
-                            <input class="form-check-input" type="radio" name="mpesaMethodRadio" id="mpesaManualRadio" value="manual">
+                            <input class="form-check-input" type="radio" name="mpesaMethodRadio" id="mpesaManualRadio" value="manual" <?= (!$subMpesaStk && $subMpesaManual) ? 'checked' : '' ?> <?= $subMpesaManual ? '' : 'disabled' ?>>
                             <label class="form-check-label" for="mpesaManualRadio">
                                 Pay Bill (Manual)
                             </label>
@@ -223,9 +241,16 @@ ob_start();
                                 <h6 class="card-title mb-3">How to Pay via M-Pesa:</h6>
                                 <ol class="mb-0">
                                     <li>Go to M-Pesa menu</li>
-                                    <li>Select Pay Bill</li>
-                                    <li>Enter Business No: <strong>400200</strong></li>
-                                    <li>Enter Account No: <strong>01101379956001</strong></li>
+                                    <?php $manualMethod = strtolower((string)($subManualDetails['mpesa_method'] ?? 'paybill')); ?>
+                                    <?php if ($manualMethod === 'till'): ?>
+                                        <li>Select Lipa na M-Pesa</li>
+                                        <li>Select Buy Goods and Services</li>
+                                        <li>Enter Till No: <strong><?= htmlspecialchars((string)($subManualDetails['till_number'] ?? '')) ?></strong></li>
+                                    <?php else: ?>
+                                        <li>Select Pay Bill</li>
+                                        <li>Enter Business No: <strong><?= htmlspecialchars((string)($subManualDetails['paybill_number'] ?? '')) ?></strong></li>
+                                        <li>Enter Account No: <strong><?= htmlspecialchars((string)($subManualDetails['account_number'] ?? '')) ?></strong></li>
+                                    <?php endif; ?>
                                     <li>Enter Amount: Ksh<strong id="mpesaAmount"></strong></li>
                                     <li>Enter your M-Pesa PIN</li>
                                     <li>Save the M-Pesa message with transaction code</li>

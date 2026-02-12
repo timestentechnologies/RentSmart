@@ -39,6 +39,7 @@ ob_start();
                     <tr>
                         <th class="text-muted">NAME</th>
                         <th class="text-muted">TYPE</th>
+                        <th class="text-muted">SCOPE</th>
                         <th class="text-muted">DESCRIPTION</th>
                         <th class="text-muted">LINKED PROPERTIES</th>
                         <th class="text-muted">STATUS</th>
@@ -87,6 +88,12 @@ ob_start();
                                 <td>
                                     <span class="badge bg-light text-dark">
                                         <?= ucwords(str_replace('_', ' ', $method['type'])) ?>
+                                    </span>
+                                </td>
+                                <td>
+                                    <?php $scope = strtolower((string)($method['scope'] ?? 'tenant')); ?>
+                                    <span class="badge bg-<?= $scope === 'subscription' ? 'info text-dark' : 'secondary' ?>">
+                                        <?= $scope === 'subscription' ? 'Subscription' : 'Tenant' ?>
                                     </span>
                                 </td>
                                 <td>
@@ -182,6 +189,17 @@ ob_start();
                             <option value="card">Credit/Debit Card</option>
                         </select>
                     </div>
+
+                    <?php $role = strtolower((string)($_SESSION['user_role'] ?? '')); $isAdmin = in_array($role, ['administrator', 'admin'], true); ?>
+                    <?php if ($isAdmin): ?>
+                        <div class="mb-3">
+                            <label for="add_scope" class="form-label">Scope</label>
+                            <select id="add_scope" name="scope" class="form-select">
+                                <option value="tenant" selected>Tenant Payments (Properties)</option>
+                                <option value="subscription">Subscription Billing (Platform)</option>
+                            </select>
+                        </div>
+                    <?php endif; ?>
                     
                     <!-- M-Pesa Manual Fields -->
                     <div id="add_mpesa_manual_fields" style="display: none;">
@@ -305,6 +323,16 @@ ob_start();
                             <option value="card">Credit/Debit Card</option>
                         </select>
                     </div>
+
+                    <?php if ($isAdmin): ?>
+                        <div class="mb-3">
+                            <label for="edit_scope" class="form-label">Scope</label>
+                            <select id="edit_scope" name="scope" class="form-select">
+                                <option value="tenant">Tenant Payments (Properties)</option>
+                                <option value="subscription">Subscription Billing (Platform)</option>
+                            </select>
+                        </div>
+                    <?php endif; ?>
                     
                     <!-- M-Pesa Manual Fields -->
                     <div id="edit_mpesa_manual_fields" style="display: none;">
@@ -544,6 +572,11 @@ function editPaymentMethod(id) {
             document.getElementById('edit_type').value = method.type;
             document.getElementById('edit_description').value = method.description || '';
             document.getElementById('edit_is_active').checked = method.is_active == 1;
+
+            const editScope = document.getElementById('edit_scope');
+            if (editScope) {
+                editScope.value = (method.scope || 'tenant');
+            }
             
             // Toggle M-Pesa fields based on type
             toggleMpesaFields('edit');
