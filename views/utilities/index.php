@@ -292,10 +292,12 @@ ob_start();
                                                 data-bs-toggle="modal" data-bs-target="#editUtilityModal">
                                             Edit
                                         </button>
-                                        <form method="POST" action="<?= BASE_URL ?>/utilities/delete/<?= $utility['id'] ?>" style="display:inline;">
-                                            <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
-                                            <button type="submit" class="btn btn-sm btn-outline-danger" onclick="return confirm('Are you sure you want to delete this utility?');">Delete</button>
-                                        </form>
+                                        <button type="button"
+                                                class="btn btn-sm btn-outline-danger delete-utility-btn"
+                                                data-id="<?= (int)$utility['id'] ?>"
+                                                data-csrf="<?= htmlspecialchars($_SESSION['csrf_token']) ?>">
+                                            Delete
+                                        </button>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -558,26 +560,13 @@ $(document).ready(function() {
 
     // Store the utility ID to be deleted
     let utilityToDelete = null;
-
-    // Replace the inline delete form with a button
-    $('form[action*="/utilities/delete/"]').each(function() {
-        const form = $(this);
-        const utilityId = form.attr('action').split('/').pop();
-        const csrfToken = form.find('input[name="csrf_token"]').val();
-        
-        const deleteBtn = $('<button>')
-            .addClass('btn btn-sm btn-outline-danger delete-utility-btn')
-            .attr('data-id', utilityId)
-            .attr('data-csrf', csrfToken)
-            .text('Delete');
-        
-        form.replaceWith(deleteBtn);
-    });
+    let utilityDeleteCsrf = null;
 
     // Handle delete button click
-    $('.delete-utility-btn').on('click', function(e) {
+    $(document).on('click', '.delete-utility-btn', function(e) {
         e.preventDefault();
         utilityToDelete = $(this).data('id');
+        utilityDeleteCsrf = $(this).data('csrf') || null;
         const modal = new bootstrap.Modal(document.getElementById('deleteUtilityModal'));
         modal.show();
     });
@@ -591,10 +580,11 @@ $(document).ready(function() {
         btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Deleting...');
 
         $.ajax({
-            url: `${BASE_URL}/utilities/delete/${utilityToDelete}`,
+            url: `${window.BASE_URL}/utilities/delete/${utilityToDelete}`,
             method: 'POST',
+            dataType: 'json',
             data: {
-                csrf_token: $('input[name="csrf_token"]').val()
+                csrf_token: utilityDeleteCsrf
             },
             success: function(response) {
                 const modal = bootstrap.Modal.getInstance(document.getElementById('deleteUtilityModal'));
@@ -633,10 +623,9 @@ $(document).ready(function() {
                 showAlert('danger', message);
             },
             complete: function() {
-                const modal = bootstrap.Modal.getInstance(document.getElementById('deleteUtilityModal'));
-                modal.hide();
                 btn.prop('disabled', false).html(originalText);
                 utilityToDelete = null;
+                utilityDeleteCsrf = null;
             }
         });
     });
