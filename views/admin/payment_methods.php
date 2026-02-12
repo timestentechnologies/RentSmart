@@ -34,7 +34,7 @@ ob_start();
     <!-- Payment Methods Table -->
     <div class="card mt-4">
         <div class="table-responsive">
-            <table id="paymentMethodsTable" class="table table-hover mb-0 datatable">
+            <table id="paymentMethodsTable" class="table table-hover mb-0 <?= empty($paymentMethods) ? '' : 'datatable' ?>">
                 <thead class="bg-light">
                     <tr>
                         <th class="text-muted">NAME</th>
@@ -50,11 +50,18 @@ ob_start();
                 <tbody>
                     <?php if (empty($paymentMethods)): ?>
                         <tr>
-                            <td class="text-center py-5" colspan="8">
+                            <td class="text-center py-5">
                                 <i class="bi bi-credit-card display-4 text-muted mb-3 d-block"></i>
                                 <h5>No payment methods found</h5>
                                 <p class="text-muted">Add your first payment method to get started</p>
                             </td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
+                            <td></td>
                         </tr>
                     <?php else: ?>
                         <?php foreach ($paymentMethods as $method): ?>
