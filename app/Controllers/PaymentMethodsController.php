@@ -82,11 +82,20 @@ class PaymentMethodsController
                 session_start();
             }
             $ownerUserId = $_SESSION['user_id'] ?? null;
+            $role = strtolower($_SESSION['user_role'] ?? '');
+            $isAdmin = in_array($role, ['administrator', 'admin'], true);
 
             $name = trim($_POST['name'] ?? '');
             $type = trim($_POST['type'] ?? '');
             $description = trim($_POST['description'] ?? '');
             $isActive = filter_input(INPUT_POST, 'is_active', FILTER_VALIDATE_BOOLEAN);
+            $scope = strtolower(trim((string)($_POST['scope'] ?? 'tenant')));
+            if (!$isAdmin) {
+                $scope = 'tenant';
+            }
+            if ($scope !== 'subscription') {
+                $scope = 'tenant';
+            }
 
             if (!$name || !$type) {
                 throw new \Exception('Name and type are required');
@@ -117,6 +126,7 @@ class PaymentMethodsController
                 'description' => $description,
                 'is_active' => $isActive ? 1 : 0,
                 'details' => json_encode($details),
+                'scope' => $scope,
                 // Column must exist in DB: ALTER TABLE payment_methods ADD COLUMN owner_user_id INT NULL;
                 'owner_user_id' => $ownerUserId,
                 'created_at' => date('Y-m-d H:i:s')
@@ -126,7 +136,11 @@ class PaymentMethodsController
             // Link to properties (if provided)
             $propertyIds = $_POST['property_ids'] ?? [];
             if (!is_array($propertyIds)) { $propertyIds = []; }
-            $this->paymentMethod->assignProperties($paymentMethodId, $propertyIds);
+            if ($scope === 'tenant') {
+                $this->paymentMethod->assignProperties($paymentMethodId, $propertyIds);
+            } else {
+                $this->paymentMethod->assignProperties($paymentMethodId, []);
+            }
 
             if ($isAjax) {
                 header('Content-Type: application/json');
@@ -188,6 +202,13 @@ class PaymentMethodsController
             $type = trim($_POST['type'] ?? '');
             $description = trim($_POST['description'] ?? '');
             $isActive = filter_input(INPUT_POST, 'is_active', FILTER_VALIDATE_BOOLEAN);
+            $scope = strtolower(trim((string)($_POST['scope'] ?? ($existing['scope'] ?? 'tenant'))));
+            if (!$isAdmin) {
+                $scope = 'tenant';
+            }
+            if ($scope !== 'subscription') {
+                $scope = 'tenant';
+            }
 
             if (!$name || !$type) {
                 throw new \Exception('Name and type are required');
@@ -218,6 +239,7 @@ class PaymentMethodsController
                 'description' => $description,
                 'is_active' => $isActive ? 1 : 0,
                 'details' => json_encode($details),
+                'scope' => $scope,
                 'updated_at' => date('Y-m-d H:i:s')
             ];
 
@@ -225,7 +247,11 @@ class PaymentMethodsController
             // Update property links
             $propertyIds = $_POST['property_ids'] ?? [];
             if (!is_array($propertyIds)) { $propertyIds = []; }
-            $this->paymentMethod->assignProperties($id, $propertyIds);
+            if ($scope === 'tenant') {
+                $this->paymentMethod->assignProperties($id, $propertyIds);
+            } else {
+                $this->paymentMethod->assignProperties($id, []);
+            }
 
             if ($isAjax) {
                 header('Content-Type: application/json');
