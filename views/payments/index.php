@@ -250,6 +250,8 @@ ob_start();
                                     <td>
                                         <?php if (!empty($payment['transaction_code'])): ?>
                                             <code class="text-primary"><?= htmlspecialchars($payment['transaction_code']) ?></code>
+                                        <?php elseif (!empty($payment['reference_number'])): ?>
+                                            <code class="text-primary"><?= htmlspecialchars($payment['reference_number']) ?></code>
                                         <?php else: ?>
                                             <span class="text-muted">-</span>
                                         <?php endif; ?>
@@ -394,9 +396,10 @@ ob_start();
 
                     <div id="utility_payment_section" class="mb-3" style="display: none;">
                         <label for="utility_id" class="form-label">Utility</label>
-                        <select class="form-select" id="utility_id" name="utility_id">
+                        <select class="form-select" id="utility_id" name="utility_ids[]" multiple>
                             <option value="">Select Utility</option>
                         </select>
+                        <div class="mt-2" id="selected_utilities" style="display:none;"></div>
                         <div class="mt-2" id="utility_details" style="display: none;">
                             <div class="card bg-light">
                                 <div class="card-body">
@@ -415,7 +418,7 @@ ob_start();
                             <label for="utility_amount" class="form-label">Amount to Pay</label>
                             <div class="input-group">
                                 <span class="input-group-text">Ksh</span>
-                                <input type="number" step="0.01" class="form-control" id="utility_amount" name="utility_amount">
+                                <input type="number" step="0.01" class="form-control" id="utility_amount" name="utility_amount" readonly>
                             </div>
                         </div>
                     </div>
@@ -1170,6 +1173,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const maintenanceAmountInput = document.getElementById('maintenance_amount');
     const utilityTypeSelect = document.getElementById('utility_id');
     const utilityDetails = document.getElementById('utility_details');
+    const selectedUtilitiesWrap = document.getElementById('selected_utilities');
 
     // Handle payment type checkbox changes
     rentPaymentCheckbox.addEventListener('change', function() {
@@ -1285,7 +1289,7 @@ document.addEventListener('DOMContentLoaded', function() {
         validatePaidMonth();
 
         // Update utility type options
-        utilityTypeSelect.innerHTML = '<option value="">Select Utility</option>';
+        utilityTypeSelect.innerHTML = '';
         utilities.forEach(utility => {
             const option = document.createElement('option');
             option.value = utility.id;
@@ -1295,43 +1299,109 @@ document.addEventListener('DOMContentLoaded', function() {
             option.setAttribute('data-details', JSON.stringify(utility));
             utilityTypeSelect.appendChild(option);
         });
+
+        if (selectedUtilitiesWrap) {
+            selectedUtilitiesWrap.style.display = 'none';
+            selectedUtilitiesWrap.innerHTML = '';
+        }
+        if (utilityDetails) {
+            utilityDetails.style.display = 'none';
+        }
+        if (utilityAmountInput) {
+            utilityAmountInput.value = '';
+        }
     });
 
-    // Handle utility type selection
+    // Handle utility type selection (supports multi-select)
     utilityTypeSelect.addEventListener('change', function() {
-        const selectedOption = this.options[this.selectedIndex];
-        if (selectedOption.value) {
-            let utilityDetails = null;
+        const selectedOptions = Array.from(this.selectedOptions || []).filter(o => String(o.value || '').trim() !== '');
+        const selectedDetails = [];
+        selectedOptions.forEach(opt => {
             try {
-                utilityDetails = JSON.parse(selectedOption.getAttribute('data-details') || '{}');
+                const d = JSON.parse(opt.getAttribute('data-details') || '{}');
+                if (d && d.id) selectedDetails.push(d);
             } catch (e) {
-                utilityDetails = null;
             }
-            if (utilityDetails) {
-                const isMetered = (String(utilityDetails.is_metered) === '1' || utilityDetails.is_metered === 1);
+        });
+
+        let total = 0;
+        if (selectedUtilitiesWrap) {
+            selectedUtilitiesWrap.innerHTML = '';
+            if (selectedDetails.length) {
+                selectedUtilitiesWrap.style.display = 'block';
+                const list = document.createElement('div');
+                list.className = 'd-grid gap-2';
+
+                selectedDetails.forEach(d => {
+                    const row = document.createElement('div');
+                    row.className = 'border rounded p-2 d-flex justify-content-between align-items-center gap-2';
+
+                    const label = document.createElement('div');
+                    const baseLabel = d.label || (d.type ? (d.type.charAt(0).toUpperCase() + d.type.slice(1)) : ('Utility #' + String(d.id)));
+                    label.className = 'small';
+                    label.textContent = baseLabel;
+
+                    const input = document.createElement('input');
+                    input.type = 'number';
+                    input.step = '0.01';
+                    input.min = '0';
+                    input.className = 'form-control form-control-sm';
+                    input.style.maxWidth = '160px';
+                    input.name = `utility_amounts[${d.id}]`;
+                    input.value = (d.cost !== undefined && d.cost !== null) ? d.cost : '';
+
+                    input.addEventListener('input', () => {
+                        let sum = 0;
+                        selectedUtilitiesWrap.querySelectorAll('input[name^="utility_amounts["]').forEach(i => {
+                            const v = parseFloat(i.value);
+                            if (!isNaN(v) && v > 0) sum += v;
+                        });
+                        if (utilityAmountInput) utilityAmountInput.value = sum ? sum.toFixed(2) : '';
+                    });
+
+                    row.appendChild(label);
+                    row.appendChild(input);
+                    list.appendChild(row);
+
+                    const v = parseFloat(input.value);
+                    if (!isNaN(v) && v > 0) total += v;
+                });
+
+                selectedUtilitiesWrap.appendChild(list);
+            } else {
+                selectedUtilitiesWrap.style.display = 'none';
+            }
+        }
+
+        if (utilityDetails) {
+            if (selectedDetails.length === 1) {
+                const d = selectedDetails[0];
+                const isMetered = (String(d.is_metered) === '1' || d.is_metered === 1);
                 const meterRows = document.getElementById('meter_reading_rows');
                 const rateRow = document.getElementById('rate_row');
 
                 if (meterRows) meterRows.style.display = isMetered ? 'block' : 'none';
 
                 if (isMetered) {
-                    document.getElementById('previous_reading').textContent = utilityDetails.previous_reading;
-                    document.getElementById('previous_reading_date').textContent = formatDate(utilityDetails.previous_reading_date);
-                    document.getElementById('current_reading').textContent = utilityDetails.current_reading;
-                    document.getElementById('current_reading_date').textContent = formatDate(utilityDetails.current_reading_date);
+                    document.getElementById('previous_reading').textContent = d.previous_reading;
+                    document.getElementById('previous_reading_date').textContent = formatDate(d.previous_reading_date);
+                    document.getElementById('current_reading').textContent = d.current_reading;
+                    document.getElementById('current_reading_date').textContent = formatDate(d.current_reading_date);
                     if (rateRow) rateRow.style.display = 'block';
-                    document.getElementById('rate').textContent = utilityDetails.rate;
+                    document.getElementById('rate').textContent = d.rate;
                 } else {
                     if (rateRow) rateRow.style.display = 'none';
                 }
 
-                document.getElementById('amount_due').textContent = utilityDetails.cost;
-                utilityAmountInput.value = utilityDetails.cost;
-                document.getElementById('utility_details').style.display = 'block';
+                document.getElementById('amount_due').textContent = d.cost;
+                utilityDetails.style.display = 'block';
+            } else {
+                utilityDetails.style.display = 'none';
             }
-        } else {
-            document.getElementById('utility_details').style.display = 'none';
-            utilityAmountInput.value = '';
+        }
+
+        if (utilityAmountInput) {
+            utilityAmountInput.value = total ? total.toFixed(2) : '';
         }
     });
 

@@ -1620,8 +1620,8 @@ class Payment extends Model
      */
     public function createRentPayment($data)
     {
-        $sql = "INSERT INTO payments (lease_id, amount, payment_date, applies_to_month, payment_type, payment_method, notes, status) 
-                VALUES (:lease_id, :amount, :payment_date, :applies_to_month, :payment_type, :payment_method, :notes, :status)";
+        $sql = "INSERT INTO payments (lease_id, amount, payment_date, applies_to_month, payment_type, payment_method, reference_number, notes, status) 
+                VALUES (:lease_id, :amount, :payment_date, :applies_to_month, :payment_type, :payment_method, :reference_number, :notes, :status)";
         $stmt = $this->db->prepare($sql);
         $stmt->execute([
             'lease_id' => $data['lease_id'],
@@ -1630,6 +1630,7 @@ class Payment extends Model
             'applies_to_month' => $data['applies_to_month'] ?? null,
             'payment_type' => $data['payment_type'],
             'payment_method' => $data['payment_method'],
+            'reference_number' => $data['reference_number'] ?? null,
             'notes' => $data['notes'] ?? null,
             'status' => $data['status'] ?? 'completed'
         ]);
@@ -1657,8 +1658,8 @@ class Payment extends Model
 
     public function createUtilityPayment($data)
     {
-        $sql = "INSERT INTO payments (lease_id, utility_id, amount, payment_date, applies_to_month, payment_type, payment_method, notes, status) 
-                VALUES (:lease_id, :utility_id, :amount, :payment_date, :applies_to_month, :payment_type, :payment_method, :notes, :status)";
+        $sql = "INSERT INTO payments (lease_id, utility_id, amount, payment_date, applies_to_month, payment_type, payment_method, reference_number, notes, status) 
+                VALUES (:lease_id, :utility_id, :amount, :payment_date, :applies_to_month, :payment_type, :payment_method, :reference_number, :notes, :status)";
         $stmt = $this->db->prepare($sql);
         $stmt->execute([
             'lease_id' => $data['lease_id'],
@@ -1668,6 +1669,7 @@ class Payment extends Model
             'applies_to_month' => $data['applies_to_month'] ?? null,
             'payment_type' => $data['payment_type'],
             'payment_method' => $data['payment_method'],
+            'reference_number' => $data['reference_number'] ?? null,
             'notes' => $data['notes'] ?? null,
             'status' => $data['status'] ?? 'completed'
         ]);

@@ -367,7 +367,10 @@ class PaymentsController
                         'applies_to_month' => $appliesToMonth,
                         'payment_type' => 'rent',
                         'payment_method' => $_POST['payment_method'],
+                        'reference_number' => $_POST['reference_number'] ?? null,
                         'notes' => 'Rent payment: ' . ($_POST['notes'] ?? '')
+                        ,
+                        'status' => $_POST['status'] ?? 'completed'
                     ];
                     
                     // Add M-Pesa specific data if it's an M-Pesa payment
@@ -528,133 +531,90 @@ class PaymentsController
 
                 // Process utility payment if selected
                 if (in_array('utility', $paymentTypes) && !empty($_POST['utility_amount'])) {
-                    // Get all utilities for this unit
-                    $utilityModel = new \App\Models\Utility();
-                    $utilities = $utilityModel->getUtilitiesByUnit($lease['unit_id']);
-                    
-                    if (!empty($utilities)) {
-                        // Calculate the amount per utility based on their individual amounts
-                        $totalUtilityAmount = 0;
-                        $utilityAmounts = [];
-                        
-                        foreach ($utilities as $utility) {
-                            $amount = 0;
-                            if ($utility['is_metered']) {
-                                // For metered utilities, get the latest reading cost
-                                $latestReading = $utilityModel->getLatestReading($utility['id']);
-                                $amount = $latestReading ? $latestReading['cost'] : 0;
-                            } else {
-                                // For flat rate utilities, use the flat rate
-                                $amount = $utility['flat_rate'] ?? 0;
-                            }
-                            
-                            if ($amount > 0) {
-                                $utilityAmounts[$utility['id']] = $amount;
-                                $totalUtilityAmount += $amount;
-                            }
-                        }
-                        
-                        // If the payment amount matches the total utility amount, create separate payments
-                        if (abs($_POST['utility_amount'] - $totalUtilityAmount) < 0.01) {
-                            foreach ($utilityAmounts as $utilityId => $amount) {
-                                $utilityData = [
-                                    'lease_id' => $lease['id'],
-                                    'utility_id' => $utilityId,
-                                    'amount' => $amount,
-                                    'payment_date' => $_POST['payment_date'],
-                                    'applies_to_month' => $appliesToMonth,
-                                    'payment_type' => 'utility',
-                                    'payment_method' => $_POST['payment_method'],
-                                    'notes' => 'Utility payment: ' . ($_POST['notes'] ?? '')
-                                ];
-                                $utilityPaymentId = $paymentModel->createUtilityPayment($utilityData);
-                                // Activity log: payment.create (utility split)
-                                try {
-                                    $ip = $_SERVER['REMOTE_ADDR'] ?? null;
-                                    $agent = $_SERVER['HTTP_USER_AGENT'] ?? null;
-                                    $p = $paymentModel->getById($utilityPaymentId, $this->userId);
-                                    $this->activityLog->add(
-                                        $_SESSION['user_id'] ?? null,
-                                        $_SESSION['user_role'] ?? null,
-                                        'payment.create',
-                                        'payment',
-                                        (int)$utilityPaymentId,
-                                        isset($p['property_id']) ? (int)$p['property_id'] : null,
-                                        json_encode([
-                                            'amount' => (float)$amount,
-                                            'payment_date' => $_POST['payment_date'],
-                                            'payment_type' => 'utility',
-                                            'payment_method' => $_POST['payment_method'],
-                                            'utility_id' => (int)$utilityId
-                                        ]),
-                                        $ip,
-                                        $agent
-                                    );
-                                } catch (\Exception $ex) { error_log('payment.create log failed: ' . $ex->getMessage()); }
-                                
-                                // Handle file uploads for utility payment (only for the first one to avoid duplicates)
-                                if ($utilityId === array_key_first($utilityAmounts) && !empty($_FILES['payment_attachments']['name'][0])) {
-                                    $this->handlePaymentAttachments($utilityPaymentId);
-                                }
-                            }
-                            $successMessages[] = 'Utility payments added successfully!';
-                        } else {
-                            // If amounts don't match, create a single payment for the specified utility type
-                            if (!empty($_POST['utility_id'])) {
-                                $utilityId = (int)$_POST['utility_id'];
-                                
-                                $utilityData = [
-                                    'lease_id' => $lease['id'],
-                                    'utility_id' => $utilityId,
-                                    'amount' => $_POST['utility_amount'],
-                                    'payment_date' => $_POST['payment_date'],
-                                    'applies_to_month' => $appliesToMonth,
-                                    'payment_type' => 'utility',
-                                    'payment_method' => $_POST['payment_method'],
-                                    'notes' => 'Utility payment: ' . ($_POST['notes'] ?? '')
-                                ];
-                                $utilityPaymentId = $paymentModel->createUtilityPayment($utilityData);
-                                // Activity log: payment.create (utility single)
-                                try {
-                                    $ip = $_SERVER['REMOTE_ADDR'] ?? null;
-                                    $agent = $_SERVER['HTTP_USER_AGENT'] ?? null;
-                                    $p = $paymentModel->getById($utilityPaymentId, $this->userId);
-                                    $this->activityLog->add(
-                                        $_SESSION['user_id'] ?? null,
-                                        $_SESSION['user_role'] ?? null,
-                                        'payment.create',
-                                        'payment',
-                                        (int)$utilityPaymentId,
-                                        isset($p['property_id']) ? (int)$p['property_id'] : null,
-                                        json_encode([
-                                            'amount' => (float)$_POST['utility_amount'],
-                                            'payment_date' => $_POST['payment_date'],
-                                            'payment_type' => 'utility',
-                                            'payment_method' => $_POST['payment_method'],
-                                            'utility_id' => $utilityId
-                                        ]),
-                                        $ip,
-                                        $agent
-                                    );
-                                } catch (\Exception $ex) { error_log('payment.create log failed: ' . $ex->getMessage()); }
-                                
-                                // Handle file uploads for utility payment
-                                if (!empty($_FILES['payment_attachments']['name'][0])) {
-                                    $this->handlePaymentAttachments($utilityPaymentId);
-                                }
-                                
-                                $successMessages[] = 'Utility payment added successfully!';
-                            }
-                        }
+                    $selectedUtilityIds = $_POST['utility_ids'] ?? [];
+                    if (!is_array($selectedUtilityIds)) {
+                        $selectedUtilityIds = [$selectedUtilityIds];
+                    }
+                    $selectedUtilityIds = array_values(array_filter(array_map('intval', $selectedUtilityIds)));
+
+                    $utilityAmountsById = $_POST['utility_amounts'] ?? [];
+                    if (!is_array($utilityAmountsById)) {
+                        $utilityAmountsById = [];
                     }
 
-                    // Ensure invoice exists and update statuses for this month (utility payments should affect invoices)
-                    try {
-                        $invModel = new \App\Models\Invoice();
-                        $invModel->ensureMonthlyRentInvoice((int)$lease['tenant_id'], $_POST['payment_date'], (float)($lease['rent_amount'] ?? 0), (int)($_SESSION['user_id'] ?? 0), 'AUTO');
-                        $invModel->updateStatusForTenantMonth((int)$lease['tenant_id'], $_POST['payment_date']);
-                    } catch (\Exception $e) {
-                        error_log('Auto-invoice (admin utility) failed: ' . $e->getMessage());
+                    // Backward-compat: if only one selected but no utility_amounts provided, use utility_amount
+                    if (empty($utilityAmountsById) && count($selectedUtilityIds) === 1) {
+                        $utilityAmountsById[(int)$selectedUtilityIds[0]] = (float)($_POST['utility_amount'] ?? 0);
+                    }
+
+                    if (!empty($selectedUtilityIds)) {
+                        $firstId = (int)$selectedUtilityIds[0];
+                        $createdAny = false;
+
+                        foreach ($selectedUtilityIds as $utilityId) {
+                            $amount = isset($utilityAmountsById[$utilityId]) ? (float)$utilityAmountsById[$utilityId] : 0.0;
+                            if ($amount <= 0.0) {
+                                continue;
+                            }
+
+                            $utilityData = [
+                                'lease_id' => $lease['id'],
+                                'utility_id' => $utilityId,
+                                'amount' => $amount,
+                                'payment_date' => $_POST['payment_date'],
+                                'applies_to_month' => $appliesToMonth,
+                                'payment_type' => 'utility',
+                                'payment_method' => $_POST['payment_method'],
+                                'reference_number' => $_POST['reference_number'] ?? null,
+                                'notes' => 'Utility payment: ' . ($_POST['notes'] ?? ''),
+                                'status' => $_POST['status'] ?? 'completed'
+                            ];
+
+                            $utilityPaymentId = $paymentModel->createUtilityPayment($utilityData);
+                            $createdAny = true;
+
+                            // Activity log: payment.create (utility)
+                            try {
+                                $ip = $_SERVER['REMOTE_ADDR'] ?? null;
+                                $agent = $_SERVER['HTTP_USER_AGENT'] ?? null;
+                                $p = $paymentModel->getById($utilityPaymentId, $this->userId);
+                                $this->activityLog->add(
+                                    $_SESSION['user_id'] ?? null,
+                                    $_SESSION['user_role'] ?? null,
+                                    'payment.create',
+                                    'payment',
+                                    (int)$utilityPaymentId,
+                                    isset($p['property_id']) ? (int)$p['property_id'] : null,
+                                    json_encode([
+                                        'amount' => (float)$amount,
+                                        'payment_date' => $_POST['payment_date'],
+                                        'payment_type' => 'utility',
+                                        'payment_method' => $_POST['payment_method'],
+                                        'utility_id' => (int)$utilityId
+                                    ]),
+                                    $ip,
+                                    $agent
+                                );
+                            } catch (\Exception $ex) { error_log('payment.create log failed: ' . $ex->getMessage()); }
+
+                            // Attachments only once to avoid duplicates
+                            if ($utilityId === $firstId && !empty($_FILES['payment_attachments']['name'][0])) {
+                                $this->handlePaymentAttachments($utilityPaymentId);
+                            }
+                        }
+
+                        if ($createdAny) {
+                            $successMessages[] = count($selectedUtilityIds) > 1 ? 'Utility payments added successfully!' : 'Utility payment added successfully!';
+
+                            // Ensure invoice exists and update statuses for this month (utility payments should affect invoices)
+                            try {
+                                $invModel = new \App\Models\Invoice();
+                                $invModel->ensureMonthlyRentInvoice((int)$lease['tenant_id'], $_POST['payment_date'], (float)($lease['rent_amount'] ?? 0), (int)($_SESSION['user_id'] ?? 0), 'AUTO');
+                                $invModel->updateStatusForTenantMonth((int)$lease['tenant_id'], $_POST['payment_date']);
+                            } catch (\Exception $e) {
+                                error_log('Auto-invoice (admin utility) failed: ' . $e->getMessage());
+                            }
+                        }
                     }
                 }
 
@@ -667,7 +627,10 @@ class PaymentsController
                         'applies_to_month' => $appliesToMonth,
                         'payment_type' => 'other',
                         'payment_method' => $_POST['payment_method'],
+                        'reference_number' => $_POST['reference_number'] ?? null,
                         'notes' => 'Maintenance payment: ' . ($_POST['notes'] ?? '')
+                        ,
+                        'status' => $_POST['status'] ?? 'completed'
                     ];
 
                     if ($_POST['payment_method'] === 'mpesa_manual') {
@@ -1051,11 +1014,22 @@ class PaymentsController
             }
             
             $sql = "INSERT INTO manual_mpesa_payments (payment_id, phone_number, transaction_code, amount, verification_status, verification_notes, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())";
+
+            $amount = null;
+            foreach (['rent_amount', 'utility_amount', 'maintenance_amount'] as $k) {
+                if (isset($postData[$k]) && $postData[$k] !== '') {
+                    $amount = (float)$postData[$k];
+                    break;
+                }
+            }
+            if ($amount === null) {
+                $amount = 0.0;
+            }
             
             $paymentModel = new Payment();
             $db = $paymentModel->getDb();
             $stmt = $db->prepare($sql);
-            $stmt->execute([$paymentId, $phoneNumber, $transactionCode, $postData['rent_amount'], $verificationStatus, $notes]);
+            $stmt->execute([$paymentId, $phoneNumber, $transactionCode, $amount, $verificationStatus, $notes]);
             
         } catch (\Exception $e) {
             error_log("Error saving M-Pesa transaction: " . $e->getMessage());

@@ -35,7 +35,7 @@ class TenantInvoicesController
         $settings = $settingsModel->getAllAsAssoc();
 
         $siteName = $settings['site_name'] ?? 'RentSmart';
-        $logoFilename = $settings['site_logo'] ?? '';
+        $logoFilename = $settings['site_logo'] ?? 'site_logo_1751627446.png';
 
         // Prefer property branding (owner/manager/agent/caretaker) for the tenant's lease at invoice time
         try {
@@ -43,6 +43,23 @@ class TenantInvoicesController
             if ($issueDate === '') { $issueDate = date('Y-m-d'); }
 
             $db = $invModel->getDb();
+
+            // First, attempt active lease (most reliable for tenant-side view)
+            $leaseStmt = $db->prepare(
+                "SELECT l.id AS lease_id, p.owner_id, p.manager_id, p.agent_id, p.caretaker_user_id\n"
+                . "FROM leases l\n"
+                . "JOIN units u ON l.unit_id = u.id\n"
+                . "JOIN properties p ON u.property_id = p.id\n"
+                . "WHERE l.tenant_id = ?\n"
+                . "  AND l.status = 'active'\n"
+                . "ORDER BY l.start_date DESC, l.id DESC\n"
+                . "LIMIT 1"
+            );
+            $leaseStmt->execute([(int)$tenantId]);
+            $lr = $leaseStmt->fetch(\PDO::FETCH_ASSOC) ?: [];
+
+            // Fallback: lease around invoice issue date
+            if (empty($lr)) {
             $leaseStmt = $db->prepare(
                 "SELECT l.id AS lease_id, p.owner_id, p.manager_id, p.agent_id, p.caretaker_user_id\n"
                 . "FROM leases l\n"
@@ -56,6 +73,7 @@ class TenantInvoicesController
             );
             $leaseStmt->execute([(int)$tenantId, $issueDate, $issueDate]);
             $lr = $leaseStmt->fetch(\PDO::FETCH_ASSOC) ?: [];
+            }
 
             $brandingUserId = 0;
             foreach (['manager_id','owner_id','agent_id','caretaker_user_id'] as $k) {
