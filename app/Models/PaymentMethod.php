@@ -6,6 +6,8 @@ class PaymentMethod extends Model
 {
     protected $table = 'payment_methods';
 
+    private const SUBSCRIPTION_OWNER_USER_ID = 1;
+
     private function ensureScopeColumn()
     {
         try {
@@ -54,9 +56,15 @@ class PaymentMethod extends Model
     {
         $this->ensureScopeColumn();
         $scope = strtolower(trim((string)$scope));
-        $sql = "SELECT * FROM {$this->table} WHERE COALESCE(scope, 'tenant') = ? ORDER BY name ASC";
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute([$scope]);
+        if ($scope === 'subscription') {
+            $sql = "SELECT * FROM {$this->table} WHERE (COALESCE(scope, 'tenant') = 'subscription' OR owner_user_id = ?) ORDER BY name ASC";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([self::SUBSCRIPTION_OWNER_USER_ID]);
+        } else {
+            $sql = "SELECT * FROM {$this->table} WHERE COALESCE(scope, 'tenant') = 'tenant' AND (owner_user_id IS NULL OR owner_user_id <> ?) ORDER BY name ASC";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([self::SUBSCRIPTION_OWNER_USER_ID]);
+        }
         return $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
     }
 
@@ -73,9 +81,15 @@ class PaymentMethod extends Model
     {
         $this->ensureScopeColumn();
         $scope = strtolower(trim((string)$scope));
-        $sql = "SELECT * FROM {$this->table} WHERE is_active = 1 AND COALESCE(scope, 'tenant') = ? ORDER BY name ASC";
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute([$scope]);
+        if ($scope === 'subscription') {
+            $sql = "SELECT * FROM {$this->table} WHERE is_active = 1 AND (COALESCE(scope, 'tenant') = 'subscription' OR owner_user_id = ?) ORDER BY name ASC";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([self::SUBSCRIPTION_OWNER_USER_ID]);
+        } else {
+            $sql = "SELECT * FROM {$this->table} WHERE is_active = 1 AND COALESCE(scope, 'tenant') = 'tenant' AND (owner_user_id IS NULL OR owner_user_id <> ?) ORDER BY name ASC";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([self::SUBSCRIPTION_OWNER_USER_ID]);
+        }
         return $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
     }
 
@@ -99,7 +113,7 @@ class PaymentMethod extends Model
             }
             // Build placeholders e.g. IN (?, ?, ?)
             $placeholders = implode(',', array_fill(0, count($userIds), '?'));
-            $sql = "SELECT * FROM {$this->table} WHERE is_active = 1 AND owner_user_id IN ($placeholders) AND COALESCE(scope, 'tenant') = 'tenant' ORDER BY name ASC";
+            $sql = "SELECT * FROM {$this->table} WHERE is_active = 1 AND owner_user_id IN ($placeholders) AND COALESCE(scope, 'tenant') = 'tenant' AND owner_user_id <> " . (int)self::SUBSCRIPTION_OWNER_USER_ID . " ORDER BY name ASC";
             $stmt = $this->db->prepare($sql);
             $stmt->execute($userIds);
             $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC);
@@ -115,9 +129,9 @@ class PaymentMethod extends Model
     {
         $this->ensureScopeColumn();
         try {
-            $sql = "SELECT * FROM {$this->table} WHERE owner_user_id = ? AND COALESCE(scope, 'tenant') = 'tenant' ORDER BY name ASC";
+            $sql = "SELECT * FROM {$this->table} WHERE owner_user_id = ? AND COALESCE(scope, 'tenant') = 'tenant' AND owner_user_id <> ? ORDER BY name ASC";
             $stmt = $this->db->prepare($sql);
-            $stmt->execute([intval($userId)]);
+            $stmt->execute([intval($userId), (int)self::SUBSCRIPTION_OWNER_USER_ID]);
             return $stmt->fetchAll(\PDO::FETCH_ASSOC);
         } catch (\Exception $e) {
             return [];
@@ -189,7 +203,7 @@ class PaymentMethod extends Model
             $sql = "SELECT pm.*
                     FROM {$this->table} pm
                     INNER JOIN payment_method_properties pmp ON pmp.payment_method_id = pm.id
-                    WHERE pm.is_active = 1 AND pmp.property_id = ? AND COALESCE(pm.scope, 'tenant') = 'tenant'
+                    WHERE pm.is_active = 1 AND pmp.property_id = ? AND COALESCE(pm.scope, 'tenant') = 'tenant' AND (pm.owner_user_id IS NULL OR pm.owner_user_id <> " . (int)self::SUBSCRIPTION_OWNER_USER_ID . ")
                     ORDER BY pm.name ASC";
             $stmt = $this->db->prepare($sql);
             $stmt->execute([(int)$propertyId]);
