@@ -50,17 +50,11 @@ ob_start();
                 <tbody>
                     <?php if (empty($paymentMethods)): ?>
                         <tr>
-                            <td class="text-center py-5">
+                            <td class="text-center py-5" colspan="8">
                                 <i class="bi bi-credit-card display-4 text-muted mb-3 d-block"></i>
                                 <h5>No payment methods found</h5>
                                 <p class="text-muted">Add your first payment method to get started</p>
                             </td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
-                            <td></td>
                         </tr>
                     <?php else: ?>
                         <?php foreach ($paymentMethods as $method): ?>
