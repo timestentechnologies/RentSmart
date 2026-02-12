@@ -28,7 +28,7 @@ class PaymentMethodsController
             $isAdmin = in_array($role, ['administrator', 'admin'], true);
 
             $paymentMethods = $isAdmin
-                ? $this->paymentMethod->getAll()
+                ? $this->paymentMethod->getAllForScope('subscription')
                 : $this->paymentMethod->getByUser($userId);
             
             // Properties for linking in the UI
