@@ -357,19 +357,30 @@ document.addEventListener('DOMContentLoaded', function () {
 <script>
 // Initialize charts when the document is ready
 document.addEventListener('DOMContentLoaded', function() {
+    if (typeof Chart === 'undefined') {
+        return;
+    }
     // Revenue Trend Chart
-    const revenueTrendCtx = document.getElementById('revenueTrendChart').getContext('2d');
+    const revenueCanvas = document.getElementById('revenueTrendChart');
+    if (revenueCanvas && revenueCanvas.getContext) {
+    const revenueTrendCtx = revenueCanvas.getContext('2d');
+    const revenueLabels = <?= json_encode(array_map(function($month) {
+                return date('M Y', strtotime($month['month']));
+            }, $monthlyRevenue)) ?>;
+    const revenueData = <?= json_encode(array_map(function($month) {
+                    return $month['total_amount'];
+                }, $monthlyRevenue)) ?>;
+    if (!Array.isArray(revenueLabels) || !revenueLabels.length) {
+        const parent = revenueCanvas.closest('.chart-container');
+        if (parent) parent.innerHTML = '<div class="text-muted small">No revenue data available.</div>';
+    } else {
     new Chart(revenueTrendCtx, {
         type: 'line',
         data: {
-            labels: <?= json_encode(array_map(function($month) {
-                return date('M Y', strtotime($month['month']));
-            }, $monthlyRevenue)) ?>,
+            labels: revenueLabels,
             datasets: [{
                 label: 'Monthly Revenue',
-                data: <?= json_encode(array_map(function($month) {
-                    return $month['total_amount'];
-                }, $monthlyRevenue)) ?>,
+                data: revenueData,
                 borderColor: 'rgb(25, 135, 84)',
                 tension: 0.1,
                 fill: false
@@ -395,17 +406,28 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     });
+    }
+    }
 
     // Occupancy Chart
-    const occupancyCtx = document.getElementById('occupancyChart').getContext('2d');
+    const occCanvas = document.getElementById('occupancyChart');
+    if (occCanvas && occCanvas.getContext) {
+    const occupancyCtx = occCanvas.getContext('2d');
+    const occOccupied = <?= (int)($occupancyStats['occupied_units'] ?? 0) ?>;
+    const occTotal = <?= (int)($occupancyStats['total_units'] ?? 0) ?>;
+    const occVacant = Math.max(0, occTotal - occOccupied);
+    if (!occTotal) {
+        const parent = occCanvas.closest('.chart-container');
+        if (parent) parent.innerHTML = '<div class="text-muted small">No occupancy data available.</div>';
+    } else {
     new Chart(occupancyCtx, {
         type: 'doughnut',
         data: {
             labels: ['Occupied', 'Vacant'],
             datasets: [{
                 data: [
-                    <?= $occupancyStats['occupied_units'] ?>,
-                    <?= $occupancyStats['total_units'] - $occupancyStats['occupied_units'] ?>
+                    occOccupied,
+                    occVacant
                 ],
                 backgroundColor: [
                     'rgb(25, 135, 84)',
@@ -423,6 +445,8 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     });
+    }
+    }
 });
 </script>
 
