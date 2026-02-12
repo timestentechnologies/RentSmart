@@ -273,6 +273,12 @@ class SubscriptionController
                     $this->sendJsonResponse(400, ['error' => 'Invalid M-Pesa transaction code']);
                     exit;
                 }
+            } else {
+                $allowed = ['cash', 'cheque', 'bank_transfer', 'card'];
+                if (!in_array($paymentMethod, $allowed, true)) {
+                    $this->sendJsonResponse(400, ['error' => 'Invalid payment method']);
+                    exit;
+                }
             }
 
             // Get plan details
@@ -322,13 +328,15 @@ class SubscriptionController
                         VALUES (?, (SELECT id FROM subscriptions WHERE user_id = ? ORDER BY id DESC LIMIT 1), ?, ?, ?, ?, NOW(), NOW())";
                 
                 $paymentStmt = $db->prepare($paymentSql);
+                $transactionRef = $paymentMethod === 'mpesa' ? $mpesaCode : null;
+
                 $paymentStmt->execute([
                     $userId,
                     $userId,
                     $plan['price'],
                     $paymentMethod,
                     'pending',
-                    $mpesaCode
+                    $transactionRef
                 ]);
                 
                 $paymentId = $db->lastInsertId();

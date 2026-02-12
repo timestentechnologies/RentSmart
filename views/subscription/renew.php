@@ -169,6 +169,7 @@ ob_start();
                     $subscriptionPaymentMethods = $subscriptionPaymentMethods ?? [];
                     $subMpesaManualMethods = [];
                     $subMpesaStkMethods = [];
+                    $subOtherMethods = [];
                     foreach ($subscriptionPaymentMethods as $m) {
                         $t = strtolower((string)($m['type'] ?? ''));
                         if ($t === 'mpesa_manual') {
@@ -176,6 +177,9 @@ ob_start();
                         }
                         if ($t === 'mpesa_stk') {
                             $subMpesaStkMethods[] = $m;
+                        }
+                        if (in_array($t, ['cash', 'cheque', 'bank_transfer'], true)) {
+                            $subOtherMethods[$t][] = $m;
                         }
                     }
 
@@ -207,21 +211,47 @@ ob_start();
                             Credit/Debit Card
                         </label>
                     </div>
+
+                    <?php if (!empty($subOtherMethods['cash'])): ?>
+                        <div class="form-check mt-2">
+                            <input class="form-check-input" type="radio" name="paymentMethodRadio" id="cashRadio" value="cash">
+                            <label class="form-check-label" for="cashRadio">Cash</label>
+                            <small class="d-block text-muted">Pay by cash and submit for verification</small>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php if (!empty($subOtherMethods['cheque'])): ?>
+                        <div class="form-check mt-2">
+                            <input class="form-check-input" type="radio" name="paymentMethodRadio" id="chequeRadio" value="cheque">
+                            <label class="form-check-label" for="chequeRadio">Cheque</label>
+                            <small class="d-block text-muted">Pay by cheque and submit for verification</small>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php if (!empty($subOtherMethods['bank_transfer'])): ?>
+                        <div class="form-check mt-2">
+                            <input class="form-check-input" type="radio" name="paymentMethodRadio" id="bankTransferRadio" value="bank_transfer">
+                            <label class="form-check-label" for="bankTransferRadio">Bank Transfer</label>
+                            <small class="d-block text-muted">Transfer to bank and submit for verification</small>
+                        </div>
+                    <?php endif; ?>
                 </div>
 
                 <!-- M-Pesa Form -->
                 <div id="mpesaForm">
                     <div class="mb-3">
                         <label class="form-label">M-Pesa Payment Method</label>
-                        <div class="form-check mb-2">
-                            <input class="form-check-input" type="radio" name="mpesaMethodRadio" id="mpesaStkRadio" value="stk" <?= $subMpesaStk ? 'checked' : (!$subMpesaManual ? 'checked' : '') ?> <?= $subMpesaStk ? '' : 'disabled' ?>>
-                            <label class="form-check-label" for="mpesaStkRadio">
-                                STK Push (Automatic)
-                            </label>
-                            <small class="d-block text-muted">Receive payment prompt on your phone</small>
-                        </div>
+                        <?php if ($subMpesaStk): ?>
+                            <div class="form-check mb-2">
+                                <input class="form-check-input" type="radio" name="mpesaMethodRadio" id="mpesaStkRadio" value="stk" checked>
+                                <label class="form-check-label" for="mpesaStkRadio">
+                                    STK Push (Automatic)
+                                </label>
+                                <small class="d-block text-muted">Receive payment prompt on your phone</small>
+                            </div>
+                        <?php endif; ?>
                         <div class="form-check">
-                            <input class="form-check-input" type="radio" name="mpesaMethodRadio" id="mpesaManualRadio" value="manual" <?= (!$subMpesaStk && $subMpesaManual) ? 'checked' : '' ?> <?= $subMpesaManual ? '' : 'disabled' ?>>
+                            <input class="form-check-input" type="radio" name="mpesaMethodRadio" id="mpesaManualRadio" value="manual" <?= $subMpesaStk ? '' : 'checked' ?> <?= $subMpesaManual ? '' : 'disabled' ?>>
                             <label class="form-check-label" for="mpesaManualRadio">
                                 Pay Bill (Manual)
                             </label>
@@ -375,9 +405,15 @@ document.addEventListener('DOMContentLoaded', function() {
         return new bootstrap.Modal(modal);
     });
 
-    // Set initial state for M-Pesa forms
-    const initialMpesaMethod = document.querySelector('input[name="mpesaMethodRadio"]:checked').value;
-    toggleMpesaForms(initialMpesaMethod);
+    // Set initial state for payment forms
+    const initialPayment = document.querySelector('input[name="paymentMethodRadio"]:checked');
+    togglePaymentForms(initialPayment ? initialPayment.value : 'mpesa');
+
+    // Set initial state for M-Pesa forms (if present)
+    const initialMpesaMethod = document.querySelector('input[name="mpesaMethodRadio"]:checked');
+    if (initialMpesaMethod) {
+        toggleMpesaForms(initialMpesaMethod.value);
+    }
 
     // Subscription manual methods (from server)
     window.__subscriptionManualMethods = <?php
@@ -452,23 +488,71 @@ document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('input[name="paymentMethodRadio"]').forEach(radio => {
         radio.addEventListener('change', function() {
             console.log('Payment method changed to:', this.value);
-            const mpesaForm = document.getElementById('mpesaForm');
-            const cardForm = document.getElementById('cardForm');
-            
-            mpesaForm.style.display = this.value === 'mpesa' ? 'block' : 'none';
-            cardForm.style.display = this.value === 'card' ? 'block' : 'none';
-            
+            togglePaymentForms(this.value);
+
             // If switching to M-Pesa, ensure the correct M-Pesa form is shown
             if (this.value === 'mpesa') {
-                const selectedMpesaMethod = document.querySelector('input[name="mpesaMethodRadio"]:checked').value;
-                console.log('Selected M-Pesa method:', selectedMpesaMethod);
-                toggleMpesaForms(selectedMpesaMethod);
+                const selectedMpesaMethod = document.querySelector('input[name="mpesaMethodRadio"]:checked');
+                if (selectedMpesaMethod) {
+                    console.log('Selected M-Pesa method:', selectedMpesaMethod.value);
+                    toggleMpesaForms(selectedMpesaMethod.value);
+                }
             }
-            
+
             document.getElementById('paymentMethod').value = this.value;
         });
     });
+
+    // Subscription other methods (from server)
+    window.__subscriptionOtherMethods = <?php
+        $otherPayload = [
+            'cash' => null,
+            'cheque' => null,
+            'bank_transfer' => null
+        ];
+        foreach (['cash', 'cheque', 'bank_transfer'] as $ot) {
+            if (!empty($subOtherMethods[$ot])) {
+                $m = $subOtherMethods[$ot][0];
+                $otherPayload[$ot] = [
+                    'id' => (int)($m['id'] ?? 0),
+                    'name' => (string)($m['name'] ?? ''),
+                    'description' => (string)($m['description'] ?? '')
+                ];
+            }
+        }
+        echo json_encode($otherPayload);
+    ?>;
+
+    function applyOtherInstructions(type) {
+        const payload = (window.__subscriptionOtherMethods || {})[type] || null;
+        const text = payload && (payload.description || '') ? payload.description : 'Submit your payment for verification by admin.';
+
+        const map = {
+            cash: document.getElementById('cashInstructions'),
+            cheque: document.getElementById('chequeInstructions'),
+            bank_transfer: document.getElementById('bankTransferInstructions')
+        };
+        if (map[type]) map[type].textContent = text;
+    }
+
+    applyOtherInstructions('cash');
+    applyOtherInstructions('cheque');
+    applyOtherInstructions('bank_transfer');
 });
+
+function togglePaymentForms(method) {
+    const mpesaForm = document.getElementById('mpesaForm');
+    const cardForm = document.getElementById('cardForm');
+    const cashForm = document.getElementById('cashForm');
+    const chequeForm = document.getElementById('chequeForm');
+    const bankForm = document.getElementById('bankTransferForm');
+
+    if (mpesaForm) mpesaForm.style.display = method === 'mpesa' ? 'block' : 'none';
+    if (cardForm) cardForm.style.display = method === 'card' ? 'block' : 'none';
+    if (cashForm) cashForm.style.display = method === 'cash' ? 'block' : 'none';
+    if (chequeForm) chequeForm.style.display = method === 'cheque' ? 'block' : 'none';
+    if (bankForm) bankForm.style.display = method === 'bank_transfer' ? 'block' : 'none';
+}
 
 // Function to toggle M-Pesa form visibility
 function toggleMpesaForms(method) {
@@ -542,15 +626,6 @@ function selectPlan(element, planId, planName, planPrice) {
     document.getElementById('selectedPlanId').value = planId;
 }
 
-// Toggle payment forms
-document.querySelectorAll('input[name="paymentMethodRadio"]').forEach(radio => {
-    radio.addEventListener('change', function() {
-        document.getElementById('mpesaForm').style.display = this.value === 'mpesa' ? 'block' : 'none';
-        document.getElementById('cardForm').style.display = this.value === 'card' ? 'block' : 'none';
-        document.getElementById('paymentMethod').value = this.value;
-    });
-});
-
 document.getElementById('renewForm').addEventListener('submit', function(e) {
     e.preventDefault();
     
@@ -597,7 +672,7 @@ document.getElementById('processPaymentBtn').addEventListener('click', async fun
                 return;
             }
         }
-    } else {
+    } else if (paymentMethod === 'card') {
         const cardForm = document.getElementById('cardForm');
         if (!cardForm.checkValidity()) {
             cardForm.reportValidity();
@@ -698,9 +773,45 @@ document.getElementById('processPaymentBtn').addEventListener('click', async fun
                     throw new Error(result.message || 'Failed to verify M-Pesa payment');
                 }
             }
-        } else {
+        } else if (paymentMethod === 'card') {
             // For card payments, just submit the form for now
             document.getElementById('renewForm').submit();
+        } else {
+            // Cash / Cheque / Bank Transfer: create a pending payment record
+            const response = await fetch(window.BASE_URL + '/subscription/renew', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+                    'Accept': 'application/json'
+                },
+                body: new URLSearchParams({
+                    csrf_token: document.querySelector('input[name="csrf_token"]').value,
+                    plan_id: selectedPlanDetails.id,
+                    payment_method: paymentMethod
+                })
+            });
+
+            const raw = await response.text();
+            let result;
+            try {
+                result = JSON.parse(raw);
+            } catch (e) {
+                throw new Error(raw);
+            }
+
+            if (result.success) {
+                Swal.fire({
+                    title: 'Payment Submitted',
+                    text: 'Your payment has been submitted and is pending verification by admin.',
+                    icon: 'info',
+                    confirmButtonText: 'OK'
+                }).then(() => {
+                    bootstrap.Modal.getInstance(document.getElementById('paymentModal')).hide();
+                    window.location.href = window.BASE_URL + (result.redirect || '/dashboard');
+                });
+            } else {
+                throw new Error(result.error || result.message || 'Failed to submit payment');
+            }
         }
     } catch (error) {
         alert(error.message || 'Payment processing failed. Please try again.');
