@@ -248,6 +248,7 @@ class SubscriptionController
             $paymentMethod = filter_input(INPUT_POST, 'payment_method', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
             $mpesaPhone = filter_input(INPUT_POST, 'mpesa_phone', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
             $mpesaCode = filter_input(INPUT_POST, 'mpesa_code', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
+            $transactionReferenceInput = filter_input(INPUT_POST, 'transaction_reference', FILTER_SANITIZE_FULL_SPECIAL_CHARS);
             
             // Validate required fields
             if (!$planId || !$paymentMethod) {
@@ -278,6 +279,13 @@ class SubscriptionController
                 if (!in_array($paymentMethod, $allowed, true)) {
                     $this->sendJsonResponse(400, ['error' => 'Invalid payment method']);
                     exit;
+                }
+
+                if (in_array($paymentMethod, ['cash', 'cheque', 'bank_transfer'], true)) {
+                    if (!$transactionReferenceInput) {
+                        $this->sendJsonResponse(400, ['error' => 'Please provide payment reference details']);
+                        exit;
+                    }
                 }
             }
 
@@ -328,7 +336,7 @@ class SubscriptionController
                         VALUES (?, (SELECT id FROM subscriptions WHERE user_id = ? ORDER BY id DESC LIMIT 1), ?, ?, ?, ?, NOW(), NOW())";
                 
                 $paymentStmt = $db->prepare($paymentSql);
-                $transactionRef = $paymentMethod === 'mpesa' ? $mpesaCode : null;
+                $transactionRef = $paymentMethod === 'mpesa' ? $mpesaCode : ($transactionReferenceInput ?: null);
 
                 $paymentStmt->execute([
                     $userId,

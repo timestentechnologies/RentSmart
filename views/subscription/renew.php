@@ -331,6 +331,60 @@ ob_start();
                         </div>
                     </div>
                 </div>
+
+                <!-- Cash Payment Form -->
+                <div id="cashForm" style="display: none;">
+                    <div class="card bg-info bg-opacity-25">
+                        <div class="card-body">
+                            <h6 class="card-title mb-2">Cash Payment</h6>
+                            <div class="text-muted" id="cashInstructions"></div>
+                            <div class="mt-3">
+                                <label for="cashReceiptNumber" class="form-label">Receipt Number</label>
+                                <input type="text" class="form-control" id="cashReceiptNumber" placeholder="e.g. RCPT-12345" autocomplete="off">
+                                <small class="text-muted">Enter the receipt number issued for the cash payment</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cheque Payment Form -->
+                <div id="chequeForm" style="display: none;">
+                    <div class="card bg-info bg-opacity-25">
+                        <div class="card-body">
+                            <h6 class="card-title mb-2">Cheque Payment</h6>
+                            <div class="text-muted" id="chequeInstructions"></div>
+                            <div class="row g-2 mt-2">
+                                <div class="col-12 col-md-6">
+                                    <label for="chequeNumber" class="form-label">Cheque Number</label>
+                                    <input type="text" class="form-control" id="chequeNumber" placeholder="e.g. 001234" autocomplete="off">
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    <label for="chequeBank" class="form-label">Bank (optional)</label>
+                                    <input type="text" class="form-control" id="chequeBank" placeholder="e.g. KCB" autocomplete="off">
+                                </div>
+                                <div class="col-12">
+                                    <label for="chequeAccountName" class="form-label">Account Name (optional)</label>
+                                    <input type="text" class="form-control" id="chequeAccountName" placeholder="e.g. John Doe" autocomplete="off">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Bank Transfer Payment Form -->
+                <div id="bankTransferForm" style="display: none;">
+                    <div class="card bg-info bg-opacity-25">
+                        <div class="card-body">
+                            <h6 class="card-title mb-2">Bank Transfer</h6>
+                            <div class="text-muted" id="bankTransferInstructions"></div>
+                            <div class="mt-3">
+                                <label for="bankTransferReference" class="form-label">Transfer Reference</label>
+                                <input type="text" class="form-control" id="bankTransferReference" placeholder="e.g. FT-ABC123" autocomplete="off">
+                                <small class="text-muted">Enter the bank transfer reference / narration</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -678,6 +732,24 @@ document.getElementById('processPaymentBtn').addEventListener('click', async fun
             cardForm.reportValidity();
             return;
         }
+    } else if (paymentMethod === 'cash') {
+        const receipt = (document.getElementById('cashReceiptNumber')?.value || '').trim();
+        if (!receipt) {
+            alert('Please enter the cash receipt number');
+            return;
+        }
+    } else if (paymentMethod === 'bank_transfer') {
+        const ref = (document.getElementById('bankTransferReference')?.value || '').trim();
+        if (!ref) {
+            alert('Please enter the bank transfer reference');
+            return;
+        }
+    } else if (paymentMethod === 'cheque') {
+        const chequeNo = (document.getElementById('chequeNumber')?.value || '').trim();
+        if (!chequeNo) {
+            alert('Please enter the cheque number');
+            return;
+        }
     }
 
     try {
@@ -778,6 +850,20 @@ document.getElementById('processPaymentBtn').addEventListener('click', async fun
             document.getElementById('renewForm').submit();
         } else {
             // Cash / Cheque / Bank Transfer: create a pending payment record
+            let transactionReference = '';
+            if (paymentMethod === 'cash') {
+                transactionReference = (document.getElementById('cashReceiptNumber')?.value || '').trim();
+            } else if (paymentMethod === 'bank_transfer') {
+                transactionReference = (document.getElementById('bankTransferReference')?.value || '').trim();
+            } else if (paymentMethod === 'cheque') {
+                const chequeNo = (document.getElementById('chequeNumber')?.value || '').trim();
+                const bank = (document.getElementById('chequeBank')?.value || '').trim();
+                const name = (document.getElementById('chequeAccountName')?.value || '').trim();
+                transactionReference = `Cheque: ${chequeNo}`;
+                if (bank) transactionReference += ` | Bank: ${bank}`;
+                if (name) transactionReference += ` | Name: ${name}`;
+            }
+
             const response = await fetch(window.BASE_URL + '/subscription/renew', {
                 method: 'POST',
                 headers: {
@@ -787,7 +873,8 @@ document.getElementById('processPaymentBtn').addEventListener('click', async fun
                 body: new URLSearchParams({
                     csrf_token: document.querySelector('input[name="csrf_token"]').value,
                     plan_id: selectedPlanDetails.id,
-                    payment_method: paymentMethod
+                    payment_method: paymentMethod,
+                    transaction_reference: transactionReference
                 })
             });
 
