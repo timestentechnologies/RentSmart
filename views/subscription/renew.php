@@ -167,17 +167,21 @@ ob_start();
             <div class="modal-body">
                 <?php
                     $subscriptionPaymentMethods = $subscriptionPaymentMethods ?? [];
-                    $subMpesaManual = null;
-                    $subMpesaStk = null;
+                    $subMpesaManualMethods = [];
+                    $subMpesaStkMethods = [];
                     foreach ($subscriptionPaymentMethods as $m) {
                         $t = strtolower((string)($m['type'] ?? ''));
-                        if ($t === 'mpesa_manual' && !$subMpesaManual) {
-                            $subMpesaManual = $m;
+                        if ($t === 'mpesa_manual') {
+                            $subMpesaManualMethods[] = $m;
                         }
-                        if ($t === 'mpesa_stk' && !$subMpesaStk) {
-                            $subMpesaStk = $m;
+                        if ($t === 'mpesa_stk') {
+                            $subMpesaStkMethods[] = $m;
                         }
                     }
+
+                    $subMpesaManual = !empty($subMpesaManualMethods) ? $subMpesaManualMethods[0] : null;
+                    $subMpesaStk = !empty($subMpesaStkMethods) ? $subMpesaStkMethods[0] : null;
+
                     $subManualDetails = [];
                     if ($subMpesaManual && !empty($subMpesaManual['details'])) {
                         $subManualDetails = json_decode((string)$subMpesaManual['details'], true) ?: [];
@@ -229,28 +233,38 @@ ob_start();
                     <div id="stkPushForm">
                         <div class="mb-3">
                             <label for="phoneNumber" class="form-label">M-Pesa Phone Number</label>
-                            <input type="tel" class="form-control" id="phoneNumber" name="phone_number" placeholder="254700000000" required autocomplete="off" inputmode="numeric">
+                            <input type="tel" class="form-control" id="phoneNumber" name="phone_number" placeholder="254700000000" autocomplete="off" inputmode="numeric">
                             <small class="text-muted">Enter your M-Pesa registered phone number starting with 254</small>
                         </div>
                     </div>
 
                     <!-- Manual Payment Form -->
                     <div id="manualMpesaForm">
+                        <?php if (count($subMpesaManualMethods) > 1): ?>
+                            <div class="mb-3">
+                                <label for="subscriptionManualMethodSelect" class="form-label">Choose Manual M-Pesa Option</label>
+                                <select id="subscriptionManualMethodSelect" class="form-select">
+                                    <?php foreach ($subMpesaManualMethods as $idx => $mm): ?>
+                                        <option value="<?= (int)($mm['id'] ?? 0) ?>" <?= $idx === 0 ? 'selected' : '' ?>>
+                                            <?= htmlspecialchars((string)($mm['name'] ?? ('Manual Method #' . $idx))) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        <?php endif; ?>
                         <div class="card bg-info bg-opacity-25">
                             <div class="card-body">
                                 <h6 class="card-title mb-3">How to Pay via M-Pesa:</h6>
                                 <ol class="mb-0">
                                     <li>Go to M-Pesa menu</li>
-                                    <?php $manualMethod = strtolower((string)($subManualDetails['mpesa_method'] ?? 'paybill')); ?>
-                                    <?php if ($manualMethod === 'till'): ?>
-                                        <li>Select Lipa na M-Pesa</li>
-                                        <li>Select Buy Goods and Services</li>
-                                        <li>Enter Till No: <strong><?= htmlspecialchars((string)($subManualDetails['till_number'] ?? '')) ?></strong></li>
-                                    <?php else: ?>
-                                        <li>Select Pay Bill</li>
-                                        <li>Enter Business No: <strong><?= htmlspecialchars((string)($subManualDetails['paybill_number'] ?? '')) ?></strong></li>
-                                        <li>Enter Account No: <strong><?= htmlspecialchars((string)($subManualDetails['account_number'] ?? '')) ?></strong></li>
-                                    <?php endif; ?>
+                                    <li id="mpesaStepPaybillMenu" style="display:none;">Select Pay Bill</li>
+                                    <li id="mpesaStepPaybillBusiness" style="display:none;">Enter Business No: <strong id="mpesaPaybillNumber"></strong></li>
+                                    <li id="mpesaStepPaybillAccount" style="display:none;">Enter Account No: <strong id="mpesaAccountNumber"></strong></li>
+
+                                    <li id="mpesaStepTillMenu" style="display:none;">Select Lipa na M-Pesa</li>
+                                    <li id="mpesaStepTillBuyGoods" style="display:none;">Select Buy Goods and Services</li>
+                                    <li id="mpesaStepTillNumber" style="display:none;">Enter Till No: <strong id="mpesaTillNumber"></strong></li>
+
                                     <li>Enter Amount: Ksh<strong id="mpesaAmount"></strong></li>
                                     <li>Enter your M-Pesa PIN</li>
                                     <li>Save the M-Pesa message with transaction code</li>
@@ -364,6 +378,67 @@ document.addEventListener('DOMContentLoaded', function() {
     // Set initial state for M-Pesa forms
     const initialMpesaMethod = document.querySelector('input[name="mpesaMethodRadio"]:checked').value;
     toggleMpesaForms(initialMpesaMethod);
+
+    // Subscription manual methods (from server)
+    window.__subscriptionManualMethods = <?php
+        $manualPayload = [];
+        foreach ($subMpesaManualMethods as $mm) {
+            $d = [];
+            if (!empty($mm['details'])) {
+                $d = json_decode((string)$mm['details'], true) ?: [];
+            }
+            $manualPayload[] = [
+                'id' => (int)($mm['id'] ?? 0),
+                'name' => (string)($mm['name'] ?? ''),
+                'details' => $d
+            ];
+        }
+        echo json_encode($manualPayload);
+    ?>;
+
+    function applyManualMpesaDetails(details) {
+        details = details || {};
+        const method = String(details.mpesa_method || 'paybill').toLowerCase();
+
+        const showPaybill = method !== 'till';
+        const elPaybillMenu = document.getElementById('mpesaStepPaybillMenu');
+        const elPaybillBusiness = document.getElementById('mpesaStepPaybillBusiness');
+        const elPaybillAccount = document.getElementById('mpesaStepPaybillAccount');
+        const elTillMenu = document.getElementById('mpesaStepTillMenu');
+        const elTillBuy = document.getElementById('mpesaStepTillBuyGoods');
+        const elTillNumber = document.getElementById('mpesaStepTillNumber');
+
+        if (elPaybillMenu) elPaybillMenu.style.display = showPaybill ? '' : 'none';
+        if (elPaybillBusiness) elPaybillBusiness.style.display = showPaybill ? '' : 'none';
+        if (elPaybillAccount) elPaybillAccount.style.display = showPaybill ? '' : 'none';
+        if (elTillMenu) elTillMenu.style.display = showPaybill ? 'none' : '';
+        if (elTillBuy) elTillBuy.style.display = showPaybill ? 'none' : '';
+        if (elTillNumber) elTillNumber.style.display = showPaybill ? 'none' : '';
+
+        const pb = document.getElementById('mpesaPaybillNumber');
+        const acc = document.getElementById('mpesaAccountNumber');
+        const till = document.getElementById('mpesaTillNumber');
+        if (pb) pb.textContent = details.paybill_number || '';
+        if (acc) acc.textContent = details.account_number || '';
+        if (till) till.textContent = details.till_number || '';
+    }
+
+    // Apply initial manual method details (first method)
+    if (window.__subscriptionManualMethods && window.__subscriptionManualMethods.length) {
+        applyManualMpesaDetails(window.__subscriptionManualMethods[0].details);
+    } else {
+        applyManualMpesaDetails({});
+    }
+
+    // Handle manual method selection
+    const manualSelect = document.getElementById('subscriptionManualMethodSelect');
+    if (manualSelect) {
+        manualSelect.addEventListener('change', function() {
+            const id = parseInt(this.value || '0', 10);
+            const found = (window.__subscriptionManualMethods || []).find(m => m.id === id);
+            applyManualMpesaDetails(found ? found.details : {});
+        });
+    }
 
     // Toggle M-Pesa payment forms
     document.querySelectorAll('input[name="mpesaMethodRadio"]').forEach(radio => {
