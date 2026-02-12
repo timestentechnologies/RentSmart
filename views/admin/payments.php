@@ -127,6 +127,9 @@ ob_start();
                         <th class="text-muted">STATUS</th>
                         <th class="text-muted">PHONE</th>
                         <th class="text-muted">REFERENCE</th>
+                        <th class="text-muted">RECEIPT NO</th>
+                        <th class="text-muted">CHEQUE DETAILS</th>
+                        <th class="text-muted">BANK TRANSFER REF</th>
                         <th class="text-muted">ACTIONS</th>
                     </tr>
                 </thead>
@@ -142,6 +145,11 @@ ob_start();
                             $reference = $payment['transaction_reference'] ?? '';
                             if (!$reference) { $reference = $isManual ? ($payment['manual_transaction_code'] ?? '') : ($payment['mpesa_receipt_number'] ?? ''); }
                             if (!$reference) { $reference = 'N/A'; }
+
+                            $pm = strtolower((string)($payment['payment_method'] ?? ''));
+                            $receiptNo = $pm === 'cash' ? ($payment['transaction_reference'] ?? '') : '';
+                            $chequeDetails = $pm === 'cheque' ? ($payment['transaction_reference'] ?? '') : '';
+                            $bankTransferRef = $pm === 'bank_transfer' ? ($payment['transaction_reference'] ?? '') : '';
                         ?>
                         <tr>
                             <td><?= date('M j, Y H:i', strtotime($payment['created_at'])) ?></td>
@@ -167,6 +175,9 @@ ob_start();
                             </td>
                             <td><?= htmlspecialchars($phone ?: 'N/A') ?></td>
                             <td><?= htmlspecialchars($reference) ?></td>
+                            <td><?= htmlspecialchars($receiptNo ?: 'N/A') ?></td>
+                            <td><?= htmlspecialchars($chequeDetails ?: 'N/A') ?></td>
+                            <td><?= htmlspecialchars($bankTransferRef ?: 'N/A') ?></td>
                             <td>
                                 <div class="btn-group">
                                     <button class="btn btn-sm btn-outline-primary" onclick="viewPayment(<?= $payment['id'] ?>)">
@@ -348,8 +359,11 @@ document.getElementById('verifyManualConfirmBtn').addEventListener('click', asyn
             const statusText = normalize(cells[5]?.innerText);
             const phoneText = normalize(cells[6]?.innerText);
             const refText = normalize(cells[7]?.innerText);
+            const receiptText = normalize(cells[8]?.innerText);
+            const chequeText = normalize(cells[9]?.innerText);
+            const bankText = normalize(cells[10]?.innerText);
 
-            const matchesSearch = !q || user.includes(q) || plan.includes(q) || methodText.includes(q) || phoneText.includes(q) || refText.includes(q);
+            const matchesSearch = !q || user.includes(q) || plan.includes(q) || methodText.includes(q) || phoneText.includes(q) || refText.includes(q) || receiptText.includes(q) || chequeText.includes(q) || bankText.includes(q);
             const matchesStatus = !status || statusText === status;
             const matchesMethod = !method || methodText.includes(method);
 
