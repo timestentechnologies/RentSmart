@@ -263,7 +263,8 @@ class AuthController
             // Redirect to dashboard
             $_SESSION['flash_message'] = 'Welcome to RentSmart! Your 7-day trial has started.';
             $_SESSION['flash_type'] = 'success';
-            header('Location: ' . BASE_URL . '/dashboard');
+            $redirectPath = ($role === 'realtor') ? '/realtor/dashboard' : '/dashboard';
+            header('Location: ' . BASE_URL . $redirectPath);
             exit;
         } catch (Exception $e) {
             error_log("Registration error: " . $e->getMessage());
@@ -446,7 +447,8 @@ class AuthController
             }
 
             // Redirect to dashboard
-            header('Location: ' . BASE_URL . '/dashboard');
+            $redirectPath = (strtolower((string)($user['role'] ?? '')) === 'realtor') ? '/realtor/dashboard' : '/dashboard';
+            header('Location: ' . BASE_URL . $redirectPath);
             exit;
         } catch (Exception $e) {
             error_log($e->getMessage());

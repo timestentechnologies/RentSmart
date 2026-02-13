@@ -18,7 +18,10 @@ class HomeController
         try {
             // If user is logged in, redirect to dashboard
             if (isset($_SESSION['user_id'])) {
-                header('Location: ' . BASE_URL . '/dashboard');
+                $redirectPath = (isset($_SESSION['user_role']) && strtolower((string)$_SESSION['user_role']) === 'realtor')
+                    ? '/realtor/dashboard'
+                    : '/dashboard';
+                header('Location: ' . BASE_URL . $redirectPath);
                 exit;
             }
             
