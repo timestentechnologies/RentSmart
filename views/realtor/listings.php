@@ -63,7 +63,7 @@ ob_start();
 <div class="modal fade" id="addListingModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">
-      <form method="POST" action="<?= BASE_URL ?>/realtor/listings/store">
+      <form method="POST" action="<?= BASE_URL ?>/realtor/listings/store" enctype="multipart/form-data">
         <?= csrf_field() ?>
         <div class="modal-header">
           <h5 class="modal-title">Add Listing</h5>
@@ -106,6 +106,10 @@ ob_start();
                 <label class="form-label">Description</label>
                 <textarea name="description" class="form-control" rows="3"></textarea>
             </div>
+            <div class="mb-3">
+                <label class="form-label">Images</label>
+                <input type="file" name="listing_images[]" class="form-control" accept="image/*" multiple>
+            </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -119,7 +123,7 @@ ob_start();
 <div class="modal fade" id="editListingModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">
-      <form method="POST" id="editListingForm">
+      <form method="POST" id="editListingForm" enctype="multipart/form-data">
         <?= csrf_field() ?>
         <div class="modal-header">
           <h5 class="modal-title">Edit Listing</h5>
@@ -162,6 +166,10 @@ ob_start();
             <div class="mb-3">
                 <label class="form-label">Description</label>
                 <textarea id="edit_description" name="description" class="form-control" rows="3"></textarea>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Add Images</label>
+                <input type="file" name="listing_images[]" class="form-control" accept="image/*" multiple>
             </div>
         </div>
         <div class="modal-footer">

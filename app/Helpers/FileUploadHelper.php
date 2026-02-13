@@ -274,6 +274,8 @@ class FileUploadHelper
                 return 'uploads/properties';
             case 'unit':
                 return 'uploads/units';
+            case 'realtor_listing':
+                return 'uploads/realtor_listings';
             case 'payment':
                 return 'uploads/payments';
             case 'expense':

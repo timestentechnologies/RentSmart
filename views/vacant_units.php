@@ -113,15 +113,36 @@ if (!defined('BASE_URL')) { define('BASE_URL', ''); }
                             $label = $st ?: 'active';
                             if ($st === 'active') { $badge = 'success'; $label = 'Available'; }
                             elseif ($st === 'inactive') { $badge = 'secondary'; $label = 'Unavailable'; }
+                            $limgs = isset($listing['images']) && is_array($listing['images']) ? $listing['images'] : [];
+                            if (empty($limgs) && !empty($listing['image'])) { $limgs = [ $listing['image'] ]; }
+                            if (empty($limgs)) {
+                                $limgs = [ 'https://ui-avatars.com/api/?name=' . urlencode($title) . '&size=400&background=6B3E99&color=fff&bold=true' ];
+                            }
+                            $listingCarouselId = 'listingCarousel_' . $listingId;
                         ?>
                         <div class="col-md-4 unit-card" data-location="<?= htmlspecialchars(strtolower($location)) ?>" data-type="<?= htmlspecialchars(strtolower($type)) ?>" data-rent="<?= $price ?>" data-name="<?= htmlspecialchars(strtolower($title.' '.$location)) ?>">
                             <div class="card card-unit">
-                                <div class="d-flex align-items-center justify-content-center" style="height:200px;background:linear-gradient(135deg, rgba(107,62,153,.12) 0%, rgba(142,92,196,.10) 100%);">
-                                    <div class="text-center">
-                                        <div class="mb-2"><i class="bi bi-building" style="font-size:3rem;color:#6B3E99"></i></div>
-                                        <span class="badge bg-<?= $badge ?>"><?= htmlspecialchars($label) ?></span>
+                                <?php if (count($limgs) > 1): ?>
+                                    <div id="<?= htmlspecialchars($listingCarouselId) ?>" class="carousel slide" data-bs-ride="false">
+                                        <div class="carousel-inner">
+                                            <?php foreach ($limgs as $idx => $imgUrl): ?>
+                                                <div class="carousel-item <?= $idx === 0 ? 'active' : '' ?>">
+                                                    <img src="<?= htmlspecialchars($imgUrl) ?>" class="d-block w-100" alt="<?= htmlspecialchars($title) ?>">
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                        <button class="carousel-control-prev" type="button" data-bs-target="#<?= htmlspecialchars($listingCarouselId) ?>" data-bs-slide="prev">
+                                            <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                            <span class="visually-hidden">Previous</span>
+                                        </button>
+                                        <button class="carousel-control-next" type="button" data-bs-target="#<?= htmlspecialchars($listingCarouselId) ?>" data-bs-slide="next">
+                                            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                            <span class="visually-hidden">Next</span>
+                                        </button>
                                     </div>
-                                </div>
+                                <?php else: ?>
+                                    <img src="<?= htmlspecialchars($limgs[0]) ?>" alt="<?= htmlspecialchars($title) ?>">
+                                <?php endif; ?>
                                 <div class="card-body">
                                     <div class="d-flex justify-content-between align-items-center mb-2">
                                         <h5 class="card-title mb-0"><?= htmlspecialchars($title) ?></h5>

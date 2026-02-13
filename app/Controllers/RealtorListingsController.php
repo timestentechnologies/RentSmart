@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Models\RealtorListing;
+use App\Helpers\FileUploadHelper;
 
 class RealtorListingsController
 {
@@ -67,7 +68,26 @@ class RealtorListingsController
             }
 
             $model = new RealtorListing();
-            $model->insert($data);
+            $listingId = $model->insert($data);
+
+            // Handle image uploads
+            try {
+                if (!empty($_FILES['listing_images']['name'][0])) {
+                    $fileUploadHelper = new FileUploadHelper();
+                    $imageResult = $fileUploadHelper->uploadFiles(
+                        $_FILES['listing_images'],
+                        'realtor_listing',
+                        (int)$listingId,
+                        'image',
+                        $_SESSION['user_id']
+                    );
+                    if (empty($imageResult['errors'])) {
+                        $fileUploadHelper->updateEntityFiles('realtor_listing', (int)$listingId);
+                    }
+                }
+            } catch (\Exception $e) {
+                error_log('Realtor listing image upload failed: ' . $e->getMessage());
+            }
 
             $_SESSION['flash_message'] = 'Listing added successfully';
             $_SESSION['flash_type'] = 'success';
@@ -123,6 +143,25 @@ class RealtorListingsController
             ];
 
             $ok = $model->updateById((int)$id, $data);
+
+            // Handle image uploads
+            try {
+                if (!empty($_FILES['listing_images']['name'][0])) {
+                    $fileUploadHelper = new FileUploadHelper();
+                    $imageResult = $fileUploadHelper->uploadFiles(
+                        $_FILES['listing_images'],
+                        'realtor_listing',
+                        (int)$id,
+                        'image',
+                        $_SESSION['user_id']
+                    );
+                    if (empty($imageResult['errors'])) {
+                        $fileUploadHelper->updateEntityFiles('realtor_listing', (int)$id);
+                    }
+                }
+            } catch (\Exception $e) {
+                error_log('Realtor listing image upload failed: ' . $e->getMessage());
+            }
             echo json_encode(['success' => (bool)$ok, 'message' => $ok ? 'Updated' : 'Failed to update']);
         } catch (\Exception $e) {
             error_log('RealtorListings update failed: ' . $e->getMessage());
