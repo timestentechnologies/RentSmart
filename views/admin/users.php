@@ -107,8 +107,26 @@ ob_start();
                             <td><?= htmlspecialchars($user['email']) ?></td>
                              <td><?= htmlspecialchars($user['phone']) ?></td>
                             <td>
-                                <span class="badge bg-<?= $user['role'] === 'admin' ? 'danger' : ($user['role'] === 'manager' ? 'success' : 'info') ?>">
-                                    <?= ucfirst($user['role']) ?>
+                                <?php
+                                    $role = strtolower((string)($user['role'] ?? ''));
+                                    $roleLabel = $role ? ucfirst($role) : 'User';
+                                    $roleBadge = 'info';
+                                    if (in_array($role, ['admin', 'administrator'], true)) {
+                                        $roleBadge = 'danger';
+                                        $roleLabel = $role === 'administrator' ? 'Admin' : 'Admin';
+                                    } elseif ($role === 'manager') {
+                                        $roleBadge = 'success';
+                                    } elseif ($role === 'realtor') {
+                                        $roleBadge = 'primary';
+                                        $roleLabel = 'Realtor';
+                                    } elseif ($role === 'landlord') {
+                                        $roleBadge = 'warning';
+                                    } elseif ($role === 'caretaker') {
+                                        $roleBadge = 'secondary';
+                                    }
+                                ?>
+                                <span class="badge bg-<?= $roleBadge ?>">
+                                    <?= htmlspecialchars($roleLabel) ?>
                                 </span>
                             </td>
                             <td>
