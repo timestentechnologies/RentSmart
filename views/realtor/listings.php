@@ -35,7 +35,18 @@ ob_start();
                                 <td><?= htmlspecialchars((string)($x['listing_type'] ?? '')) ?></td>
                                 <td><?= htmlspecialchars((string)($x['location'] ?? '')) ?></td>
                                 <td>Ksh<?= number_format((float)($x['price'] ?? 0), 2) ?></td>
-                                <td><span class="badge bg-secondary"><?= htmlspecialchars((string)($x['status'] ?? 'active')) ?></span></td>
+                                <td>
+                                    <?php
+                                        $st = strtolower((string)($x['status'] ?? 'active'));
+                                        $badge = 'secondary';
+                                        $label = $st ?: 'active';
+                                        if ($st === 'active') { $badge = 'success'; $label = 'Available'; }
+                                        elseif ($st === 'inactive') { $badge = 'secondary'; $label = 'Unavailable'; }
+                                        elseif ($st === 'sold') { $badge = 'danger'; $label = 'Sold'; }
+                                        elseif ($st === 'rented') { $badge = 'warning'; $label = 'Rented'; }
+                                    ?>
+                                    <span class="badge bg-<?= $badge ?>"><?= htmlspecialchars($label) ?></span>
+                                </td>
                                 <td>
                                     <button type="button" class="btn btn-sm btn-outline-primary me-1" onclick="editRealtorListing(<?= (int)$x['id'] ?>)"><i class="bi bi-pencil"></i></button>
                                     <button type="button" class="btn btn-sm btn-outline-danger" onclick="confirmDeleteRealtorListing(<?= (int)$x['id'] ?>)"><i class="bi bi-trash"></i></button>

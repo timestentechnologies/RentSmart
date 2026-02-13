@@ -1329,7 +1329,7 @@ ob_clean();
                         </a>
                     </li>
                 <?php endif; ?>
-                <?php if (!$isRealtor): ?>
+                <?php if (true): ?>
                 
                 
                     <!-- FINANCIAL Section -->
@@ -1417,24 +1417,41 @@ ob_clean();
                             <i class="bi bi-calendar-check me-2"></i> Monthly Tenant Balances
                         </a>
                     </li>
-                    <li class="nav-item mt-3">
-                        <small class="nav-header text-uppercase px-3">HR & PAYROLL</small>
-                    </li>
-                    <li class="nav-item">
-                        <a href="<?= BASE_URL ?>/employees" class="nav-link <?= strpos($current_uri, 'employees') === 0 ? 'active' : '' ?>">
-                            <i class="bi bi-person-badge me-2"></i> Employees
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="<?= BASE_URL ?>/files" class="nav-link <?= strpos($current_uri, 'files') === 0 ? 'active' : '' ?>">
-                            <i class="bi bi-folder2-open me-2"></i> Files
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="<?= BASE_URL ?>/esign" class="nav-link <?= strpos($current_uri, 'esign') === 0 ? 'active' : '' ?>">
-                            <i class="bi bi-pen me-2"></i> E‑Signatures
-                        </a>
-                    </li>
+                    <?php if ($isRealtor): ?>
+                        <li class="nav-item mt-3">
+                            <small class="nav-header text-uppercase px-3">Add-ons</small>
+                        </li>
+                        <li class="nav-item">
+                            <a href="<?= BASE_URL ?>/files" class="nav-link <?= strpos($current_uri, 'files') === 0 ? 'active' : '' ?>">
+                                <i class="bi bi-folder2-open me-2"></i> Files
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="<?= BASE_URL ?>/esign" class="nav-link <?= strpos($current_uri, 'esign') === 0 ? 'active' : '' ?>">
+                                <i class="bi bi-pen me-2"></i> E‑Signatures
+                            </a>
+                        </li>
+                    <?php else: ?>
+                        <li class="nav-item mt-3">
+                            <small class="nav-header text-uppercase px-3">HR & PAYROLL</small>
+                        </li>
+                        <li class="nav-item">
+                            <a href="<?= BASE_URL ?>/employees" class="nav-link <?= strpos($current_uri, 'employees') === 0 ? 'active' : '' ?>">
+                                <i class="bi bi-person-badge me-2"></i> Employees
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="<?= BASE_URL ?>/files" class="nav-link <?= strpos($current_uri, 'files') === 0 ? 'active' : '' ?>">
+                                <i class="bi bi-folder2-open me-2"></i> Files
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="<?= BASE_URL ?>/esign" class="nav-link <?= strpos($current_uri, 'esign') === 0 ? 'active' : '' ?>">
+                                <i class="bi bi-pen me-2"></i> E‑Signatures
+                            </a>
+                        </li>
+                    <?php endif; ?>
+
                     <li class="nav-item mt-3">
                         <small class="nav-header text-uppercase px-3">Communication</small>
                     </li>
@@ -1443,19 +1460,20 @@ ob_clean();
                             <i class="bi bi-envelope-open me-2"></i> Inquiries
                         </a>
                     </li>
-                    <li class="nav-item">
-                        <a href="<?= BASE_URL ?>/messaging" class="nav-link <?= strpos($current_uri, 'messaging') === 0 ? 'active' : '' ?>">
-                            <i class="bi bi-chat-dots me-2"></i> Messaging
-                        </a>
-                    </li>
-                
-                    <li class="nav-item">
-                        <a href="<?= BASE_URL ?>/notices" class="nav-link <?= strpos($current_uri, 'notices') === 0 ? 'active' : '' ?>">
-                            <i class="bi bi-megaphone me-2"></i> Notices
-                        </a>
-                    </li>
+                    <?php if (!$isRealtor): ?>
+                        <li class="nav-item">
+                            <a href="<?= BASE_URL ?>/messaging" class="nav-link <?= strpos($current_uri, 'messaging') === 0 ? 'active' : '' ?>">
+                                <i class="bi bi-chat-dots me-2"></i> Messaging
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="<?= BASE_URL ?>/notices" class="nav-link <?= strpos($current_uri, 'notices') === 0 ? 'active' : '' ?>">
+                                <i class="bi bi-megaphone me-2"></i> Notices
+                            </a>
+                        </li>
+                    <?php endif; ?>
                 <?php endif; ?>
-                <?php if (!$isRealtor && isset($_SESSION['user_role']) && !in_array(strtolower($_SESSION['user_role']), ['admin','administrator'], true)): ?>
+                <?php if (isset($_SESSION['user_role']) && !in_array(strtolower($_SESSION['user_role']), ['admin','administrator'], true)): ?>
                     <li class="nav-item">
                         <a href="<?= BASE_URL ?>/contact" class="nav-link <?= (strpos($current_uri, 'contact') === 0) ? 'active' : '' ?>">
                             <i class="bi bi-life-preserver me-2"></i> Contact Us
@@ -1473,7 +1491,6 @@ ob_clean();
                         </a>
                     </li>
                 <?php endif; ?>
-                <?php if (!$isRealtor): ?>
                 <li class="nav-item mt-3">
                     <small class="nav-header text-uppercase px-3">BILLING & SUBSCRIPTION</small>
                 </li>
@@ -1534,7 +1551,7 @@ ob_clean();
                         </ul>
                     </div>
                 </li>
-                <?php endif; ?>
+
                 
                 
 
