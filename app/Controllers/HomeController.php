@@ -94,6 +94,7 @@ class HomeController
             require_once __DIR__ . '/../Models/Unit.php';
             require_once __DIR__ . '/../Models/Property.php';
             require_once __DIR__ . '/../Models/RealtorListing.php';
+            require_once __DIR__ . '/../Helpers/FileUploadHelper.php';
 
             $unitModel = new \App\Models\Unit();
             $propertyModel = new \App\Models\Property();
@@ -104,6 +105,23 @@ class HomeController
 
             // Public realtor listings
             $realtorListings = $realtorListingModel->getPublicAll();
+
+            // Attach listing images
+            try {
+                $fileUploadHelper = new \App\Helpers\FileUploadHelper();
+                foreach ($realtorListings as &$rl) {
+                    $imgs = $fileUploadHelper->getEntityFiles('realtor_listing', (int)($rl['id'] ?? 0), 'image');
+                    $urls = [];
+                    foreach (($imgs ?? []) as $img) {
+                        if (!empty($img['url'])) { $urls[] = $img['url']; }
+                    }
+                    $rl['images'] = $urls;
+                    $rl['image'] = $urls[0] ?? null;
+                }
+                unset($rl);
+            } catch (\Exception $e) {
+                error_log('Failed to attach realtor listing images: ' . $e->getMessage());
+            }
 
             // Attach property address and images for display
             $enhancedUnits = [];
