@@ -129,7 +129,6 @@ ob_start();
       </form>
     </div>
   </div>
-$0
 </div>
 
 <div class="modal fade" id="editExpenseModal" tabindex="-1" aria-hidden="true">

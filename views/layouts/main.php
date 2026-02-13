@@ -1266,172 +1266,196 @@ ob_clean();
         </div>
         <nav class="sidebar-nav">
             <ul class="nav flex-column">
+                <?php $isRealtor = isset($_SESSION['user_role']) && strtolower((string)$_SESSION['user_role']) === 'realtor'; ?>
                 <!-- Dashboard -->
                 <li class="nav-item">
-                    <a class="nav-link <?= ($current_uri === 'dashboard') ? 'active' : '' ?>" href="<?= BASE_URL ?>/dashboard">
+                    <a class="nav-link <?= ($current_uri === 'dashboard' || strpos($current_uri, 'realtor/dashboard') === 0) ? 'active' : '' ?>" href="<?= BASE_URL . ($isRealtor ? '/realtor/dashboard' : '/dashboard') ?>">
                         <i class="bi bi-speedometer2 me-2"></i> Dashboard
                     </a>
                 </li>
 
-                <!-- PROPERTY MANAGEMENT Section -->
-                <li class="nav-item mt-3">
-                    <small class="nav-header text-uppercase px-3">PROPERTY MANAGEMENT</small>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link <?= (strpos($current_uri, 'properties') === 0) ? 'active' : '' ?>" href="<?= BASE_URL ?>/properties">
-                        <i class="bi bi-building me-2"></i> Properties
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="<?= BASE_URL ?>/units" class="nav-link <?= strpos($current_uri, 'units') === 0 ? 'active' : '' ?>">
-                        <i class="bi bi-door-open me-2"></i> Units
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="<?= BASE_URL ?>/tenants" class="nav-link <?= strpos($current_uri, 'tenants') === 0 ? 'active' : '' ?>">
-                        <i class="bi bi-people me-2"></i> Tenants
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="<?= BASE_URL ?>/leases" class="nav-link <?= strpos($current_uri, 'leases') === 0 ? 'active' : '' ?>">
-                        <i class="bi bi-file-text me-2"></i> Leases
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="<?= BASE_URL ?>/utilities" class="nav-link <?= strpos($current_uri, 'utilities') === 0 ? 'active' : '' ?>">
-                        <i class="bi bi-lightning-charge me-2"></i> Utilities
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="<?= BASE_URL ?>/maintenance" class="nav-link <?= strpos($current_uri, 'maintenance') === 0 ? 'active' : '' ?>">
-                        <i class="bi bi-tools me-2"></i> Maintenance
-                    </a>
-                </li>
+                <?php if ($isRealtor): ?>
+                    <li class="nav-item mt-3">
+                        <small class="nav-header text-uppercase px-3">REALTOR</small>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link <?= (strpos($current_uri, 'realtor/listings') === 0) ? 'active' : '' ?>" href="<?= BASE_URL ?>/realtor/listings">
+                            <i class="bi bi-building me-2"></i> Listings
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link <?= (strpos($current_uri, 'realtor/clients') === 0) ? 'active' : '' ?>" href="<?= BASE_URL ?>/realtor/clients">
+                            <i class="bi bi-people me-2"></i> Clients
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link <?= (strpos($current_uri, 'realtor/leads') === 0) ? 'active' : '' ?>" href="<?= BASE_URL ?>/realtor/leads">
+                            <i class="bi bi-kanban me-2"></i> CRM (Leads)
+                        </a>
+                    </li>
+                <?php else: ?>
+                    <!-- PROPERTY MANAGEMENT Section -->
+                    <li class="nav-item mt-3">
+                        <small class="nav-header text-uppercase px-3">PROPERTY MANAGEMENT</small>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link <?= (strpos($current_uri, 'properties') === 0) ? 'active' : '' ?>" href="<?= BASE_URL ?>/properties">
+                            <i class="bi bi-building me-2"></i> Properties
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="<?= BASE_URL ?>/units" class="nav-link <?= strpos($current_uri, 'units') === 0 ? 'active' : '' ?>">
+                            <i class="bi bi-door-open me-2"></i> Units
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="<?= BASE_URL ?>/tenants" class="nav-link <?= strpos($current_uri, 'tenants') === 0 ? 'active' : '' ?>">
+                            <i class="bi bi-people me-2"></i> Tenants
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="<?= BASE_URL ?>/leases" class="nav-link <?= strpos($current_uri, 'leases') === 0 ? 'active' : '' ?>">
+                            <i class="bi bi-file-text me-2"></i> Leases
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="<?= BASE_URL ?>/utilities" class="nav-link <?= strpos($current_uri, 'utilities') === 0 ? 'active' : '' ?>">
+                            <i class="bi bi-lightning-charge me-2"></i> Utilities
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="<?= BASE_URL ?>/maintenance" class="nav-link <?= strpos($current_uri, 'maintenance') === 0 ? 'active' : '' ?>">
+                            <i class="bi bi-tools me-2"></i> Maintenance
+                        </a>
+                    </li>
+                <?php endif; ?>
+                <?php if (!$isRealtor): ?>
                 
                 
-                <!-- FINANCIAL Section -->
-                <li class="nav-item mt-3">
-                    <small class="nav-header text-uppercase px-3">FINANCIAL</small>
-                </li>
-                <li class="nav-item">
-                    <a href="<?= BASE_URL ?>/payment-methods" class="nav-link <?= strpos($current_uri, 'payment-methods') === 0 ? 'active' : '' ?>">
-                        <i class="bi bi-credit-card me-2"></i> Payment Methods
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="<?= BASE_URL ?>/payments" class="nav-link <?= strpos($current_uri, 'payments') === 0 ? 'active' : '' ?>">
-                        <i class="bi bi-cash-stack me-2"></i> Payments
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="<?= BASE_URL ?>/mpesa-verification" class="nav-link <?= strpos($current_uri, 'mpesa-verification') === 0 ? 'active' : '' ?>">
-                        <i class="bi bi-shield-check me-2"></i> M-Pesa Verification
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="<?= BASE_URL ?>/expenses" class="nav-link <?= strpos($current_uri, 'expenses') === 0 ? 'active' : '' ?>">
-                        <i class="bi bi-receipt me-2"></i> Expenses
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="<?= BASE_URL ?>/invoices" class="nav-link <?= strpos($current_uri, 'invoices') === 0 ? 'active' : '' ?>">
-                        <i class="bi bi-receipt-cutoff me-2"></i> Invoices
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link dropdown-toggle <?= (strpos($current_uri, 'accounting') === 0) ? 'active' : '' ?>" 
-                       href="#accountingSubmenu" 
-                       data-bs-toggle="collapse" 
-                       role="button" 
-                       aria-expanded="false">
-                        <i class="bi bi-calculator me-2"></i> Accounting
-                    </a>
-                    <div class="collapse" id="accountingSubmenu">
-                        <ul class="nav flex-column ms-3">
-                            <li class="nav-item">
-                                <a href="<?= BASE_URL ?>/accounting/accounts" class="nav-link">
-                                    <i class="bi bi-journal-text me-2"></i> Chart of Accounts
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a href="<?= BASE_URL ?>/accounting/ledger" class="nav-link">
-                                    <i class="bi bi-journal-check me-2"></i> General Ledger
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a href="<?= BASE_URL ?>/accounting/trial-balance" class="nav-link">
-                                    <i class="bi bi-columns-gap me-2"></i> Trial Balance
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a href="<?= BASE_URL ?>/accounting/balance-sheet" class="nav-link">
-                                    <i class="bi bi-diagram-3 me-2"></i> Balance Sheet
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a href="<?= BASE_URL ?>/accounting/profit-loss" class="nav-link">
-                                    <i class="bi bi-graph-up me-2"></i> Profit & Loss
-                                </a>
-                            </li>
-                            <li class="nav-item">
-                                <a href="<?= BASE_URL ?>/accounting/statements" class="nav-link">
-                                    <i class="bi bi-file-earmark-text me-2"></i> Statements
-                                </a>
-                            </li>
-                        </ul>
-                    </div>
-                </li>
-                <li class="nav-item mt-3">
-                    <small class="nav-header text-uppercase px-3">Reports</small>
-                </li>
-                <li class="nav-item">
-                    <a href="<?= BASE_URL ?>/reports" class="nav-link <?= strpos($current_uri, 'reports') === 0 ? 'active' : '' ?>">
-                        <i class="bi bi-graph-up me-2"></i> Reports
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="<?= BASE_URL ?>/reports/tenant-balances" class="nav-link <?= (strpos($current_uri, 'reports/tenant-balances') === 0) ? 'active' : '' ?>">
-                        <i class="bi bi-calendar-check me-2"></i> Monthly Tenant Balances
-                    </a>
-                </li>
-                <li class="nav-item mt-3">
-                    <small class="nav-header text-uppercase px-3">HR & PAYROLL</small>
-                </li>
-                <li class="nav-item">
-                    <a href="<?= BASE_URL ?>/employees" class="nav-link <?= strpos($current_uri, 'employees') === 0 ? 'active' : '' ?>">
-                        <i class="bi bi-person-badge me-2"></i> Employees
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="<?= BASE_URL ?>/files" class="nav-link <?= strpos($current_uri, 'files') === 0 ? 'active' : '' ?>">
-                        <i class="bi bi-folder2-open me-2"></i> Files
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="<?= BASE_URL ?>/esign" class="nav-link <?= strpos($current_uri, 'esign') === 0 ? 'active' : '' ?>">
-                        <i class="bi bi-pen me-2"></i> E‑Signatures
-                    </a>
-                </li>
-                <li class="nav-item mt-3">
-                    <small class="nav-header text-uppercase px-3">Communication</small>
-                </li>
-                <li class="nav-item">
-                    <a href="<?= BASE_URL ?>/admin/inquiries" class="nav-link <?= strpos($current_uri, 'admin/inquiries') === 0 ? 'active' : '' ?>">
-                        <i class="bi bi-envelope-open me-2"></i> Inquiries
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a href="<?= BASE_URL ?>/messaging" class="nav-link <?= strpos($current_uri, 'messaging') === 0 ? 'active' : '' ?>">
-                        <i class="bi bi-chat-dots me-2"></i> Messaging
-                    </a>
-                </li>
-            
-                <li class="nav-item">
-                    <a href="<?= BASE_URL ?>/notices" class="nav-link <?= strpos($current_uri, 'notices') === 0 ? 'active' : '' ?>">
-                        <i class="bi bi-megaphone me-2"></i> Notices
-                    </a>
-                </li>
-                <?php if (isset($_SESSION['user_role']) && !in_array(strtolower($_SESSION['user_role']), ['admin','administrator'], true)): ?>
+                    <!-- FINANCIAL Section -->
+                    <li class="nav-item mt-3">
+                        <small class="nav-header text-uppercase px-3">FINANCIAL</small>
+                    </li>
+                    <li class="nav-item">
+                        <a href="<?= BASE_URL ?>/payment-methods" class="nav-link <?= strpos($current_uri, 'payment-methods') === 0 ? 'active' : '' ?>">
+                            <i class="bi bi-credit-card me-2"></i> Payment Methods
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="<?= BASE_URL ?>/payments" class="nav-link <?= strpos($current_uri, 'payments') === 0 ? 'active' : '' ?>">
+                            <i class="bi bi-cash-stack me-2"></i> Payments
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="<?= BASE_URL ?>/mpesa-verification" class="nav-link <?= strpos($current_uri, 'mpesa-verification') === 0 ? 'active' : '' ?>">
+                            <i class="bi bi-shield-check me-2"></i> M-Pesa Verification
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="<?= BASE_URL ?>/expenses" class="nav-link <?= strpos($current_uri, 'expenses') === 0 ? 'active' : '' ?>">
+                            <i class="bi bi-receipt me-2"></i> Expenses
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="<?= BASE_URL ?>/invoices" class="nav-link <?= strpos($current_uri, 'invoices') === 0 ? 'active' : '' ?>">
+                            <i class="bi bi-receipt-cutoff me-2"></i> Invoices
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link dropdown-toggle <?= (strpos($current_uri, 'accounting') === 0) ? 'active' : '' ?>" 
+                           href="#accountingSubmenu" 
+                           data-bs-toggle="collapse" 
+                           role="button" 
+                           aria-expanded="false">
+                            <i class="bi bi-calculator me-2"></i> Accounting
+                        </a>
+                        <div class="collapse" id="accountingSubmenu">
+                            <ul class="nav flex-column ms-3">
+                                <li class="nav-item">
+                                    <a href="<?= BASE_URL ?>/accounting/accounts" class="nav-link">
+                                        <i class="bi bi-journal-text me-2"></i> Chart of Accounts
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a href="<?= BASE_URL ?>/accounting/ledger" class="nav-link">
+                                        <i class="bi bi-journal-check me-2"></i> General Ledger
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a href="<?= BASE_URL ?>/accounting/trial-balance" class="nav-link">
+                                        <i class="bi bi-columns-gap me-2"></i> Trial Balance
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a href="<?= BASE_URL ?>/accounting/balance-sheet" class="nav-link">
+                                        <i class="bi bi-diagram-3 me-2"></i> Balance Sheet
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a href="<?= BASE_URL ?>/accounting/profit-loss" class="nav-link">
+                                        <i class="bi bi-graph-up me-2"></i> Profit & Loss
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a href="<?= BASE_URL ?>/accounting/statements" class="nav-link">
+                                        <i class="bi bi-file-earmark-text me-2"></i> Statements
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </li>
+                    <li class="nav-item mt-3">
+                        <small class="nav-header text-uppercase px-3">Reports</small>
+                    </li>
+                    <li class="nav-item">
+                        <a href="<?= BASE_URL ?>/reports" class="nav-link <?= strpos($current_uri, 'reports') === 0 ? 'active' : '' ?>">
+                            <i class="bi bi-graph-up me-2"></i> Reports
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="<?= BASE_URL ?>/reports/tenant-balances" class="nav-link <?= (strpos($current_uri, 'reports/tenant-balances') === 0) ? 'active' : '' ?>">
+                            <i class="bi bi-calendar-check me-2"></i> Monthly Tenant Balances
+                        </a>
+                    </li>
+                    <li class="nav-item mt-3">
+                        <small class="nav-header text-uppercase px-3">HR & PAYROLL</small>
+                    </li>
+                    <li class="nav-item">
+                        <a href="<?= BASE_URL ?>/employees" class="nav-link <?= strpos($current_uri, 'employees') === 0 ? 'active' : '' ?>">
+                            <i class="bi bi-person-badge me-2"></i> Employees
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="<?= BASE_URL ?>/files" class="nav-link <?= strpos($current_uri, 'files') === 0 ? 'active' : '' ?>">
+                            <i class="bi bi-folder2-open me-2"></i> Files
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="<?= BASE_URL ?>/esign" class="nav-link <?= strpos($current_uri, 'esign') === 0 ? 'active' : '' ?>">
+                            <i class="bi bi-pen me-2"></i> E‑Signatures
+                        </a>
+                    </li>
+                    <li class="nav-item mt-3">
+                        <small class="nav-header text-uppercase px-3">Communication</small>
+                    </li>
+                    <li class="nav-item">
+                        <a href="<?= BASE_URL ?>/admin/inquiries" class="nav-link <?= strpos($current_uri, 'admin/inquiries') === 0 ? 'active' : '' ?>">
+                            <i class="bi bi-envelope-open me-2"></i> Inquiries
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="<?= BASE_URL ?>/messaging" class="nav-link <?= strpos($current_uri, 'messaging') === 0 ? 'active' : '' ?>">
+                            <i class="bi bi-chat-dots me-2"></i> Messaging
+                        </a>
+                    </li>
+                
+                    <li class="nav-item">
+                        <a href="<?= BASE_URL ?>/notices" class="nav-link <?= strpos($current_uri, 'notices') === 0 ? 'active' : '' ?>">
+                            <i class="bi bi-megaphone me-2"></i> Notices
+                        </a>
+                    </li>
+                <?php endif; ?>
+                <?php if (!$isRealtor && isset($_SESSION['user_role']) && !in_array(strtolower($_SESSION['user_role']), ['admin','administrator'], true)): ?>
                     <li class="nav-item">
                         <a href="<?= BASE_URL ?>/contact" class="nav-link <?= (strpos($current_uri, 'contact') === 0) ? 'active' : '' ?>">
                             <i class="bi bi-life-preserver me-2"></i> Contact Us
@@ -1439,7 +1463,7 @@ ob_clean();
                     </li>
                 <?php endif; ?>
                 
-                <?php if (isset($_SESSION['user_role']) && in_array(strtolower($_SESSION['user_role']), ['manager','agent','landlord'], true)): ?>
+                <?php if (!$isRealtor && isset($_SESSION['user_role']) && in_array(strtolower($_SESSION['user_role']), ['manager','agent','landlord'], true)): ?>
                 <li class="nav-item mt-3">
                     <small class="nav-header text-uppercase px-3">Settings</small>
                 </li>
@@ -1449,6 +1473,7 @@ ob_clean();
                         </a>
                     </li>
                 <?php endif; ?>
+                <?php if (!$isRealtor): ?>
                 <li class="nav-item mt-3">
                     <small class="nav-header text-uppercase px-3">BILLING & SUBSCRIPTION</small>
                 </li>
@@ -1457,6 +1482,7 @@ ob_clean();
                         <i class="bi bi-credit-card-2-back me-2"></i> Billing
                     </a>
                 </li>
+
                 <li class="nav-item mt-3">
                     <small class="nav-header text-uppercase px-3">OTHERS</small>
                 </li>
@@ -1508,6 +1534,7 @@ ob_clean();
                         </ul>
                     </div>
                 </li>
+                <?php endif; ?>
                 
                 
 
@@ -1525,7 +1552,7 @@ ob_clean();
                         }
                     }
                 ?>
-                <?php if ($showActivityLogs): ?>
+                <?php if (!$isRealtor && $showActivityLogs): ?>
                     <li class="nav-item">
                         <a href="<?= BASE_URL ?>/activity-logs" class="nav-link <?= strpos($current_uri, 'activity-logs') === 0 ? 'active' : '' ?>">
                             <i class="bi bi-activity me-2"></i> Activity Logs

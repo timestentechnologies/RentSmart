@@ -170,6 +170,7 @@ ob_start();
                             <option value="manager">Manager</option>
                             <option value="landlord">Landlord</option>
                             <option value="caretaker">Caretaker</option>
+                            <option value="realtor">Realtor</option>
                         </select>
                     </div>
                 </div>
@@ -210,6 +211,7 @@ ob_start();
                             <option value="manager">Manager</option>
                             <option value="landlord">Landlord</option>
                             <option value="caretaker">Caretaker</option>
+                            <option value="realtor">Realtor</option>
                         </select>
                     </div>
                     <div class="mb-3">

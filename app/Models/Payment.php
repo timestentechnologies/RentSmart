@@ -1566,6 +1566,10 @@ class Payment extends Model
                 mt.transaction_date as mpesa_transaction_date,
                 mt.result_code as mpesa_result_code,
                 mt.result_description as mpesa_result_description,
+                mmp.id as manual_mpesa_id,
+                mmp.phone_number as manual_phone_number,
+                mmp.transaction_code as manual_transaction_code,
+                mmp.verification_status as manual_verification_status,
                 spl.log_type,
                 spl.log_data,
                 spl.created_at as log_created_at
@@ -1573,6 +1577,7 @@ class Payment extends Model
                 LEFT JOIN users u ON sp.user_id = u.id
                 LEFT JOIN subscriptions s ON sp.subscription_id = s.id
                 LEFT JOIN mpesa_transactions mt ON sp.id = mt.payment_id
+                LEFT JOIN manual_mpesa_payments mmp ON sp.id = mmp.payment_id
                 LEFT JOIN subscription_payment_logs spl ON sp.id = spl.payment_id
                 WHERE sp.id = ?
                 ORDER BY spl.created_at DESC";
