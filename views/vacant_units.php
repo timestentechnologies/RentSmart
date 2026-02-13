@@ -92,11 +92,57 @@ if (!defined('BASE_URL')) { define('BASE_URL', ''); }
                     </div>
                 </div>
             </div>
-            <?php if (empty($vacantUnits)): ?>
+            <?php if (empty($vacantUnits) && empty($publicRealtorListings)): ?>
                 <div class="alert alert-info">No vacant units at the moment. Please check back later.</div>
             <?php else: ?>
-                <div class="row g-4">
-                    <?php foreach ($vacantUnits as $unit): ?>
+                <?php if (!empty($publicRealtorListings)): ?>
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <h4 class="mb-0"><i class="bi bi-building me-2"></i>Listings</h4>
+                    </div>
+                    <div class="row g-4 mb-4">
+                        <?php foreach (($publicRealtorListings ?? []) as $listing): ?>
+                        <?php
+                            $listingId = (int)($listing['id'] ?? 0);
+                            $listingUserId = (int)($listing['user_id'] ?? 0);
+                            $title = (string)($listing['title'] ?? 'Listing');
+                            $location = (string)($listing['location'] ?? '');
+                            $price = (float)($listing['price'] ?? 0);
+                            $type = (string)($listing['listing_type'] ?? '');
+                            $st = strtolower((string)($listing['status'] ?? 'active'));
+                            $badge = 'secondary';
+                            $label = $st ?: 'active';
+                            if ($st === 'active') { $badge = 'success'; $label = 'Available'; }
+                            elseif ($st === 'inactive') { $badge = 'secondary'; $label = 'Unavailable'; }
+                        ?>
+                        <div class="col-md-4 unit-card" data-location="<?= htmlspecialchars(strtolower($location)) ?>" data-type="<?= htmlspecialchars(strtolower($type)) ?>" data-rent="<?= $price ?>" data-name="<?= htmlspecialchars(strtolower($title.' '.$location)) ?>">
+                            <div class="card card-unit">
+                                <div class="d-flex align-items-center justify-content-center" style="height:200px;background:linear-gradient(135deg, rgba(107,62,153,.12) 0%, rgba(142,92,196,.10) 100%);">
+                                    <div class="text-center">
+                                        <div class="mb-2"><i class="bi bi-building" style="font-size:3rem;color:#6B3E99"></i></div>
+                                        <span class="badge bg-<?= $badge ?>"><?= htmlspecialchars($label) ?></span>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <h5 class="card-title mb-0"><?= htmlspecialchars($title) ?></h5>
+                                        <span class="badge badge-rent">Ksh <?= number_format($price, 2) ?></span>
+                                    </div>
+                                    <p class="mb-1 unit-meta"><i class="bi bi-tag me-1"></i><strong>Type:</strong> <?= htmlspecialchars(str_replace('_', ' ', $type)) ?></p>
+                                    <p class="text-muted mb-3"><i class="bi bi-geo-alt-fill me-1"></i><?= htmlspecialchars($location) ?></p>
+                                    <button class="btn btn-outline-primary w-100" onclick="openInquiryModalForListing(<?= $listingId ?>, <?= $listingUserId ?>, '<?= htmlspecialchars(addslashes($title)) ?>')">Contact to Apply</button>
+                                </div>
+                            </div>
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
+
+                <?php if (!empty($vacantUnits)): ?>
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <h4 class="mb-0"><i class="bi bi-door-open-fill me-2"></i>Vacant Units</h4>
+                    </div>
+                    <div class="row g-4">
+                        <?php foreach ($vacantUnits as $unit): ?>
                         <?php
                             $addressBits = array_filter([
                                 $unit['address'] ?? '',
@@ -152,8 +198,9 @@ if (!defined('BASE_URL')) { define('BASE_URL', ''); }
                                 </div>
                             </div>
                         </div>
-                    <?php endforeach; ?>
-                </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
             <?php endif; ?>
         </div>
     </main>
@@ -169,6 +216,8 @@ if (!defined('BASE_URL')) { define('BASE_URL', ''); }
                 <form id="inquiryForm">
                     <div class="modal-body">
                         <input type="hidden" name="unit_id" id="inquiry_unit_id">
+                        <input type="hidden" name="realtor_listing_id" id="inquiry_realtor_listing_id">
+                        <input type="hidden" name="realtor_user_id" id="inquiry_realtor_user_id">
                         <div class="mb-2"><strong id="inquiry_unit_label"></strong></div>
                         <div class="mb-3">
                             <label class="form-label">Full Name</label>
@@ -205,7 +254,18 @@ if (!defined('BASE_URL')) { define('BASE_URL', ''); }
     <script>
         function openInquiryModal(unitId, propertyName, unitNumber) {
             document.getElementById('inquiry_unit_id').value = unitId;
+            document.getElementById('inquiry_realtor_listing_id').value = '';
+            document.getElementById('inquiry_realtor_user_id').value = '';
             document.getElementById('inquiry_unit_label').textContent = propertyName + ' - Unit ' + unitNumber;
+            const m = new bootstrap.Modal(document.getElementById('inquiryModal'));
+            m.show();
+        }
+
+        function openInquiryModalForListing(listingId, realtorUserId, title) {
+            document.getElementById('inquiry_unit_id').value = '';
+            document.getElementById('inquiry_realtor_listing_id').value = listingId;
+            document.getElementById('inquiry_realtor_user_id').value = realtorUserId;
+            document.getElementById('inquiry_unit_label').textContent = title;
             const m = new bootstrap.Modal(document.getElementById('inquiryModal'));
             m.show();
         }

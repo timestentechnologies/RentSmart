@@ -93,12 +93,17 @@ class HomeController
             // Public page listing vacant units
             require_once __DIR__ . '/../Models/Unit.php';
             require_once __DIR__ . '/../Models/Property.php';
+            require_once __DIR__ . '/../Models/RealtorListing.php';
 
             $unitModel = new \App\Models\Unit();
             $propertyModel = new \App\Models\Property();
+            $realtorListingModel = new \App\Models\RealtorListing();
 
             // Get vacant units (public - no role filters)
             $units = $unitModel->getVacantUnitsPublic();
+
+            // Public realtor listings
+            $realtorListings = $realtorListingModel->getPublicAll();
 
             // Attach property address and images for display
             $enhancedUnits = [];
@@ -156,6 +161,7 @@ class HomeController
                 : BASE_URL . '/public/assets/images/logo.png';
 
             $vacantUnits = $enhancedUnits;
+            $publicRealtorListings = $realtorListings;
             require 'views/vacant_units.php';
         } catch (\Exception $e) {
             error_log($e->getMessage());
