@@ -52,6 +52,16 @@ class RealtorListing extends Model
         return $stmt->fetch(\PDO::FETCH_ASSOC);
     }
 
+    public function getPublicAll()
+    {
+        $stmt = $this->db->prepare(
+            "SELECT * FROM {$this->table}
+             ORDER BY status = 'active' DESC, id DESC"
+        );
+        $stmt->execute();
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+    }
+
     public function countAll($userId)
     {
         $stmt = $this->db->prepare("SELECT COUNT(*) AS c FROM {$this->table} WHERE user_id = ?");
