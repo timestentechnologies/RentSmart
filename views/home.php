@@ -1411,6 +1411,7 @@
                                 <option value="landlord">Landlord</option>
                                 <option value="manager">Manager</option>
                                 <option value="agent">Agent</option>
+                                <option value="realtor">Realtor</option>
                             </select>
                             <label for="registerRole">Your Role</label>
                         </div>

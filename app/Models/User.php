@@ -67,6 +67,11 @@ class User extends Model
         return isset($this->userData['role']) && $this->userData['role'] === 'caretaker';
     }
 
+    public function isRealtor()
+    {
+        return isset($this->userData['role']) && $this->userData['role'] === 'realtor';
+    }
+
     // Get properties based on user role
     public function getAccessibleProperties()
     {

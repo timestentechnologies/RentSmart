@@ -44,6 +44,11 @@ class DashboardController
         // Load user data
         $userData = $this->user->find($_SESSION['user_id']);
         $role = strtolower($userData['role']);
+
+        if ($role === 'realtor') {
+            header('Location: ' . BASE_URL . '/realtor/dashboard');
+            exit;
+        }
         // Check subscription for non-admin users (allow caretakers, same as requireAuth)
         if (!in_array($role, ['admin', 'administrator', 'caretaker'])) {
             $subscription = $this->subscription->getUserSubscription($_SESSION['user_id']);

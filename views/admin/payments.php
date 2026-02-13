@@ -253,6 +253,30 @@ function viewPayment(paymentId) {
         .then(response => response.json())
         .then(payment => {
             const details = document.getElementById('paymentDetails');
+
+            const pm = (payment.payment_method || '').toString().toLowerCase();
+            const isManual = !!payment.manual_mpesa_id;
+            const isStk = !isManual && (!!payment.mpesa_receipt_number || !!payment.phone_number);
+            const methodLabel = (pm === 'mpesa')
+                ? (isManual ? 'Mpesa Paybill (Manual)' : (isStk ? 'Mpesa STK' : 'Mpesa'))
+                : (payment.payment_method || 'Other');
+
+            const phone = (pm === 'mpesa')
+                ? (isManual ? (payment.manual_phone_number || '') : (payment.phone_number || ''))
+                : '';
+
+            let reference = payment.transaction_reference || '';
+            if (!reference) {
+                if (pm === 'mpesa') {
+                    reference = isManual ? (payment.manual_transaction_code || '') : (payment.mpesa_receipt_number || '');
+                }
+            }
+            if (!reference) reference = 'N/A';
+
+            const cashReceipt = pm === 'cash' ? (payment.transaction_reference || 'N/A') : 'N/A';
+            const chequeDetails = pm === 'cheque' ? (payment.transaction_reference || 'N/A') : 'N/A';
+            const bankRef = pm === 'bank_transfer' ? (payment.transaction_reference || 'N/A') : 'N/A';
+
             details.innerHTML = `
                 <div class="row">
                     <div class="col-md-6">
@@ -262,9 +286,13 @@ function viewPayment(paymentId) {
                         <p><strong>Amount:</strong> ${payment.amount}</p>
                     </div>
                     <div class="col-md-6">
-                        <p><strong>Method:</strong> ${payment.payment_method}</p>
+                        <p><strong>Method:</strong> ${methodLabel}</p>
                         <p><strong>Status:</strong> ${payment.status}</p>
-                        <p><strong>Reference:</strong> ${payment.transaction_reference || 'N/A'}</p>
+                        <p><strong>Phone:</strong> ${(phone || 'N/A')}</p>
+                        <p><strong>Reference:</strong> ${reference}</p>
+                        <p><strong>Receipt No:</strong> ${cashReceipt}</p>
+                        <p><strong>Cheque Details:</strong> ${chequeDetails}</p>
+                        <p><strong>Bank Transfer Ref:</strong> ${bankRef}</p>
                         <p><strong>Date:</strong> ${new Date(payment.created_at).toLocaleString()}</p>
                     </div>
                 </div>

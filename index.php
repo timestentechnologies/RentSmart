@@ -444,6 +444,27 @@ $routes = [
     'admin/debug/tenant-payment-error' => ['controller' => 'AdminDebugController', 'action' => 'tenantPaymentError'],
     // Public inquiry
     'inquiries/store' => ['controller' => 'InquiryController', 'action' => 'store'],
+
+    // Realtor routes
+    'realtor/dashboard' => ['controller' => 'RealtorDashboardController', 'action' => 'index'],
+    'realtor/listings' => ['controller' => 'RealtorListingsController', 'action' => 'index'],
+    'realtor/listings/store' => ['controller' => 'RealtorListingsController', 'action' => 'store'],
+    'realtor/listings/get/(\d+)' => ['controller' => 'RealtorListingsController', 'action' => 'get'],
+    'realtor/listings/update/(\d+)' => ['controller' => 'RealtorListingsController', 'action' => 'update'],
+    'realtor/listings/delete/(\d+)' => ['controller' => 'RealtorListingsController', 'action' => 'delete'],
+
+    'realtor/clients' => ['controller' => 'RealtorClientsController', 'action' => 'index'],
+    'realtor/clients/store' => ['controller' => 'RealtorClientsController', 'action' => 'store'],
+    'realtor/clients/get/(\d+)' => ['controller' => 'RealtorClientsController', 'action' => 'get'],
+    'realtor/clients/update/(\d+)' => ['controller' => 'RealtorClientsController', 'action' => 'update'],
+    'realtor/clients/delete/(\d+)' => ['controller' => 'RealtorClientsController', 'action' => 'delete'],
+
+    'realtor/leads' => ['controller' => 'RealtorLeadsController', 'action' => 'index'],
+    'realtor/leads/store' => ['controller' => 'RealtorLeadsController', 'action' => 'store'],
+    'realtor/leads/get/(\d+)' => ['controller' => 'RealtorLeadsController', 'action' => 'get'],
+    'realtor/leads/update/(\d+)' => ['controller' => 'RealtorLeadsController', 'action' => 'update'],
+    'realtor/leads/convert/(\d+)' => ['controller' => 'RealtorLeadsController', 'action' => 'convert'],
+    'realtor/leads/delete/(\d+)' => ['controller' => 'RealtorLeadsController', 'action' => 'delete'],
 ];
 
 // Protected routes that require authentication
@@ -672,6 +693,25 @@ $protectedRoutes = [
     'admin/contact-messages/reply/(\d+)',
     'activity-logs',
     'activity-logs/export/(csv|xlsx)'
+    ,
+    // Realtor
+    'realtor/dashboard',
+    'realtor/listings',
+    'realtor/listings/store',
+    'realtor/listings/get/(\d+)',
+    'realtor/listings/update/(\d+)',
+    'realtor/listings/delete/(\d+)',
+    'realtor/clients',
+    'realtor/clients/store',
+    'realtor/clients/get/(\d+)',
+    'realtor/clients/update/(\d+)',
+    'realtor/clients/delete/(\d+)',
+    'realtor/leads',
+    'realtor/leads/store',
+    'realtor/leads/get/(\d+)',
+    'realtor/leads/update/(\d+)',
+    'realtor/leads/convert/(\d+)',
+    'realtor/leads/delete/(\d+)'
 ];
 
 // Check if the current route requires authentication

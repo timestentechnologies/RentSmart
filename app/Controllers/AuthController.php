@@ -104,7 +104,7 @@ class AuthController
             }
 
             // Validate role
-            if (!in_array($role, ['landlord', 'agent', 'manager'])) {
+            if (!in_array($role, ['landlord', 'agent', 'manager', 'realtor'])) {
                 if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
                     header('Content-Type: application/json');
                     echo json_encode(['success' => false, 'message' => 'Invalid role selected']);

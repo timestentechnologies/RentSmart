@@ -288,6 +288,59 @@ CREATE TABLE `invoices` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
+--
+-- Table structure for table `realtor_listings`
+--
+
+CREATE TABLE `realtor_listings` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `title` varchar(255) NOT NULL,
+  `listing_type` enum('plot','commercial_apartment','residential_apartment') NOT NULL DEFAULT 'plot',
+  `location` varchar(255) NOT NULL,
+  `price` decimal(12,2) NOT NULL DEFAULT 0.00,
+  `status` enum('active','inactive','sold','rented') NOT NULL DEFAULT 'active',
+  `description` text DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+--
+-- Table structure for table `realtor_clients`
+--
+
+CREATE TABLE `realtor_clients` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `phone` varchar(50) NOT NULL,
+  `email` varchar(150) DEFAULT NULL,
+  `notes` text DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
+--
+-- Table structure for table `realtor_leads`
+--
+
+CREATE TABLE `realtor_leads` (
+  `id` int(11) NOT NULL,
+  `user_id` int(11) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `phone` varchar(50) NOT NULL,
+  `email` varchar(150) DEFAULT NULL,
+  `source` varchar(100) DEFAULT NULL,
+  `status` enum('new','contacted','won','lost') NOT NULL DEFAULT 'new',
+  `notes` text DEFAULT NULL,
+  `converted_client_id` int(11) DEFAULT NULL,
+  `created_at` timestamp NULL DEFAULT current_timestamp(),
+  `updated_at` timestamp NULL DEFAULT current_timestamp() ON UPDATE current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- --------------------------------------------------------
 
 --
 -- Table structure for table `invoice_items`
