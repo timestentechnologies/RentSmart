@@ -28,7 +28,11 @@ class RealtorListing extends Model
             INDEX idx_user_id (user_id),
             INDEX idx_status (status)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;";
-        $this->db->exec($sql);
+        try {
+            $this->db->exec($sql);
+        } catch (\Exception $e) {
+            // ignore (e.g., missing CREATE privilege on some hosting)
+        }
     }
 
     public function getAll($userId)
