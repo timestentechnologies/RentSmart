@@ -25,7 +25,11 @@ class RealtorClient extends Model
             updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             INDEX idx_user_id (user_id)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;";
-        $this->db->exec($sql);
+        try {
+            $this->db->exec($sql);
+        } catch (\Exception $e) {
+            // ignore (e.g., missing CREATE privilege on some hosting)
+        }
     }
 
     public function getAll($userId)
