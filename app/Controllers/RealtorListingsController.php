@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Models\RealtorListing;
+use App\Models\RealtorClient;
 use App\Helpers\FileUploadHelper;
 
 class RealtorListingsController
@@ -30,9 +31,13 @@ class RealtorListingsController
     {
         $model = new RealtorListing();
         $listings = $model->getAll($this->userId);
+
+        $clientModel = new RealtorClient();
+        $clients = $clientModel->getAll($this->userId);
         echo view('realtor/listings', [
             'title' => 'Listings',
             'listings' => $listings,
+            'clients' => $clients,
         ]);
     }
 

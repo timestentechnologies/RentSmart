@@ -5,9 +5,14 @@ ob_start();
     <div class="card page-header mb-4">
         <div class="card-body d-flex justify-content-between align-items-center">
             <h1 class="h3 mb-0"><i class="bi bi-people text-primary me-2"></i>Clients</h1>
-            <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addClientModal">
-                <i class="bi bi-plus-circle me-1"></i>Add Client
-            </button>
+            <div class="d-flex gap-2">
+                <a class="btn btn-sm btn-outline-secondary" href="<?= BASE_URL ?>/realtor/contracts">
+                    <i class="bi bi-file-text me-1"></i>Contracts
+                </a>
+                <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addClientModal">
+                    <i class="bi bi-plus-circle me-1"></i>Add Client
+                </button>
+            </div>
         </div>
     </div>
 

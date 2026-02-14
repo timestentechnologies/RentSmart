@@ -359,8 +359,34 @@ $isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
                 <div class="modal-body">
                     <?php if ($isRealtor): ?>
                         <div class="mb-3">
+                            <label class="form-label">Contract (optional)</label>
+                            <select class="form-select" name="realtor_contract_id" id="realtor_contract_id">
+                                <option value="">Select Contract (optional)</option>
+                                <?php foreach (($contracts ?? []) as $ct): ?>
+                                    <?php
+                                        $ctId = (int)($ct['id'] ?? 0);
+                                        $ctTerms = (string)($ct['terms_type'] ?? 'one_time');
+                                        $ctClient = (string)($ct['client_name'] ?? '');
+                                        $ctListing = (string)($ct['listing_title'] ?? '');
+                                        $ctStart = substr((string)($ct['start_month'] ?? ''), 0, 7);
+                                        $ctDur = (int)($ct['duration_months'] ?? 0);
+                                    ?>
+                                    <option
+                                        value="<?= $ctId ?>"
+                                        data-terms="<?= htmlspecialchars($ctTerms, ENT_QUOTES) ?>"
+                                        data-start-month="<?= htmlspecialchars($ctStart, ENT_QUOTES) ?>"
+                                        data-duration="<?= (int)$ctDur ?>"
+                                    >
+                                        #<?= $ctId ?> - <?= htmlspecialchars($ctClient) ?> / <?= htmlspecialchars($ctListing) ?> (<?= htmlspecialchars($ctTerms) ?>)
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <div class="form-text">If selected, client/listing and payment type will follow the contract terms.</div>
+                        </div>
+
+                        <div class="mb-3">
                             <label class="form-label">Client</label>
-                            <select class="form-select" name="realtor_client_id" required>
+                            <select class="form-select" name="realtor_client_id" id="realtor_client_id" required>
                                 <option value="">Select Client</option>
                                 <?php foreach (($clients ?? []) as $c): ?>
                                     <option value="<?= (int)($c['id'] ?? 0) ?>"><?= htmlspecialchars($c['name'] ?? '') ?></option>
@@ -369,7 +395,7 @@ $isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Listing</label>
-                            <select class="form-select" name="realtor_listing_id" required>
+                            <select class="form-select" name="realtor_listing_id" id="realtor_listing_id" required>
                                 <option value="">Select Listing</option>
                                 <?php foreach (($listings ?? []) as $l): ?>
                                     <option value="<?= (int)($l['id'] ?? 0) ?>"><?= htmlspecialchars($l['title'] ?? '') ?></option>
@@ -389,7 +415,7 @@ $isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Payment Type</label>
-                            <select class="form-select" name="payment_type">
+                            <select class="form-select" name="payment_type" id="realtor_payment_type">
                                 <option value="realtor">Realtor Payment</option>
                                 <option value="commission">Commission</option>
                                 <option value="booking">Booking</option>
@@ -400,8 +426,9 @@ $isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
                             </select>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Payment For Month (optional)</label>
-                            <input type="month" class="form-control" name="applies_to_month" value="<?= date('Y-m') ?>">
+                            <label class="form-label">Payment For Month</label>
+                            <input type="month" class="form-control" name="applies_to_month" id="realtor_applies_to_month" value="<?= date('Y-m') ?>">
+                            <div class="form-text" id="realtor_month_hint" style="display:none;">Required for monthly contracts (mortgage monthly).</div>
                         </div>
                     <?php else: ?>
                         <div class="mb-3">
@@ -1659,9 +1686,59 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Error deleting file:', error);
             showAlert('Error deleting file', 'danger');
         }
-    });
+    };
 
 <?php endif; ?>
+</script>
+<script>
+// Realtor Contracts -> Payments linkage
+(function(){
+    const contractSel = document.getElementById('realtor_contract_id');
+    const clientSel = document.getElementById('realtor_client_id');
+    const listingSel = document.getElementById('realtor_listing_id');
+    const typeSel = document.getElementById('realtor_payment_type');
+    const monthInput = document.getElementById('realtor_applies_to_month');
+    const monthHint = document.getElementById('realtor_month_hint');
+
+    if (!contractSel || !typeSel || !monthInput) {
+        return;
+    }
+
+    const applyContractRules = () => {
+        const opt = contractSel.options[contractSel.selectedIndex];
+        const cid = (contractSel.value || '').trim();
+        const terms = (opt && opt.getAttribute) ? (opt.getAttribute('data-terms') || '') : '';
+
+        const hasContract = cid !== '';
+        if (clientSel) clientSel.disabled = hasContract;
+        if (listingSel) listingSel.disabled = hasContract;
+
+        if (hasContract) {
+            if (terms === 'monthly') {
+                typeSel.value = 'mortgage_monthly';
+                monthInput.required = true;
+                if (monthHint) monthHint.style.display = '';
+            } else {
+                typeSel.value = 'mortgage';
+                monthInput.required = false;
+                monthInput.value = '';
+                if (monthHint) monthHint.style.display = 'none';
+            }
+            typeSel.disabled = true;
+        } else {
+            typeSel.disabled = false;
+            // Only require month if user manually selected monthly mortgage
+            const t = (typeSel.value || '').toLowerCase();
+            const requiresMonth = (t === 'mortgage_monthly' || t === 'monthly_mortgage');
+            monthInput.required = requiresMonth;
+            if (monthHint) monthHint.style.display = requiresMonth ? '' : 'none';
+        }
+    };
+
+    contractSel.addEventListener('change', applyContractRules);
+    typeSel.addEventListener('change', applyContractRules);
+    applyContractRules();
+})();
 </script>
 <?php
 $content = ob_get_clean();

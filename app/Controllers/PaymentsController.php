@@ -8,6 +8,7 @@ use App\Helpers\FileUploadHelper;
 use App\Models\ActivityLog;
 use App\Models\RealtorClient;
 use App\Models\RealtorListing;
+use App\Models\RealtorContract;
 
 class PaymentsController
 {
@@ -214,12 +215,14 @@ class PaymentsController
         if ($role === 'realtor') {
             $clientModel = new RealtorClient();
             $listingModel = new RealtorListing();
+            $contractModel = new RealtorContract();
 
             $payments = $paymentModel->getPaymentsForRealtor($this->userId);
             $clients = $clientModel->getAll($this->userId);
             $listings = $listingModel->getAll($this->userId);
-            $tenants = [];
-            $pendingPaymentsCount = 0;
+            $contracts = $contractModel->getAllWithDetails($this->userId);
+            $tenants = []; // Set to empty array for Realtor role
+            $pendingPaymentsCount = 0; // Set to 0 for Realtor role
 
             require 'views/payments/index.php';
             return;
@@ -336,65 +339,95 @@ class PaymentsController
 
                 $role = strtolower((string)($_SESSION['user_role'] ?? 'guest'));
                 if ($role === 'realtor') {
-                    $clientId = (int)($_POST['realtor_client_id'] ?? 0);
-                    $listingId = (int)($_POST['realtor_listing_id'] ?? 0);
-                    $amount = (float)($_POST['amount'] ?? 0);
-                    $paymentDate = (string)($_POST['payment_date'] ?? date('Y-m-d'));
-                    $paymentMethod = (string)($_POST['payment_method'] ?? 'cash');
-                    $referenceNumber = $_POST['reference_number'] ?? null;
-                    $status = (string)($_POST['status'] ?? 'completed');
-                    $notes = (string)($_POST['notes'] ?? '');
-                    $paymentType = (string)($_POST['payment_type'] ?? 'realtor');
-
-                    $appliesToMonthRaw = trim((string)($_POST['applies_to_month'] ?? ''));
-                    $appliesToMonth = null;
-                    if ($appliesToMonthRaw !== '') {
-                        if (preg_match('/^\d{4}-\d{2}$/', $appliesToMonthRaw)) {
-                            $appliesToMonth = $appliesToMonthRaw . '-01';
-                        } else if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $appliesToMonthRaw)) {
-                            $appliesToMonth = substr($appliesToMonthRaw, 0, 7) . '-01';
+                    try {
+                        if (!verify_csrf_token()) {
+                            $_SESSION['flash_message'] = 'Invalid security token';
+                            $_SESSION['flash_type'] = 'danger';
+                            header('Location: ' . BASE_URL . '/payments');
+                            exit;
                         }
-                    }
 
-                    if ($clientId <= 0 || $listingId <= 0 || $amount <= 0) {
-                        $_SESSION['flash_message'] = 'Client, Listing and Amount are required.';
+                        $contractId = (int)($_POST['realtor_contract_id'] ?? 0);
+                        $clientId = (int)($_POST['realtor_client_id'] ?? 0);
+                        $listingId = (int)($_POST['realtor_listing_id'] ?? 0);
+                        $paymentType = trim((string)($_POST['payment_type'] ?? 'realtor'));
+                        $amount = (float)($_POST['amount'] ?? 0);
+                        $paymentDate = trim((string)($_POST['payment_date'] ?? date('Y-m-d')));
+                        $paymentMethod = trim((string)($_POST['payment_method'] ?? 'cash'));
+                        $reference = trim((string)($_POST['reference_number'] ?? ''));
+                        $status = trim((string)($_POST['status'] ?? 'completed'));
+                        $notes = trim((string)($_POST['notes'] ?? ''));
+                        $appliesToMonth = trim((string)($_POST['applies_to_month'] ?? ''));
+
+                        $contractTermsType = null;
+                        if ($contractId > 0) {
+                            $contractModel = new RealtorContract();
+                            $contract = $contractModel->getByIdWithAccess($contractId, $this->userId);
+                            if (!$contract) {
+                                $_SESSION['flash_message'] = 'Invalid contract selected';
+                                $_SESSION['flash_type'] = 'danger';
+                                header('Location: ' . BASE_URL . '/payments');
+                                exit;
+                            }
+                            $clientId = (int)($contract['realtor_client_id'] ?? 0);
+                            $listingId = (int)($contract['realtor_listing_id'] ?? 0);
+                            $contractTermsType = (string)($contract['terms_type'] ?? 'one_time');
+
+                            // Normalize payment type based on contract terms.
+                            if ($contractTermsType === 'monthly') {
+                                $paymentType = 'mortgage_monthly';
+                            } else {
+                                $paymentType = 'mortgage';
+                                $appliesToMonth = '';
+                            }
+                        }
+
+                        if ($clientId <= 0 || $listingId <= 0) {
+                            $_SESSION['flash_message'] = 'Client and Listing are required';
+                            $_SESSION['flash_type'] = 'danger';
+                            header('Location: ' . BASE_URL . '/payments');
+                            exit;
+                        }
+
+                        // For monthly payments like mortgage, prevent double-entry for the same month
+                        if ($appliesToMonth !== null && in_array($paymentType, ['mortgage', 'mortgage_monthly'], true)) {
+                            if ($paymentModel->realtorMonthAlreadyPaid($this->userId, $clientId, $listingId, $appliesToMonth, $paymentType)) {
+                                $_SESSION['flash_message'] = 'Selected month is already marked as paid for this mortgage. Please select another month.';
+                                $_SESSION['flash_type'] = 'warning';
+                                header('Location: ' . BASE_URL . '/payments');
+                                exit;
+                            }
+                        }
+
+                        $paymentId = $paymentModel->createRealtorPayment([
+                            'realtor_user_id' => (int)$this->userId,
+                            'realtor_client_id' => (int)$clientId,
+                            'realtor_listing_id' => (int)$listingId,
+                            'realtor_contract_id' => ($contractId > 0) ? (int)$contractId : null,
+                            'amount' => (float)$amount,
+                            'payment_date' => (string)$paymentDate,
+                            'applies_to_month' => ($appliesToMonth !== '') ? (string)$appliesToMonth . '-01' : null,
+                            'payment_type' => (string)$paymentType,
+                            'payment_method' => (string)$paymentMethod,
+                            'reference_number' => ($reference !== '') ? (string)$reference : null,
+                            'status' => (string)$status,
+                            'notes' => (string)$notes,
+                        ]);
+
+                        if (!empty($_FILES['payment_attachments']['name'][0])) {
+                            $this->handlePaymentAttachments($paymentId);
+                        }
+
+                        $_SESSION['flash_message'] = 'Payment added successfully!';
+                        $_SESSION['flash_type'] = 'success';
+                        header('Location: ' . BASE_URL . '/payments');
+                        exit;
+                    } catch (\Exception $e) {
+                        $_SESSION['flash_message'] = 'Payment failed: ' . $e->getMessage();
                         $_SESSION['flash_type'] = 'danger';
                         header('Location: ' . BASE_URL . '/payments');
                         exit;
                     }
-
-                    // For monthly payments like mortgage, prevent double-entry for the same month
-                    if ($appliesToMonth !== null && in_array($paymentType, ['mortgage', 'mortgage_monthly'], true)) {
-                        if ($paymentModel->realtorMonthAlreadyPaid($this->userId, $clientId, $listingId, $appliesToMonth, $paymentType)) {
-                            $_SESSION['flash_message'] = 'Selected month is already marked as paid for this mortgage. Please select another month.';
-                            $_SESSION['flash_type'] = 'warning';
-                            header('Location: ' . BASE_URL . '/payments');
-                            exit;
-                        }
-                    }
-
-                    $paymentId = $paymentModel->createRealtorPayment([
-                        'realtor_user_id' => (int)$this->userId,
-                        'realtor_client_id' => (int)$clientId,
-                        'realtor_listing_id' => (int)$listingId,
-                        'amount' => (float)$amount,
-                        'payment_date' => $paymentDate,
-                        'applies_to_month' => $appliesToMonth,
-                        'payment_type' => $paymentType,
-                        'payment_method' => $paymentMethod,
-                        'reference_number' => $referenceNumber,
-                        'status' => $status,
-                        'notes' => $notes,
-                    ]);
-
-                    if (!empty($_FILES['payment_attachments']['name'][0])) {
-                        $this->handlePaymentAttachments($paymentId);
-                    }
-
-                    $_SESSION['flash_message'] = 'Payment added successfully!';
-                    $_SESSION['flash_type'] = 'success';
-                    header('Location: ' . BASE_URL . '/payments');
-                    exit;
                 }
 
                 $appliesToMonthRaw = trim((string)($_POST['applies_to_month'] ?? ''));
