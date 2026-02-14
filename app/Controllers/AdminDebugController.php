@@ -24,7 +24,8 @@ class AdminDebugController
         // This helps diagnose role-specific 500s without opening the endpoint publicly.
         $uri = (string)($_SERVER['REQUEST_URI'] ?? '');
         $isRealtorPaymentsDebug = (strpos($uri, '/admin/debug/realtor-payments') !== false);
-        if ($isRealtorPaymentsDebug) {
+        $isRenderPaymentsDebug = (strpos($uri, '/admin/debug/render-payments') !== false);
+        if ($isRealtorPaymentsDebug || $isRenderPaymentsDebug) {
             $key = $_GET['key'] ?? null;
             if ($key && isset($_SESSION['csrf_token']) && hash_equals((string)$_SESSION['csrf_token'], (string)$key)) {
                 return;
@@ -191,5 +192,109 @@ class AdminDebugController
         echo '<pre>' . htmlspecialchars(json_encode($payload, JSON_PRETTY_PRINT)) . '</pre>';
         echo '</body></html>';
         exit;
+    }
+
+    public function renderPayments()
+    {
+        $acceptHeader = strtolower((string)($_SERVER['HTTP_ACCEPT'] ?? ''));
+        $wantsJson = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')
+            || (strpos($acceptHeader, 'application/json') !== false)
+            || (isset($_GET['format']) && strtolower((string)$_GET['format']) === 'json');
+
+        $userId = (int)($_SESSION['user_id'] ?? 0);
+        $role = strtolower((string)($_SESSION['user_role'] ?? ''));
+
+        $payload = [
+            'success' => false,
+            'user_id' => $userId,
+            'user_role' => $role,
+            'step' => 'init',
+            'exception' => null,
+            'last_error' => null,
+        ];
+
+        $prevHandler = null;
+        try {
+            // Convert warnings/notices into exceptions so we can see what is crashing production.
+            $prevHandler = set_error_handler(function ($severity, $message, $file, $line) {
+                if (!(error_reporting() & $severity)) {
+                    return false;
+                }
+                throw new \ErrorException($message, 0, $severity, $file, $line);
+            });
+
+            $payload['step'] = 'load_models';
+            $paymentModel = new Payment();
+
+            $payments = [];
+            $tenants = [];
+            $clients = [];
+            $listings = [];
+            $pendingPaymentsCount = 0;
+
+            if ($role === 'realtor') {
+                $payload['step'] = 'query_realtor';
+                $clientModel = new RealtorClient();
+                $listingModel = new RealtorListing();
+                $payments = $paymentModel->getPaymentsForRealtor($userId);
+                $clients = $clientModel->getAll($userId);
+                $listings = $listingModel->getAll($userId);
+            } else {
+                $payload['step'] = 'query_tenant_payments';
+                $payments = $paymentModel->getPaymentsWithTenantInfo($userId);
+            }
+
+            $payload['step'] = 'render_view';
+            ob_start();
+            require 'views/payments/index.php';
+            $html = ob_get_clean();
+
+            $payload['success'] = true;
+            $payload['step'] = 'done';
+
+            if ($wantsJson) {
+                header('Content-Type: application/json');
+                echo json_encode($payload);
+                exit;
+            }
+
+            header('Content-Type: text/html; charset=utf-8');
+            echo $html;
+            exit;
+        } catch (\Throwable $e) {
+            $payload['exception'] = [
+                'class' => get_class($e),
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+            ];
+            $payload['last_error'] = error_get_last();
+
+            if ($wantsJson) {
+                header('Content-Type: application/json');
+                echo json_encode($payload);
+                exit;
+            }
+
+            header('Content-Type: text/html; charset=utf-8');
+            echo '<!doctype html><html><head><meta charset="utf-8"><title>Render Payments Debug</title>';
+            echo '<style>body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;padding:16px;max-width:980px;margin:0 auto}pre{background:#111827;color:#e5e7eb;padding:12px;border-radius:8px;overflow:auto}</style>';
+            echo '</head><body>';
+            echo '<h2>Render Payments Debug</h2>';
+            echo '<div><strong>User ID:</strong> ' . (int)$userId . '</div>';
+            echo '<div><strong>Role:</strong> ' . htmlspecialchars($role) . '</div>';
+            echo '<div style="margin-top:12px"><a href="?format=json" target="_blank">Open JSON</a></div>';
+            echo '<div style="margin-top:12px"><strong>Payload:</strong></div>';
+            echo '<pre>' . htmlspecialchars(json_encode($payload, JSON_PRETTY_PRINT)) . '</pre>';
+            echo '</body></html>';
+            exit;
+        } finally {
+            if ($prevHandler) {
+                set_error_handler($prevHandler);
+            } else {
+                restore_error_handler();
+            }
+        }
     }
 }
