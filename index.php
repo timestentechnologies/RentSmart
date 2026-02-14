@@ -465,6 +465,11 @@ $routes = [
     'realtor/leads/update/(\d+)' => ['controller' => 'RealtorLeadsController', 'action' => 'update'],
     'realtor/leads/convert/(\d+)' => ['controller' => 'RealtorLeadsController', 'action' => 'convert'],
     'realtor/leads/delete/(\d+)' => ['controller' => 'RealtorLeadsController', 'action' => 'delete'],
+
+    'realtor/leads/stages' => ['controller' => 'RealtorLeadsController', 'action' => 'stages'],
+    'realtor/leads/stages/store' => ['controller' => 'RealtorLeadsController', 'action' => 'storeStage'],
+    'realtor/leads/stages/update/(\d+)' => ['controller' => 'RealtorLeadsController', 'action' => 'updateStage'],
+    'realtor/leads/stages/delete/(\d+)' => ['controller' => 'RealtorLeadsController', 'action' => 'deleteStage'],
 ];
 
 // Protected routes that require authentication

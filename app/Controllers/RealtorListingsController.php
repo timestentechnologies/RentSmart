@@ -81,8 +81,10 @@ class RealtorListingsController
                         'image',
                         $_SESSION['user_id']
                     );
-                    if (empty($imageResult['errors'])) {
-                        $fileUploadHelper->updateEntityFiles('realtor_listing', (int)$listingId);
+                    $fileUploadHelper->updateEntityFiles('realtor_listing', (int)$listingId);
+                    if (!empty($imageResult['errors'])) {
+                        $_SESSION['flash_message'] = 'Listing saved, but some images failed to upload: ' . implode('; ', $imageResult['errors']);
+                        $_SESSION['flash_type'] = 'warning';
                     }
                 }
             } catch (\Exception $e) {
@@ -110,6 +112,18 @@ class RealtorListingsController
                 http_response_code(404);
                 echo json_encode(['success' => false, 'message' => 'Listing not found']);
                 exit;
+            }
+            try {
+                $fileUploadHelper = new FileUploadHelper();
+                $imgs = $fileUploadHelper->getEntityFiles('realtor_listing', (int)$id, 'image');
+                $urls = [];
+                foreach (($imgs ?? []) as $img) {
+                    if (!empty($img['url'])) { $urls[] = $img['url']; }
+                }
+                $row['images'] = $urls;
+            } catch (\Exception $e) {
+                error_log('Failed to load realtor listing images: ' . $e->getMessage());
+                $row['images'] = [];
             }
             echo json_encode(['success' => true, 'data' => $row]);
         } catch (\Exception $e) {
@@ -155,8 +169,10 @@ class RealtorListingsController
                         'image',
                         $_SESSION['user_id']
                     );
-                    if (empty($imageResult['errors'])) {
-                        $fileUploadHelper->updateEntityFiles('realtor_listing', (int)$id);
+                    $fileUploadHelper->updateEntityFiles('realtor_listing', (int)$id);
+                    if (!empty($imageResult['errors'])) {
+                        echo json_encode(['success' => false, 'message' => 'Updated, but some images failed to upload: ' . implode('; ', $imageResult['errors'])]);
+                        exit;
                     }
                 }
             } catch (\Exception $e) {

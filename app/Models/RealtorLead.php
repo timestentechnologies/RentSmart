@@ -21,7 +21,7 @@ class RealtorLead extends Model
             phone VARCHAR(50) NOT NULL,
             email VARCHAR(150) NULL,
             source VARCHAR(100) NULL,
-            status ENUM('new','contacted','won','lost') NOT NULL DEFAULT 'new',
+            status VARCHAR(50) NOT NULL DEFAULT 'new',
             notes TEXT NULL,
             converted_client_id INT NULL,
             created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
@@ -30,6 +30,17 @@ class RealtorLead extends Model
             INDEX idx_status (status)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;";
         $this->db->exec($sql);
+
+        // If the column exists as ENUM (older installs), widen it to VARCHAR for custom stages
+        try {
+            $stmt = $this->db->query("SHOW COLUMNS FROM {$this->table} LIKE 'status'");
+            $col = $stmt ? $stmt->fetch(\PDO::FETCH_ASSOC) : null;
+            $type = strtolower((string)($col['Type'] ?? ''));
+            if ($type !== '' && strpos($type, 'enum(') === 0) {
+                $this->db->exec("ALTER TABLE {$this->table} MODIFY status VARCHAR(50) NOT NULL DEFAULT 'new'");
+            }
+        } catch (\Exception $e) {
+        }
     }
 
     public function getAll($userId)

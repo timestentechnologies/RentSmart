@@ -21,8 +21,13 @@ ob_start();
                     <thead>
                         <tr>
                             <th>Date</th>
-                            <th>Property</th>
-                            <th>Unit</th>
+                            <?php $isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor'; ?>
+                            <?php if ($isRealtor): ?>
+                                <th>Listing</th>
+                            <?php else: ?>
+                                <th>Property</th>
+                                <th>Unit</th>
+                            <?php endif; ?>
                             <th>Name</th>
                             <th>Contact</th>
                             <th>Preferred Date</th>
@@ -34,8 +39,12 @@ ob_start();
                         <?php foreach (($inquiries ?? []) as $inq): ?>
                             <tr>
                                 <td><?= htmlspecialchars($inq['created_at'] ?? '') ?></td>
-                                <td><?= htmlspecialchars($inq['property_name'] ?? '') ?></td>
-                                <td><?= htmlspecialchars($inq['unit_number'] ?? '') ?></td>
+                                <?php if ($isRealtor): ?>
+                                    <td><?= htmlspecialchars($inq['listing_title'] ?? '') ?></td>
+                                <?php else: ?>
+                                    <td><?= htmlspecialchars($inq['property_name'] ?? '') ?></td>
+                                    <td><?= htmlspecialchars($inq['unit_number'] ?? '') ?></td>
+                                <?php endif; ?>
                                 <td><?= htmlspecialchars($inq['name'] ?? '') ?></td>
                                 <td><?= htmlspecialchars($inq['contact'] ?? '') ?></td>
                                 <td><?= htmlspecialchars($inq['preferred_date'] ?? '') ?></td>
