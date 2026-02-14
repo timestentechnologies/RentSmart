@@ -20,6 +20,17 @@ class AdminDebugController
             redirect('/home');
         }
 
+        // Allow non-admin access to realtor payments debug only when a valid key is provided.
+        // This helps diagnose role-specific 500s without opening the endpoint publicly.
+        $uri = (string)($_SERVER['REQUEST_URI'] ?? '');
+        $isRealtorPaymentsDebug = (strpos($uri, '/admin/debug/realtor-payments') !== false);
+        if ($isRealtorPaymentsDebug) {
+            $key = $_GET['key'] ?? null;
+            if ($key && isset($_SESSION['csrf_token']) && hash_equals((string)$_SESSION['csrf_token'], (string)$key)) {
+                return;
+            }
+        }
+
         $role = strtolower((string)($_SESSION['user_role'] ?? ''));
         if (!in_array($role, ['admin', 'administrator'], true)) {
             $_SESSION['flash_message'] = 'Access denied';
