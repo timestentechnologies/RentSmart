@@ -110,6 +110,7 @@ ob_start();
                 <label class="form-label">Images</label>
                 <input type="file" name="listing_images[]" class="form-control" accept="image/*" multiple>
             </div>
+            <div class="mb-3" id="add_listing_images_preview" style="display:none;"></div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -171,6 +172,8 @@ ob_start();
                 <label class="form-label">Add Images</label>
                 <input type="file" name="listing_images[]" class="form-control" accept="image/*" multiple>
             </div>
+            <div class="mb-3" id="edit_listing_existing_images" style="display:none;"></div>
+            <div class="mb-3" id="edit_listing_images_preview" style="display:none;"></div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -198,6 +201,34 @@ ob_start();
 </div>
 
 <script>
+function renderSelectedImagePreviews(inputEl, containerEl){
+  if(!inputEl || !containerEl) return;
+  const files = Array.from(inputEl.files || []).filter(f => (f.type || '').startsWith('image/'));
+  if(files.length === 0){
+    containerEl.style.display = 'none';
+    containerEl.innerHTML = '';
+    return;
+  }
+  containerEl.style.display = '';
+  containerEl.innerHTML = '<div class="d-flex flex-wrap gap-2"></div>';
+  const wrap = containerEl.querySelector('div');
+  files.forEach(f => {
+    const url = URL.createObjectURL(f);
+    const img = document.createElement('img');
+    img.src = url;
+    img.style.width = '88px';
+    img.style.height = '66px';
+    img.style.objectFit = 'cover';
+    img.className = 'rounded border';
+    img.onload = () => URL.revokeObjectURL(url);
+    wrap.appendChild(img);
+  });
+}
+
+document.querySelector('#addListingModal input[name="listing_images[]"]')?.addEventListener('change', function(){
+  renderSelectedImagePreviews(this, document.getElementById('add_listing_images_preview'));
+});
+
 function editRealtorListing(id){
   fetch('<?= BASE_URL ?>' + '/realtor/listings/get/' + id)
     .then(r=>r.json()).then(resp=>{
@@ -210,6 +241,39 @@ function editRealtorListing(id){
       document.getElementById('edit_price').value = e.price || 0;
       document.getElementById('edit_status').value = e.status || 'active';
       document.getElementById('edit_description').value = e.description || '';
+
+      const existing = document.getElementById('edit_listing_existing_images');
+      const previews = document.getElementById('edit_listing_images_preview');
+      if (previews) { previews.style.display = 'none'; previews.innerHTML = ''; }
+
+      const urls = Array.isArray(e.images) ? e.images : [];
+      if(existing){
+        if(urls.length){
+          existing.style.display = '';
+          existing.innerHTML = '<label class="form-label">Current Images</label><div class="d-flex flex-wrap gap-2"></div>';
+          const wrap = existing.querySelector('div');
+          urls.forEach(u => {
+            const img = document.createElement('img');
+            img.src = u;
+            img.style.width = '88px';
+            img.style.height = '66px';
+            img.style.objectFit = 'cover';
+            img.className = 'rounded border';
+            wrap.appendChild(img);
+          });
+        } else {
+          existing.style.display = 'none';
+          existing.innerHTML = '';
+        }
+      }
+
+      const editFileInput = document.querySelector('#editListingModal input[name="listing_images[]"]');
+      if(editFileInput){
+        editFileInput.value = '';
+        editFileInput.onchange = function(){
+          renderSelectedImagePreviews(editFileInput, document.getElementById('edit_listing_images_preview'));
+        };
+      }
       new bootstrap.Modal(document.getElementById('editListingModal')).show();
     }).catch(()=>alert('Failed to load listing'));
 }

@@ -5,9 +5,14 @@ ob_start();
     <div class="card page-header mb-4">
         <div class="card-body d-flex justify-content-between align-items-center">
             <h1 class="h3 mb-0"><i class="bi bi-kanban text-primary me-2"></i>CRM - Leads</h1>
-            <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addLeadModal">
-                <i class="bi bi-plus-circle me-1"></i>Add Lead
-            </button>
+            <div class="d-flex gap-2">
+                <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#manageStagesModal">
+                    <i class="bi bi-sliders me-1"></i>Stages
+                </button>
+                <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addLeadModal">
+                    <i class="bi bi-plus-circle me-1"></i>Add Lead
+                </button>
+            </div>
         </div>
     </div>
 
@@ -31,6 +36,7 @@ ob_start();
         .crm-board { display:flex; gap: 12px; overflow-x:auto; padding-bottom: 6px; }
         .crm-col { min-width: 280px; flex: 1 0 280px; background: #f8f9fa; border: 1px solid rgba(0,0,0,.075); border-radius: 10px; }
         .crm-col-header { padding: 10px 12px; border-bottom: 1px solid rgba(0,0,0,.075); display:flex; align-items:center; justify-content:space-between; }
+        .crm-accent { width: 10px; height: 10px; border-radius: 999px; display:inline-block; margin-right: 8px; }
         .crm-col-title { font-weight: 600; }
         .crm-col-body { padding: 10px 12px; min-height: 360px; }
         .lead-card { border: 1px solid rgba(0,0,0,.08); border-radius: 10px; background: #fff; padding: 10px; margin-bottom: 10px; cursor: grab; }
@@ -42,25 +48,50 @@ ob_start();
     </style>
 
     <?php
-        $cols = [
-            'new' => 'New',
-            'contacted' => 'Qualified',
-            'won' => 'Won',
-            'lost' => 'Lost',
-        ];
-        $grouped = [ 'new'=>[], 'contacted'=>[], 'won'=>[], 'lost'=>[] ];
+        $stagesArr = is_array($stages ?? null) ? $stages : [];
+        if (empty($stagesArr)) {
+            $stagesArr = [
+                ['stage_key'=>'new','label'=>'New','color_class'=>'primary','is_won'=>0,'is_lost'=>0],
+                ['stage_key'=>'contacted','label'=>'Qualified','color_class'=>'warning','is_won'=>0,'is_lost'=>0],
+                ['stage_key'=>'won','label'=>'Won','color_class'=>'success','is_won'=>1,'is_lost'=>0],
+                ['stage_key'=>'lost','label'=>'Lost','color_class'=>'danger','is_won'=>0,'is_lost'=>1],
+            ];
+        }
+        $stageMap = [];
+        $grouped = [];
+        foreach ($stagesArr as $s) {
+            $k = strtolower((string)($s['stage_key'] ?? ''));
+            if ($k === '') continue;
+            $stageMap[$k] = $s;
+            $grouped[$k] = [];
+        }
         foreach (($leads ?? []) as $l) {
             $st = strtolower((string)($l['status'] ?? 'new'));
-            if (!isset($grouped[$st])) { $st = 'new'; }
+            if (!isset($grouped[$st])) {
+                $st = array_key_first($grouped) ?: 'new';
+            }
             $grouped[$st][] = $l;
         }
+        $accentToHex = function($c){
+            $m = [
+                'primary'=>'#0d6efd','secondary'=>'#6c757d','success'=>'#198754','warning'=>'#ffc107','danger'=>'#dc3545','info'=>'#0dcaf0','dark'=>'#212529'
+            ];
+            return $m[$c] ?? '#6c757d';
+        };
     ?>
 
     <div class="crm-board" id="crmBoard">
-        <?php foreach ($cols as $key => $label): ?>
-            <div class="crm-col" data-status="<?= htmlspecialchars($key) ?>">
+        <?php foreach ($stagesArr as $stage): ?>
+            <?php
+                $key = strtolower((string)($stage['stage_key'] ?? 'new'));
+                $label = (string)($stage['label'] ?? $key);
+                $colorClass = (string)($stage['color_class'] ?? 'secondary');
+                $accent = $accentToHex($colorClass);
+            ?>
+            <div class="crm-col" data-status="<?= htmlspecialchars($key) ?>" data-color="<?= htmlspecialchars($colorClass) ?>" data-is-won="<?= (int)($stage['is_won'] ?? 0) ?>">
                 <div class="crm-col-header">
                     <div>
+                        <span class="crm-accent" style="background: <?= htmlspecialchars($accent) ?>;"></span>
                         <span class="crm-col-title"><?= htmlspecialchars($label) ?></span>
                         <span class="badge bg-light text-dark ms-2" id="count_<?= htmlspecialchars($key) ?>"><?= (int)count($grouped[$key] ?? []) ?></span>
                     </div>
@@ -76,6 +107,10 @@ ob_start();
                             $source = (string)($x['source'] ?? '');
                             $status = strtolower((string)($x['status'] ?? 'new'));
                             $amount = 0;
+                            $stageDef = $stageMap[$status] ?? ['label'=>$label,'color_class'=>$colorClass,'is_won'=>0];
+                            $stageLabel = (string)($stageDef['label'] ?? $label);
+                            $stageColorClass = (string)($stageDef['color_class'] ?? 'secondary');
+                            $isWonStage = (int)($stageDef['is_won'] ?? 0) === 1;
                         ?>
                         <div class="lead-card" draggable="true"
                              data-id="<?= $leadId ?>"
@@ -86,7 +121,14 @@ ob_start();
                              data-source="<?= htmlspecialchars(strtolower($source)) ?>">
                             <div class="d-flex justify-content-between align-items-start">
                                 <div class="lead-title"><?= htmlspecialchars($name) ?></div>
-                                <div class="lead-sub">Ksh <?= number_format((float)$amount, 2) ?></div>
+                                <div class="lead-sub">
+                                    <?php if ($isWonStage): ?>
+                                        <span class="text-success" title="Won" data-role="trophy"><i class="bi bi-trophy-fill"></i></span>
+                                    <?php else: ?>
+                                        <span class="text-success" title="Won" data-role="trophy" style="display:none;"><i class="bi bi-trophy-fill"></i></span>
+                                    <?php endif; ?>
+                                    <span class="ms-2">Ksh <?= number_format((float)$amount, 2) ?></span>
+                                </div>
                             </div>
                             <div class="lead-sub mt-1">
                                 <?= htmlspecialchars($phone) ?><?= $email ? ' • ' . htmlspecialchars($email) : '' ?>
@@ -95,11 +137,13 @@ ob_start();
                                 <?php if ($source !== ''): ?>
                                     <span class="badge bg-light text-dark lead-tag"><?= htmlspecialchars($source) ?></span>
                                 <?php endif; ?>
-                                <span class="badge bg-secondary lead-tag"><?= htmlspecialchars($label) ?></span>
+                                <span class="badge bg-<?= htmlspecialchars($stageColorClass) ?> lead-tag" data-role="stage-badge"><?= htmlspecialchars($stageLabel) ?></span>
                             </div>
                             <div class="mt-2 d-flex gap-2">
-                                <?php if (($x['status'] ?? 'new') !== 'won'): ?>
-                                    <button type="button" class="btn btn-sm btn-outline-success" onclick="convertLead(<?= $leadId ?>)"><i class="bi bi-check2-circle"></i> Win</button>
+                                <?php if (!$isWonStage): ?>
+                                    <button type="button" class="btn btn-sm btn-outline-success" data-role="win-btn" onclick="convertLead(<?= $leadId ?>)"><i class="bi bi-check2-circle"></i> Win</button>
+                                <?php else: ?>
+                                    <button type="button" class="btn btn-sm btn-outline-success" data-role="win-btn" style="display:none;" onclick="convertLead(<?= $leadId ?>)"><i class="bi bi-check2-circle"></i> Win</button>
                                 <?php endif; ?>
                                 <button type="button" class="btn btn-sm btn-outline-primary" onclick="editRealtorLead(<?= $leadId ?>)"><i class="bi bi-pencil"></i></button>
                                 <button type="button" class="btn btn-sm btn-outline-danger" onclick="confirmDeleteRealtorLead(<?= $leadId ?>)"><i class="bi bi-trash"></i></button>
@@ -110,6 +154,68 @@ ob_start();
             </div>
         <?php endforeach; ?>
     </div>
+</div>
+
+<div class="modal fade" id="manageStagesModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Manage Stages</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-2 mb-3">
+          <div class="col-md-3"><input type="text" id="new_stage_key" class="form-control" placeholder="key e.g follow_up"></div>
+          <div class="col-md-3"><input type="text" id="new_stage_label" class="form-control" placeholder="Label"></div>
+          <div class="col-md-3">
+            <select id="new_stage_color" class="form-select">
+              <option value="primary">Blue</option>
+              <option value="success">Green</option>
+              <option value="warning">Orange</option>
+              <option value="danger">Red</option>
+              <option value="info">Cyan</option>
+              <option value="secondary">Gray</option>
+              <option value="dark">Dark</option>
+            </select>
+          </div>
+          <div class="col-md-1"><input type="number" id="new_stage_sort" class="form-control" placeholder="Order"></div>
+          <div class="col-md-1 d-flex align-items-center justify-content-center">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="new_stage_is_won">
+              <label class="form-check-label" for="new_stage_is_won">Won</label>
+            </div>
+          </div>
+          <div class="col-md-1 d-flex align-items-center justify-content-center">
+            <div class="form-check">
+              <input class="form-check-input" type="checkbox" id="new_stage_is_lost">
+              <label class="form-check-label" for="new_stage_is_lost">Lost</label>
+            </div>
+          </div>
+          <div class="col-md-1 d-grid"><button class="btn btn-primary" type="button" onclick="addStage()">Add</button></div>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-sm align-middle">
+            <thead>
+              <tr>
+                <th>Key</th>
+                <th>Label</th>
+                <th>Color</th>
+                <th>Order</th>
+                <th>Won</th>
+                <th>Lost</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="stagesTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary" onclick="location.reload()">Apply</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <div class="modal fade" id="addLeadModal" tabindex="-1" aria-hidden="true">
@@ -198,8 +304,12 @@ ob_start();
 </div>
 
 <script>
+function getAllStageKeys(){
+  return Array.from(document.querySelectorAll('.crm-col[data-status]')).map(el=>el.getAttribute('data-status')).filter(Boolean);
+}
+
 function recomputeCounts(){
-  const statuses = ['new','contacted','won','lost'];
+  const statuses = getAllStageKeys();
   statuses.forEach(st=>{
     const el = document.getElementById('count_' + st);
     if(!el) return;
@@ -259,10 +369,24 @@ document.querySelectorAll('[data-dropzone="1"]').forEach(zone=>{
       }
       card.setAttribute('data-status', targetStatus);
       zone.appendChild(card);
-      const stageMap = { new: 'New', contacted: 'Qualified', won: 'Won', lost: 'Lost' };
-      const stageBadge = card.querySelector('.lead-tag.bg-secondary');
-      if (stageBadge && stageMap[targetStatus]) {
-        stageBadge.textContent = stageMap[targetStatus];
+      const col = document.querySelector('.crm-col[data-status="' + targetStatus + '"]');
+      const stageLabel = col?.querySelector('.crm-col-title')?.textContent || targetStatus;
+      const stageColor = col?.getAttribute('data-color') || 'secondary';
+      const isWon = (col?.getAttribute('data-is-won') || '0') === '1';
+      const stageBadge = card.querySelector('[data-role="stage-badge"]');
+      if (stageBadge) {
+        stageBadge.textContent = stageLabel;
+        stageBadge.className = 'badge bg-' + stageColor + ' lead-tag';
+        stageBadge.setAttribute('data-role','stage-badge');
+      }
+
+      const winBtn = card.querySelector('[data-role="win-btn"]');
+      if (winBtn) {
+        winBtn.style.display = isWon ? 'none' : '';
+      }
+      const trophy = card.querySelector('[data-role="trophy"]');
+      if (trophy) {
+        trophy.style.display = isWon ? '' : 'none';
       }
       recomputeCounts();
       applyLeadSearch();
@@ -305,6 +429,101 @@ async function convertLead(id){
     else { alert(data.message || 'Failed to convert'); }
   } catch(e){ alert('Failed to convert'); }
 }
+
+async function loadStages(){
+  try {
+    const res = await fetch('<?= BASE_URL ?>' + '/realtor/leads/stages');
+    const data = await res.json();
+    if(!data.success) return;
+    const body = document.getElementById('stagesTableBody');
+    if(!body) return;
+    body.innerHTML = '';
+    (data.data || []).forEach(s=>{
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td><code>${(s.stage_key||'')}</code></td>
+        <td><input class="form-control form-control-sm" value="${(s.label||'').replace(/\"/g,'&quot;')}" data-id="${s.id}" data-field="label"></td>
+        <td>
+          <select class="form-select form-select-sm" data-id="${s.id}" data-field="color_class">
+            <option value="primary" ${s.color_class==='primary'?'selected':''}>Blue</option>
+            <option value="success" ${s.color_class==='success'?'selected':''}>Green</option>
+            <option value="warning" ${s.color_class==='warning'?'selected':''}>Orange</option>
+            <option value="danger" ${s.color_class==='danger'?'selected':''}>Red</option>
+            <option value="info" ${s.color_class==='info'?'selected':''}>Cyan</option>
+            <option value="secondary" ${s.color_class==='secondary'?'selected':''}>Gray</option>
+            <option value="dark" ${s.color_class==='dark'?'selected':''}>Dark</option>
+          </select>
+        </td>
+        <td><input type="number" class="form-control form-control-sm" value="${parseInt(s.sort_order||0,10)}" data-id="${s.id}" data-field="sort_order"></td>
+        <td class="text-center"><input type="checkbox" ${parseInt(s.is_won||0,10)===1?'checked':''} data-id="${s.id}" data-field="is_won"></td>
+        <td class="text-center"><input type="checkbox" ${parseInt(s.is_lost||0,10)===1?'checked':''} data-id="${s.id}" data-field="is_lost"></td>
+        <td class="text-end">
+          <button class="btn btn-sm btn-outline-primary me-1" type="button" onclick="saveStage(${s.id})"><i class="bi bi-save"></i></button>
+          <button class="btn btn-sm btn-outline-danger" type="button" onclick="deleteStage(${s.id})"><i class="bi bi-trash"></i></button>
+        </td>
+      `;
+      body.appendChild(tr);
+    });
+  } catch(e){}
+}
+
+async function addStage(){
+  const stage_key = (document.getElementById('new_stage_key')?.value || '').trim();
+  const label = (document.getElementById('new_stage_label')?.value || '').trim();
+  const color_class = (document.getElementById('new_stage_color')?.value || 'secondary');
+  const sort_order = (document.getElementById('new_stage_sort')?.value || '0');
+  const is_won = document.getElementById('new_stage_is_won')?.checked ? '1' : '0';
+  const is_lost = document.getElementById('new_stage_is_lost')?.checked ? '1' : '0';
+  const fd = new FormData();
+  fd.append('stage_key', stage_key);
+  fd.append('label', label);
+  fd.append('color_class', color_class);
+  fd.append('sort_order', sort_order);
+  fd.append('is_won', is_won);
+  fd.append('is_lost', is_lost);
+  try{
+    const res = await fetch('<?= BASE_URL ?>' + '/realtor/leads/stages/store', { method:'POST', body: fd });
+    const data = await res.json();
+    if(!data.success){ alert(data.message || 'Failed to add stage'); return; }
+    document.getElementById('new_stage_key').value='';
+    document.getElementById('new_stage_label').value='';
+    document.getElementById('new_stage_sort').value='';
+    if (document.getElementById('new_stage_is_won')) document.getElementById('new_stage_is_won').checked = false;
+    if (document.getElementById('new_stage_is_lost')) document.getElementById('new_stage_is_lost').checked = false;
+    await loadStages();
+  }catch(e){ alert('Failed to add stage'); }
+}
+
+async function saveStage(id){
+  const label = document.querySelector(`[data-id="${id}"][data-field="label"]`)?.value || '';
+  const color_class = document.querySelector(`[data-id="${id}"][data-field="color_class"]`)?.value || 'secondary';
+  const sort_order = document.querySelector(`[data-id="${id}"][data-field="sort_order"]`)?.value || '0';
+  const is_won = document.querySelector(`[data-id="${id}"][data-field="is_won"]`)?.checked ? '1' : '0';
+  const is_lost = document.querySelector(`[data-id="${id}"][data-field="is_lost"]`)?.checked ? '1' : '0';
+  const fd = new FormData();
+  fd.append('label', label);
+  fd.append('color_class', color_class);
+  fd.append('sort_order', sort_order);
+  fd.append('is_won', is_won);
+  fd.append('is_lost', is_lost);
+  try{
+    const res = await fetch('<?= BASE_URL ?>' + '/realtor/leads/stages/update/' + id, { method:'POST', body: fd });
+    const data = await res.json();
+    if(!data.success){ alert(data.message || 'Failed to save'); return; }
+  }catch(e){ alert('Failed to save'); }
+}
+
+async function deleteStage(id){
+  if(!confirm('Delete this stage?')) return;
+  try{
+    const res = await fetch('<?= BASE_URL ?>' + '/realtor/leads/stages/delete/' + id, { method:'POST' });
+    const data = await res.json();
+    if(!data.success){ alert(data.message || 'Failed to delete'); return; }
+    await loadStages();
+  }catch(e){ alert('Failed to delete'); }
+}
+
+document.getElementById('manageStagesModal')?.addEventListener('shown.bs.modal', loadStages);
 
 let deleteLeadId = null;
 function confirmDeleteRealtorLead(id){

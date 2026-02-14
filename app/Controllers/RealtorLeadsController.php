@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use App\Models\RealtorLead;
 use App\Models\RealtorClient;
+use App\Models\RealtorLeadStage;
 
 class RealtorLeadsController
 {
@@ -30,10 +31,41 @@ class RealtorLeadsController
     {
         $model = new RealtorLead();
         $leads = $model->getAll($this->userId);
+        $stageModel = new RealtorLeadStage();
+        $stages = $stageModel->getAll($this->userId);
         echo view('realtor/leads', [
             'title' => 'CRM - Leads',
             'leads' => $leads,
+            'stages' => $stages,
         ]);
+    }
+
+    private function maybeConvertToClient($leadId)
+    {
+        $leadModel = new RealtorLead();
+        $lead = $leadModel->getByIdWithAccess((int)$leadId, $this->userId);
+        if (!$lead) {
+            return ['converted' => false, 'client_id' => null];
+        }
+
+        if (!empty($lead['converted_client_id'])) {
+            return ['converted' => false, 'client_id' => (int)$lead['converted_client_id']];
+        }
+
+        $clientModel = new RealtorClient();
+        $clientId = $clientModel->insert([
+            'user_id' => $this->userId,
+            'name' => $lead['name'] ?? '',
+            'phone' => $lead['phone'] ?? '',
+            'email' => $lead['email'] ?? '',
+            'notes' => $lead['notes'] ?? '',
+        ]);
+
+        $leadModel->updateById((int)$leadId, [
+            'converted_client_id' => (int)$clientId,
+        ]);
+
+        return ['converted' => true, 'client_id' => (int)$clientId];
     }
 
     public function store()
@@ -124,6 +156,20 @@ class RealtorLeadsController
             ];
 
             $ok = $model->updateById((int)$id, $data);
+
+            // Auto-convert when moved to a Won stage
+            $stageModel = new RealtorLeadStage();
+            $stage = $stageModel->getByKey($this->userId, (string)$data['status']);
+            if ($stage && (int)($stage['is_won'] ?? 0) === 1) {
+                $conv = $this->maybeConvertToClient((int)$id);
+                echo json_encode([
+                    'success' => (bool)$ok,
+                    'message' => $ok ? 'Updated' : 'Failed to update',
+                    'converted' => (bool)($conv['converted'] ?? false),
+                    'client_id' => $conv['client_id'] ?? null,
+                ]);
+                exit;
+            }
             echo json_encode(['success' => (bool)$ok, 'message' => $ok ? 'Updated' : 'Failed to update']);
         } catch (\Exception $e) {
             error_log('RealtorLeads update failed: ' . $e->getMessage());
@@ -147,6 +193,12 @@ class RealtorLeadsController
                 exit;
             }
 
+            if (!empty($lead['converted_client_id'])) {
+                $leadModel->updateById((int)$id, [ 'status' => 'won' ]);
+                echo json_encode(['success' => true, 'message' => 'Already converted', 'client_id' => (int)$lead['converted_client_id']]);
+                exit;
+            }
+
             $clientModel = new RealtorClient();
             $clientId = $clientModel->insert([
                 'user_id' => $this->userId,
@@ -165,6 +217,110 @@ class RealtorLeadsController
         } catch (\Exception $e) {
             error_log('RealtorLeads convert failed: ' . $e->getMessage());
             echo json_encode(['success' => false, 'message' => 'Failed to convert lead']);
+        }
+        exit;
+    }
+
+    public function stages()
+    {
+        header('Content-Type: application/json');
+        try {
+            $stageModel = new RealtorLeadStage();
+            $stages = $stageModel->getAll($this->userId);
+            echo json_encode(['success' => true, 'data' => $stages]);
+        } catch (\Exception $e) {
+            echo json_encode(['success' => false, 'message' => 'Failed to load stages']);
+        }
+        exit;
+    }
+
+    public function storeStage()
+    {
+        header('Content-Type: application/json');
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo json_encode(['success' => false, 'message' => 'Invalid request']);
+            exit;
+        }
+        try {
+            $stageKey = strtolower(trim((string)($_POST['stage_key'] ?? '')));
+            $label = trim((string)($_POST['label'] ?? ''));
+            $colorClass = trim((string)($_POST['color_class'] ?? 'secondary'));
+            $sortOrder = (int)($_POST['sort_order'] ?? 0);
+            $isWon = (int)($_POST['is_won'] ?? 0) === 1 ? 1 : 0;
+            $isLost = (int)($_POST['is_lost'] ?? 0) === 1 ? 1 : 0;
+            if ($stageKey === '' || $label === '') {
+                echo json_encode(['success' => false, 'message' => 'Stage key and label are required']);
+                exit;
+            }
+            $stageModel = new RealtorLeadStage();
+            $id = $stageModel->insert([
+                'user_id' => $this->userId,
+                'stage_key' => $stageKey,
+                'label' => $label,
+                'color_class' => $colorClass,
+                'sort_order' => $sortOrder,
+                'is_won' => $isWon,
+                'is_lost' => $isLost,
+            ]);
+            echo json_encode(['success' => true, 'id' => (int)$id]);
+        } catch (\Exception $e) {
+            error_log('storeStage failed: ' . $e->getMessage());
+            echo json_encode(['success' => false, 'message' => 'Failed to add stage']);
+        }
+        exit;
+    }
+
+    public function updateStage($id)
+    {
+        header('Content-Type: application/json');
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo json_encode(['success' => false, 'message' => 'Invalid request']);
+            exit;
+        }
+        try {
+            $stageModel = new RealtorLeadStage();
+            $row = $stageModel->getByIdWithAccess((int)$id, $this->userId);
+            if (!$row) {
+                echo json_encode(['success' => false, 'message' => 'Stage not found']);
+                exit;
+            }
+            $data = [
+                'label' => trim((string)($_POST['label'] ?? ($row['label'] ?? ''))),
+                'color_class' => trim((string)($_POST['color_class'] ?? ($row['color_class'] ?? 'secondary'))),
+                'sort_order' => (int)($_POST['sort_order'] ?? ($row['sort_order'] ?? 0)),
+                'is_won' => (int)($_POST['is_won'] ?? ($row['is_won'] ?? 0)) === 1 ? 1 : 0,
+                'is_lost' => (int)($_POST['is_lost'] ?? ($row['is_lost'] ?? 0)) === 1 ? 1 : 0,
+            ];
+            $ok = $stageModel->updateById((int)$id, $data);
+            echo json_encode(['success' => (bool)$ok]);
+        } catch (\Exception $e) {
+            echo json_encode(['success' => false, 'message' => 'Failed to update stage']);
+        }
+        exit;
+    }
+
+    public function deleteStage($id)
+    {
+        header('Content-Type: application/json');
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo json_encode(['success' => false, 'message' => 'Invalid request']);
+            exit;
+        }
+        try {
+            $stageModel = new RealtorLeadStage();
+            $row = $stageModel->getByIdWithAccess((int)$id, $this->userId);
+            if (!$row) {
+                echo json_encode(['success' => false, 'message' => 'Stage not found']);
+                exit;
+            }
+            if (in_array((string)($row['stage_key'] ?? ''), ['new','contacted','won','lost'], true)) {
+                echo json_encode(['success' => false, 'message' => 'Default stages cannot be deleted']);
+                exit;
+            }
+            $ok = $stageModel->deleteById((int)$id);
+            echo json_encode(['success' => (bool)$ok]);
+        } catch (\Exception $e) {
+            echo json_encode(['success' => false, 'message' => 'Failed to delete stage']);
         }
         exit;
     }
