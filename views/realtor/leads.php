@@ -388,6 +388,10 @@ document.querySelectorAll('[data-dropzone="1"]').forEach(zone=>{
         alert(data.message || 'Failed to update stage');
         return;
       }
+      if(data.contract_id){
+        window.location.href = '<?= BASE_URL ?>' + '/realtor/contracts/show/' + data.contract_id;
+        return;
+      }
       card.setAttribute('data-status', targetStatus);
       zone.appendChild(card);
       const col = document.querySelector('.crm-col[data-status="' + targetStatus + '"]');
@@ -450,7 +454,13 @@ async function convertLead(id){
   try {
     const res = await fetch('<?= BASE_URL ?>' + '/realtor/leads/convert/' + id, { method:'POST' });
     const data = await res.json();
-    if(data.success){ location.reload(); }
+    if(data.success){
+      if(data.contract_id){
+        window.location.href = '<?= BASE_URL ?>' + '/realtor/contracts/show/' + data.contract_id;
+        return;
+      }
+      location.reload();
+    }
     else { alert(data.message || 'Failed to convert'); }
   } catch(e){ alert('Failed to convert'); }
 }

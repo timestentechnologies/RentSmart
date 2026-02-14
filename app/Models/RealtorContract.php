@@ -24,6 +24,7 @@ class RealtorContract extends Model
             monthly_amount DECIMAL(12,2) NULL,
             duration_months INT NULL,
             start_month DATE NULL,
+            instructions TEXT NULL,
             status ENUM('active','completed','cancelled') NOT NULL DEFAULT 'active',
             created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -35,6 +36,11 @@ class RealtorContract extends Model
             $this->db->exec($sql);
         } catch (\Exception $e) {
             // ignore (e.g., missing CREATE privilege on some hosting)
+        }
+
+        try {
+            $this->db->exec("ALTER TABLE {$this->table} ADD COLUMN instructions TEXT NULL AFTER start_month");
+        } catch (\Exception $e) {
         }
     }
 

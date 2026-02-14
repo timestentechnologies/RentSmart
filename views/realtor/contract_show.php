@@ -57,6 +57,9 @@ function monthAddPhp(string $ym, int $n): string {
                 <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editContractTermsModal">
                     <i class="bi bi-pencil me-1"></i>Edit Terms
                 </button>
+                <a class="btn btn-sm btn-outline-dark" href="<?= BASE_URL ?>/realtor/contracts/print/<?= (int)$contractId ?>" target="_blank">
+                    <i class="bi bi-printer me-1"></i>Print
+                </a>
                 <a class="btn btn-sm btn-outline-secondary" href="<?= BASE_URL ?>/realtor/contracts">Back</a>
             </div>
         </div>
@@ -138,6 +141,11 @@ function monthAddPhp(string $ym, int $n): string {
                         <label class="form-label">Duration (Months)</label>
                         <input type="number" min="1" step="1" class="form-control" name="duration_months" id="ect_duration_months" value="<?= (int)$duration ?>">
                     </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Instructions / Notes</label>
+                    <textarea class="form-control" name="instructions" id="ect_instructions" rows="4"><?= htmlspecialchars((string)($contract['instructions'] ?? '')) ?></textarea>
                 </div>
             </div>
             <div class="modal-footer">
