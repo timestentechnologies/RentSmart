@@ -1289,8 +1289,13 @@ ob_clean();
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link <?= (strpos($current_uri, 'realtor/contracts') === 0) ? 'active' : '' ?>" href="<?= BASE_URL ?>/realtor/contracts">
+                            <i class="bi bi-file-text me-2"></i> Contracts
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link <?= (strpos($current_uri, 'realtor/leads') === 0) ? 'active' : '' ?>" href="<?= BASE_URL ?>/realtor/leads">
-                            <i class="bi bi-kanban me-2"></i> CRM (Leads)
+                            <i class="bi bi-kanban me-2"></i> CRM Leads
                         </a>
                     </li>
                 <?php else: ?>

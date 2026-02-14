@@ -9,6 +9,71 @@ ob_start();
                 <i class="bi bi-plus-circle me-1"></i>Add Listing
             </button>
         </div>
+
+<div class="modal fade" id="sellListingModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="POST" action="<?= BASE_URL ?>/realtor/contracts/store" id="sellListingForm">
+        <?= csrf_field() ?>
+        <input type="hidden" name="realtor_listing_id" id="sell_listing_id">
+        <div class="modal-header">
+          <h5 class="modal-title">Sell Listing</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+            <div class="mb-2">
+                <div class="small text-muted">Listing</div>
+                <div class="fw-semibold" id="sell_listing_title"></div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Client</label>
+                <select class="form-select" name="realtor_client_id" id="sell_client_id" required>
+                    <option value="">Select Client</option>
+                    <?php foreach (($clients ?? []) as $c): ?>
+                        <option value="<?= (int)($c['id'] ?? 0) ?>"><?= htmlspecialchars((string)($c['name'] ?? '')) ?> (<?= htmlspecialchars((string)($c['phone'] ?? '')) ?>)</option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Payment Terms</label>
+                <select class="form-select" name="terms_type" id="sell_terms_type" required>
+                    <option value="one_time">One Time</option>
+                    <option value="monthly">Monthly</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Total Amount</label>
+                <div class="input-group">
+                    <span class="input-group-text">Ksh</span>
+                    <input type="number" step="0.01" min="0" class="form-control" name="total_amount" id="sell_total_amount" required>
+                </div>
+            </div>
+
+            <div id="sell_monthly_fields" style="display:none;">
+                <div class="mb-3">
+                    <label class="form-label">Start Month</label>
+                    <input type="month" class="form-control" name="start_month" id="sell_start_month">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Duration (Months)</label>
+                    <input type="number" min="1" step="1" class="form-control" name="duration_months" id="sell_duration_months">
+                </div>
+
+                <div class="alert alert-info py-2" id="sell_monthly_summary" style="display:none;"></div>
+                <div class="border rounded p-2" id="sell_monthly_breakdown" style="display:none; max-height: 220px; overflow:auto;"></div>
+            </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-success">Create Contract</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
     </div>
 
     <div class="card">
@@ -48,6 +113,7 @@ ob_start();
                                     <span class="badge bg-<?= $badge ?>"><?= htmlspecialchars($label) ?></span>
                                 </td>
                                 <td>
+                                    <button type="button" class="btn btn-sm btn-outline-success me-1" onclick="openSellListingModal(<?= (int)$x['id'] ?>, '<?= htmlspecialchars((string)($x['title'] ?? ''), ENT_QUOTES) ?>')"><i class="bi bi-cash-coin"></i></button>
                                     <button type="button" class="btn btn-sm btn-outline-primary me-1" onclick="editRealtorListing(<?= (int)$x['id'] ?>)"><i class="bi bi-pencil"></i></button>
                                     <button type="button" class="btn btn-sm btn-outline-danger" onclick="confirmDeleteRealtorListing(<?= (int)$x['id'] ?>)"><i class="bi bi-trash"></i></button>
                                 </td>
@@ -201,6 +267,93 @@ ob_start();
 </div>
 
 <script>
+function openSellListingModal(listingId, listingTitle){
+  document.getElementById('sell_listing_id').value = listingId;
+  document.getElementById('sell_listing_title').textContent = listingTitle || '';
+  document.getElementById('sell_client_id').value = '';
+  document.getElementById('sell_terms_type').value = 'one_time';
+  document.getElementById('sell_total_amount').value = '';
+  document.getElementById('sell_start_month').value = '';
+  document.getElementById('sell_duration_months').value = '';
+  toggleSellTermsFields();
+  new bootstrap.Modal(document.getElementById('sellListingModal')).show();
+}
+
+function monthAdd(ym, n){
+  if(!ym) return '';
+  const parts = String(ym).split('-');
+  if(parts.length < 2) return '';
+  const y = parseInt(parts[0], 10);
+  const m = parseInt(parts[1], 10);
+  if(isNaN(y) || isNaN(m)) return '';
+  const d = new Date(y, m - 1, 1);
+  d.setMonth(d.getMonth() + n);
+  const yy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  return `${yy}-${mm}`;
+}
+
+function toggleSellTermsFields(){
+  const type = document.getElementById('sell_terms_type').value;
+  const fields = document.getElementById('sell_monthly_fields');
+  const start = document.getElementById('sell_start_month');
+  const dur = document.getElementById('sell_duration_months');
+  if(type === 'monthly'){
+    fields.style.display = '';
+    start.setAttribute('required','');
+    dur.setAttribute('required','');
+  } else {
+    fields.style.display = 'none';
+    start.removeAttribute('required');
+    dur.removeAttribute('required');
+  }
+  updateSellMonthlyPreview();
+}
+
+function updateSellMonthlyPreview(){
+  const type = document.getElementById('sell_terms_type').value;
+  const summary = document.getElementById('sell_monthly_summary');
+  const breakdown = document.getElementById('sell_monthly_breakdown');
+  if(type !== 'monthly'){
+    summary.style.display = 'none';
+    breakdown.style.display = 'none';
+    summary.innerHTML = '';
+    breakdown.innerHTML = '';
+    return;
+  }
+
+  const total = parseFloat(document.getElementById('sell_total_amount').value || '0');
+  const duration = parseInt(document.getElementById('sell_duration_months').value || '0', 10);
+  const startMonth = document.getElementById('sell_start_month').value;
+
+  if(!total || !duration || !startMonth){
+    summary.style.display = 'none';
+    breakdown.style.display = 'none';
+    summary.innerHTML = '';
+    breakdown.innerHTML = '';
+    return;
+  }
+
+  const monthly = Math.round((total / Math.max(1, duration)) * 100) / 100;
+  summary.style.display = '';
+  breakdown.style.display = '';
+  summary.innerHTML = `<strong>Monthly:</strong> Ksh${monthly.toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2})} for ${duration} months`;
+
+  let html = '<div class="small fw-semibold mb-2">Breakdown</div>';
+  html += '<div class="d-grid gap-1">';
+  for(let i=0;i<duration;i++){
+    const ym = monthAdd(startMonth, i);
+    html += `<div class="d-flex justify-content-between border rounded px-2 py-1"><div>${ym}</div><div>Ksh${monthly.toLocaleString(undefined,{minimumFractionDigits:2, maximumFractionDigits:2})}</div></div>`;
+  }
+  html += '</div>';
+  breakdown.innerHTML = html;
+}
+
+document.getElementById('sell_terms_type')?.addEventListener('change', toggleSellTermsFields);
+document.getElementById('sell_total_amount')?.addEventListener('input', updateSellMonthlyPreview);
+document.getElementById('sell_start_month')?.addEventListener('change', updateSellMonthlyPreview);
+document.getElementById('sell_duration_months')?.addEventListener('input', updateSellMonthlyPreview);
+
 function renderSelectedImagePreviews(inputEl, containerEl){
   if(!inputEl || !containerEl) return;
   const files = Array.from(inputEl.files || []).filter(f => (f.type || '').startsWith('image/'));

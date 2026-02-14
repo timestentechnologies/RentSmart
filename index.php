@@ -472,6 +472,10 @@ $routes = [
     'realtor/leads/stages/store' => ['controller' => 'RealtorLeadsController', 'action' => 'storeStage'],
     'realtor/leads/stages/update/(\d+)' => ['controller' => 'RealtorLeadsController', 'action' => 'updateStage'],
     'realtor/leads/stages/delete/(\d+)' => ['controller' => 'RealtorLeadsController', 'action' => 'deleteStage'],
+
+    'realtor/contracts' => ['controller' => 'RealtorContractsController', 'action' => 'index'],
+    'realtor/contracts/store' => ['controller' => 'RealtorContractsController', 'action' => 'store'],
+    'realtor/contracts/show/(\d+)' => ['controller' => 'RealtorContractsController', 'action' => 'show'],
 ];
 
 // Protected routes that require authentication
@@ -720,7 +724,11 @@ $protectedRoutes = [
     'realtor/leads/get/(\d+)',
     'realtor/leads/update/(\d+)',
     'realtor/leads/convert/(\d+)',
-    'realtor/leads/delete/(\d+)'
+    'realtor/leads/delete/(\d+)',
+
+    'realtor/contracts',
+    'realtor/contracts/store',
+    'realtor/contracts/show/(\d+)'
 ];
 
 // Check if the current route requires authentication

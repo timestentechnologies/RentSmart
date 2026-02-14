@@ -33,7 +33,15 @@ class Payment extends Model
         } catch (\Exception $e) {
         }
         try {
+            $this->db->exec("ALTER TABLE payments ADD COLUMN realtor_contract_id INT NULL AFTER realtor_listing_id");
+        } catch (\Exception $e) {
+        }
+        try {
             $this->db->exec("ALTER TABLE payments ADD INDEX idx_realtor_payment (realtor_user_id, realtor_client_id, realtor_listing_id)");
+        } catch (\Exception $e) {
+        }
+        try {
+            $this->db->exec("ALTER TABLE payments ADD INDEX idx_realtor_contract (realtor_contract_id)");
         } catch (\Exception $e) {
         }
     }
@@ -44,10 +52,12 @@ class Payment extends Model
 
         $sql = "INSERT INTO payments (
                     lease_id, realtor_user_id, realtor_client_id, realtor_listing_id,
+                    realtor_contract_id,
                     amount, payment_date, applies_to_month, payment_type, payment_method,
                     reference_number, status, notes
                 ) VALUES (
                     NULL, :realtor_user_id, :realtor_client_id, :realtor_listing_id,
+                    :realtor_contract_id,
                     :amount, :payment_date, :applies_to_month, :payment_type, :payment_method,
                     :reference_number, :status, :notes
                 )";
@@ -57,6 +67,7 @@ class Payment extends Model
             'realtor_user_id' => (int)($data['realtor_user_id'] ?? 0),
             'realtor_client_id' => (int)($data['realtor_client_id'] ?? 0),
             'realtor_listing_id' => (int)($data['realtor_listing_id'] ?? 0),
+            'realtor_contract_id' => !empty($data['realtor_contract_id']) ? (int)$data['realtor_contract_id'] : null,
             'amount' => (float)($data['amount'] ?? 0),
             'payment_date' => (string)($data['payment_date'] ?? date('Y-m-d')),
             'applies_to_month' => $data['applies_to_month'] ?? null,
@@ -76,10 +87,16 @@ class Payment extends Model
                        rc.name AS client_name,
                        rc.id AS client_id,
                        rl.title AS listing_title,
-                       rl.id AS listing_id
+                       rl.id AS listing_id,
+                       c.terms_type AS contract_terms_type,
+                       c.total_amount AS contract_total_amount,
+                       c.monthly_amount AS contract_monthly_amount,
+                       c.duration_months AS contract_duration_months,
+                       c.start_month AS contract_start_month
                 FROM payments p
                 LEFT JOIN realtor_clients rc ON rc.id = p.realtor_client_id
                 LEFT JOIN realtor_listings rl ON rl.id = p.realtor_listing_id
+                LEFT JOIN realtor_contracts c ON c.id = p.realtor_contract_id
                 WHERE p.realtor_user_id = ?
                 ORDER BY p.payment_date DESC, p.id DESC";
         $stmt = $this->db->prepare($sql);
