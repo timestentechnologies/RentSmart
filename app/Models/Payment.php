@@ -15,6 +15,76 @@ class Payment extends Model
     public function __construct()
     {
         parent::__construct();
+        $this->ensureRealtorPaymentColumns();
+    }
+
+    private function ensureRealtorPaymentColumns(): void
+    {
+        try {
+            $this->db->exec("ALTER TABLE payments ADD COLUMN realtor_user_id INT NULL AFTER lease_id");
+        } catch (\Exception $e) {
+        }
+        try {
+            $this->db->exec("ALTER TABLE payments ADD COLUMN realtor_client_id INT NULL AFTER realtor_user_id");
+        } catch (\Exception $e) {
+        }
+        try {
+            $this->db->exec("ALTER TABLE payments ADD COLUMN realtor_listing_id INT NULL AFTER realtor_client_id");
+        } catch (\Exception $e) {
+        }
+        try {
+            $this->db->exec("ALTER TABLE payments ADD INDEX idx_realtor_payment (realtor_user_id, realtor_client_id, realtor_listing_id)");
+        } catch (\Exception $e) {
+        }
+    }
+
+    public function createRealtorPayment(array $data)
+    {
+        $this->ensureAppliesToMonthColumn();
+
+        $sql = "INSERT INTO payments (
+                    lease_id, realtor_user_id, realtor_client_id, realtor_listing_id,
+                    amount, payment_date, applies_to_month, payment_type, payment_method,
+                    reference_number, status, notes
+                ) VALUES (
+                    NULL, :realtor_user_id, :realtor_client_id, :realtor_listing_id,
+                    :amount, :payment_date, :applies_to_month, :payment_type, :payment_method,
+                    :reference_number, :status, :notes
+                )";
+
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([
+            'realtor_user_id' => (int)($data['realtor_user_id'] ?? 0),
+            'realtor_client_id' => (int)($data['realtor_client_id'] ?? 0),
+            'realtor_listing_id' => (int)($data['realtor_listing_id'] ?? 0),
+            'amount' => (float)($data['amount'] ?? 0),
+            'payment_date' => (string)($data['payment_date'] ?? date('Y-m-d')),
+            'applies_to_month' => $data['applies_to_month'] ?? null,
+            'payment_type' => (string)($data['payment_type'] ?? 'realtor'),
+            'payment_method' => (string)($data['payment_method'] ?? 'cash'),
+            'reference_number' => $data['reference_number'] ?? null,
+            'status' => (string)($data['status'] ?? 'completed'),
+            'notes' => (string)($data['notes'] ?? ''),
+        ]);
+
+        return $this->db->lastInsertId();
+    }
+
+    public function getPaymentsForRealtor($userId)
+    {
+        $sql = "SELECT p.*,
+                       rc.name AS client_name,
+                       rc.id AS client_id,
+                       rl.title AS listing_title,
+                       rl.id AS listing_id
+                FROM payments p
+                LEFT JOIN realtor_clients rc ON rc.id = p.realtor_client_id
+                LEFT JOIN realtor_listings rl ON rl.id = p.realtor_listing_id
+                WHERE p.realtor_user_id = ?
+                ORDER BY p.payment_date DESC, p.id DESC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([(int)$userId]);
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
 
     private function ensureAppliesToMonthColumn(): void

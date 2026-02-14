@@ -6,6 +6,8 @@ use App\Models\Payment;
 use App\Models\Tenant;
 use App\Helpers\FileUploadHelper;
 use App\Models\ActivityLog;
+use App\Models\RealtorClient;
+use App\Models\RealtorListing;
 
 class PaymentsController
 {
@@ -207,6 +209,22 @@ class PaymentsController
     public function index()
     {
         $paymentModel = new Payment();
+        $role = strtolower((string)($_SESSION['user_role'] ?? 'guest'));
+
+        if ($role === 'realtor') {
+            $clientModel = new RealtorClient();
+            $listingModel = new RealtorListing();
+
+            $payments = $paymentModel->getPaymentsForRealtor($this->userId);
+            $clients = $clientModel->getAll($this->userId);
+            $listings = $listingModel->getAll($this->userId);
+            $tenants = [];
+            $pendingPaymentsCount = 0;
+
+            require 'views/payments/index.php';
+            return;
+        }
+
         $tenantModel = new Tenant();
         $utilityModel = new \App\Models\Utility();
         $utilityReadingModel = new \App\Models\UtilityReading();
@@ -315,6 +333,48 @@ class PaymentsController
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
                 $paymentModel = new Payment();
+
+                $role = strtolower((string)($_SESSION['user_role'] ?? 'guest'));
+                if ($role === 'realtor') {
+                    $clientId = (int)($_POST['realtor_client_id'] ?? 0);
+                    $listingId = (int)($_POST['realtor_listing_id'] ?? 0);
+                    $amount = (float)($_POST['amount'] ?? 0);
+                    $paymentDate = (string)($_POST['payment_date'] ?? date('Y-m-d'));
+                    $paymentMethod = (string)($_POST['payment_method'] ?? 'cash');
+                    $referenceNumber = $_POST['reference_number'] ?? null;
+                    $status = (string)($_POST['status'] ?? 'completed');
+                    $notes = (string)($_POST['notes'] ?? '');
+                    $paymentType = (string)($_POST['payment_type'] ?? 'realtor');
+
+                    if ($clientId <= 0 || $listingId <= 0 || $amount <= 0) {
+                        $_SESSION['flash_message'] = 'Client, Listing and Amount are required.';
+                        $_SESSION['flash_type'] = 'danger';
+                        header('Location: ' . BASE_URL . '/payments');
+                        exit;
+                    }
+
+                    $paymentId = $paymentModel->createRealtorPayment([
+                        'realtor_user_id' => (int)$this->userId,
+                        'realtor_client_id' => (int)$clientId,
+                        'realtor_listing_id' => (int)$listingId,
+                        'amount' => (float)$amount,
+                        'payment_date' => $paymentDate,
+                        'payment_type' => $paymentType,
+                        'payment_method' => $paymentMethod,
+                        'reference_number' => $referenceNumber,
+                        'status' => $status,
+                        'notes' => $notes,
+                    ]);
+
+                    if (!empty($_FILES['payment_attachments']['name'][0])) {
+                        $this->handlePaymentAttachments($paymentId);
+                    }
+
+                    $_SESSION['flash_message'] = 'Payment added successfully!';
+                    $_SESSION['flash_type'] = 'success';
+                    header('Location: ' . BASE_URL . '/payments');
+                    exit;
+                }
 
                 $appliesToMonthRaw = trim((string)($_POST['applies_to_month'] ?? ''));
                 $appliesToMonth = null;
