@@ -346,11 +346,31 @@ class PaymentsController
                     $notes = (string)($_POST['notes'] ?? '');
                     $paymentType = (string)($_POST['payment_type'] ?? 'realtor');
 
+                    $appliesToMonthRaw = trim((string)($_POST['applies_to_month'] ?? ''));
+                    $appliesToMonth = null;
+                    if ($appliesToMonthRaw !== '') {
+                        if (preg_match('/^\d{4}-\d{2}$/', $appliesToMonthRaw)) {
+                            $appliesToMonth = $appliesToMonthRaw . '-01';
+                        } else if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $appliesToMonthRaw)) {
+                            $appliesToMonth = substr($appliesToMonthRaw, 0, 7) . '-01';
+                        }
+                    }
+
                     if ($clientId <= 0 || $listingId <= 0 || $amount <= 0) {
                         $_SESSION['flash_message'] = 'Client, Listing and Amount are required.';
                         $_SESSION['flash_type'] = 'danger';
                         header('Location: ' . BASE_URL . '/payments');
                         exit;
+                    }
+
+                    // For monthly payments like mortgage, prevent double-entry for the same month
+                    if ($appliesToMonth !== null && in_array($paymentType, ['mortgage', 'mortgage_monthly'], true)) {
+                        if ($paymentModel->realtorMonthAlreadyPaid($this->userId, $clientId, $listingId, $appliesToMonth, $paymentType)) {
+                            $_SESSION['flash_message'] = 'Selected month is already marked as paid for this mortgage. Please select another month.';
+                            $_SESSION['flash_type'] = 'warning';
+                            header('Location: ' . BASE_URL . '/payments');
+                            exit;
+                        }
                     }
 
                     $paymentId = $paymentModel->createRealtorPayment([
@@ -359,6 +379,7 @@ class PaymentsController
                         'realtor_listing_id' => (int)$listingId,
                         'amount' => (float)$amount,
                         'payment_date' => $paymentDate,
+                        'applies_to_month' => $appliesToMonth,
                         'payment_type' => $paymentType,
                         'payment_method' => $paymentMethod,
                         'reference_number' => $referenceNumber,
