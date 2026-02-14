@@ -42,6 +42,12 @@ class RealtorClient extends Model
     {
         $stmt = $this->db->prepare(
             "SELECT c.*, rl.title AS listing_title, rl.location AS listing_location\n"
+            . ", (SELECT cc.id FROM realtor_contracts cc WHERE cc.user_id = c.user_id AND cc.realtor_client_id = c.id ORDER BY cc.id DESC LIMIT 1) AS contract_id\n"
+            . ", (SELECT cc.terms_type FROM realtor_contracts cc WHERE cc.user_id = c.user_id AND cc.realtor_client_id = c.id ORDER BY cc.id DESC LIMIT 1) AS contract_terms_type\n"
+            . ", (SELECT cc.total_amount FROM realtor_contracts cc WHERE cc.user_id = c.user_id AND cc.realtor_client_id = c.id ORDER BY cc.id DESC LIMIT 1) AS contract_total_amount\n"
+            . ", (SELECT cc.monthly_amount FROM realtor_contracts cc WHERE cc.user_id = c.user_id AND cc.realtor_client_id = c.id ORDER BY cc.id DESC LIMIT 1) AS contract_monthly_amount\n"
+            . ", (SELECT cc.duration_months FROM realtor_contracts cc WHERE cc.user_id = c.user_id AND cc.realtor_client_id = c.id ORDER BY cc.id DESC LIMIT 1) AS contract_duration_months\n"
+            . ", (SELECT cc.start_month FROM realtor_contracts cc WHERE cc.user_id = c.user_id AND cc.realtor_client_id = c.id ORDER BY cc.id DESC LIMIT 1) AS contract_start_month\n"
             . "FROM {$this->table} c\n"
             . "LEFT JOIN realtor_listings rl ON rl.id = c.realtor_listing_id\n"
             . "WHERE c.user_id = ?\n"
@@ -55,6 +61,12 @@ class RealtorClient extends Model
     {
         $stmt = $this->db->prepare(
             "SELECT c.*, rl.title AS listing_title, rl.location AS listing_location\n"
+            . ", (SELECT cc.id FROM realtor_contracts cc WHERE cc.user_id = c.user_id AND cc.realtor_client_id = c.id ORDER BY cc.id DESC LIMIT 1) AS contract_id\n"
+            . ", (SELECT cc.terms_type FROM realtor_contracts cc WHERE cc.user_id = c.user_id AND cc.realtor_client_id = c.id ORDER BY cc.id DESC LIMIT 1) AS contract_terms_type\n"
+            . ", (SELECT cc.total_amount FROM realtor_contracts cc WHERE cc.user_id = c.user_id AND cc.realtor_client_id = c.id ORDER BY cc.id DESC LIMIT 1) AS contract_total_amount\n"
+            . ", (SELECT cc.monthly_amount FROM realtor_contracts cc WHERE cc.user_id = c.user_id AND cc.realtor_client_id = c.id ORDER BY cc.id DESC LIMIT 1) AS contract_monthly_amount\n"
+            . ", (SELECT cc.duration_months FROM realtor_contracts cc WHERE cc.user_id = c.user_id AND cc.realtor_client_id = c.id ORDER BY cc.id DESC LIMIT 1) AS contract_duration_months\n"
+            . ", (SELECT cc.start_month FROM realtor_contracts cc WHERE cc.user_id = c.user_id AND cc.realtor_client_id = c.id ORDER BY cc.id DESC LIMIT 1) AS contract_start_month\n"
             . "FROM {$this->table} c\n"
             . "LEFT JOIN realtor_listings rl ON rl.id = c.realtor_listing_id\n"
             . "WHERE c.id = ? AND c.user_id = ?\n"

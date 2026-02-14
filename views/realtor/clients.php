@@ -86,6 +86,8 @@ ob_start();
                             <th>Phone</th>
                             <th>Email</th>
                             <th>Listing</th>
+                            <th>Payment Mode</th>
+                            <th>Amount</th>
                             <th>Notes</th>
                             <th>Actions</th>
                         </tr>
@@ -104,12 +106,38 @@ ob_start();
                                         <span class="text-muted">-</span>
                                     <?php endif; ?>
                                 </td>
+                                <td>
+                                    <?php if (!empty($x['contract_terms_type'] ?? null)): ?>
+                                        <span class="badge bg-light text-dark">
+                                            <?= htmlspecialchars(($x['contract_terms_type'] === 'monthly') ? 'Monthly' : 'One Time') ?>
+                                        </span>
+                                    <?php else: ?>
+                                        <span class="text-muted">-</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
+                                    <?php if (!empty($x['contract_id'] ?? null)): ?>
+                                        <?php if (($x['contract_terms_type'] ?? '') === 'monthly'): ?>
+                                            <div class="fw-semibold">Ksh<?= number_format((float)($x['contract_monthly_amount'] ?? 0), 2) ?></div>
+                                            <div class="small text-muted">Total: Ksh<?= number_format((float)($x['contract_total_amount'] ?? 0), 2) ?></div>
+                                        <?php else: ?>
+                                            <div class="fw-semibold">Ksh<?= number_format((float)($x['contract_total_amount'] ?? 0), 2) ?></div>
+                                        <?php endif; ?>
+                                    <?php else: ?>
+                                        <span class="text-muted">-</span>
+                                    <?php endif; ?>
+                                </td>
                                 <td class="text-truncate" style="max-width:240px;" title="<?= htmlspecialchars((string)($x['notes'] ?? '')) ?>"><?= htmlspecialchars((string)($x['notes'] ?? '')) ?></td>
                                 <td>
                                     <?php if (!empty($x['realtor_listing_id'] ?? null)): ?>
                                         <button type="button" class="btn btn-sm btn-outline-success me-1" onclick="openClientContractModal(<?= (int)$x['id'] ?>, <?= (int)($x['realtor_listing_id'] ?? 0) ?>, '<?= htmlspecialchars((string)($x['name'] ?? ''), ENT_QUOTES) ?>', '<?= htmlspecialchars((string)($x['listing_title'] ?? ''), ENT_QUOTES) ?>')" title="Create Contract">
                                             <i class="bi bi-file-earmark-plus"></i>
                                         </button>
+                                    <?php endif; ?>
+                                    <?php if (!empty($x['contract_id'] ?? null)): ?>
+                                        <a class="btn btn-sm btn-outline-secondary me-1" href="<?= BASE_URL ?>/realtor/contracts/show/<?= (int)($x['contract_id'] ?? 0) ?>" title="View Contract">
+                                            <i class="bi bi-eye"></i>
+                                        </a>
                                     <?php endif; ?>
                                     <button type="button" class="btn btn-sm btn-outline-primary me-1" onclick="editRealtorClient(<?= (int)$x['id'] ?>)"><i class="bi bi-pencil"></i></button>
                                     <button type="button" class="btn btn-sm btn-outline-danger" onclick="confirmDeleteRealtorClient(<?= (int)$x['id'] ?>)"><i class="bi bi-trash"></i></button>
@@ -161,6 +189,15 @@ ob_start();
             <div class="mb-3"><label class="form-label">Name</label><input type="text" id="edit_client_name" name="name" class="form-control" required></div>
             <div class="mb-3"><label class="form-label">Phone</label><input type="text" id="edit_client_phone" name="phone" class="form-control" required></div>
             <div class="mb-3"><label class="form-label">Email</label><input type="email" id="edit_client_email" name="email" class="form-control"></div>
+            <div class="mb-3">
+                <div class="small text-muted">Linked Listing</div>
+                <div class="fw-semibold" id="edit_client_listing_title">-</div>
+                <div class="small text-muted" id="edit_client_listing_location"></div>
+            </div>
+            <div class="mb-3">
+                <div class="small text-muted">Contract</div>
+                <div class="fw-semibold" id="edit_client_contract_summary">-</div>
+            </div>
             <div class="mb-3"><label class="form-label">Notes</label><textarea id="edit_client_notes" name="notes" class="form-control" rows="3"></textarea></div>
         </div>
         <div class="modal-footer">
@@ -229,6 +266,31 @@ function editRealtorClient(id){
       document.getElementById('edit_client_name').value = e.name || '';
       document.getElementById('edit_client_phone').value = e.phone || '';
       document.getElementById('edit_client_email').value = e.email || '';
+      const listingTitle = document.getElementById('edit_client_listing_title');
+      const listingLoc = document.getElementById('edit_client_listing_location');
+      if(listingTitle){
+        listingTitle.textContent = e.listing_title ? String(e.listing_title) : '-';
+      }
+      if(listingLoc){
+        listingLoc.textContent = e.listing_location ? String(e.listing_location) : '';
+      }
+
+      const cs = document.getElementById('edit_client_contract_summary');
+      if(cs){
+        if(e.contract_id){
+          const mode = (e.contract_terms_type === 'monthly') ? 'Monthly' : 'One Time';
+          if(e.contract_terms_type === 'monthly'){
+            const m = Number(e.contract_monthly_amount || 0).toFixed(2);
+            const t = Number(e.contract_total_amount || 0).toFixed(2);
+            cs.textContent = mode + ' - Ksh' + m + ' (Total Ksh' + t + ')';
+          } else {
+            const t = Number(e.contract_total_amount || 0).toFixed(2);
+            cs.textContent = mode + ' - Ksh' + t;
+          }
+        } else {
+          cs.textContent = '-';
+        }
+      }
       document.getElementById('edit_client_notes').value = e.notes || '';
       new bootstrap.Modal(document.getElementById('editClientModal')).show();
     }).catch(()=>alert('Failed to load client'));
