@@ -5,6 +5,7 @@ namespace App\Controllers;
 use App\Models\RealtorLead;
 use App\Models\RealtorClient;
 use App\Models\RealtorLeadStage;
+use App\Models\RealtorListing;
 
 class RealtorLeadsController
 {
@@ -33,10 +34,14 @@ class RealtorLeadsController
         $leads = $model->getAll($this->userId);
         $stageModel = new RealtorLeadStage();
         $stages = $stageModel->getAll($this->userId);
+
+        $listingModel = new RealtorListing();
+        $listings = $listingModel->getAll($this->userId);
         echo view('realtor/leads', [
             'title' => 'CRM - Leads',
             'leads' => $leads,
             'stages' => $stages,
+            'listings' => $listings,
         ]);
     }
 
@@ -55,6 +60,7 @@ class RealtorLeadsController
         $clientModel = new RealtorClient();
         $clientId = $clientModel->insert([
             'user_id' => $this->userId,
+            'realtor_listing_id' => !empty($lead['realtor_listing_id']) ? (int)$lead['realtor_listing_id'] : null,
             'name' => $lead['name'] ?? '',
             'phone' => $lead['phone'] ?? '',
             'email' => $lead['email'] ?? '',
@@ -84,6 +90,7 @@ class RealtorLeadsController
 
             $data = [
                 'user_id' => $this->userId,
+                'realtor_listing_id' => !empty($_POST['realtor_listing_id']) ? (int)$_POST['realtor_listing_id'] : null,
                 'name' => trim((string)($_POST['name'] ?? '')),
                 'phone' => trim((string)($_POST['phone'] ?? '')),
                 'email' => trim((string)($_POST['email'] ?? '')),
@@ -147,6 +154,7 @@ class RealtorLeadsController
             }
 
             $data = [
+                'realtor_listing_id' => array_key_exists('realtor_listing_id', $_POST) ? (($_POST['realtor_listing_id'] !== '' && $_POST['realtor_listing_id'] !== null) ? (int)$_POST['realtor_listing_id'] : null) : ($row['realtor_listing_id'] ?? null),
                 'name' => trim((string)($_POST['name'] ?? ($row['name'] ?? ''))),
                 'phone' => trim((string)($_POST['phone'] ?? ($row['phone'] ?? ''))),
                 'email' => trim((string)($_POST['email'] ?? ($row['email'] ?? ''))),
@@ -202,6 +210,7 @@ class RealtorLeadsController
             $clientModel = new RealtorClient();
             $clientId = $clientModel->insert([
                 'user_id' => $this->userId,
+                'realtor_listing_id' => !empty($lead['realtor_listing_id']) ? (int)$lead['realtor_listing_id'] : null,
                 'name' => $lead['name'] ?? '',
                 'phone' => $lead['phone'] ?? '',
                 'email' => $lead['email'] ?? '',

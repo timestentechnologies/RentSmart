@@ -53,7 +53,12 @@ function monthAddPhp(string $ym, int $n): string {
                     &mdash; Listing: <span class="fw-semibold"><?= htmlspecialchars((string)($listing['title'] ?? '')) ?></span>
                 </div>
             </div>
-            <a class="btn btn-sm btn-outline-secondary" href="<?= BASE_URL ?>/realtor/contracts">Back</a>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editContractTermsModal">
+                    <i class="bi bi-pencil me-1"></i>Edit Terms
+                </button>
+                <a class="btn btn-sm btn-outline-secondary" href="<?= BASE_URL ?>/realtor/contracts">Back</a>
+            </div>
         </div>
     </div>
 
@@ -98,6 +103,50 @@ function monthAddPhp(string $ym, int $n): string {
                 <div class="mb-2"><strong>Type:</strong> One Time</div>
             <?php endif; ?>
         </div>
+    </div>
+
+    <div class="modal fade" id="editContractTermsModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <form method="POST" action="<?= BASE_URL ?>/realtor/contracts/update/<?= (int)$contractId ?>" id="editContractTermsForm">
+            <?= csrf_field() ?>
+            <div class="modal-header">
+              <h5 class="modal-title">Edit Contract Terms</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label">Payment Terms</label>
+                    <select class="form-select" name="terms_type" id="ect_terms_type" required>
+                        <option value="one_time" <?= $termsType === 'one_time' ? 'selected' : '' ?>>One Time</option>
+                        <option value="monthly" <?= $termsType === 'monthly' ? 'selected' : '' ?>>Monthly</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Total Amount</label>
+                    <div class="input-group">
+                        <span class="input-group-text">Ksh</span>
+                        <input type="number" step="0.01" min="0" class="form-control" name="total_amount" id="ect_total_amount" value="<?= htmlspecialchars((string)$totalAmount) ?>" required>
+                    </div>
+                </div>
+                <div id="ect_monthly_fields" style="display:none;">
+                    <div class="mb-3">
+                        <label class="form-label">Start Month</label>
+                        <input type="month" class="form-control" name="start_month" id="ect_start_month" value="<?= htmlspecialchars(substr((string)$startMonth, 0, 7)) ?>">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Duration (Months)</label>
+                        <input type="number" min="1" step="1" class="form-control" name="duration_months" id="ect_duration_months" value="<?= (int)$duration ?>">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+              <button type="submit" class="btn btn-primary">Save</button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
 
     <?php if ($termsType === 'monthly'): ?>
@@ -169,6 +218,31 @@ function monthAddPhp(string $ym, int $n): string {
         </div>
     </div>
 </div>
+
+<script>
+(function(){
+    const terms = document.getElementById('ect_terms_type');
+    const fields = document.getElementById('ect_monthly_fields');
+    const start = document.getElementById('ect_start_month');
+    const dur = document.getElementById('ect_duration_months');
+    if(!terms || !fields) return;
+
+    const apply = () => {
+        const t = terms.value;
+        if(t === 'monthly'){
+            fields.style.display = '';
+            start && start.setAttribute('required','');
+            dur && dur.setAttribute('required','');
+        } else {
+            fields.style.display = 'none';
+            start && start.removeAttribute('required');
+            dur && dur.removeAttribute('required');
+        }
+    };
+    terms.addEventListener('change', apply);
+    apply();
+})();
+</script>
 
 <?php
 $content = ob_get_clean();
