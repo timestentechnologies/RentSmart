@@ -393,8 +393,14 @@ $isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
                                 <option value="commission">Commission</option>
                                 <option value="booking">Booking</option>
                                 <option value="deposit">Deposit</option>
+                                <option value="mortgage_monthly">Mortgage (Monthly)</option>
+                                <option value="mortgage">Mortgage</option>
                                 <option value="other">Other</option>
                             </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Payment For Month (optional)</label>
+                            <input type="month" class="form-control" name="applies_to_month" value="<?= date('Y-m') ?>">
                         </div>
                     <?php else: ?>
                         <div class="mb-3">

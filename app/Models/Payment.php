@@ -87,6 +87,31 @@ class Payment extends Model
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
 
+    public function realtorMonthAlreadyPaid($userId, $clientId, $listingId, $appliesToMonth, $paymentType)
+    {
+        if (empty($appliesToMonth)) {
+            return false;
+        }
+        $sql = "SELECT COUNT(*) AS c
+                FROM payments
+                WHERE realtor_user_id = ?
+                  AND realtor_client_id = ?
+                  AND realtor_listing_id = ?
+                  AND payment_type = ?
+                  AND applies_to_month = ?
+                  AND status IN ('completed','verified')";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([
+            (int)$userId,
+            (int)$clientId,
+            (int)$listingId,
+            (string)$paymentType,
+            (string)$appliesToMonth,
+        ]);
+        $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+        return ((int)($row['c'] ?? 0)) > 0;
+    }
+
     private function ensureAppliesToMonthColumn(): void
     {
         try {
