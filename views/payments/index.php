@@ -1,5 +1,6 @@
 <?php
 ob_start();
+$isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
 ?>
 <div class="container-fluid pt-4">
     <!-- Page Header -->
@@ -163,7 +164,12 @@ ob_start();
                 <table class="table table-hover align-middle" id="paymentsTable">
                     <thead>
                         <tr>
-                            <th>Tenant</th>
+                            <?php if ($isRealtor): ?>
+                                <th>Client</th>
+                                <th>Listing</th>
+                            <?php else: ?>
+                                <th>Tenant</th>
+                            <?php endif; ?>
                             <th>Amount</th>
                             <th>Date</th>
                             <th>Type</th>
@@ -172,7 +178,9 @@ ob_start();
                             <th>Phone Number</th>
                             <th>Status</th>
                             <th>Notes</th>
-                            <th>Property</th>
+                            <?php if (!$isRealtor): ?>
+                                <th>Property</th>
+                            <?php endif; ?>
                             <th>Receipt</th>
                             <th>Actions</th>
                         </tr>
@@ -181,17 +189,32 @@ ob_start();
                         <?php if (!empty($payments)): ?>
                             <?php foreach ($payments as $payment): ?>
                                 <tr data-payment-id="<?= $payment['id'] ?>">
-                                    <td>
-                                        <div class="d-flex align-items-center">
-                                            <div class="avatar-circle bg-primary text-white me-2">
-                                                <?= strtoupper(substr($payment['tenant_name'] ?? 'U', 0, 1)) ?>
+                                    <?php if ($isRealtor): ?>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="avatar-circle bg-primary text-white me-2">
+                                                    <?= strtoupper(substr($payment['client_name'] ?? 'U', 0, 1)) ?>
+                                                </div>
+                                                <div>
+                                                    <?= htmlspecialchars($payment['client_name'] ?? 'Unknown') ?>
+                                                    <div class="small text-muted">ID: <?= (int)($payment['client_id'] ?? 0) ?></div>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <?= htmlspecialchars($payment['tenant_name'] ?? 'Unknown') ?>
-                                                <div class="small text-muted">ID: <?= $payment['tenant_id'] ?></div>
+                                        </td>
+                                        <td><?= htmlspecialchars($payment['listing_title'] ?? '') ?></td>
+                                    <?php else: ?>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="avatar-circle bg-primary text-white me-2">
+                                                    <?= strtoupper(substr($payment['tenant_name'] ?? 'U', 0, 1)) ?>
+                                                </div>
+                                                <div>
+                                                    <?= htmlspecialchars($payment['tenant_name'] ?? 'Unknown') ?>
+                                                    <div class="small text-muted">ID: <?= $payment['tenant_id'] ?></div>
+                                                </div>
                                             </div>
-                                        </div>
-                                    </td>
+                                        </td>
+                                    <?php endif; ?>
                                     <td>
                                         <span class="fw-medium text-success">
                                             Ksh<?= number_format($payment['amount'], 2) ?>
@@ -288,13 +311,17 @@ ob_start();
                                             <span class="text-muted">-</span>
                                         <?php endif; ?>
                                     </td>
+                                    <?php if (!$isRealtor): ?>
+                                        <td>
+                                            <?= htmlspecialchars($payment['property_name'] ?? 'N/A') ?>
+                                        </td>
+                                    <?php endif; ?>
                                     <td>
-                                        <?= htmlspecialchars($payment['property_name'] ?? '-') ?>
-                                    </td>
-                                    <td>
-                                        <a href="<?= BASE_URL ?>/payments/receipt/<?= $payment['id'] ?>" class="btn btn-sm btn-outline-secondary" target="_blank">
-                                            <i class="bi bi-download"></i> Receipt
-                                        </a>
+                                        <?php if (!empty($payment['receipt_path'])): ?>
+                                            <a href="<?= BASE_URL ?>/public/<?= $payment['receipt_path'] ?>" target="_blank" class="btn btn-sm btn-outline-secondary">
+                                                <i class="bi bi-file-earmark"></i>
+                                            </a>
+                                        <?php endif; ?>
                                     </td>
                                     <td>
                                         <div class="btn-group">
@@ -329,63 +356,108 @@ ob_start();
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="tenant_id" class="form-label">Tenant</label>
-                        <select class="form-select" id="tenant_id" name="tenant_id" required>
-                            <option value="">Select Tenant</option>
-                            <?php foreach ($tenants as $tenant): ?>
-                                <?php
-                                $utilityData = [];
-                                if (!empty($tenant['utility_readings'])) {
-                                    foreach ($tenant['utility_readings'] as $reading) {
-                                        $utilityData[] = [
-                                            'id' => $reading['utility_id'],
-                                            'type' => $reading['utility_type'],
-                                            'label' => !empty($reading['utility_type']) ? ucfirst((string)$reading['utility_type']) : ('Utility #' . (int)$reading['utility_id']),
-                                            'current_reading' => $reading['current_reading'],
-                                            'current_reading_date' => $reading['current_reading_date'],
-                                            'previous_reading' => $reading['previous_reading'],
-                                            'previous_reading_date' => $reading['previous_reading_date'],
-                                            'cost' => $reading['cost'],
-                                            'rate' => $reading['rate'],
-                                            'is_metered' => $reading['is_metered']
-                                        ];
+                    <?php if ($isRealtor): ?>
+                        <div class="mb-3">
+                            <label class="form-label">Client</label>
+                            <select class="form-select" name="realtor_client_id" required>
+                                <option value="">Select Client</option>
+                                <?php foreach (($clients ?? []) as $c): ?>
+                                    <option value="<?= (int)($c['id'] ?? 0) ?>"><?= htmlspecialchars($c['name'] ?? '') ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Listing</label>
+                            <select class="form-select" name="realtor_listing_id" required>
+                                <option value="">Select Listing</option>
+                                <?php foreach (($listings ?? []) as $l): ?>
+                                    <option value="<?= (int)($l['id'] ?? 0) ?>"><?= htmlspecialchars($l['title'] ?? '') ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Amount</label>
+                            <div class="input-group">
+                                <span class="input-group-text">Ksh</span>
+                                <input type="number" step="0.01" class="form-control" name="amount" required>
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Payment Date</label>
+                            <input type="date" class="form-control" name="payment_date" value="<?= date('Y-m-d') ?>" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Payment Type</label>
+                            <select class="form-select" name="payment_type">
+                                <option value="realtor">Realtor Payment</option>
+                                <option value="commission">Commission</option>
+                                <option value="booking">Booking</option>
+                                <option value="deposit">Deposit</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                    <?php else: ?>
+                        <div class="mb-3">
+                            <label for="tenant_id" class="form-label">Tenant</label>
+                            <select class="form-select" id="tenant_id" name="tenant_id" required>
+                                <option value="">Select Tenant</option>
+                                <?php foreach ($tenants as $tenant): ?>
+                                    <?php
+                                    $utilityData = [];
+                                    if (!empty($tenant['utility_readings'])) {
+                                        foreach ($tenant['utility_readings'] as $reading) {
+                                            $utilityData[] = [
+                                                'id' => $reading['utility_id'],
+                                                'type' => $reading['utility_type'],
+                                                'label' => !empty($reading['utility_type']) ? ucfirst((string)$reading['utility_type']) : ('Utility #' . (int)$reading['utility_id']),
+                                                'current_reading' => $reading['current_reading'],
+                                                'current_reading_date' => $reading['current_reading_date'],
+                                                'previous_reading' => $reading['previous_reading'],
+                                                'previous_reading_date' => $reading['previous_reading_date'],
+                                                'cost' => $reading['cost'],
+                                                'rate' => $reading['rate'],
+                                                'is_metered' => $reading['is_metered']
+                                            ];
+                                        }
                                     }
-                                }
-                                ?>
-                                <option value="<?= $tenant['id'] ?>" 
-                                        data-due="<?= htmlspecialchars($tenant['due_amount'] ?? 0) ?>"
-                                        data-paid-months='<?= htmlspecialchars(json_encode(array_values(array_unique($tenant['paid_rent_months'] ?? []))), ENT_QUOTES, 'UTF-8') ?>'
-                                        data-utilities='<?= htmlspecialchars(json_encode($utilityData, JSON_HEX_APOS | JSON_HEX_TAG | JSON_HEX_AMP), ENT_NOQUOTES, 'UTF-8') ?>'>
-                                    <?= htmlspecialchars($tenant['name']) ?> 
-                                    (Lease #<?= $tenant['lease_id'] ?>)
-                                </option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
+                                    ?>
+                                    <option value="<?= $tenant['id'] ?>" 
+                                            data-due="<?= htmlspecialchars($tenant['due_amount'] ?? 0) ?>"
+                                            data-paid-months='<?= htmlspecialchars(json_encode(array_values(array_unique($tenant['paid_rent_months'] ?? []))), ENT_QUOTES, 'UTF-8') ?>'
+                                            data-utilities='<?= htmlspecialchars(json_encode($utilityData, JSON_HEX_APOS | JSON_HEX_TAG | JSON_HEX_AMP), ENT_NOQUOTES, 'UTF-8') ?>'>
+                                        <?= htmlspecialchars($tenant['name']) ?> 
+                                        (Lease #<?= $tenant['lease_id'] ?>)
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    <?php endif; ?>
 
-                    <div class="mb-3">
-                        <label class="form-label">Payment Type</label>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="rent_payment" name="payment_types[]" value="rent" checked>
-                            <label class="form-check-label" for="rent_payment">
-                                Rent Payment
-                            </label>
+                    <?php if (!$isRealtor): ?>
+                        <div class="mb-3">
+                            <label class="form-label">Payment Type</label>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="rent_payment" name="payment_types[]" value="rent" checked>
+                                <label class="form-check-label" for="rent_payment">
+                                    Rent Payment
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="utility_payment" name="payment_types[]" value="utility">
+                                <label class="form-check-label" for="utility_payment">
+                                    Utility Payment
+                                </label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="maintenance_payment" name="payment_types[]" value="maintenance">
+                                <label class="form-check-label" for="maintenance_payment">
+                                    Maintenance Payment
+                                </label>
+                            </div>
                         </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="utility_payment" name="payment_types[]" value="utility">
-                            <label class="form-check-label" for="utility_payment">
-                                Utility Payment
-                            </label>
-                        </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="maintenance_payment" name="payment_types[]" value="maintenance">
-                            <label class="form-check-label" for="maintenance_payment">
-                                Maintenance Payment
-                            </label>
-                        </div>
-                    </div>
+                    <?php endif; ?>
 
+                    <?php if (!$isRealtor): ?>
                     <div id="rent_payment_section" class="mb-3">
                         <label for="rent_amount" class="form-label">Rent Amount</label>
                         <div class="input-group">
@@ -437,11 +509,13 @@ ob_start();
                         <input type="date" class="form-control" id="payment_date" name="payment_date" value="<?= date('Y-m-d') ?>" required>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="applies_to_month" class="form-label">Payment For Month</label>
-                        <input type="month" class="form-control" id="applies_to_month" name="applies_to_month" value="<?= date('Y-m') ?>">
-                        <div id="adminPaidMonthWarning" class="text-danger small mt-1" style="display:none;"></div>
-                    </div>
+                    <?php if (!$isRealtor): ?>
+                        <div class="mb-3">
+                            <label for="applies_to_month" class="form-label">Payment For Month</label>
+                            <input type="month" class="form-control" id="applies_to_month" name="applies_to_month" value="<?= date('Y-m') ?>">
+                            <div id="adminPaidMonthWarning" class="text-danger small mt-1" style="display:none;"></div>
+                        </div>
+                    <?php endif; ?>
 
                     <div class="mb-3">
                         <label for="payment_method" class="form-label">Payment Method</label>
@@ -1149,6 +1223,7 @@ document.addEventListener('DOMContentLoaded', function() {
         table.draw();
     }
 
+<?php if (!$isRealtor): ?>
     // Auto-populate amount with due amount when tenant is selected
     const tenantSelect = document.getElementById('tenant_id');
     const amountInput = document.getElementById('amount');
@@ -1222,6 +1297,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
     });
+<?php endif; ?>
 
     // Format date function
     function formatDate(dateString) {
@@ -1234,6 +1310,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+<?php if (!$isRealtor): ?>
     // Handle tenant selection to show due amount and utilities
     document.getElementById('tenant_id').addEventListener('change', function() {
         const selectedOption = this.options[this.selectedIndex];
@@ -1573,9 +1650,8 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error('Error deleting file:', error);
             showAlert('Error deleting file', 'danger');
         }
-    };
-});
+    });
 </script>
 <?php
 $content = ob_get_clean();
-require __DIR__ . '/../layouts/main.php'; 
+require __DIR__ . '/../layouts/main.php';
