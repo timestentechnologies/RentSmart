@@ -443,6 +443,7 @@ $routes = [
     // Admin Debug routes
     'admin/debug/tenant-payment-error' => ['controller' => 'AdminDebugController', 'action' => 'tenantPaymentError'],
     'admin/debug/realtor-payments' => ['controller' => 'AdminDebugController', 'action' => 'realtorPayments'],
+    'admin/debug/render-payments' => ['controller' => 'AdminDebugController', 'action' => 'renderPayments'],
     // Public inquiry
     'inquiries/store' => ['controller' => 'InquiryController', 'action' => 'store'],
 
@@ -698,6 +699,7 @@ $protectedRoutes = [
     'admin/contact-messages/show/(\d+)',
     'admin/debug/realtor-payments',
     'admin/contact-messages/reply/(\d+)',
+    'admin/debug/render-payments',
     'activity-logs',
     'activity-logs/export/(csv|xlsx)'
     ,
