@@ -137,6 +137,9 @@ ob_start();
                                 <?php if ($source !== ''): ?>
                                     <span class="badge bg-light text-dark lead-tag"><?= htmlspecialchars($source) ?></span>
                                 <?php endif; ?>
+                                <?php if (!empty($x['listing_title'] ?? null)): ?>
+                                    <span class="badge bg-light text-dark lead-tag"><?= htmlspecialchars((string)($x['listing_title'] ?? '')) ?></span>
+                                <?php endif; ?>
                                 <span class="badge bg-<?= htmlspecialchars($stageColorClass) ?> lead-tag" data-role="stage-badge"><?= htmlspecialchars($stageLabel) ?></span>
                             </div>
                             <div class="mt-2 d-flex gap-2">
@@ -233,6 +236,15 @@ ob_start();
             <div class="mb-3"><label class="form-label">Email</label><input type="email" name="email" class="form-control"></div>
             <div class="mb-3"><label class="form-label">Source</label><input type="text" name="source" class="form-control" placeholder="e.g., Facebook, Walk-in, Referral"></div>
             <div class="mb-3">
+                <label class="form-label">Listing / Property</label>
+                <select name="realtor_listing_id" class="form-select">
+                    <option value="">(Optional) Select Listing</option>
+                    <?php foreach (($listings ?? []) as $l): ?>
+                        <option value="<?= (int)($l['id'] ?? 0) ?>"><?= htmlspecialchars((string)($l['title'] ?? '')) ?><?= !empty($l['location'] ?? null) ? ' - ' . htmlspecialchars((string)($l['location'] ?? '')) : '' ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="mb-3">
                 <label class="form-label">Status</label>
                 <select name="status" class="form-select" required>
                     <option value="new">New</option>
@@ -267,6 +279,15 @@ ob_start();
             <div class="mb-3"><label class="form-label">Phone</label><input type="text" id="edit_lead_phone" name="phone" class="form-control" required></div>
             <div class="mb-3"><label class="form-label">Email</label><input type="email" id="edit_lead_email" name="email" class="form-control"></div>
             <div class="mb-3"><label class="form-label">Source</label><input type="text" id="edit_lead_source" name="source" class="form-control"></div>
+            <div class="mb-3">
+                <label class="form-label">Listing / Property</label>
+                <select id="edit_lead_listing_id" name="realtor_listing_id" class="form-select">
+                    <option value="">(Optional) Select Listing</option>
+                    <?php foreach (($listings ?? []) as $l): ?>
+                        <option value="<?= (int)($l['id'] ?? 0) ?>"><?= htmlspecialchars((string)($l['title'] ?? '')) ?><?= !empty($l['location'] ?? null) ? ' - ' . htmlspecialchars((string)($l['location'] ?? '')) : '' ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
             <div class="mb-3">
                 <label class="form-label">Status</label>
                 <select id="edit_lead_status" name="status" class="form-select" required>
@@ -406,6 +427,10 @@ function editRealtorLead(id){
       document.getElementById('edit_lead_phone').value = e.phone || '';
       document.getElementById('edit_lead_email').value = e.email || '';
       document.getElementById('edit_lead_source').value = e.source || '';
+      const listingEl = document.getElementById('edit_lead_listing_id');
+      if(listingEl){
+        listingEl.value = (e.realtor_listing_id !== undefined && e.realtor_listing_id !== null) ? String(e.realtor_listing_id) : '';
+      }
       document.getElementById('edit_lead_status').value = e.status || 'new';
       document.getElementById('edit_lead_notes').value = e.notes || '';
       new bootstrap.Modal(document.getElementById('editLeadModal')).show();

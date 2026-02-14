@@ -476,6 +476,7 @@ $routes = [
     'realtor/contracts' => ['controller' => 'RealtorContractsController', 'action' => 'index'],
     'realtor/contracts/store' => ['controller' => 'RealtorContractsController', 'action' => 'store'],
     'realtor/contracts/show/(\d+)' => ['controller' => 'RealtorContractsController', 'action' => 'show'],
+    'realtor/contracts/update/(\d+)' => ['controller' => 'RealtorContractsController', 'action' => 'update'],
 ];
 
 // Protected routes that require authentication
@@ -728,7 +729,8 @@ $protectedRoutes = [
 
     'realtor/contracts',
     'realtor/contracts/store',
-    'realtor/contracts/show/(\d+)'
+    'realtor/contracts/show/(\d+)',
+    'realtor/contracts/update/(\d+)'
 ];
 
 // Check if the current route requires authentication

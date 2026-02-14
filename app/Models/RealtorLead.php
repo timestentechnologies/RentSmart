@@ -17,6 +17,7 @@ class RealtorLead extends Model
         $sql = "CREATE TABLE IF NOT EXISTS realtor_leads (
             id INT AUTO_INCREMENT PRIMARY KEY,
             user_id INT NOT NULL,
+            realtor_listing_id INT NULL,
             name VARCHAR(255) NOT NULL,
             phone VARCHAR(50) NOT NULL,
             email VARCHAR(150) NULL,
@@ -29,7 +30,15 @@ class RealtorLead extends Model
             INDEX idx_user_id (user_id),
             INDEX idx_status (status)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;";
-        $this->db->exec($sql);
+        try {
+            $this->db->exec($sql);
+        } catch (\Exception $e) {
+        }
+
+        try {
+            $this->db->exec("ALTER TABLE {$this->table} ADD COLUMN realtor_listing_id INT NULL AFTER user_id");
+        } catch (\Exception $e) {
+        }
 
         // If the column exists as ENUM (older installs), widen it to VARCHAR for custom stages
         try {
@@ -45,7 +54,13 @@ class RealtorLead extends Model
 
     public function getAll($userId)
     {
-        $stmt = $this->db->prepare("SELECT * FROM {$this->table} WHERE user_id = ? ORDER BY id DESC");
+        $stmt = $this->db->prepare(
+            "SELECT l.*, rl.title AS listing_title, rl.location AS listing_location\n"
+            . "FROM {$this->table} l\n"
+            . "LEFT JOIN realtor_listings rl ON rl.id = l.realtor_listing_id\n"
+            . "WHERE l.user_id = ?\n"
+            . "ORDER BY l.id DESC"
+        );
         $stmt->execute([(int)$userId]);
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
@@ -59,7 +74,13 @@ class RealtorLead extends Model
 
     public function getByIdWithAccess($id, $userId)
     {
-        $stmt = $this->db->prepare("SELECT * FROM {$this->table} WHERE id = ? AND user_id = ? LIMIT 1");
+        $stmt = $this->db->prepare(
+            "SELECT l.*, rl.title AS listing_title, rl.location AS listing_location\n"
+            . "FROM {$this->table} l\n"
+            . "LEFT JOIN realtor_listings rl ON rl.id = l.realtor_listing_id\n"
+            . "WHERE l.id = ? AND l.user_id = ?\n"
+            . "LIMIT 1"
+        );
         $stmt->execute([(int)$id, (int)$userId]);
         return $stmt->fetch(\PDO::FETCH_ASSOC);
     }

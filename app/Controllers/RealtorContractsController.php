@@ -189,4 +189,84 @@ class RealtorContractsController
             exit;
         }
     }
+
+    public function update($id)
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: ' . BASE_URL . '/realtor/contracts/show/' . (int)$id);
+            exit;
+        }
+
+        if (!verify_csrf_token()) {
+            $_SESSION['flash_message'] = 'Invalid security token';
+            $_SESSION['flash_type'] = 'danger';
+            header('Location: ' . BASE_URL . '/realtor/contracts/show/' . (int)$id);
+            exit;
+        }
+
+        $contractModel = new RealtorContract();
+        $contract = $contractModel->getByIdWithAccess((int)$id, $this->userId);
+        if (!$contract) {
+            $_SESSION['flash_message'] = 'Contract not found';
+            $_SESSION['flash_type'] = 'danger';
+            header('Location: ' . BASE_URL . '/realtor/contracts');
+            exit;
+        }
+
+        $termsType = trim((string)($_POST['terms_type'] ?? ($contract['terms_type'] ?? 'one_time')));
+        $totalAmount = (float)($_POST['total_amount'] ?? ($contract['total_amount'] ?? 0));
+        $durationMonths = (int)($_POST['duration_months'] ?? ($contract['duration_months'] ?? 0));
+        $startMonth = trim((string)($_POST['start_month'] ?? ''));
+
+        if (!in_array($termsType, ['one_time', 'monthly'], true)) {
+            $termsType = 'one_time';
+        }
+        if ($totalAmount <= 0) {
+            $_SESSION['flash_message'] = 'Total amount must be greater than 0';
+            $_SESSION['flash_type'] = 'danger';
+            header('Location: ' . BASE_URL . '/realtor/contracts/show/' . (int)$id);
+            exit;
+        }
+
+        $monthlyAmount = null;
+        $startMonthDate = null;
+        $durationToSave = null;
+
+        if ($termsType === 'monthly') {
+            if ($durationMonths <= 0) {
+                $_SESSION['flash_message'] = 'Duration (months) is required for monthly contracts';
+                $_SESSION['flash_type'] = 'danger';
+                header('Location: ' . BASE_URL . '/realtor/contracts/show/' . (int)$id);
+                exit;
+            }
+            if ($startMonth === '') {
+                $_SESSION['flash_message'] = 'Start month is required for monthly contracts';
+                $_SESSION['flash_type'] = 'danger';
+                header('Location: ' . BASE_URL . '/realtor/contracts/show/' . (int)$id);
+                exit;
+            }
+            $monthlyAmount = round($totalAmount / max(1, $durationMonths), 2);
+            $startMonthDate = $startMonth . '-01';
+            $durationToSave = (int)$durationMonths;
+        }
+
+        try {
+            $ok = $contractModel->updateById((int)$id, [
+                'terms_type' => (string)$termsType,
+                'total_amount' => (float)$totalAmount,
+                'monthly_amount' => $monthlyAmount,
+                'duration_months' => $durationToSave,
+                'start_month' => $startMonthDate,
+            ]);
+            $_SESSION['flash_message'] = $ok ? 'Contract updated' : 'Failed to update contract';
+            $_SESSION['flash_type'] = $ok ? 'success' : 'danger';
+        } catch (\Exception $e) {
+            error_log('RealtorContracts update failed: ' . $e->getMessage());
+            $_SESSION['flash_message'] = 'Failed to update contract';
+            $_SESSION['flash_type'] = 'danger';
+        }
+
+        header('Location: ' . BASE_URL . '/realtor/contracts/show/' . (int)$id);
+        exit;
+    }
 }

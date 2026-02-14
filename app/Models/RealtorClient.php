@@ -17,6 +17,7 @@ class RealtorClient extends Model
         $sql = "CREATE TABLE IF NOT EXISTS realtor_clients (
             id INT AUTO_INCREMENT PRIMARY KEY,
             user_id INT NOT NULL,
+            realtor_listing_id INT NULL,
             name VARCHAR(255) NOT NULL,
             phone VARCHAR(50) NOT NULL,
             email VARCHAR(150) NULL,
@@ -30,18 +31,35 @@ class RealtorClient extends Model
         } catch (\Exception $e) {
             // ignore (e.g., missing CREATE privilege on some hosting)
         }
+
+        try {
+            $this->db->exec("ALTER TABLE {$this->table} ADD COLUMN realtor_listing_id INT NULL AFTER user_id");
+        } catch (\Exception $e) {
+        }
     }
 
     public function getAll($userId)
     {
-        $stmt = $this->db->prepare("SELECT * FROM {$this->table} WHERE user_id = ? ORDER BY id DESC");
+        $stmt = $this->db->prepare(
+            "SELECT c.*, rl.title AS listing_title, rl.location AS listing_location\n"
+            . "FROM {$this->table} c\n"
+            . "LEFT JOIN realtor_listings rl ON rl.id = c.realtor_listing_id\n"
+            . "WHERE c.user_id = ?\n"
+            . "ORDER BY c.id DESC"
+        );
         $stmt->execute([(int)$userId]);
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
 
     public function getByIdWithAccess($id, $userId)
     {
-        $stmt = $this->db->prepare("SELECT * FROM {$this->table} WHERE id = ? AND user_id = ? LIMIT 1");
+        $stmt = $this->db->prepare(
+            "SELECT c.*, rl.title AS listing_title, rl.location AS listing_location\n"
+            . "FROM {$this->table} c\n"
+            . "LEFT JOIN realtor_listings rl ON rl.id = c.realtor_listing_id\n"
+            . "WHERE c.id = ? AND c.user_id = ?\n"
+            . "LIMIT 1"
+        );
         $stmt->execute([(int)$id, (int)$userId]);
         return $stmt->fetch(\PDO::FETCH_ASSOC);
     }
