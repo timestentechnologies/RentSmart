@@ -511,6 +511,8 @@ $isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
                         <div class="form-text">Use this when a tenant is paying a maintenance charge (e.g. MAINT-123).</div>
                     </div>
 
+                    <?php endif; ?>
+
                     <div class="mb-3">
                         <label for="payment_date" class="form-label">Payment Date</label>
                         <input type="date" class="form-control" id="payment_date" name="payment_date" value="<?= date('Y-m-d') ?>" required>
