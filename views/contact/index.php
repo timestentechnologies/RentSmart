@@ -1,9 +1,14 @@
+<?php
+if (!defined('BASE_URL')) { define('BASE_URL', ''); }
+$siteName = $siteName ?? site_setting('site_name', 'RentSmart');
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Contact Us - RentSmart</title>
+  <meta name="csrf-token" content="<?= htmlspecialchars(csrf_token()) ?>">
+  <title><?= htmlspecialchars($siteName) ?> | Contact Us</title>
   <?php $faviconUrl = site_setting_image_url('site_favicon', BASE_URL . '/public/assets/images/site_favicon_1750832003.png'); ?>
   <link rel="icon" type="image/png" sizes="32x32" href="<?= htmlspecialchars($faviconUrl) ?>">
   <link rel="icon" type="image/png" sizes="96x96" href="<?= htmlspecialchars($faviconUrl) ?>">
