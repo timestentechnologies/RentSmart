@@ -1658,6 +1658,8 @@ document.addEventListener('DOMContentLoaded', function() {
             showAlert('Error deleting file', 'danger');
         }
     });
+
+<?php endif; ?>
 </script>
 <?php
 $content = ob_get_clean();
