@@ -477,6 +477,7 @@ $routes = [
     'realtor/contracts/store' => ['controller' => 'RealtorContractsController', 'action' => 'store'],
     'realtor/contracts/show/(\d+)' => ['controller' => 'RealtorContractsController', 'action' => 'show'],
     'realtor/contracts/update/(\d+)' => ['controller' => 'RealtorContractsController', 'action' => 'update'],
+    'realtor/contracts/print/(\d+)' => ['controller' => 'RealtorContractsController', 'action' => 'print'],
 ];
 
 // Protected routes that require authentication
@@ -729,7 +730,8 @@ $protectedRoutes = [
 
     'realtor/contracts',
     'realtor/contracts/store',
-    'realtor/contracts/show/(\d+)',
+    'realtor/contracts/show/(\d+)',,
+    'realtor/contracts/print/(\d+)'
     'realtor/contracts/update/(\d+)'
 ];
 

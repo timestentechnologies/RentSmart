@@ -75,6 +75,30 @@ class RealtorContractsController
         ]);
     }
 
+    public function print($id)
+    {
+        $contractModel = new RealtorContract();
+        $contract = $contractModel->getByIdWithAccess((int)$id, $this->userId);
+        if (!$contract) {
+            $_SESSION['flash_message'] = 'Contract not found';
+            $_SESSION['flash_type'] = 'danger';
+            header('Location: ' . BASE_URL . '/realtor/contracts');
+            exit;
+        }
+
+        $clientModel = new RealtorClient();
+        $listingModel = new RealtorListing();
+        $client = $clientModel->getByIdWithAccess((int)($contract['realtor_client_id'] ?? 0), $this->userId);
+        $listing = $listingModel->getByIdWithAccess((int)($contract['realtor_listing_id'] ?? 0), $this->userId);
+
+        echo view('realtor/contract_print', [
+            'title' => 'Contract Print',
+            'contract' => $contract,
+            'client' => $client,
+            'listing' => $listing,
+        ]);
+    }
+
     public function store()
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -217,6 +241,7 @@ class RealtorContractsController
         $totalAmount = (float)($_POST['total_amount'] ?? ($contract['total_amount'] ?? 0));
         $durationMonths = (int)($_POST['duration_months'] ?? ($contract['duration_months'] ?? 0));
         $startMonth = trim((string)($_POST['start_month'] ?? ''));
+        $instructions = trim((string)($_POST['instructions'] ?? ($contract['instructions'] ?? '')));
 
         if (!in_array($termsType, ['one_time', 'monthly'], true)) {
             $termsType = 'one_time';
@@ -257,6 +282,7 @@ class RealtorContractsController
                 'monthly_amount' => $monthlyAmount,
                 'duration_months' => $durationToSave,
                 'start_month' => $startMonthDate,
+                'instructions' => $instructions,
             ]);
             $_SESSION['flash_message'] = $ok ? 'Contract updated' : 'Failed to update contract';
             $_SESSION['flash_type'] = $ok ? 'success' : 'danger';
