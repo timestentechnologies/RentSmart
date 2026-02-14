@@ -264,31 +264,32 @@ $isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
                                             'mpesa_manual' => 'bg-primary',
                                             'mpesa_stk' => 'bg-info'
                                         ];
-                                        $methodClass = $methodClasses[$payment['payment_method']] ?? 'bg-secondary';
+                                        $paymentMethod = (string)($payment['payment_method'] ?? '');
+                                        $methodClass = $methodClasses[$paymentMethod] ?? 'bg-secondary';
                                         ?>
                                         <span class="badge <?= $methodClass ?>">
-                                            <?= ucwords(str_replace('_', ' ', $payment['payment_method'])) ?>
+                                            <?= ucwords(str_replace('_', ' ', $paymentMethod)) ?>
                                         </span>
                                     </td>
                                     <td>
-                                        <?php if (!empty($payment['transaction_code'])): ?>
-                                            <code class="text-primary"><?= htmlspecialchars($payment['transaction_code']) ?></code>
-                                        <?php elseif (!empty($payment['reference_number'])): ?>
-                                            <code class="text-primary"><?= htmlspecialchars($payment['reference_number']) ?></code>
+                                        <?php if (!empty($payment['transaction_code'] ?? null)): ?>
+                                            <code class="text-primary"><?= htmlspecialchars((string)($payment['transaction_code'] ?? '')) ?></code>
+                                        <?php elseif (!empty($payment['reference_number'] ?? null)): ?>
+                                            <code class="text-primary"><?= htmlspecialchars((string)($payment['reference_number'] ?? '')) ?></code>
                                         <?php else: ?>
                                             <span class="text-muted">-</span>
                                         <?php endif; ?>
                                     </td>
                                     <td>
-                                        <?php if (!empty($payment['phone_number'])): ?>
-                                            <span class="text-dark"><?= htmlspecialchars($payment['phone_number']) ?></span>
+                                        <?php if (!empty($payment['phone_number'] ?? null)): ?>
+                                            <span class="text-dark"><?= htmlspecialchars((string)($payment['phone_number'] ?? '')) ?></span>
                                         <?php else: ?>
                                             <span class="text-muted">-</span>
                                         <?php endif; ?>
                                     </td>
                                     <td>
                                         <?php
-                                        $status = $payment['status'] ?? 'completed';
+                                        $status = (string)($payment['status'] ?? 'completed');
                                         $statusClasses = [
                                             'completed' => 'bg-success',
                                             'pending' => 'bg-warning',
@@ -301,11 +302,11 @@ $isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
                                         <span class="badge <?= $statusClass ?>"><?= $statusText ?></span>
                                     </td>
                                     <td>
-                                        <?php if ($payment['notes']): ?>
+                                        <?php if (!empty($payment['notes'] ?? null)): ?>
                                             <span class="text-truncate d-inline-block" style="max-width: 200px;" 
                                                   data-bs-toggle="tooltip" 
-                                                  title="<?= htmlspecialchars($payment['notes']) ?>">
-                                                <?= htmlspecialchars($payment['notes']) ?>
+                                                  title="<?= htmlspecialchars((string)($payment['notes'] ?? '')) ?>">
+                                                <?= htmlspecialchars((string)($payment['notes'] ?? '')) ?>
                                             </span>
                                         <?php else: ?>
                                             <span class="text-muted">-</span>
@@ -317,8 +318,8 @@ $isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
                                         </td>
                                     <?php endif; ?>
                                     <td>
-                                        <?php if (!empty($payment['receipt_path'])): ?>
-                                            <a href="<?= BASE_URL ?>/public/<?= $payment['receipt_path'] ?>" target="_blank" class="btn btn-sm btn-outline-secondary">
+                                        <?php if (!empty($payment['receipt_path'] ?? null)): ?>
+                                            <a href="<?= BASE_URL ?>/public/<?= (string)($payment['receipt_path'] ?? '') ?>" target="_blank" class="btn btn-sm btn-outline-secondary">
                                                 <i class="bi bi-file-earmark"></i>
                                             </a>
                                         <?php endif; ?>
