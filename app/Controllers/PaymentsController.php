@@ -348,9 +348,16 @@ class PaymentsController
                         }
 
                         $contractId = (int)($_POST['realtor_contract_id'] ?? 0);
-                        $clientId = (int)($_POST['realtor_client_id'] ?? 0);
-                        $listingId = (int)($_POST['realtor_listing_id'] ?? 0);
-                        $paymentType = trim((string)($_POST['payment_type'] ?? 'realtor'));
+                        if ($contractId <= 0) {
+                            $_SESSION['flash_message'] = 'Contract is required';
+                            $_SESSION['flash_type'] = 'danger';
+                            header('Location: ' . BASE_URL . '/payments');
+                            exit;
+                        }
+
+                        $clientId = 0;
+                        $listingId = 0;
+                        $paymentType = 'mortgage';
                         $amount = (float)($_POST['amount'] ?? 0);
                         $paymentDate = trim((string)($_POST['payment_date'] ?? date('Y-m-d')));
                         $paymentMethod = trim((string)($_POST['payment_method'] ?? 'cash'));
@@ -360,26 +367,24 @@ class PaymentsController
                         $appliesToMonth = trim((string)($_POST['applies_to_month'] ?? ''));
 
                         $contractTermsType = null;
-                        if ($contractId > 0) {
-                            $contractModel = new RealtorContract();
-                            $contract = $contractModel->getByIdWithAccess($contractId, $this->userId);
-                            if (!$contract) {
-                                $_SESSION['flash_message'] = 'Invalid contract selected';
-                                $_SESSION['flash_type'] = 'danger';
-                                header('Location: ' . BASE_URL . '/payments');
-                                exit;
-                            }
-                            $clientId = (int)($contract['realtor_client_id'] ?? 0);
-                            $listingId = (int)($contract['realtor_listing_id'] ?? 0);
-                            $contractTermsType = (string)($contract['terms_type'] ?? 'one_time');
+                        $contractModel = new RealtorContract();
+                        $contract = $contractModel->getByIdWithAccess($contractId, $this->userId);
+                        if (!$contract) {
+                            $_SESSION['flash_message'] = 'Invalid contract selected';
+                            $_SESSION['flash_type'] = 'danger';
+                            header('Location: ' . BASE_URL . '/payments');
+                            exit;
+                        }
+                        $clientId = (int)($contract['realtor_client_id'] ?? 0);
+                        $listingId = (int)($contract['realtor_listing_id'] ?? 0);
+                        $contractTermsType = (string)($contract['terms_type'] ?? 'one_time');
 
-                            // Normalize payment type based on contract terms.
-                            if ($contractTermsType === 'monthly') {
-                                $paymentType = 'mortgage_monthly';
-                            } else {
-                                $paymentType = 'mortgage';
-                                $appliesToMonth = '';
-                            }
+                        // Normalize payment type based on contract terms.
+                        if ($contractTermsType === 'monthly') {
+                            $paymentType = 'mortgage_monthly';
+                        } else {
+                            $paymentType = 'mortgage';
+                            $appliesToMonth = '';
                         }
 
                         if ($clientId <= 0 || $listingId <= 0) {

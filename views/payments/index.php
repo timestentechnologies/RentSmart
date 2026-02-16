@@ -359,6 +359,7 @@ $isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
     <div class="modal-dialog">
         <div class="modal-content">
             <form method="POST" action="<?= BASE_URL ?>/payments/store" enctype="multipart/form-data">
+                <?= csrf_field() ?>
                 <div class="modal-header">
                     <h5 class="modal-title" id="addPaymentModalLabel">Add Payment</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -366,9 +367,9 @@ $isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
                 <div class="modal-body">
                     <?php if ($isRealtor): ?>
                         <div class="mb-3">
-                            <label class="form-label">Contract (optional)</label>
-                            <select class="form-select" name="realtor_contract_id" id="realtor_contract_id">
-                                <option value="">Select Contract (optional)</option>
+                            <label class="form-label">Contract</label>
+                            <select class="form-select" name="realtor_contract_id" id="realtor_contract_id" required>
+                                <option value="">Select Contract</option>
                                 <?php foreach (($contracts ?? []) as $ct): ?>
                                     <?php
                                         $ctId = (int)($ct['id'] ?? 0);
@@ -396,7 +397,7 @@ $isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
                                     </option>
                                 <?php endforeach; ?>
                             </select>
-                            <div class="form-text">If selected, client/listing and payment type will follow the contract terms.</div>
+                            <div class="form-text">Client/listing and payment type will follow the contract terms.</div>
                         </div>
 
                         <div class="mb-3">
@@ -430,15 +431,8 @@ $isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Payment Type</label>
-                            <select class="form-select" name="payment_type" id="realtor_payment_type">
-                                <option value="realtor">Realtor Payment</option>
-                                <option value="commission">Commission</option>
-                                <option value="booking">Booking</option>
-                                <option value="deposit">Deposit</option>
-                                <option value="mortgage_monthly">Mortgage (Monthly)</option>
-                                <option value="mortgage">Mortgage</option>
-                                <option value="other">Other</option>
-                            </select>
+                            <input type="hidden" name="payment_type" id="realtor_payment_type" value="mortgage">
+                            <input type="text" class="form-control" id="realtor_payment_type_label" value="One Time" readonly>
                         </div>
                         <div class="mb-3">
                             <label class="form-label">Payment For Month</label>
@@ -1720,6 +1714,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const clientSel = document.getElementById('realtor_client_id');
     const listingSel = document.getElementById('realtor_listing_id');
     const typeSel = document.getElementById('realtor_payment_type');
+    const typeLabel = document.getElementById('realtor_payment_type_label');
     const amountInput = document.getElementById('realtor_amount');
     const monthInput = document.getElementById('realtor_applies_to_month');
     const monthHint = document.getElementById('realtor_month_hint');
@@ -1754,27 +1749,26 @@ document.addEventListener('DOMContentLoaded', function() {
 
             if (terms === 'monthly') {
                 typeSel.value = 'mortgage_monthly';
+                if (typeLabel) typeLabel.value = 'Monthly';
                 monthInput.required = true;
                 if (monthHint) monthHint.style.display = '';
             } else {
                 typeSel.value = 'mortgage';
+                if (typeLabel) typeLabel.value = 'One Time';
                 monthInput.required = false;
                 monthInput.value = '';
                 if (monthHint) monthHint.style.display = 'none';
             }
-            typeSel.disabled = true;
         } else {
-            typeSel.disabled = false;
-            // Only require month if user manually selected monthly mortgage
-            const t = (typeSel.value || '').toLowerCase();
-            const requiresMonth = (t === 'mortgage_monthly' || t === 'monthly_mortgage');
-            monthInput.required = requiresMonth;
-            if (monthHint) monthHint.style.display = requiresMonth ? '' : 'none';
+            // Contract is required for Realtor, but keep the UI consistent if cleared.
+            typeSel.value = 'mortgage';
+            if (typeLabel) typeLabel.value = 'One Time';
+            monthInput.required = false;
+            if (monthHint) monthHint.style.display = 'none';
         }
     };
 
     contractSel.addEventListener('change', applyContractRules);
-    typeSel.addEventListener('change', applyContractRules);
     applyContractRules();
 })();
 </script>
