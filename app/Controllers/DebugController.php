@@ -158,6 +158,20 @@ class DebugController
                 $type = 'opportunity';
             }
 
+            $amount = 0.0;
+            if (isset($_GET['amount']) && is_numeric($_GET['amount'])) {
+                $amount = (float)$_GET['amount'];
+            } else {
+                try {
+                    $planStmt = $db->prepare('SELECT price FROM subscription_plans WHERE id = ? LIMIT 1');
+                    $planStmt->execute([1]);
+                    $planRow = $planStmt->fetch(\PDO::FETCH_ASSOC);
+                    $amount = isset($planRow['price']) ? (float)$planRow['price'] : 0.0;
+                } catch (\Throwable $ignore) {
+                    $amount = 0.0;
+                }
+            }
+
             $leadData = [
                 'name' => $title,
                 'type' => $type,
@@ -167,8 +181,29 @@ class DebugController
                 'description' => 'Source: RentSmart debug/odoo-create-lead',
             ];
 
+            if ($amount > 0) {
+                $leadData['expected_revenue'] = (float)$amount;
+            }
+
             $objectUrl = $url . '/xmlrpc/2/object';
             $obj = new XmlRpcClient($objectUrl, 15);
+
+            $tagId = null;
+            try {
+                $search = $obj->call('execute_kw', [$database, $uid, $password, 'crm.tag', 'search_read', [[['name', '=', 'Rentsmart']], ['fields' => ['id'], 'limit' => 1]]]);
+                if (is_array($search) && !empty($search[0]['id'])) {
+                    $tagId = (int)$search[0]['id'];
+                } else {
+                    $tagId = (int)($obj->call('execute_kw', [$database, $uid, $password, 'crm.tag', 'create', [[['name' => 'Rentsmart']]]]) ?? 0);
+                }
+            } catch (\Throwable $ignore) {
+                $tagId = null;
+            }
+
+            if (!empty($tagId)) {
+                $leadData['tag_ids'] = [[6, 0, [(int)$tagId]]];
+            }
+
             $createdId = $obj->call('execute_kw', [$database, $uid, $password, 'crm.lead', 'create', [$leadData]]);
 
             header('Content-Type: application/json');

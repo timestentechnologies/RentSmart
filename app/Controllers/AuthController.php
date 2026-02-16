@@ -336,6 +336,20 @@ class AuthController
         $descParts[] = 'Source: Website Registration';
         $description = implode("\n", $descParts);
 
+        $starterAmount = 0.0;
+        try {
+            $starterAmount = $this->getStarterPlanPrice();
+        } catch (\Throwable $e) {
+            $starterAmount = 0.0;
+        }
+
+        $tagId = null;
+        try {
+            $tagId = $this->getOrCreateOdooTagId($urlBase, $db, (int)$uid, $password, 'Rentsmart');
+        } catch (\Throwable $e) {
+            $tagId = null;
+        }
+
         $leadData = [
             'name' => 'RentSmart - ' . $leadTitle,
             'type' => 'opportunity',
@@ -344,6 +358,14 @@ class AuthController
             'phone' => $phone,
             'description' => $description,
         ];
+
+        if ($starterAmount > 0) {
+            $leadData['expected_revenue'] = (float)$starterAmount;
+        }
+
+        if (!empty($tagId)) {
+            $leadData['tag_ids'] = [[6, 0, [(int)$tagId]]];
+        }
 
         $createdId = $this->odooExecuteKw($urlBase, $db, (int)$uid, $password, 'crm.lead', 'create', [$leadData]);
         if (!empty($createdId)) {
@@ -437,6 +459,34 @@ class AuthController
 
         $client = new XmlRpcClient($endpoint, 15);
         return $client->call($method, $params);
+    }
+
+    private function getStarterPlanPrice(): float
+    {
+        $db = Connection::getInstance()->getConnection();
+        $stmt = $db->prepare('SELECT price FROM subscription_plans WHERE id = ? LIMIT 1');
+        $stmt->execute([1]);
+        $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+        return isset($row['price']) ? (float)$row['price'] : 0.0;
+    }
+
+    private function getOrCreateOdooTagId(string $urlBase, string $db, int $uid, string $password, string $tagName): ?int
+    {
+        $tagName = trim($tagName);
+        if ($tagName === '') {
+            return null;
+        }
+
+        $found = $this->odooExecuteKw($urlBase, $db, $uid, $password, 'crm.tag', 'search_read', [[['name', '=', $tagName]], ['fields' => ['id'], 'limit' => 1]]);
+        if (is_array($found) && !empty($found[0]['id'])) {
+            return (int)$found[0]['id'];
+        }
+
+        $created = $this->odooExecuteKw($urlBase, $db, $uid, $password, 'crm.tag', 'create', [[['name' => $tagName]]]);
+        if (is_int($created) || (is_string($created) && ctype_digit($created))) {
+            return (int)$created;
+        }
+        return null;
     }
 
     public function login()
