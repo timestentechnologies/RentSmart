@@ -901,6 +901,8 @@ try {
     error_log("Error in routing | error_id={$globalErrorId} | msg=" . $e->getMessage());
     error_log("Error in routing | error_id={$globalErrorId} | trace=" . $e->getTraceAsString());
 
+    $debugMode = !empty($_GET['debug']) && isset($_SESSION['user_id']);
+
     try {
         $requestPath = trim((string)parse_url((string)($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH), '/');
         if ($requestPath === 'tenant/payment/process') {
@@ -930,8 +932,26 @@ try {
         echo json_encode([
             'success' => false,
             'message' => 'Server error. Error ID: ' . $globalErrorId,
-            'error_id' => $globalErrorId
+            'error_id' => $globalErrorId,
+            'debug' => $debugMode ? (
+                "Error ID: {$globalErrorId}\n"
+                . 'Message: ' . $e->getMessage() . "\n"
+                . 'File: ' . $e->getFile() . ':' . $e->getLine() . "\n\n"
+                . $e->getTraceAsString()
+            ) : null,
         ]);
+        exit;
+    }
+    if ($debugMode) {
+        header("HTTP/1.0 500 Internal Server Error");
+        echo '<pre style="white-space:pre-wrap; padding:16px;">'
+            . htmlspecialchars(
+                "Error ID: {$globalErrorId}\n"
+                . 'Message: ' . $e->getMessage() . "\n"
+                . 'File: ' . $e->getFile() . ':' . $e->getLine() . "\n\n"
+                . $e->getTraceAsString()
+            )
+            . '</pre>';
         exit;
     }
     header("HTTP/1.0 500 Internal Server Error");
