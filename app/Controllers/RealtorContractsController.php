@@ -34,6 +34,9 @@ class RealtorContractsController
         $model = new RealtorContract();
         $contracts = $model->getAllWithDetails($this->userId);
 
+        $paymentModel = new Payment();
+        $paidTotals = $paymentModel->getRealtorPaidTotalsByContract((int)$this->userId);
+
         $clientModel = new RealtorClient();
         $listingModel = new RealtorListing();
         $clients = $clientModel->getAll($this->userId);
@@ -42,6 +45,7 @@ class RealtorContractsController
         echo view('realtor/contracts', [
             'title' => 'Contracts',
             'contracts' => $contracts,
+            'paidTotals' => $paidTotals,
             'clients' => $clients,
             'listings' => $listings,
         ]);

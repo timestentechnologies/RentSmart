@@ -5,6 +5,8 @@ namespace App\Controllers;
 use App\Models\RealtorListing;
 use App\Models\RealtorClient;
 use App\Models\RealtorLead;
+use App\Models\RealtorContract;
+use App\Models\Payment;
 
 class RealtorDashboardController
 {
@@ -32,6 +34,8 @@ class RealtorDashboardController
         $listingModel = new RealtorListing();
         $clientModel = new RealtorClient();
         $leadModel = new RealtorLead();
+        $contractModel = new RealtorContract();
+        $paymentModel = new Payment();
 
         $stats = [
             'listings_total' => $listingModel->countAll($this->userId),
@@ -41,6 +45,27 @@ class RealtorDashboardController
             'leads_new' => $leadModel->countByStatus($this->userId, 'new'),
             'leads_won' => $leadModel->countByStatus($this->userId, 'won'),
         ];
+
+        $contracts = $contractModel->getAllWithDetails($this->userId);
+        $paidTotals = $paymentModel->getRealtorPaidTotalsByContract((int)$this->userId);
+
+        $expected = 0.0;
+        $received = 0.0;
+        foreach (($contracts ?? []) as $c) {
+            $status = (string)($c['status'] ?? 'active');
+            if ($status === 'cancelled') {
+                continue;
+            }
+            $cid = (int)($c['id'] ?? 0);
+            $total = (float)($c['total_amount'] ?? 0);
+            $expected += max(0.0, $total);
+            $received += (float)($paidTotals[$cid] ?? 0.0);
+        }
+        $remaining = max(0.0, $expected - $received);
+
+        $stats['contracts_expected_amount'] = $expected;
+        $stats['contracts_received_amount'] = $received;
+        $stats['contracts_remaining_amount'] = $remaining;
 
         $recentLeads = $leadModel->getRecent($this->userId, 5);
         $recentListings = $listingModel->getRecent($this->userId, 5);

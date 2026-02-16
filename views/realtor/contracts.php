@@ -25,6 +25,7 @@ ob_start();
                             <th>Listing</th>
                             <th>Terms</th>
                             <th>Total</th>
+                            <th>Payment</th>
                             <th>Status</th>
                             <th>Created</th>
                             <th>Actions</th>
@@ -39,6 +40,11 @@ ob_start();
                                 if ($status === 'active') { $statusBadge = 'success'; }
                                 elseif ($status === 'completed') { $statusBadge = 'primary'; }
                                 elseif ($status === 'cancelled') { $statusBadge = 'danger'; }
+
+                                $cid = (int)($x['id'] ?? 0);
+                                $total = (float)($x['total_amount'] ?? 0);
+                                $paid = (float)(($paidTotals ?? [])[$cid] ?? 0);
+                                $isFullyPaid = ($total > 0 && $paid + 0.00001 >= $total);
                             ?>
                             <tr>
                                 <td>#<?= (int)($x['id'] ?? 0) ?></td>
@@ -61,6 +67,14 @@ ob_start();
                                     <?php endif; ?>
                                 </td>
                                 <td>Ksh<?= number_format((float)($x['total_amount'] ?? 0), 2) ?></td>
+                                <td>
+                                    <?php if ($isFullyPaid): ?>
+                                        <span class="badge bg-success">Fully Paid</span>
+                                    <?php else: ?>
+                                        <span class="badge bg-warning text-dark">Not Paid</span>
+                                    <?php endif; ?>
+                                    <div class="small text-muted">Paid: Ksh<?= number_format($paid, 2) ?></div>
+                                </td>
                                 <td><span class="badge bg-<?= $statusBadge ?>"><?= htmlspecialchars(ucwords(str_replace('_',' ', $status))) ?></span></td>
                                 <td><?= htmlspecialchars((string)($x['created_at'] ?? '')) ?></td>
                                 <td>
