@@ -13,7 +13,31 @@ ob_start();
 
     <div class="card">
         <div class="card-header border-bottom">
-            <h5 class="card-title mb-0">All Contracts</h5>
+            <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center">
+                <h5 class="card-title mb-0">All Contracts</h5>
+                <div class="d-flex flex-wrap gap-2">
+                    <div class="input-group" style="min-width: 260px;">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" class="form-control" id="realtorContractsSearch" placeholder="Search contracts...">
+                    </div>
+                    <select class="form-select" id="realtorContractsFilterStatus" style="min-width: 180px;">
+                        <option value="">All Status</option>
+                        <option value="active">Active</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+                    </select>
+                    <select class="form-select" id="realtorContractsFilterTerms" style="min-width: 180px;">
+                        <option value="">All Terms</option>
+                        <option value="monthly">Monthly</option>
+                        <option value="one_time">One Time</option>
+                    </select>
+                    <select class="form-select" id="realtorContractsFilterPayment" style="min-width: 180px;">
+                        <option value="">All Payments</option>
+                        <option value="paid">Fully Paid</option>
+                        <option value="unpaid">Not Paid</option>
+                    </select>
+                </div>
+            </div>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">
@@ -46,7 +70,7 @@ ob_start();
                                 $paid = (float)(($paidTotals ?? [])[$cid] ?? 0);
                                 $isFullyPaid = ($total > 0 && $paid + 0.00001 >= $total);
                             ?>
-                            <tr>
+                            <tr data-status="<?= htmlspecialchars($status) ?>" data-terms="<?= htmlspecialchars($terms) ?>" data-payment="<?= $isFullyPaid ? 'paid' : 'unpaid' ?>">
                                 <td>#<?= (int)($x['id'] ?? 0) ?></td>
                                 <td>
                                     <div class="fw-semibold"><?= htmlspecialchars((string)($x['client_name'] ?? '')) ?></div>
@@ -90,6 +114,51 @@ ob_start();
         </div>
     </div>
 </div>
+
+<script>
+(function(){
+  const table = document.getElementById('realtorContractsTable');
+  const q = document.getElementById('realtorContractsSearch');
+  const fStatus = document.getElementById('realtorContractsFilterStatus');
+  const fTerms = document.getElementById('realtorContractsFilterTerms');
+  const fPay = document.getElementById('realtorContractsFilterPayment');
+  if (!table) return;
+  const tbody = table.querySelector('tbody');
+  if (!tbody) return;
+
+  const norm = (v) => (String(v || '')).toLowerCase().trim();
+
+  function apply(){
+    const query = norm(q && q.value);
+    const status = norm(fStatus && fStatus.value);
+    const terms = norm(fTerms && fTerms.value);
+    const pay = norm(fPay && fPay.value);
+
+    const rows = tbody.querySelectorAll('tr');
+    rows.forEach((tr) => {
+      const rowText = norm(tr.innerText);
+      const rowStatus = norm(tr.getAttribute('data-status'));
+      const rowTerms = norm(tr.getAttribute('data-terms'));
+      const rowPay = norm(tr.getAttribute('data-payment'));
+
+      let ok = true;
+      if (query && !rowText.includes(query)) ok = false;
+      if (status && rowStatus !== status) ok = false;
+      if (terms && rowTerms !== terms) ok = false;
+      if (pay && rowPay !== pay) ok = false;
+
+      tr.style.display = ok ? '' : 'none';
+    });
+  }
+
+  [q, fStatus, fTerms, fPay].forEach((el) => {
+    if (!el) return;
+    el.addEventListener('input', apply);
+    el.addEventListener('change', apply);
+  });
+  apply();
+})();
+</script>
 
 <div class="modal fade" id="addContractModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
