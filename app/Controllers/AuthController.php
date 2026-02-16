@@ -422,11 +422,11 @@ class AuthController
         return $uid > 0 ? $uid : null;
     }
 
-    private function odooExecuteKw(string $urlBase, string $db, int $uid, string $password, string $model, string $method, array $params = [])
+    private function odooExecuteKw(string $urlBase, string $db, int $uid, string $password, string $model, string $method, array $args = [], array $kwargs = [])
     {
         $url = $urlBase . '/xmlrpc/2/object';
         try {
-            return $this->xmlRpcCall($url, 'execute_kw', [$db, $uid, $password, $model, $method, $params]);
+            return $this->xmlRpcCall($url, 'execute_kw', [$db, $uid, $password, $model, $method, $args, $kwargs]);
         } catch (\Throwable $e) {
             error_log('Odoo execute_kw failed. Model: ' . $model . ' Method: ' . $method . ' Error: ' . $e->getMessage());
             throw new \Exception('Failed to call Odoo: ' . $e->getMessage());
@@ -477,12 +477,21 @@ class AuthController
             return null;
         }
 
-        $found = $this->odooExecuteKw($urlBase, $db, $uid, $password, 'crm.tag', 'search_read', [[['name', '=', $tagName]], ['fields' => ['id'], 'limit' => 1]]);
+        $found = $this->odooExecuteKw(
+            $urlBase,
+            $db,
+            $uid,
+            $password,
+            'crm.tag',
+            'search_read',
+            [[['name', '=', $tagName]]],
+            ['fields' => ['id'], 'limit' => 1]
+        );
         if (is_array($found) && !empty($found[0]['id'])) {
             return (int)$found[0]['id'];
         }
 
-        $created = $this->odooExecuteKw($urlBase, $db, $uid, $password, 'crm.tag', 'create', [[['name' => $tagName]]]);
+        $created = $this->odooExecuteKw($urlBase, $db, $uid, $password, 'crm.tag', 'create', [['name' => $tagName]]);
         if (is_int($created) || (is_string($created) && ctype_digit($created))) {
             return (int)$created;
         }
