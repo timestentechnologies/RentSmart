@@ -69,7 +69,7 @@ ob_start();
                                         <option value="<?= (int)($p['id'] ?? 0) ?>"><?= htmlspecialchars((string)($p['name'] ?? '')) ?></option>
                                     <?php endforeach; ?>
                                 </select>
-                                <button type="button" class="btn btn-outline-primary" id="agentClientAddPropertyBtn" title="Add Property">
+                                <button type="button" class="btn btn-outline-primary" id="agentClientAddPropertyBtn" title="Add Property" data-bs-toggle="modal" data-bs-target="#agentClientAddPropertyModal">
                                     <i class="bi bi-plus-circle"></i>
                                 </button>
                             </div>
@@ -169,13 +169,14 @@ ob_start();
   const addPropForm = document.getElementById('agentClientAddPropertyForm');
   const addPropErr = document.getElementById('agentClientAddPropertyError');
   const addPropSubmit = document.getElementById('agentClientAddPropertySubmit');
-  const addPropModal = addPropModalEl ? new bootstrap.Modal(addPropModalEl) : null;
+  const addPropModal = (addPropModalEl && window.bootstrap && window.bootstrap.Modal)
+    ? window.bootstrap.Modal.getOrCreateInstance(addPropModalEl)
+    : null;
 
-  if(addPropBtn && addPropModal){
+  if(addPropBtn){
     addPropBtn.addEventListener('click', ()=>{
       if(addPropErr){ addPropErr.classList.add('d-none'); addPropErr.textContent = ''; }
       addPropForm?.reset();
-      addPropModal.show();
     });
   }
 
@@ -201,7 +202,9 @@ ob_start();
       opt.textContent = String(fd.get('name') || 'New Property');
       propertySel.appendChild(opt);
       propertySel.value = opt.value;
-      addPropModal?.hide();
+      if (addPropModal) {
+        addPropModal.hide();
+      }
     } catch (err){
       if(addPropErr){
         addPropErr.textContent = String(err && err.message ? err.message : err);

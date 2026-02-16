@@ -9,62 +9,6 @@ ob_start();
                 <i class="bi bi-plus-circle me-1"></i>Add Lead
             </button>
         </div>
-
-<div class="modal fade" id="agentAddPropertyModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <form id="agentAddPropertyForm">
-        <div class="modal-header">
-          <h5 class="modal-title">Add Property</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <div class="row g-3">
-            <div class="col-md-6">
-              <label class="form-label">Name</label>
-              <input class="form-control" name="name" required>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Property Type</label>
-              <select class="form-select" name="property_type" required>
-                <option value="">Select Type</option>
-                <option value="apartment">Apartment</option>
-                <option value="house">House</option>
-                <option value="commercial">Commercial</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Address</label>
-              <input class="form-control" name="address" required>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">City</label>
-              <input class="form-control" name="city" required>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">State</label>
-              <input class="form-control" name="state" required>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">ZIP Code</label>
-              <input class="form-control" name="zip_code" required>
-            </div>
-            <div class="col-12">
-              <label class="form-label">Description</label>
-              <textarea class="form-control" name="description" rows="3"></textarea>
-            </div>
-          </div>
-          <div class="alert alert-danger mt-3 d-none" id="agentAddPropertyError"></div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-primary" id="agentAddPropertySubmit">Create Property</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
     </div>
 
     <style>
@@ -180,7 +124,7 @@ ob_start();
                     <option value="<?= (int)($p['id'] ?? 0) ?>"><?= htmlspecialchars((string)($p['name'] ?? '')) ?></option>
                   <?php endforeach; ?>
                 </select>
-                <button type="button" class="btn btn-outline-primary" id="agentLeadAddPropertyBtn" title="Add Property">
+                <button type="button" class="btn btn-outline-primary" id="agentLeadAddPropertyBtn" title="Add Property" data-bs-toggle="modal" data-bs-target="#agentAddPropertyModal">
                   <i class="bi bi-plus-circle"></i>
                 </button>
               </div>
@@ -263,13 +207,14 @@ ob_start();
   const addPropForm = document.getElementById('agentAddPropertyForm');
   const addPropErr = document.getElementById('agentAddPropertyError');
   const addPropSubmit = document.getElementById('agentAddPropertySubmit');
-  const addPropModal = addPropModalEl ? new bootstrap.Modal(addPropModalEl) : null;
+  const addPropModal = (addPropModalEl && window.bootstrap && window.bootstrap.Modal)
+    ? window.bootstrap.Modal.getOrCreateInstance(addPropModalEl)
+    : null;
 
-  if(addPropBtn && addPropModal){
+  if(addPropBtn){
     addPropBtn.addEventListener('click', ()=>{
       if(addPropErr){ addPropErr.classList.add('d-none'); addPropErr.textContent = ''; }
       addPropForm?.reset();
-      addPropModal.show();
     });
   }
 
@@ -296,7 +241,9 @@ ob_start();
       propertySel.appendChild(opt);
       propertySel.value = opt.value;
       propertySel.dispatchEvent(new Event('change'));
-      addPropModal?.hide();
+      if (addPropModal) {
+        addPropModal.hide();
+      }
     } catch (err){
       if(addPropErr){
         addPropErr.textContent = String(err && err.message ? err.message : err);
@@ -364,6 +311,62 @@ ob_start();
   });
 })();
 </script>
+
+<div class="modal fade" id="agentAddPropertyModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <form id="agentAddPropertyForm">
+        <div class="modal-header">
+          <h5 class="modal-title">Add Property</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Name</label>
+              <input class="form-control" name="name" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Property Type</label>
+              <select class="form-select" name="property_type" required>
+                <option value="">Select Type</option>
+                <option value="apartment">Apartment</option>
+                <option value="house">House</option>
+                <option value="commercial">Commercial</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Address</label>
+              <input class="form-control" name="address" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">City</label>
+              <input class="form-control" name="city" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">State</label>
+              <input class="form-control" name="state" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">ZIP Code</label>
+              <input class="form-control" name="zip_code" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Description</label>
+              <textarea class="form-control" name="description" rows="3"></textarea>
+            </div>
+          </div>
+          <div class="alert alert-danger mt-3 d-none" id="agentAddPropertyError"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="agentAddPropertySubmit">Create Property</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 
 <?php
 $content = ob_get_clean();
