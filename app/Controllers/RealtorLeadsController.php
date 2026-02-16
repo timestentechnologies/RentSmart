@@ -31,19 +31,24 @@ class RealtorLeadsController
 
     public function index()
     {
-        $model = new RealtorLead();
-        $leads = $model->getAll($this->userId);
-        $stageModel = new RealtorLeadStage();
-        $stages = $stageModel->getAll($this->userId);
+        try {
+            $model = new RealtorLead();
+            $leads = $model->getAll($this->userId);
+            $stageModel = new RealtorLeadStage();
+            $stages = $stageModel->getAll($this->userId);
 
-        $listingModel = new RealtorListing();
-        $listings = $listingModel->getAll($this->userId);
-        echo view('realtor/leads', [
-            'title' => 'CRM - Leads',
-            'leads' => $leads,
-            'stages' => $stages,
-            'listings' => $listings,
-        ]);
+            $listingModel = new RealtorListing();
+            $listings = $listingModel->getAll($this->userId);
+            echo view('realtor/leads', [
+                'title' => 'CRM - Leads',
+                'leads' => $leads,
+                'stages' => $stages,
+                'listings' => $listings,
+            ]);
+        } catch (\Throwable $e) {
+            error_log('RealtorLeads index failed: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+            echo view('errors/500', ['title' => '500 Internal Server Error']);
+        }
     }
 
     private function maybeConvertToClient($leadId)

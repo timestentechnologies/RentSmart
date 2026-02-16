@@ -5,6 +5,9 @@ ob_start();
     <div class="card page-header mb-4">
         <div class="card-body d-flex justify-content-between align-items-center">
             <h1 class="h3 mb-0"><i class="bi bi-kanban text-primary me-2"></i>CRM - Leads</h1>
+            <button class="btn btn-sm btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#addAgentLeadModal">
+                <i class="bi bi-plus-circle me-1"></i>Add Lead
+            </button>
         </div>
     </div>
 
@@ -93,9 +96,83 @@ ob_start();
     </div>
 </div>
 
+<div class="modal fade" id="addAgentLeadModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <form method="POST" action="<?= BASE_URL ?>/agent/leads/store">
+        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
+        <div class="modal-header">
+          <h5 class="modal-title">Add Lead</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Property</label>
+              <select class="form-select" name="property_id" id="agent_lead_property" required>
+                <option value="">Select property</option>
+                <?php foreach (($properties ?? []) as $p): ?>
+                  <option value="<?= (int)($p['id'] ?? 0) ?>"><?= htmlspecialchars((string)($p['name'] ?? '')) ?></option>
+                <?php endforeach; ?>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Unit (optional)</label>
+              <select class="form-select" name="unit_id" id="agent_lead_unit">
+                <option value="">Select unit</option>
+                <?php foreach (($units ?? []) as $u): ?>
+                  <option value="<?= (int)($u['id'] ?? 0) ?>" data-property-id="<?= (int)($u['property_id'] ?? 0) ?>">
+                    <?= htmlspecialchars((string)($u['property_name'] ?? '')) ?> - Unit <?= htmlspecialchars((string)($u['unit_number'] ?? '')) ?>
+                  </option>
+                <?php endforeach; ?>
+              </select>
+              <div class="form-text">Units list is filtered by selected property.</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Name</label>
+              <input class="form-control" name="name" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Contact</label>
+              <input class="form-control" name="contact" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Message/Notes</label>
+              <textarea class="form-control" name="message" rows="3"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary">Save Lead</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
 <script>
 (function(){
   let draggedId = null;
+
+  const propertySel = document.getElementById('agent_lead_property');
+  const unitSel = document.getElementById('agent_lead_unit');
+  function filterUnits(){
+    if(!propertySel || !unitSel) return;
+    const pid = propertySel.value;
+    Array.from(unitSel.options).forEach(opt=>{
+      if(!opt.value) return;
+      const ok = !pid || opt.getAttribute('data-property-id') === pid;
+      opt.hidden = !ok;
+    });
+    if(unitSel.selectedOptions.length && unitSel.selectedOptions[0].hidden){
+      unitSel.value = '';
+    }
+  }
+  if(propertySel){
+    propertySel.addEventListener('change', filterUnits);
+    filterUnits();
+  }
 
   function recomputeCounts(){
     document.querySelectorAll('.crm-col[data-stage]').forEach(col=>{

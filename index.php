@@ -486,6 +486,7 @@ $routes = [
     'agent/contracts/store' => ['controller' => 'AgentContractsController', 'action' => 'store'],
 
     'agent/leads' => ['controller' => 'AgentLeadsController', 'action' => 'index'],
+    'agent/leads/store' => ['controller' => 'AgentLeadsController', 'action' => 'store'],
     'agent/leads/update-stage/(\d+)' => ['controller' => 'AgentLeadsController', 'action' => 'updateStage'],
 ];
 
@@ -749,6 +750,7 @@ $protectedRoutes = [
     'agent/contracts/store',
 
     'agent/leads',
+    'agent/leads/store',
     'agent/leads/update-stage/(\d+)',
 ];
 
