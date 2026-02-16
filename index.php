@@ -730,9 +730,9 @@ $protectedRoutes = [
 
     'realtor/contracts',
     'realtor/contracts/store',
-    'realtor/contracts/show/(\d+)',,
-    'realtor/contracts/print/(\d+)'
-    'realtor/contracts/update/(\d+)'
+    'realtor/contracts/show/(\d+)',
+    'realtor/contracts/update/(\d+)',
+    'realtor/contracts/print/(\d+)',
 ];
 
 // Check if the current route requires authentication
