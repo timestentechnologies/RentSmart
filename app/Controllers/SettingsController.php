@@ -216,7 +216,8 @@ class SettingsController
             $allowedFields = [
                 'site_name', 'site_email', 'site_description', 'site_keywords',
                 'site_footer_text', 'site_analytics_code', 'maintenance_mode',
-                'timezone', 'date_format'
+                'timezone', 'date_format',
+                'odoo_url', 'odoo_database', 'odoo_username', 'odoo_password'
             ];
 
             // Process text fields

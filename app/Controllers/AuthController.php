@@ -301,6 +301,7 @@ class AuthController
     {
         $cfg = $this->getOdooConfig();
         if (empty($cfg['url']) || empty($cfg['db']) || empty($cfg['username']) || empty($cfg['password'])) {
+            error_log('Odoo lead skipped: missing config (url/db/username/password)');
             return;
         }
 
@@ -311,6 +312,7 @@ class AuthController
 
         $uid = $this->odooAuthenticate($urlBase, $db, $username, $password);
         if (empty($uid)) {
+            error_log('Odoo lead skipped: authentication failed');
             return;
         }
 
@@ -342,7 +344,10 @@ class AuthController
             'description' => $description,
         ];
 
-        $this->odooExecuteKw($urlBase, $db, (int)$uid, $password, 'crm.lead', 'create', [$leadData]);
+        $createdId = $this->odooExecuteKw($urlBase, $db, (int)$uid, $password, 'crm.lead', 'create', [$leadData]);
+        if (!empty($createdId)) {
+            error_log('Odoo lead created from registration. Lead ID: ' . (is_scalar($createdId) ? (string)$createdId : json_encode($createdId)));
+        }
     }
 
     private function getOdooConfig(): array
@@ -367,6 +372,17 @@ class AuthController
             // ignore
         }
 
+        if (!empty($out['url'])) {
+            $raw = trim((string)$out['url']);
+            $p = @parse_url($raw);
+            if (!empty($p['scheme']) && !empty($p['host'])) {
+                $out['url'] = $p['scheme'] . '://' . $p['host'];
+                if (!empty($p['port'])) {
+                    $out['url'] .= ':' . $p['port'];
+                }
+            }
+        }
+
         return $out;
     }
 
@@ -384,6 +400,8 @@ class AuthController
         ]);
         $resp = @file_get_contents($url, false, $ctx);
         if ($resp === false) {
+            $last = error_get_last();
+            error_log('Odoo auth failed: HTTP request failed. URL: ' . $url . ' Error: ' . ($last['message'] ?? 'unknown'));
             return null;
         }
         $decoded = xmlrpc_decode($resp);
@@ -409,10 +427,13 @@ class AuthController
         ]);
         $resp = @file_get_contents($url, false, $ctx);
         if ($resp === false) {
+            $last = error_get_last();
+            error_log('Odoo execute_kw failed: HTTP request failed. URL: ' . $url . ' Model: ' . $model . ' Method: ' . $method . ' Error: ' . ($last['message'] ?? 'unknown'));
             throw new \Exception('Failed to connect to Odoo');
         }
         $decoded = xmlrpc_decode($resp);
         if (is_array($decoded) && xmlrpc_is_fault($decoded)) {
+            error_log('Odoo execute_kw fault. Model: ' . $model . ' Method: ' . $method . ' Fault: ' . ($decoded['faultString'] ?? 'unknown'));
             throw new \Exception('Odoo API fault: ' . ($decoded['faultString'] ?? 'unknown'));
         }
         return $decoded;
