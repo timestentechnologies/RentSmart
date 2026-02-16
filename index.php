@@ -492,6 +492,7 @@ $routes = [
 
     // Debug (protected by DEBUG_KEY)
     'debug/last-error' => ['controller' => 'DebugController', 'action' => 'lastError'],
+    'debug/odoo-test' => ['controller' => 'DebugController', 'action' => 'odooTest'],
 ];
 
 // Protected routes that require authentication
