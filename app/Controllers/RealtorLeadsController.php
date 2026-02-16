@@ -130,19 +130,17 @@ class RealtorLeadsController
                     [(int)$this->userId, (int)$clientId, (int)$lead['realtor_listing_id']]
                 );
                 if (empty($existing)) {
-                    if ($total > 0) {
-                        $contractId = $contractModel->insert([
-                            'user_id' => (int)$this->userId,
-                            'realtor_client_id' => (int)$clientId,
-                            'realtor_listing_id' => (int)$lead['realtor_listing_id'],
-                            'terms_type' => 'one_time',
-                            'total_amount' => (float)$total,
-                            'monthly_amount' => null,
-                            'duration_months' => null,
-                            'start_month' => null,
-                            'status' => 'active',
-                        ]);
-                    }
+                    $contractId = $contractModel->insert([
+                        'user_id' => (int)$this->userId,
+                        'realtor_client_id' => (int)$clientId,
+                        'realtor_listing_id' => (int)$lead['realtor_listing_id'],
+                        'terms_type' => 'one_time',
+                        'total_amount' => (float)$total,
+                        'monthly_amount' => null,
+                        'duration_months' => null,
+                        'start_month' => null,
+                        'status' => 'active',
+                    ]);
                 } else {
                     $contractId = (int)($existing[0]['id'] ?? 0);
                 }
@@ -345,19 +343,17 @@ class RealtorLeadsController
                             $total = 0.0;
                         }
 
-                        if ($total > 0) {
-                            $contractId = $contractModel->insert([
-                                'user_id' => (int)$this->userId,
-                                'realtor_client_id' => (int)$clientId,
-                                'realtor_listing_id' => (int)$lead['realtor_listing_id'],
-                                'terms_type' => 'one_time',
-                                'total_amount' => (float)$total,
-                                'monthly_amount' => null,
-                                'duration_months' => null,
-                                'start_month' => null,
-                                'status' => 'active',
-                            ]);
-                        }
+                        $contractId = $contractModel->insert([
+                            'user_id' => (int)$this->userId,
+                            'realtor_client_id' => (int)$clientId,
+                            'realtor_listing_id' => (int)$lead['realtor_listing_id'],
+                            'terms_type' => 'one_time',
+                            'total_amount' => (float)$total,
+                            'monthly_amount' => null,
+                            'duration_months' => null,
+                            'start_month' => null,
+                            'status' => 'active',
+                        ]);
                     }
                 } catch (\Exception $e) {
                 }

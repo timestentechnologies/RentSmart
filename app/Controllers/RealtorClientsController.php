@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Models\RealtorClient;
+use App\Models\RealtorListing;
 
 class RealtorClientsController
 {
@@ -29,9 +30,13 @@ class RealtorClientsController
     {
         $model = new RealtorClient();
         $clients = $model->getAll($this->userId);
+
+        $listingModel = new RealtorListing();
+        $listings = $listingModel->getAll($this->userId);
         echo view('realtor/clients', [
             'title' => 'Clients',
             'clients' => $clients,
+            'listings' => $listings,
         ]);
     }
 

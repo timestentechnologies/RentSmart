@@ -72,19 +72,17 @@ ob_start();
                                 </td>
                                 <td class="text-truncate" style="max-width:240px;" title="<?= htmlspecialchars((string)($x['notes'] ?? '')) ?>"><?= htmlspecialchars((string)($x['notes'] ?? '')) ?></td>
                                 <td>
-                                    <?php if (!empty($x['realtor_listing_id'] ?? null)): ?>
-                                        <button
-                                            type="button"
-                                            class="btn btn-sm btn-outline-success me-1 js-open-client-contract"
-                                            data-client-id="<?= (int)($x['id'] ?? 0) ?>"
-                                            data-listing-id="<?= (int)($x['realtor_listing_id'] ?? 0) ?>"
-                                            data-client-name="<?= htmlspecialchars((string)($x['name'] ?? '')) ?>"
-                                            data-listing-title="<?= htmlspecialchars((string)($x['listing_title'] ?? '')) ?>"
-                                            title="Create Contract"
-                                        >
-                                            <i class="bi bi-file-earmark-plus"></i>
-                                        </button>
-                                    <?php endif; ?>
+                                    <button
+                                        type="button"
+                                        class="btn btn-sm btn-outline-success me-1 js-open-client-contract"
+                                        data-client-id="<?= (int)($x['id'] ?? 0) ?>"
+                                        data-listing-id="<?= (int)($x['realtor_listing_id'] ?? 0) ?>"
+                                        data-client-name="<?= htmlspecialchars((string)($x['name'] ?? '')) ?>"
+                                        data-listing-title="<?= htmlspecialchars((string)($x['listing_title'] ?? '')) ?>"
+                                        title="Create Contract"
+                                    >
+                                        <i class="bi bi-file-earmark-plus"></i>
+                                    </button>
                                     <?php if (!empty($x['contract_id'] ?? null)): ?>
                                         <a class="btn btn-sm btn-outline-secondary me-1" href="<?= BASE_URL ?>/realtor/contracts/show/<?= (int)($x['contract_id'] ?? 0) ?>" title="View Contract">
                                             <i class="bi bi-eye"></i>
@@ -108,7 +106,6 @@ ob_start();
       <form method="POST" action="<?= BASE_URL ?>/realtor/contracts/store" id="clientContractForm">
         <?= csrf_field() ?>
         <input type="hidden" name="realtor_client_id" id="cc_client_id">
-        <input type="hidden" name="realtor_listing_id" id="cc_listing_id">
         <div class="modal-header">
           <h5 class="modal-title">Create Contract</h5>
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -121,6 +118,18 @@ ob_start();
             <div class="mb-3">
                 <div class="small text-muted">Listing</div>
                 <div class="fw-semibold" id="cc_listing_title"></div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Select Listing</label>
+                <select class="form-select" name="realtor_listing_id" id="cc_listing_select" required>
+                    <option value="">Select listing</option>
+                    <?php foreach (($listings ?? []) as $l): ?>
+                        <option value="<?= (int)($l['id'] ?? 0) ?>">
+                            <?= htmlspecialchars((string)($l['title'] ?? '')) ?><?= !empty($l['location'] ?? null) ? ' - ' . htmlspecialchars((string)($l['location'] ?? '')) : '' ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
             </div>
 
             <div class="mb-3">
@@ -236,9 +245,16 @@ ob_start();
 <script>
 function openClientContractModal(clientId, listingId, clientName, listingTitle){
   document.getElementById('cc_client_id').value = String(clientId || '');
-  document.getElementById('cc_listing_id').value = String(listingId || '');
   document.getElementById('cc_client_name').textContent = clientName || '';
   document.getElementById('cc_listing_title').textContent = listingTitle || '';
+  const sel = document.getElementById('cc_listing_select');
+  if (sel) {
+    sel.value = listingId ? String(listingId) : '';
+    if (!listingTitle) {
+      const opt = sel.options[sel.selectedIndex];
+      document.getElementById('cc_listing_title').textContent = opt ? (opt.textContent || '') : '';
+    }
+  }
   document.getElementById('cc_terms_type').value = 'one_time';
   document.getElementById('cc_total_amount').value = '';
   document.getElementById('cc_start_month').value = '';
@@ -246,6 +262,11 @@ function openClientContractModal(clientId, listingId, clientName, listingTitle){
   toggleClientContractTerms();
   new bootstrap.Modal(document.getElementById('clientContractModal')).show();
 }
+
+document.getElementById('cc_listing_select')?.addEventListener('change', function(){
+  const opt = this.options[this.selectedIndex];
+  document.getElementById('cc_listing_title').textContent = opt ? (opt.textContent || '') : '';
+});
 
 function toggleClientContractTerms(){
   const type = document.getElementById('cc_terms_type').value;

@@ -126,16 +126,18 @@ $isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
                         <?php endforeach; ?>
                     </select>
                 </div>
-                <div class="col-md-3">
-                    <label for="methodFilter" class="form-label">Payment Method</label>
-                    <select class="form-select" id="methodFilter">
-                        <option value="">All Methods</option>
-                        <option value="cash">Cash</option>
-                        <option value="check">Check</option>
-                        <option value="bank_transfer">Bank Transfer</option>
-                        <option value="credit_card">Credit Card</option>
-                    </select>
-                </div>
+                <?php if (!$isRealtor): ?>
+                    <div class="col-md-3">
+                        <label for="methodFilter" class="form-label">Payment Method</label>
+                        <select class="form-select" id="methodFilter">
+                            <option value="">All Methods</option>
+                            <option value="cash">Cash</option>
+                            <option value="check">Check</option>
+                            <option value="bank_transfer">Bank Transfer</option>
+                            <option value="credit_card">Credit Card</option>
+                        </select>
+                    </div>
+                <?php endif; ?>
                 <div class="col-md-3">
                     <label for="amountFilter" class="form-label">Amount Range</label>
                     <select class="form-select" id="amountFilter">
@@ -173,7 +175,9 @@ $isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
                             <th>Amount</th>
                             <th>Date</th>
                             <th>Type</th>
-                            <th>Method</th>
+                            <?php if (!$isRealtor): ?>
+                                <th>Method</th>
+                            <?php endif; ?>
                             <th>M-Pesa Code</th>
                             <th>Phone Number</th>
                             <th>Status</th>
@@ -254,23 +258,26 @@ $isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
                                             <?= $typeText ?>
                                         </span>
                                     </td>
-                                    <td>
-                                        <?php
-                                        $methodClasses = [
-                                            'cash' => 'bg-success',
-                                            'check' => 'bg-info',
-                                            'bank_transfer' => 'bg-primary',
-                                            'credit_card' => 'bg-warning text-dark',
-                                            'mpesa_manual' => 'bg-primary',
-                                            'mpesa_stk' => 'bg-info'
-                                        ];
-                                        $paymentMethod = (string)($payment['payment_method'] ?? '');
-                                        $methodClass = $methodClasses[$paymentMethod] ?? 'bg-secondary';
-                                        ?>
-                                        <span class="badge <?= $methodClass ?>">
-                                            <?= ucwords(str_replace('_', ' ', $paymentMethod)) ?>
-                                        </span>
-                                    </td>
+                                    <?php if (!$isRealtor): ?>
+                                        <td>
+                                            <?php
+                                            $methodClasses = [
+                                                'cash' => 'bg-success',
+                                                'check' => 'bg-warning text-dark',
+                                                'bank_transfer' => 'bg-info',
+                                                'card' => 'bg-secondary',
+                                                'credit_card' => 'bg-secondary',
+                                                'mpesa_manual' => 'bg-primary',
+                                                'mpesa_stk' => 'bg-info'
+                                            ];
+                                            $paymentMethod = (string)($payment['payment_method'] ?? '');
+                                            $methodClass = $methodClasses[$paymentMethod] ?? 'bg-secondary';
+                                            ?>
+                                            <span class="badge <?= $methodClass ?>">
+                                                <?= htmlspecialchars(ucwords(str_replace(['_', '-'], ' ', $paymentMethod))) ?>
+                                            </span>
+                                        </td>
+                                    <?php endif; ?>
                                     <td>
                                         <?php if (!empty($payment['transaction_code'] ?? null)): ?>
                                             <code class="text-primary"><?= htmlspecialchars((string)($payment['transaction_code'] ?? '')) ?></code>
@@ -368,14 +375,22 @@ $isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
                                         $ctTerms = (string)($ct['terms_type'] ?? 'one_time');
                                         $ctClient = (string)($ct['client_name'] ?? '');
                                         $ctListing = (string)($ct['listing_title'] ?? '');
+                                        $ctClientId = (int)($ct['realtor_client_id'] ?? 0);
+                                        $ctListingId = (int)($ct['realtor_listing_id'] ?? 0);
+                                        $ctTotalAmount = (float)($ct['total_amount'] ?? 0);
+                                        $ctMonthlyAmount = (float)($ct['monthly_amount'] ?? 0);
                                         $ctStart = substr((string)($ct['start_month'] ?? ''), 0, 7);
                                         $ctDur = (int)($ct['duration_months'] ?? 0);
                                     ?>
                                     <option
                                         value="<?= $ctId ?>"
+                                        data-client-id="<?= (int)$ctClientId ?>"
+                                        data-listing-id="<?= (int)$ctListingId ?>"
                                         data-terms="<?= htmlspecialchars($ctTerms, ENT_QUOTES) ?>"
                                         data-start-month="<?= htmlspecialchars($ctStart, ENT_QUOTES) ?>"
                                         data-duration="<?= (int)$ctDur ?>"
+                                        data-total-amount="<?= htmlspecialchars((string)$ctTotalAmount, ENT_QUOTES) ?>"
+                                        data-monthly-amount="<?= htmlspecialchars((string)$ctMonthlyAmount, ENT_QUOTES) ?>"
                                     >
                                         #<?= $ctId ?> - <?= htmlspecialchars($ctClient) ?> / <?= htmlspecialchars($ctListing) ?> (<?= htmlspecialchars($ctTerms) ?>)
                                     </option>
@@ -406,7 +421,7 @@ $isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
                             <label class="form-label">Amount</label>
                             <div class="input-group">
                                 <span class="input-group-text">Ksh</span>
-                                <input type="number" step="0.01" class="form-control" name="amount" required>
+                                <input type="number" step="0.01" class="form-control" name="amount" id="realtor_amount" required>
                             </div>
                         </div>
                         <div class="mb-3">
@@ -553,23 +568,28 @@ $isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
                         </div>
                     <?php endif; ?>
 
-                    <div class="mb-3">
-                        <label for="payment_method" class="form-label">Payment Method</label>
-                        <select class="form-select" id="payment_method" name="payment_method" required onchange="togglePaymentMethodFields()">
-                            <option value="">Select Payment Method</option>
-                            <option value="cash">Cash</option>
-                            <option value="check">Check</option>
-                            <option value="bank_transfer">Bank Transfer</option>
-                            <option value="card">Credit/Debit Card</option>
-                            <option value="mpesa_manual">M-Pesa (Manual)</option>
-                            <option value="mpesa_stk">M-Pesa (STK Push)</option>
-                        </select>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="reference_number" class="form-label">Reference Number</label>
-                        <input type="text" class="form-control" id="reference_number" name="reference_number" placeholder="Optional reference number">
-                    </div>
+                    <?php if ($isRealtor): ?>
+                        <input type="hidden" name="payment_method" value="cash">
+                        <input type="hidden" name="reference_number" value="">
+                    <?php else: ?>
+                        <div class="mb-3">
+                            <label for="payment_method" class="form-label">Payment Method</label>
+                            <select class="form-select" id="payment_method" name="payment_method" required onchange="togglePaymentMethodFields()">
+                                <option value="">Select Payment Method</option>
+                                <option value="cash">Cash</option>
+                                <option value="check">Check</option>
+                                <option value="bank_transfer">Bank Transfer</option>
+                                <option value="card">Credit/Debit Card</option>
+                                <option value="mpesa_manual">M-Pesa (Manual)</option>
+                                <option value="mpesa_stk">M-Pesa (STK Push)</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="reference_number" class="form-label">Reference Number</label>
+                            <input type="text" class="form-control" id="reference_number" name="reference_number" placeholder="Optional reference number">
+                        </div>
+                    <?php endif; ?>
                     
                     <div class="mb-3">
                         <label for="status" class="form-label">Payment Status</label>
@@ -581,25 +601,27 @@ $isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
                         </select>
                     </div>
                     
-                    <!-- M-Pesa Manual Fields -->
-                    <div id="mpesa_manual_fields" style="display: none;">
-                        <div class="mb-3">
-                            <label for="mpesa_phone" class="form-label">Phone Number</label>
-                            <input type="tel" id="mpesa_phone" name="mpesa_phone" class="form-control" placeholder="07XXXXXXXX">
+                    <?php if (!$isRealtor): ?>
+                        <!-- M-Pesa Manual Fields -->
+                        <div id="mpesa_manual_fields" style="display: none;">
+                            <div class="mb-3">
+                                <label for="mpesa_phone" class="form-label">Phone Number</label>
+                                <input type="tel" id="mpesa_phone" name="mpesa_phone" class="form-control" placeholder="07XXXXXXXX">
+                            </div>
+                            <div class="mb-3">
+                                <label for="mpesa_transaction_code" class="form-label">Transaction Code</label>
+                                <input type="text" id="mpesa_transaction_code" name="mpesa_transaction_code" class="form-control" placeholder="e.g., QWN213948J">
+                            </div>
+                            <div class="mb-3">
+                                <label for="mpesa_verification_status" class="form-label">Verification Status</label>
+                                <select id="mpesa_verification_status" name="mpesa_verification_status" class="form-select">
+                                    <option value="pending">Pending</option>
+                                    <option value="verified">Verified</option>
+                                    <option value="rejected">Rejected</option>
+                                </select>
+                            </div>
                         </div>
-                        <div class="mb-3">
-                            <label for="mpesa_transaction_code" class="form-label">Transaction Code</label>
-                            <input type="text" id="mpesa_transaction_code" name="mpesa_transaction_code" class="form-control" placeholder="e.g., QWN213948J">
-                        </div>
-                        <div class="mb-3">
-                            <label for="mpesa_verification_status" class="form-label">Verification Status</label>
-                            <select id="mpesa_verification_status" name="mpesa_verification_status" class="form-select">
-                                <option value="pending">Pending</option>
-                                <option value="verified">Verified</option>
-                                <option value="rejected">Rejected</option>
-                            </select>
-                        </div>
-                    </div>
+                    <?php endif; ?>
 
                     <div class="mb-3">
                         <label for="notes" class="form-label">Notes</label>
@@ -1192,7 +1214,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Filter functionality
     document.getElementById('dateFilter').addEventListener('change', filterTable);
     document.getElementById('propertyFilter').addEventListener('change', filterTable);
-    document.getElementById('methodFilter').addEventListener('change', filterTable);
+    const methodFilter = document.getElementById('methodFilter');
+    methodFilter && methodFilter.addEventListener('change', filterTable);
     document.getElementById('amountFilter').addEventListener('change', filterTable);
 
     // Reset filters
@@ -1697,6 +1720,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const clientSel = document.getElementById('realtor_client_id');
     const listingSel = document.getElementById('realtor_listing_id');
     const typeSel = document.getElementById('realtor_payment_type');
+    const amountInput = document.getElementById('realtor_amount');
     const monthInput = document.getElementById('realtor_applies_to_month');
     const monthHint = document.getElementById('realtor_month_hint');
 
@@ -1708,12 +1732,26 @@ document.addEventListener('DOMContentLoaded', function() {
         const opt = contractSel.options[contractSel.selectedIndex];
         const cid = (contractSel.value || '').trim();
         const terms = (opt && opt.getAttribute) ? (opt.getAttribute('data-terms') || '') : '';
+        const optClientId = (opt && opt.getAttribute) ? (opt.getAttribute('data-client-id') || '') : '';
+        const optListingId = (opt && opt.getAttribute) ? (opt.getAttribute('data-listing-id') || '') : '';
+        const optTotal = (opt && opt.getAttribute) ? (opt.getAttribute('data-total-amount') || '') : '';
+        const optMonthly = (opt && opt.getAttribute) ? (opt.getAttribute('data-monthly-amount') || '') : '';
 
         const hasContract = cid !== '';
         if (clientSel) clientSel.disabled = hasContract;
         if (listingSel) listingSel.disabled = hasContract;
 
         if (hasContract) {
+            if (clientSel && optClientId !== '') clientSel.value = optClientId;
+            if (listingSel && optListingId !== '') listingSel.value = optListingId;
+
+            if (amountInput) {
+                const n = (terms === 'monthly') ? (parseFloat(optMonthly || '0') || 0) : (parseFloat(optTotal || '0') || 0);
+                if (!Number.isNaN(n)) {
+                    amountInput.value = n > 0 ? String(n) : '';
+                }
+            }
+
             if (terms === 'monthly') {
                 typeSel.value = 'mortgage_monthly';
                 monthInput.required = true;
