@@ -3,6 +3,8 @@
 namespace App\Controllers;
 
 use App\Models\Inquiry;
+use App\Models\Property;
+use App\Models\Unit;
 
 class AgentLeadsController
 {
@@ -33,10 +35,91 @@ class AgentLeadsController
         $inquiryModel = new Inquiry();
         $inquiries = $inquiryModel->allVisibleForUser($this->userId, $this->role);
 
+        $propertyModel = new Property();
+        $properties = $propertyModel->getAll($this->userId);
+
+        $unitModel = new Unit();
+        $units = $unitModel->getAll($this->userId);
+
         echo view('agent/leads', [
             'title' => 'CRM - Leads',
             'inquiries' => $inquiries,
+            'properties' => $properties,
+            'units' => $units,
         ]);
+    }
+
+    public function store()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            header('Location: ' . BASE_URL . '/agent/leads');
+            exit;
+        }
+
+        try {
+            if (!verify_csrf_token()) {
+                $_SESSION['flash_message'] = 'Invalid security token';
+                $_SESSION['flash_type'] = 'danger';
+                header('Location: ' . BASE_URL . '/agent/leads');
+                exit;
+            }
+
+            $propertyId = (int)($_POST['property_id'] ?? 0);
+            $unitId = (int)($_POST['unit_id'] ?? 0);
+            $name = trim((string)($_POST['name'] ?? ''));
+            $contact = trim((string)($_POST['contact'] ?? ''));
+            $message = trim((string)($_POST['message'] ?? ''));
+
+            if ($propertyId <= 0 || $name === '' || $contact === '') {
+                $_SESSION['flash_message'] = 'Property, name and contact are required';
+                $_SESSION['flash_type'] = 'danger';
+                header('Location: ' . BASE_URL . '/agent/leads');
+                exit;
+            }
+
+            $propertyModel = new Property();
+            $property = $propertyModel->getById($propertyId, $this->userId);
+            if (!$property) {
+                $_SESSION['flash_message'] = 'Invalid property selected';
+                $_SESSION['flash_type'] = 'danger';
+                header('Location: ' . BASE_URL . '/agent/leads');
+                exit;
+            }
+
+            $resolvedUnitId = null;
+            if ($unitId > 0) {
+                $unitModel = new Unit();
+                $unit = $unitModel->getById($unitId, $this->userId);
+                if ($unit && (int)($unit['property_id'] ?? 0) === $propertyId) {
+                    $resolvedUnitId = (int)$unitId;
+                }
+            }
+
+            $inquiryModel = new Inquiry();
+            $inquiryId = $inquiryModel->create([
+                'unit_id' => $resolvedUnitId,
+                'property_id' => $propertyId,
+                'name' => $name,
+                'contact' => $contact,
+                'message' => $message,
+                'source' => 'agent_crm',
+            ]);
+
+            try {
+                $inquiryModel->updateCrmStageWithAccess((int)$inquiryId, (int)$this->userId, $this->role, 'new');
+            } catch (\Exception $e) {
+            }
+
+            $_SESSION['flash_message'] = 'Lead added successfully';
+            $_SESSION['flash_type'] = 'success';
+        } catch (\Exception $e) {
+            error_log('AgentLeads store failed: ' . $e->getMessage());
+            $_SESSION['flash_message'] = 'Failed to add lead';
+            $_SESSION['flash_type'] = 'danger';
+        }
+
+        header('Location: ' . BASE_URL . '/agent/leads');
+        exit;
     }
 
     public function updateStage($id)
