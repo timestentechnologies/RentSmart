@@ -190,21 +190,37 @@ class DebugController
 
             $tagId = null;
             try {
-                $search = $obj->call('execute_kw', [$database, $uid, $password, 'crm.tag', 'search_read', [[['name', '=', 'Rentsmart']], ['fields' => ['id'], 'limit' => 1]]]);
+                $search = $obj->call('execute_kw', [
+                    $database,
+                    $uid,
+                    $password,
+                    'crm.tag',
+                    'search_read',
+                    [[['name', '=', 'Rentsmart']]],
+                    ['fields' => ['id'], 'limit' => 1]
+                ]);
                 if (is_array($search) && !empty($search[0]['id'])) {
                     $tagId = (int)$search[0]['id'];
                 } else {
-                    $tagId = (int)($obj->call('execute_kw', [$database, $uid, $password, 'crm.tag', 'create', [[['name' => 'Rentsmart']]]]) ?? 0);
+                    $tagId = (int)($obj->call('execute_kw', [
+                        $database,
+                        $uid,
+                        $password,
+                        'crm.tag',
+                        'create',
+                        [['name' => 'Rentsmart']],
+                        []
+                    ]) ?? 0);
                 }
             } catch (\Throwable $ignore) {
                 $tagId = null;
             }
 
-            if (!empty($tagId)) {
+            if (!empty($tagId) && (int)$tagId > 0) {
                 $leadData['tag_ids'] = [[6, 0, [(int)$tagId]]];
             }
 
-            $createdId = $obj->call('execute_kw', [$database, $uid, $password, 'crm.lead', 'create', [$leadData]]);
+            $createdId = $obj->call('execute_kw', [$database, $uid, $password, 'crm.lead', 'create', [$leadData], []]);
 
             header('Content-Type: application/json');
             http_response_code(200);
