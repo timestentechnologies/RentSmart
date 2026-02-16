@@ -7,6 +7,7 @@ use App\Models\Subscription;
 use App\Models\Setting;
 use App\Models\PasswordReset;
 use App\Models\ActivityLog;
+use App\Services\XmlRpcClient;
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception as MailException;
 use Exception;
@@ -305,11 +306,6 @@ class AuthController
             return;
         }
 
-        if (!function_exists('xmlrpc_encode_request') || !function_exists('xmlrpc_decode')) {
-            error_log('Odoo lead skipped: PHP XML-RPC functions are not available on this server');
-            return;
-        }
-
         $urlBase = rtrim((string)$cfg['url'], '/');
         $db = (string)$cfg['db'];
         $username = (string)$cfg['username'];
@@ -393,61 +389,54 @@ class AuthController
 
     private function odooAuthenticate(string $urlBase, string $db, string $username, string $password): ?int
     {
-        if (!function_exists('xmlrpc_encode_request') || !function_exists('xmlrpc_decode')) {
+        try {
+            $decoded = $this->xmlRpcCall($urlBase . '/xmlrpc/2/common', 'authenticate', [$db, $username, $password, []]);
+        } catch (\Throwable $e) {
+            error_log('Odoo auth failed: ' . $e->getMessage());
             return null;
         }
-        $url = $urlBase . '/xmlrpc/2/common';
-        $req = xmlrpc_encode_request('authenticate', [$db, $username, $password, []]);
-        $ctx = stream_context_create([
-            'http' => [
-                'method' => 'POST',
-                'header' => "Content-Type: text/xml\r\n",
-                'content' => $req,
-                'timeout' => 10,
-            ]
-        ]);
-        $resp = @file_get_contents($url, false, $ctx);
-        if ($resp === false) {
-            $last = error_get_last();
-            error_log('Odoo auth failed: HTTP request failed. URL: ' . $url . ' Error: ' . ($last['message'] ?? 'unknown'));
-            return null;
-        }
-        $decoded = xmlrpc_decode($resp);
-        if (is_array($decoded) && xmlrpc_is_fault($decoded)) {
-            error_log('Odoo auth fault: ' . ($decoded['faultString'] ?? 'unknown'));
-            return null;
-        }
-        $uid = (int)$decoded;
+
+        $uid = (int)($decoded ?? 0);
         return $uid > 0 ? $uid : null;
     }
 
     private function odooExecuteKw(string $urlBase, string $db, int $uid, string $password, string $model, string $method, array $params = [])
     {
-        if (!function_exists('xmlrpc_encode_request') || !function_exists('xmlrpc_decode')) {
-            throw new \Exception('XML-RPC not available');
-        }
         $url = $urlBase . '/xmlrpc/2/object';
-        $req = xmlrpc_encode_request('execute_kw', [$db, $uid, $password, $model, $method, $params]);
-        $ctx = stream_context_create([
-            'http' => [
-                'method' => 'POST',
-                'header' => "Content-Type: text/xml\r\n",
-                'content' => $req,
-                'timeout' => 10,
-            ]
-        ]);
-        $resp = @file_get_contents($url, false, $ctx);
-        if ($resp === false) {
-            $last = error_get_last();
-            error_log('Odoo execute_kw failed: HTTP request failed. URL: ' . $url . ' Model: ' . $model . ' Method: ' . $method . ' Error: ' . ($last['message'] ?? 'unknown'));
-            throw new \Exception('Failed to connect to Odoo');
+        try {
+            return $this->xmlRpcCall($url, 'execute_kw', [$db, $uid, $password, $model, $method, $params]);
+        } catch (\Throwable $e) {
+            error_log('Odoo execute_kw failed. Model: ' . $model . ' Method: ' . $method . ' Error: ' . $e->getMessage());
+            throw new \Exception('Failed to call Odoo: ' . $e->getMessage());
         }
-        $decoded = xmlrpc_decode($resp);
-        if (is_array($decoded) && xmlrpc_is_fault($decoded)) {
-            error_log('Odoo execute_kw fault. Model: ' . $model . ' Method: ' . $method . ' Fault: ' . ($decoded['faultString'] ?? 'unknown'));
-            throw new \Exception('Odoo API fault: ' . ($decoded['faultString'] ?? 'unknown'));
+    }
+
+    private function xmlRpcCall(string $endpoint, string $method, array $params = [])
+    {
+        if (function_exists('xmlrpc_encode_request') && function_exists('xmlrpc_decode')) {
+            $req = xmlrpc_encode_request($method, $params);
+            $ctx = stream_context_create([
+                'http' => [
+                    'method' => 'POST',
+                    'header' => "Content-Type: text/xml\r\n",
+                    'content' => $req,
+                    'timeout' => 15,
+                ]
+            ]);
+            $resp = @file_get_contents($endpoint, false, $ctx);
+            if ($resp === false) {
+                $last = error_get_last();
+                throw new \RuntimeException('HTTP request failed: ' . ($last['message'] ?? 'unknown'));
+            }
+            $decoded = xmlrpc_decode($resp);
+            if (is_array($decoded) && xmlrpc_is_fault($decoded)) {
+                throw new \RuntimeException((string)($decoded['faultString'] ?? 'XML-RPC fault'));
+            }
+            return $decoded;
         }
-        return $decoded;
+
+        $client = new XmlRpcClient($endpoint, 15);
+        return $client->call($method, $params);
     }
 
     public function login()
