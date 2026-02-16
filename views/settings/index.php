@@ -255,6 +255,33 @@ if (empty($settings)) {
                             </div>
                         </div>
 
+                        <!-- Odoo CRM Configuration -->
+                        <div class="mb-4">
+                            <h6 class="fw-bold mb-3">Odoo CRM Configuration</h6>
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label for="odoo_url" class="form-label">Odoo URL</label>
+                                    <input type="url" class="form-control" id="odoo_url" name="odoo_url" value="<?= $settings['odoo_url'] ?? '' ?>" placeholder="https://yourcompany.odoo.com">
+                                    <div class="form-text text-primary">Current value: <?= !empty($settings['odoo_url']) ? $settings['odoo_url'] : 'Not set' ?></div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="odoo_database" class="form-label">Database</label>
+                                    <input type="text" class="form-control" id="odoo_database" name="odoo_database" value="<?= $settings['odoo_database'] ?? '' ?>" placeholder="yourcompany">
+                                    <div class="form-text text-primary">Current value: <?= !empty($settings['odoo_database']) ? $settings['odoo_database'] : 'Not set' ?></div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="odoo_username" class="form-label">Username</label>
+                                    <input type="text" class="form-control" id="odoo_username" name="odoo_username" value="<?= $settings['odoo_username'] ?? '' ?>" placeholder="admin@example.com">
+                                    <div class="form-text text-primary">Current value: <?= !empty($settings['odoo_username']) ? $settings['odoo_username'] : 'Not set' ?></div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="odoo_password" class="form-label">Password</label>
+                                    <input type="password" class="form-control" id="odoo_password" name="odoo_password" value="<?= $settings['odoo_password'] ?? '' ?>" placeholder="Your Odoo password">
+                                    <div class="form-text text-primary">Current value: <?= !empty($settings['odoo_password']) ? '********' : 'Not set' ?></div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- System Settings -->
                         <div class="mb-4">
                             <h6 class="fw-bold mb-3">System Settings</h6>
