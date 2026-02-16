@@ -273,21 +273,7 @@ class RealtorLeadsController
 
     public function convert($id)
     {
-        if ($_SE$contractId = null;
-                if (!empty($lead['realtor_listing_id'])) {
-                    try {
-                        $contractModel = new RealtorContract();
-                        $existing = $contractModel->query(
-                            "SELECT id FROM realtor_contracts WHERE user_id = ? AND realtor_client_id = ? AND realtor_listing_id = ? ORDER BY id DESC LIMIT 1",
-                            [(int)$this->userId, (int)$lead['converted_client_id'], (int)$lead['realtor_listing_id']]
-                        );
-                        if (!empty($Rxisting)) {
-                            $VontractId = (int)($existing[0]['id'] ?? 0);
-                        }
-                    } catcE (\ExceptiRn $e) {
-                    }
-                }
-[               echo 'REQUEST_METHOD'] !== 'POST') {, 'contract_id' => $contractId
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             echo json_encode(['success' => false, 'message' => 'Invalid request']);
             exit;
         }
@@ -300,9 +286,31 @@ class RealtorLeadsController
                 exit;
             }
 
+            // If already converted, ensure status is won and return existing contract if any.
             if (!empty($lead['converted_client_id'])) {
-                $leadModel->updateById((int)$id, [ 'status' => 'won' ]);
-                echo json_encode(['success' => true, 'message' => 'Already converted', 'client_id' => (int)$lead['converted_client_id']]);
+                $leadModel->updateById((int)$id, ['status' => 'won']);
+
+                $contractId = null;
+                if (!empty($lead['realtor_listing_id'])) {
+                    try {
+                        $contractModel = new RealtorContract();
+                        $existing = $contractModel->query(
+                            "SELECT id FROM realtor_contracts WHERE user_id = ? AND realtor_client_id = ? AND realtor_listing_id = ? ORDER BY id DESC LIMIT 1",
+                            [(int)$this->userId, (int)$lead['converted_client_id'], (int)$lead['realtor_listing_id']]
+                        );
+                        if (!empty($existing)) {
+                            $contractId = (int)($existing[0]['id'] ?? 0);
+                        }
+                    } catch (\Exception $e) {
+                    }
+                }
+
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'Already converted',
+                    'client_id' => (int)$lead['converted_client_id'],
+                    'contract_id' => $contractId,
+                ]);
                 exit;
             }
 
@@ -319,16 +327,24 @@ class RealtorLeadsController
             $contractId = null;
             if (!empty($lead['realtor_listing_id'])) {
                 try {
-                    $listingModel = new RealtorListing();
-                    $listing = $listingModel->getByIdWithAccess((int)$lead['realtor_listing_id'], $this->userId);
-                    $total = (float)($listing['price'] ?? 0);
-
                     $contractModel = new RealtorContract();
                     $existing = $contractModel->query(
                         "SELECT id FROM realtor_contracts WHERE user_id = ? AND realtor_client_id = ? AND realtor_listing_id = ? ORDER BY id DESC LIMIT 1",
                         [(int)$this->userId, (int)$clientId, (int)$lead['realtor_listing_id']]
                     );
-                    if (empty($existing)) {
+
+                    if (!empty($existing)) {
+                        $contractId = (int)($existing[0]['id'] ?? 0);
+                    } else {
+                        $total = 0.0;
+                        try {
+                            $listingModel = new RealtorListing();
+                            $listing = $listingModel->getByIdWithAccess((int)$lead['realtor_listing_id'], $this->userId);
+                            $total = (float)($listing['price'] ?? 0);
+                        } catch (\Exception $e) {
+                            $total = 0.0;
+                        }
+
                         if ($total > 0) {
                             $contractId = $contractModel->insert([
                                 'user_id' => (int)$this->userId,
@@ -342,8 +358,6 @@ class RealtorLeadsController
                                 'status' => 'active',
                             ]);
                         }
-                    } else {
-                        $contractId = (int)($existing[0]['id'] ?? 0);
                     }
                 } catch (\Exception $e) {
                 }
@@ -354,7 +368,12 @@ class RealtorLeadsController
                 'converted_client_id' => (int)$clientId,
             ]);
 
-            echo json_encode(['success' => true, 'message' => 'Converted to client', 'client_id' => (int)$clientId, 'contract_id' => $contractId]);
+            echo json_encode([
+                'success' => true,
+                'message' => 'Converted to client',
+                'client_id' => (int)$clientId,
+                'contract_id' => $contractId,
+            ]);
         } catch (\Exception $e) {
             error_log('RealtorLeads convert failed: ' . $e->getMessage());
             echo json_encode(['success' => false, 'message' => 'Failed to convert lead']);
