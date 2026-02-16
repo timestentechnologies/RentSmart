@@ -26,8 +26,8 @@ ob_start();
                     </div>
                 </div>
                 <div class="col-md-6">
-                    <div class="d-flex flex-wrap gap-2 justify-content-md-end">
-                        <select class="form-select" id="leadStageFilter" style="max-width: 240px;">
+                    <div class="realtor-filters">
+                        <select class="form-select" id="leadStageFilter">
                             <option value="">All Stages</option>
                             <?php foreach (($stagesArr ?? []) as $s): ?>
                                 <?php $k = strtolower((string)($s['stage_key'] ?? '')); if ($k === '') continue; ?>

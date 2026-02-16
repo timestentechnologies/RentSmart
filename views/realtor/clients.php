@@ -20,12 +20,12 @@ ob_start();
         <div class="card-header border-bottom">
             <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center">
                 <h5 class="card-title mb-0">All Clients</h5>
-                <div class="d-flex flex-wrap gap-2">
-                    <div class="input-group" style="min-width: 260px;">
+                <div class="realtor-filters">
+                    <div class="input-group">
                         <span class="input-group-text"><i class="bi bi-search"></i></span>
                         <input type="text" class="form-control" id="realtorClientsSearch" placeholder="Search clients...">
                     </div>
-                    <select class="form-select" id="realtorClientsFilterTerms" style="min-width: 200px;">
+                    <select class="form-select" id="realtorClientsFilterTerms">
                         <option value="">All Payment Modes</option>
                         <option value="monthly">Monthly</option>
                         <option value="one_time">One Time</option>
