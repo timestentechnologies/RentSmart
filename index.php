@@ -489,6 +489,9 @@ $routes = [
     'agent/leads' => ['controller' => 'AgentLeadsController', 'action' => 'index'],
     'agent/leads/store' => ['controller' => 'AgentLeadsController', 'action' => 'store'],
     'agent/leads/update-stage/(\d+)' => ['controller' => 'AgentLeadsController', 'action' => 'updateStage'],
+
+    // Debug (protected by DEBUG_KEY)
+    'debug/last-error' => ['controller' => 'DebugController', 'action' => 'lastError'],
 ];
 
 // Protected routes that require authentication
@@ -907,18 +910,19 @@ try {
 
     try {
         $requestPath = trim((string)parse_url((string)($_SERVER['REQUEST_URI'] ?? ''), PHP_URL_PATH), '/');
-        if ($requestPath === 'tenant/payment/process') {
-            $debugPayload = [
-                'ts' => date('c'),
-                'error_id' => $globalErrorId,
-                'step' => 'global_router',
-                'message' => $e->getMessage(),
-                'pdo' => ($e instanceof \PDOException) ? ($e->errorInfo ?? null) : null,
-                'trace' => $e->getTraceAsString(),
-            ];
-            $debugFile = rtrim(sys_get_temp_dir(), '/\\') . DIRECTORY_SEPARATOR . 'rentsmart_tenant_payment_last_error.json';
-            @file_put_contents($debugFile, json_encode($debugPayload));
-        }
+        $debugPayload = [
+            'ts' => date('c'),
+            'error_id' => $globalErrorId,
+            'step' => 'global_router',
+            'request_uri' => (string)($_SERVER['REQUEST_URI'] ?? ''),
+            'request_method' => (string)($_SERVER['REQUEST_METHOD'] ?? ''),
+            'message' => $e->getMessage(),
+            'file' => $e->getFile() . ':' . $e->getLine(),
+            'pdo' => ($e instanceof \PDOException) ? ($e->errorInfo ?? null) : null,
+            'trace' => $e->getTraceAsString(),
+        ];
+        $debugFile = rtrim(sys_get_temp_dir(), '/\\') . DIRECTORY_SEPARATOR . 'rentsmart_last_error.json';
+        @file_put_contents($debugFile, json_encode($debugPayload));
     } catch (\Throwable $ignore) {
     }
     if (getenv('APP_ENV') === 'development') {
