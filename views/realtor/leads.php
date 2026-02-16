@@ -68,7 +68,9 @@ ob_start();
         foreach (($leads ?? []) as $l) {
             $st = strtolower((string)($l['status'] ?? 'new'));
             if (!isset($grouped[$st])) {
-                $st = array_key_first($grouped) ?: 'new';
+                $firstKey = 'new';
+                foreach ($grouped as $kk => $_v) { $firstKey = $kk; break; }
+                $st = $firstKey ?: 'new';
             }
             $grouped[$st][] = $l;
         }

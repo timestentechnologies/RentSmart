@@ -484,6 +484,9 @@ $routes = [
     'agent/clients/store' => ['controller' => 'AgentClientsController', 'action' => 'store'],
     'agent/contracts' => ['controller' => 'AgentContractsController', 'action' => 'index'],
     'agent/contracts/store' => ['controller' => 'AgentContractsController', 'action' => 'store'],
+
+    'agent/leads' => ['controller' => 'AgentLeadsController', 'action' => 'index'],
+    'agent/leads/update-stage/(\d+)' => ['controller' => 'AgentLeadsController', 'action' => 'updateStage'],
 ];
 
 // Protected routes that require authentication
@@ -744,6 +747,9 @@ $protectedRoutes = [
     'agent/clients/store',
     'agent/contracts',
     'agent/contracts/store',
+
+    'agent/leads',
+    'agent/leads/update-stage/(\d+)',
 ];
 
 // Check if the current route requires authentication

@@ -1,3 +1,6 @@
+<?php
+ob_start();
+?>
 <div class="container-fluid pt-4">
     <div class="card page-header mb-4">
         <div class="card-body d-flex justify-content-between align-items-center">
@@ -130,3 +133,8 @@
   }
 })();
 </script>
+
+<?php
+$content = ob_get_clean();
+require __DIR__ . '/../layouts/main.php';
+?>
