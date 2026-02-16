@@ -109,4 +109,84 @@ class DebugController
             exit;
         }
     }
+
+    public function odooCreateLead()
+    {
+        $this->requireDebugAccess();
+
+        try {
+            $db = Connection::getInstance()->getConnection();
+            $stmt = $db->prepare("SELECT setting_key, setting_value FROM settings WHERE setting_key IN ('odoo_url','odoo_database','odoo_username','odoo_password')");
+            $stmt->execute();
+            $settings = $stmt->fetchAll(\PDO::FETCH_KEY_PAIR);
+
+            $url = rtrim((string)($settings['odoo_url'] ?? ''), '/');
+            $database = (string)($settings['odoo_database'] ?? '');
+            $username = (string)($settings['odoo_username'] ?? '');
+            $password = (string)($settings['odoo_password'] ?? '');
+
+            if ($url === '' || $database === '' || $username === '' || $password === '') {
+                header('Content-Type: application/json');
+                http_response_code(200);
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Missing Odoo settings (odoo_url, odoo_database, odoo_username, odoo_password).',
+                ]);
+                exit;
+            }
+
+            $commonUrl = $url . '/xmlrpc/2/common';
+            $common = new XmlRpcClient($commonUrl, 15);
+            $uid = (int)($common->call('authenticate', [$database, $username, $password, []]) ?? 0);
+            if ($uid <= 0) {
+                header('Content-Type: application/json');
+                http_response_code(200);
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Odoo authentication failed (uid=0).',
+                    'url' => $commonUrl,
+                ]);
+                exit;
+            }
+
+            $title = (string)($_GET['title'] ?? 'RentSmart Debug Lead');
+            $email = (string)($_GET['email'] ?? '');
+            $phone = (string)($_GET['phone'] ?? '');
+            $contact = (string)($_GET['contact'] ?? '');
+
+            $leadData = [
+                'name' => $title,
+                'type' => 'lead',
+                'contact_name' => $contact,
+                'email_from' => $email,
+                'phone' => $phone,
+                'description' => 'Source: RentSmart debug/odoo-create-lead',
+            ];
+
+            $objectUrl = $url . '/xmlrpc/2/object';
+            $obj = new XmlRpcClient($objectUrl, 15);
+            $createdId = $obj->call('execute_kw', [$database, $uid, $password, 'crm.lead', 'create', [$leadData]]);
+
+            header('Content-Type: application/json');
+            http_response_code(200);
+            echo json_encode([
+                'success' => !empty($createdId),
+                'message' => !empty($createdId) ? 'Lead created' : 'Lead not created (empty response)',
+                'lead_id' => $createdId,
+                'uid' => $uid,
+                'object_url' => $objectUrl,
+                'payload' => $leadData,
+            ]);
+            exit;
+        } catch (\Throwable $e) {
+            header('Content-Type: application/json');
+            http_response_code(200);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Odoo lead create failed: ' . $e->getMessage(),
+                'file' => $e->getFile() . ':' . $e->getLine(),
+            ]);
+            exit;
+        }
+    }
 }
