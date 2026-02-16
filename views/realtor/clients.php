@@ -13,63 +13,6 @@ ob_start();
                     <i class="bi bi-plus-circle me-1"></i>Add Client
                 </button>
             </div>
-
-<div class="modal fade" id="clientContractModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <form method="POST" action="<?= BASE_URL ?>/realtor/contracts/store" id="clientContractForm">
-        <?= csrf_field() ?>
-        <input type="hidden" name="realtor_client_id" id="cc_client_id">
-        <input type="hidden" name="realtor_listing_id" id="cc_listing_id">
-        <div class="modal-header">
-          <h5 class="modal-title">Create Contract</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-            <div class="mb-2">
-                <div class="small text-muted">Client</div>
-                <div class="fw-semibold" id="cc_client_name"></div>
-            </div>
-            <div class="mb-3">
-                <div class="small text-muted">Listing</div>
-                <div class="fw-semibold" id="cc_listing_title"></div>
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label">Payment Terms</label>
-                <select class="form-select" name="terms_type" id="cc_terms_type" required>
-                    <option value="one_time">One Time</option>
-                    <option value="monthly">Monthly</option>
-                </select>
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label">Total Amount</label>
-                <div class="input-group">
-                    <span class="input-group-text">Ksh</span>
-                    <input type="number" step="0.01" min="0" class="form-control" name="total_amount" id="cc_total_amount" required>
-                </div>
-            </div>
-
-            <div id="cc_monthly_fields" style="display:none;">
-                <div class="mb-3">
-                    <label class="form-label">Start Month</label>
-                    <input type="month" class="form-control" name="start_month" id="cc_start_month">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Duration (Months)</label>
-                    <input type="number" min="1" step="1" class="form-control" name="duration_months" id="cc_duration_months">
-                </div>
-            </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-success">Create Contract</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
         </div>
     </div>
 
@@ -157,6 +100,63 @@ ob_start();
             </div>
         </div>
     </div>
+</div>
+
+<div class="modal fade" id="clientContractModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="POST" action="<?= BASE_URL ?>/realtor/contracts/store" id="clientContractForm">
+        <?= csrf_field() ?>
+        <input type="hidden" name="realtor_client_id" id="cc_client_id">
+        <input type="hidden" name="realtor_listing_id" id="cc_listing_id">
+        <div class="modal-header">
+          <h5 class="modal-title">Create Contract</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+            <div class="mb-2">
+                <div class="small text-muted">Client</div>
+                <div class="fw-semibold" id="cc_client_name"></div>
+            </div>
+            <div class="mb-3">
+                <div class="small text-muted">Listing</div>
+                <div class="fw-semibold" id="cc_listing_title"></div>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Payment Terms</label>
+                <select class="form-select" name="terms_type" id="cc_terms_type" required>
+                    <option value="one_time">One Time</option>
+                    <option value="monthly">Monthly</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Total Amount</label>
+                <div class="input-group">
+                    <span class="input-group-text">Ksh</span>
+                    <input type="number" step="0.01" min="0" class="form-control" name="total_amount" id="cc_total_amount" required>
+                </div>
+            </div>
+
+            <div id="cc_monthly_fields" style="display:none;">
+                <div class="mb-3">
+                    <label class="form-label">Start Month</label>
+                    <input type="month" class="form-control" name="start_month" id="cc_start_month">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Duration (Months)</label>
+                    <input type="number" min="1" step="1" class="form-control" name="duration_months" id="cc_duration_months">
+                </div>
+            </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-success">Create Contract</button>
+        </div>
+      </form>
+    </div>
+  </div>
 </div>
 
 <div class="modal fade" id="addClientModal" tabindex="-1" aria-hidden="true">

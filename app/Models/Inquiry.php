@@ -58,6 +58,14 @@ class Inquiry extends Model
             }
         } catch (\Exception $e) {
         }
+
+        try {
+            $stmt = $this->db->query("SHOW COLUMNS FROM {$this->table} LIKE 'crm_stage'");
+            if ($stmt && $stmt->rowCount() === 0) {
+                $this->db->exec("ALTER TABLE {$this->table} ADD COLUMN crm_stage VARCHAR(50) NULL AFTER source");
+            }
+        } catch (\Exception $e) {
+        }
     }
 
     public function create(array $data)
@@ -108,6 +116,45 @@ class Inquiry extends Model
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+    }
+
+    public function updateCrmStageWithAccess($id, $userId, $role, $stageKey): bool
+    {
+        $role = strtolower((string)$role);
+        $stageKey = strtolower(trim((string)$stageKey));
+        if ($stageKey === '') {
+            $stageKey = 'new';
+        }
+
+        // Ensure the inquiry is visible to the user before updating.
+        $params = [(int)$id];
+        $sql = "SELECT i.id\n"
+            . "FROM {$this->table} i\n"
+            . "LEFT JOIN properties p ON p.id = i.property_id\n"
+            . "WHERE i.id = ?";
+
+        if (!in_array($role, ['admin', 'administrator'], true)) {
+            if ($role === 'realtor') {
+                $sql .= " AND i.realtor_user_id = ?";
+                $params[] = (int)$userId;
+            } else {
+                $sql .= " AND (p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ?)";
+                $params[] = (int)$userId;
+                $params[] = (int)$userId;
+                $params[] = (int)$userId;
+                $params[] = (int)$userId;
+            }
+        }
+
+        $check = $this->db->prepare($sql);
+        $check->execute($params);
+        $row = $check->fetch(\PDO::FETCH_ASSOC);
+        if (!$row) {
+            return false;
+        }
+
+        $stmt = $this->db->prepare("UPDATE {$this->table} SET crm_stage = ? WHERE id = ?");
+        return (bool)$stmt->execute([(string)$stageKey, (int)$id]);
     }
 }
 ?>

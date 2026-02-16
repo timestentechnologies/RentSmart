@@ -1307,7 +1307,7 @@ ob_clean();
                     </li>
                     <?php if ($isAgentSide): ?>
                         <li class="nav-item">
-                            <a class="nav-link <?= (strpos($current_uri, 'admin/inquiries') === 0) ? 'active' : '' ?>" href="<?= BASE_URL ?>/admin/inquiries">
+                            <a class="nav-link <?= (strpos($current_uri, 'agent/leads') === 0) ? 'active' : '' ?>" href="<?= BASE_URL ?>/agent/leads">
                                 <i class="bi bi-kanban me-2"></i> CRM
                             </a>
                         </li>
