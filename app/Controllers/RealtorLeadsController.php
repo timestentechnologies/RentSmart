@@ -46,7 +46,37 @@ class RealtorLeadsController
                 'listings' => $listings,
             ]);
         } catch (\Throwable $e) {
-            error_log('RealtorLeads index failed: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+            $msg = 'RealtorLeads index failed: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine();
+            error_log($msg);
+            try {
+                $logFile = __DIR__ . '/../../views/logs/php_errors.log';
+                @file_put_contents($logFile, '[' . date('d-M-Y H:i:s') . ' UTC] ' . $msg . "\n", FILE_APPEND);
+            } catch (\Throwable $e2) {
+            }
+
+            $isAjax = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower((string)$_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')
+                || (!empty($_SERVER['HTTP_ACCEPT']) && stripos((string)$_SERVER['HTTP_ACCEPT'], 'application/json') !== false);
+
+            if (!headers_sent()) {
+                http_response_code(500);
+            }
+
+            if ($isAjax) {
+                header('Content-Type: application/json');
+                $debug = !empty($_GET['debug']);
+                echo json_encode([
+                    'success' => false,
+                    'message' => 'Server error',
+                    'debug' => $debug ? $msg : null,
+                ]);
+                exit;
+            }
+
+            if (!empty($_GET['debug'])) {
+                echo '<pre style="white-space:pre-wrap;">' . htmlspecialchars($msg) . '</pre>';
+                exit;
+            }
+
             echo view('errors/500', ['title' => '500 Internal Server Error']);
         }
     }
