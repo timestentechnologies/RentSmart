@@ -11,8 +11,13 @@ class DebugController
         // no auth by default; protected by DEBUG_KEY
     }
 
-    private function requireDebugKey(): void
+    private function requireDebugAccess(): void
     {
+        $role = strtolower((string)($_SESSION['user_role'] ?? ''));
+        if (!empty($_SESSION['user_id']) && in_array($role, ['admin', 'administrator'], true)) {
+            return;
+        }
+
         $key = (string)($_GET['key'] ?? '');
         $expected = (string)(getenv('DEBUG_KEY') ?: '');
 
@@ -26,7 +31,7 @@ class DebugController
 
     public function lastError()
     {
-        $this->requireDebugKey();
+        $this->requireDebugAccess();
 
         $debugFile = rtrim(sys_get_temp_dir(), '/\\') . DIRECTORY_SEPARATOR . 'rentsmart_last_error.json';
         $raw = @file_get_contents($debugFile);
@@ -47,7 +52,7 @@ class DebugController
 
     public function odooTest()
     {
-        $this->requireDebugKey();
+        $this->requireDebugAccess();
 
         if (!function_exists('xmlrpc_encode_request') || !function_exists('xmlrpc_decode')) {
             header('Content-Type: application/json');
