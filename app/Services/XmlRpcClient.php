@@ -17,22 +17,80 @@ class XmlRpcClient
     {
         $xml = $this->buildRequest($method, $params);
 
-        $ctx = stream_context_create([
-            'http' => [
-                'method' => 'POST',
-                'header' => "Content-Type: text/xml\r\n",
-                'content' => $xml,
-                'timeout' => $this->timeout,
-            ],
-        ]);
-
-        $response = @file_get_contents($this->endpoint, false, $ctx);
-        if ($response === false) {
-            $err = error_get_last();
-            throw new \RuntimeException('XML-RPC request failed: ' . json_encode($err));
-        }
+        $response = $this->postXml($xml);
 
         return $this->decodeResponse($response);
+    }
+
+    private function postXml(string $xml): string
+    {
+        $warning = null;
+        $prevHandler = set_error_handler(static function ($errno, $errstr) use (&$warning) {
+            $warning = ['errno' => $errno, 'message' => $errstr];
+            return true;
+        });
+
+        try {
+            if (filter_var(ini_get('allow_url_fopen'), FILTER_VALIDATE_BOOLEAN)) {
+                $ctx = stream_context_create([
+                    'http' => [
+                        'method' => 'POST',
+                        'header' => "Content-Type: text/xml\r\n",
+                        'content' => $xml,
+                        'timeout' => $this->timeout,
+                    ],
+                ]);
+
+                $response = @file_get_contents($this->endpoint, false, $ctx);
+                if ($response !== false) {
+                    return $response;
+                }
+
+                $statusLine = null;
+                $headers = $http_response_header ?? null;
+                if (is_array($headers) && !empty($headers)) {
+                    $statusLine = (string)$headers[0];
+                }
+
+                if (!function_exists('curl_init')) {
+                    throw new \RuntimeException('HTTP request failed. status=' . ($statusLine ?: 'unknown') . ' warning=' . json_encode($warning));
+                }
+            }
+
+            if (!function_exists('curl_init')) {
+                throw new \RuntimeException('Cannot send HTTP request: allow_url_fopen disabled and cURL not available.');
+            }
+
+            $ch = curl_init($this->endpoint);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, $xml);
+            curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: text/xml']);
+            curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $this->timeout);
+            curl_setopt($ch, CURLOPT_TIMEOUT, $this->timeout);
+
+            $response = curl_exec($ch);
+            $curlErrNo = curl_errno($ch);
+            $curlErr = curl_error($ch);
+            $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($response === false || $curlErrNo !== 0) {
+                throw new \RuntimeException('cURL request failed. errno=' . $curlErrNo . ' error=' . $curlErr . ' http_code=' . $httpCode);
+            }
+
+            if ($httpCode >= 400 || $httpCode === 0) {
+                throw new \RuntimeException('HTTP error from endpoint. http_code=' . $httpCode);
+            }
+
+            return (string)$response;
+        } finally {
+            if ($prevHandler !== null) {
+                set_error_handler($prevHandler);
+            } else {
+                restore_error_handler();
+            }
+        }
     }
 
     private function buildRequest(string $method, array $params): string
