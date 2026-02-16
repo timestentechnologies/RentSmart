@@ -20,6 +20,12 @@ class Payment extends Model
 
     private function ensureRealtorPaymentColumns(): void
     {
+        // Realtor payments are contract-based and do not use leases; allow NULL lease_id.
+        try {
+            $this->db->exec("ALTER TABLE payments MODIFY lease_id INT NULL");
+        } catch (\Exception $e) {
+        }
+
         try {
             $this->db->exec("ALTER TABLE payments ADD COLUMN realtor_user_id INT NULL AFTER lease_id");
         } catch (\Exception $e) {
