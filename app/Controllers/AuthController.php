@@ -172,7 +172,7 @@ class AuthController
                     'role' => $role,
                     'user_id' => $userId,
                 ]);
-            } catch (\Exception $ex) {
+            } catch (\Throwable $ex) {
                 error_log('Odoo lead create failed (non-blocking): ' . $ex->getMessage());
             }
 
@@ -258,8 +258,8 @@ class AuthController
                         error_log('Registration admin email error: ' . $e->getMessage());
                     }
                 }
-            } catch (MailException $e) {
-                error_log('Registration email error: ' . $e->getMessage());
+            } catch (\Throwable $e) {
+                error_log('Registration email error (non-blocking): ' . $e->getMessage());
             }
 
             // Set session variables
@@ -281,7 +281,7 @@ class AuthController
             $redirectPath = ($role === 'realtor') ? '/realtor/dashboard' : '/dashboard';
             header('Location: ' . BASE_URL . $redirectPath);
             exit;
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
             error_log("Registration error: " . $e->getMessage());
             error_log("Error trace: " . $e->getTraceAsString());
             
@@ -302,6 +302,11 @@ class AuthController
         $cfg = $this->getOdooConfig();
         if (empty($cfg['url']) || empty($cfg['db']) || empty($cfg['username']) || empty($cfg['password'])) {
             error_log('Odoo lead skipped: missing config (url/db/username/password)');
+            return;
+        }
+
+        if (!function_exists('xmlrpc_encode_request') || !function_exists('xmlrpc_decode')) {
+            error_log('Odoo lead skipped: PHP XML-RPC functions are not available on this server');
             return;
         }
 
@@ -388,6 +393,9 @@ class AuthController
 
     private function odooAuthenticate(string $urlBase, string $db, string $username, string $password): ?int
     {
+        if (!function_exists('xmlrpc_encode_request') || !function_exists('xmlrpc_decode')) {
+            return null;
+        }
         $url = $urlBase . '/xmlrpc/2/common';
         $req = xmlrpc_encode_request('authenticate', [$db, $username, $password, []]);
         $ctx = stream_context_create([
@@ -415,6 +423,9 @@ class AuthController
 
     private function odooExecuteKw(string $urlBase, string $db, int $uid, string $password, string $model, string $method, array $params = [])
     {
+        if (!function_exists('xmlrpc_encode_request') || !function_exists('xmlrpc_decode')) {
+            throw new \Exception('XML-RPC not available');
+        }
         $url = $urlBase . '/xmlrpc/2/object';
         $req = xmlrpc_encode_request('execute_kw', [$db, $uid, $password, $model, $method, $params]);
         $ctx = stream_context_create([
