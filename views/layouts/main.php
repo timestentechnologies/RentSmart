@@ -1267,6 +1267,8 @@ ob_clean();
         <nav class="sidebar-nav">
             <ul class="nav flex-column">
                 <?php $isRealtor = isset($_SESSION['user_role']) && strtolower((string)$_SESSION['user_role']) === 'realtor'; ?>
+                <?php $userRole = strtolower((string)($_SESSION['user_role'] ?? '')); ?>
+                <?php $isAgentSide = !$isRealtor && in_array($userRole, ['agent', 'manager', 'landlord', 'caretaker'], true); ?>
                 <!-- Dashboard -->
                 <li class="nav-item">
                     <a class="nav-link <?= ($current_uri === 'dashboard' || strpos($current_uri, 'realtor/dashboard') === 0) ? 'active' : '' ?>" href="<?= BASE_URL . ($isRealtor ? '/realtor/dashboard' : '/dashboard') ?>">
@@ -1303,6 +1305,23 @@ ob_clean();
                     <li class="nav-item mt-3">
                         <small class="nav-header text-uppercase px-3">PROPERTY MANAGEMENT</small>
                     </li>
+                    <?php if ($isAgentSide): ?>
+                        <li class="nav-item">
+                            <a class="nav-link <?= (strpos($current_uri, 'admin/inquiries') === 0) ? 'active' : '' ?>" href="<?= BASE_URL ?>/admin/inquiries">
+                                <i class="bi bi-kanban me-2"></i> CRM
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="<?= BASE_URL ?>/agent/clients" class="nav-link <?= strpos($current_uri, 'agent/clients') === 0 ? 'active' : '' ?>">
+                                <i class="bi bi-people me-2"></i> Clients
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="<?= BASE_URL ?>/agent/contracts" class="nav-link <?= strpos($current_uri, 'agent/contracts') === 0 ? 'active' : '' ?>">
+                                <i class="bi bi-file-text me-2"></i> Contracts
+                            </a>
+                        </li>
+                    <?php endif; ?>
                     <li class="nav-item">
                         <a class="nav-link <?= (strpos($current_uri, 'properties') === 0) ? 'active' : '' ?>" href="<?= BASE_URL ?>/properties">
                             <i class="bi bi-building me-2"></i> Properties
