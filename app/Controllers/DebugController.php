@@ -153,10 +153,14 @@ class DebugController
             $email = (string)($_GET['email'] ?? '');
             $phone = (string)($_GET['phone'] ?? '');
             $contact = (string)($_GET['contact'] ?? '');
+            $type = strtolower((string)($_GET['type'] ?? 'opportunity'));
+            if (!in_array($type, ['lead', 'opportunity'], true)) {
+                $type = 'opportunity';
+            }
 
             $leadData = [
                 'name' => $title,
-                'type' => 'lead',
+                'type' => $type,
                 'contact_name' => $contact,
                 'email_from' => $email,
                 'phone' => $phone,

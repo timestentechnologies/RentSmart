@@ -338,7 +338,7 @@ class AuthController
 
         $leadData = [
             'name' => 'RentSmart - ' . $leadTitle,
-            'type' => 'lead',
+            'type' => 'opportunity',
             'contact_name' => $name,
             'email_from' => $email,
             'phone' => $phone,
