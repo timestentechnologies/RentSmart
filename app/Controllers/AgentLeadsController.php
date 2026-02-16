@@ -5,6 +5,9 @@ namespace App\Controllers;
 use App\Models\Inquiry;
 use App\Models\Property;
 use App\Models\Unit;
+use App\Models\AgentClient;
+use App\Models\Tenant;
+use App\Models\Lease;
 
 class AgentLeadsController
 {
@@ -145,11 +148,149 @@ class AgentLeadsController
 
             $model = new Inquiry();
             $ok = $model->updateCrmStageWithAccess((int)$id, (int)$this->userId, $this->role, $stage);
-            echo json_encode(['success' => (bool)$ok, 'stage' => $stage]);
+
+            $clientId = null;
+            $leaseId = null;
+            if ($ok && $stage === 'won') {
+                try {
+                    $conv = $this->maybeConvertInquiryToClientAndLease((int)$id);
+                    $clientId = $conv['client_id'] ?? null;
+                    $leaseId = $conv['lease_id'] ?? null;
+                } catch (\Exception $ex) {
+                    error_log('Agent lead win conversion failed (non-blocking): ' . $ex->getMessage());
+                }
+            }
+
+            echo json_encode([
+                'success' => (bool)$ok,
+                'stage' => $stage,
+                'client_id' => $clientId,
+                'lease_id' => $leaseId,
+            ]);
         } catch (\Exception $e) {
             error_log('AgentLeads updateStage failed: ' . $e->getMessage());
             echo json_encode(['success' => false, 'message' => 'Server error']);
         }
         exit;
+    }
+
+    private function maybeConvertInquiryToClientAndLease(int $inquiryId): array
+    {
+        $inquiryModel = new Inquiry();
+        $inq = $inquiryModel->getByIdVisibleForUser($inquiryId, (int)$this->userId, $this->role);
+        if (!$inq) {
+            return ['client_id' => null, 'lease_id' => null];
+        }
+
+        $propertyId = (int)($inq['property_id'] ?? 0);
+        $unitId = (int)($inq['unit_id'] ?? 0);
+        $name = trim((string)($inq['name'] ?? ''));
+        $contact = trim((string)($inq['contact'] ?? ''));
+        $message = trim((string)($inq['message'] ?? ''));
+
+        $clientId = null;
+        if ($propertyId > 0 && ($name !== '' || $contact !== '')) {
+            $clientModel = new AgentClient();
+            $existing = $clientModel->query(
+                "SELECT id FROM agent_clients WHERE user_id = ? AND property_id = ? AND (phone = ? OR email = ?) ORDER BY id DESC LIMIT 1",
+                [(int)$this->userId, (int)$propertyId, (string)$contact, (string)$contact]
+            );
+            if (!empty($existing)) {
+                $clientId = (int)($existing[0]['id'] ?? 0);
+            } else {
+                $clientId = (int)$clientModel->insert([
+                    'user_id' => (int)$this->userId,
+                    'property_id' => (int)$propertyId,
+                    'name' => $name !== '' ? $name : $contact,
+                    'phone' => $contact,
+                    'email' => (strpos($contact, '@') !== false) ? $contact : null,
+                    'notes' => $message !== '' ? $message : null,
+                ]);
+            }
+        }
+
+        $leaseId = null;
+        if ($unitId > 0) {
+            // If unit already has an active lease, treat it as the "contract".
+            $leaseModel = new Lease();
+            $existingLease = $leaseModel->query(
+                "SELECT l.id FROM leases l WHERE l.unit_id = ? AND l.status = 'active' ORDER BY l.id DESC LIMIT 1",
+                [(int)$unitId]
+            );
+            if (!empty($existingLease)) {
+                $leaseId = (int)($existingLease[0]['id'] ?? 0);
+                return ['client_id' => $clientId, 'lease_id' => $leaseId];
+            }
+
+            // Create tenant (client in property mgmt sense) + new lease.
+            $tenantModel = new Tenant();
+            $emailGuess = (strpos($contact, '@') !== false) ? $contact : null;
+            $phoneGuess = (strpos($contact, '@') !== false) ? '' : $contact;
+
+            $tenantId = null;
+            if (!empty($emailGuess)) {
+                $t = $tenantModel->findByEmail($emailGuess);
+                if (!empty($t['id'])) {
+                    $tenantId = (int)$t['id'];
+                }
+            }
+
+            if (empty($tenantId)) {
+                $plainPassword = bin2hex(random_bytes(4));
+                $tenantId = (int)$tenantModel->create([
+                    'name' => $name !== '' ? $name : $contact,
+                    'first_name' => $name !== '' ? $name : $contact,
+                    'last_name' => '',
+                    'email' => $emailGuess,
+                    'phone' => $phoneGuess,
+                    'id_type' => null,
+                    'id_number' => null,
+                    'registered_on' => date('Y-m-d'),
+                    'emergency_contact' => null,
+                    'notes' => $message !== '' ? $message : null,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'property_id' => $propertyId > 0 ? $propertyId : null,
+                    'unit_id' => (int)$unitId,
+                    'password' => password_hash($plainPassword, PASSWORD_DEFAULT),
+                ]);
+            }
+
+            $unitModel = new Unit();
+            $unit = $unitModel->getById((int)$unitId, (int)$this->userId);
+            $rent = (float)($unit['rent_amount'] ?? ($inq['unit_rent_amount'] ?? 0));
+            $startDate = date('Y-m-d');
+            $endDate = date('Y-m-d', strtotime($startDate . ' +1 year'));
+            $leaseId = (int)$leaseModel->create([
+                'unit_id' => (int)$unitId,
+                'tenant_id' => (int)$tenantId,
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+                'rent_amount' => $rent,
+                'security_deposit' => $rent,
+                'status' => 'active',
+                'payment_day' => 1,
+                'notes' => $message !== '' ? $message : null,
+                'created_at' => date('Y-m-d H:i:s'),
+            ]);
+
+            // Mark unit as occupied and attach tenant (keeps UI consistent)
+            try {
+                $unitModel->update((int)$unitId, [
+                    'status' => 'occupied',
+                    'tenant_id' => (int)$tenantId,
+                    'rent_amount' => $rent,
+                ]);
+            } catch (\Exception $e) {
+            }
+
+            // Auto-create draft invoices for this lease
+            try {
+                $inv = new \App\Models\Invoice();
+                $inv->ensureInvoicesForLeaseMonths((int)$tenantId, (float)$rent, (string)$startDate, date('Y-m-d'), (int)($_SESSION['user_id'] ?? 0), 'AUTO');
+            } catch (\Exception $e) {
+            }
+        }
+
+        return ['client_id' => $clientId, 'lease_id' => $leaseId];
     }
 }

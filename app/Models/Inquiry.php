@@ -118,6 +118,35 @@ class Inquiry extends Model
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
 
+    public function getByIdVisibleForUser($id, $userId, $role)
+    {
+        $role = strtolower((string)$role);
+        $params = [(int)$id];
+        $sql = "SELECT i.*, u.unit_number, u.rent_amount AS unit_rent_amount, u.status AS unit_status, p.name AS property_name\n"
+            . "FROM {$this->table} i\n"
+            . "LEFT JOIN units u ON u.id = i.unit_id\n"
+            . "LEFT JOIN properties p ON p.id = i.property_id\n"
+            . "WHERE i.id = ?";
+
+        if (!in_array($role, ['admin', 'administrator'], true)) {
+            if ($role === 'realtor') {
+                $sql .= " AND i.realtor_user_id = ?";
+                $params[] = (int)$userId;
+            } else {
+                $sql .= " AND (p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ?)";
+                $params[] = (int)$userId;
+                $params[] = (int)$userId;
+                $params[] = (int)$userId;
+                $params[] = (int)$userId;
+            }
+        }
+
+        $sql .= " LIMIT 1";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetch(\PDO::FETCH_ASSOC);
+    }
+
     public function updateCrmStageWithAccess($id, $userId, $role, $stageKey): bool
     {
         $role = strtolower((string)$role);
