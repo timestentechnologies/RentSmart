@@ -25,8 +25,17 @@ ob_start();
                         <input type="text" id="leadSearch" class="form-control" placeholder="Search leads...">
                     </div>
                 </div>
-                <div class="col-md-6 text-md-end">
-                    <span class="text-muted">Pipeline</span>
+                <div class="col-md-6">
+                    <div class="d-flex flex-wrap gap-2 justify-content-md-end">
+                        <select class="form-select" id="leadStageFilter" style="max-width: 240px;">
+                            <option value="">All Stages</option>
+                            <?php foreach (($stagesArr ?? []) as $s): ?>
+                                <?php $k = strtolower((string)($s['stage_key'] ?? '')); if ($k === '') continue; ?>
+                                <option value="<?= htmlspecialchars($k) ?>"><?= htmlspecialchars((string)($s['label'] ?? $k)) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <span class="text-muted d-flex align-items-center">Pipeline</span>
+                    </div>
                 </div>
             </div>
         </div>
@@ -343,19 +352,25 @@ function recomputeCounts(){
 
 function applyLeadSearch(){
   const q = (document.getElementById('leadSearch')?.value || '').toLowerCase().trim();
+  const stage = (document.getElementById('leadStageFilter')?.value || '').toLowerCase().trim();
   document.querySelectorAll('.lead-card').forEach(card=>{
-    if(!q){ card.style.display=''; return; }
+    const cardStage = (card.getAttribute('data-status') || '').toLowerCase().trim();
     const hay = [
       card.getAttribute('data-name') || '',
       card.getAttribute('data-phone') || '',
       card.getAttribute('data-email') || '',
       card.getAttribute('data-source') || ''
     ].join(' ');
-    card.style.display = hay.includes(q) ? '' : 'none';
+
+    let ok = true;
+    if (stage && cardStage !== stage) ok = false;
+    if (q && !hay.includes(q)) ok = false;
+    card.style.display = ok ? '' : 'none';
   });
 }
 
 document.getElementById('leadSearch')?.addEventListener('input', applyLeadSearch);
+document.getElementById('leadStageFilter')?.addEventListener('change', applyLeadSearch);
 
 let draggedLeadId = null;
 document.querySelectorAll('.lead-card').forEach(card=>{

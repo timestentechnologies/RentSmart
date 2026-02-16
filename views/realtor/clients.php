@@ -18,7 +18,21 @@ ob_start();
 
     <div class="card">
         <div class="card-header border-bottom">
-            <h5 class="card-title mb-0">All Clients</h5>
+            <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center">
+                <h5 class="card-title mb-0">All Clients</h5>
+                <div class="d-flex flex-wrap gap-2">
+                    <div class="input-group" style="min-width: 260px;">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" class="form-control" id="realtorClientsSearch" placeholder="Search clients...">
+                    </div>
+                    <select class="form-select" id="realtorClientsFilterTerms" style="min-width: 200px;">
+                        <option value="">All Payment Modes</option>
+                        <option value="monthly">Monthly</option>
+                        <option value="one_time">One Time</option>
+                        <option value="none">No Contract</option>
+                    </select>
+                </div>
+            </div>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">
@@ -37,7 +51,8 @@ ob_start();
                     </thead>
                     <tbody>
                         <?php foreach (($clients ?? []) as $x): ?>
-                            <tr>
+                            <?php $rowTerms = !empty($x['contract_terms_type'] ?? null) ? (string)$x['contract_terms_type'] : 'none'; ?>
+                            <tr data-terms="<?= htmlspecialchars($rowTerms) ?>">
                                 <td><?= htmlspecialchars((string)($x['name'] ?? '')) ?></td>
                                 <td><?= htmlspecialchars((string)($x['phone'] ?? '')) ?></td>
                                 <td><?= htmlspecialchars((string)($x['email'] ?? '')) ?></td>
@@ -99,6 +114,43 @@ ob_start();
         </div>
     </div>
 </div>
+
+<script>
+(function(){
+  const table = document.getElementById('realtorClientsTable');
+  const q = document.getElementById('realtorClientsSearch');
+  const fTerms = document.getElementById('realtorClientsFilterTerms');
+  if (!table) return;
+  const tbody = table.querySelector('tbody');
+  if (!tbody) return;
+
+  const norm = (v) => (String(v || '')).toLowerCase().trim();
+
+  function apply(){
+    const query = norm(q && q.value);
+    const terms = norm(fTerms && fTerms.value);
+
+    const rows = tbody.querySelectorAll('tr');
+    rows.forEach((tr) => {
+      const rowText = norm(tr.innerText);
+      const rowTerms = norm(tr.getAttribute('data-terms'));
+
+      let ok = true;
+      if (query && !rowText.includes(query)) ok = false;
+      if (terms && rowTerms !== terms) ok = false;
+
+      tr.style.display = ok ? '' : 'none';
+    });
+  }
+
+  [q, fTerms].forEach((el) => {
+    if (!el) return;
+    el.addEventListener('input', apply);
+    el.addEventListener('change', apply);
+  });
+  apply();
+})();
+</script>
 
 <div class="modal fade" id="clientContractModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">

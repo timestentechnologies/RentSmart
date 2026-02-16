@@ -78,7 +78,22 @@ ob_start();
 
     <div class="card">
         <div class="card-header border-bottom">
-            <h5 class="card-title mb-0">All Listings</h5>
+            <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center">
+                <h5 class="card-title mb-0">All Listings</h5>
+                <div class="d-flex flex-wrap gap-2">
+                    <div class="input-group" style="min-width: 260px;">
+                        <span class="input-group-text"><i class="bi bi-search"></i></span>
+                        <input type="text" class="form-control" id="realtorListingsSearch" placeholder="Search listings...">
+                    </div>
+                    <select class="form-select" id="realtorListingsFilterStatus" style="min-width: 200px;">
+                        <option value="">All Status</option>
+                        <option value="active">Available</option>
+                        <option value="inactive">Unavailable</option>
+                        <option value="sold">Sold</option>
+                        <option value="rented">Rented</option>
+                    </select>
+                </div>
+            </div>
         </div>
         <div class="card-body p-0">
             <div class="table-responsive">
@@ -95,14 +110,15 @@ ob_start();
                     </thead>
                     <tbody>
                         <?php foreach (($listings ?? []) as $x): ?>
-                            <tr>
+                            <?php $rowStatus = strtolower((string)($x['status'] ?? 'active')); ?>
+                            <tr data-status="<?= htmlspecialchars($rowStatus) ?>">
                                 <td><?= htmlspecialchars((string)($x['title'] ?? '')) ?></td>
                                 <td><?= htmlspecialchars((string)($x['listing_type'] ?? '')) ?></td>
                                 <td><?= htmlspecialchars((string)($x['location'] ?? '')) ?></td>
                                 <td>Ksh<?= number_format((float)($x['price'] ?? 0), 2) ?></td>
                                 <td>
                                     <?php
-                                        $st = strtolower((string)($x['status'] ?? 'active'));
+                                        $st = $rowStatus;
                                         $badge = 'secondary';
                                         $label = $st ?: 'active';
                                         if ($st === 'active') { $badge = 'success'; $label = 'Available'; }
@@ -125,6 +141,43 @@ ob_start();
         </div>
     </div>
 </div>
+
+<script>
+(function(){
+  const table = document.getElementById('realtorListingsTable');
+  const q = document.getElementById('realtorListingsSearch');
+  const fStatus = document.getElementById('realtorListingsFilterStatus');
+  if (!table) return;
+  const tbody = table.querySelector('tbody');
+  if (!tbody) return;
+
+  const norm = (v) => (String(v || '')).toLowerCase().trim();
+
+  function apply(){
+    const query = norm(q && q.value);
+    const status = norm(fStatus && fStatus.value);
+
+    const rows = tbody.querySelectorAll('tr');
+    rows.forEach((tr) => {
+      const rowText = norm(tr.innerText);
+      const rowStatus = norm(tr.getAttribute('data-status'));
+
+      let ok = true;
+      if (query && !rowText.includes(query)) ok = false;
+      if (status && rowStatus !== status) ok = false;
+
+      tr.style.display = ok ? '' : 'none';
+    });
+  }
+
+  [q, fStatus].forEach((el) => {
+    if (!el) return;
+    el.addEventListener('input', apply);
+    el.addEventListener('change', apply);
+  });
+  apply();
+})();
+</script>
 
 <div class="modal fade" id="addListingModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">
