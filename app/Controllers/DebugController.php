@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Database\Connection;
+use App\Services\XmlRpcClient;
 
 class DebugController
 {
@@ -54,16 +55,6 @@ class DebugController
     {
         $this->requireDebugAccess();
 
-        if (!function_exists('xmlrpc_encode_request') || !function_exists('xmlrpc_decode')) {
-            header('Content-Type: application/json');
-            http_response_code(200);
-            echo json_encode([
-                'success' => false,
-                'message' => 'XML-RPC functions not available on this server (install/enable php-xmlrpc).',
-            ]);
-            exit;
-        }
-
         try {
             $db = Connection::getInstance()->getConnection();
             $stmt = $db->prepare("SELECT setting_key, setting_value FROM settings WHERE setting_key IN ('odoo_url','odoo_database','odoo_username','odoo_password')");
@@ -92,45 +83,10 @@ class DebugController
             }
 
             $commonUrl = $url . '/xmlrpc/2/common';
-            $req = xmlrpc_encode_request('authenticate', [$database, $username, $password, []]);
-            $ctx = stream_context_create([
-                'http' => [
-                    'method' => 'POST',
-                    'header' => "Content-Type: text/xml\r\n",
-                    'content' => $req,
-                    'timeout' => 15,
-                ]
-            ]);
 
-            $response = @file_get_contents($commonUrl, false, $ctx);
-            if ($response === false) {
-                $err = error_get_last();
-                header('Content-Type: application/json');
-                http_response_code(200);
-                echo json_encode([
-                    'success' => false,
-                    'message' => 'Failed to connect to Odoo common endpoint.',
-                    'url' => $commonUrl,
-                    'php_error' => $err,
-                ]);
-                exit;
-            }
-
-            $decoded = xmlrpc_decode($response);
-            if (is_array($decoded) && xmlrpc_is_fault($decoded)) {
-                header('Content-Type: application/json');
-                http_response_code(200);
-                echo json_encode([
-                    'success' => false,
-                    'message' => 'Odoo XML-RPC fault.',
-                    'url' => $commonUrl,
-                    'faultCode' => $decoded['faultCode'] ?? null,
-                    'faultString' => $decoded['faultString'] ?? null,
-                ]);
-                exit;
-            }
-
-            $uid = (int)$decoded;
+            $client = new XmlRpcClient($commonUrl, 15);
+            $decoded = $client->call('authenticate', [$database, $username, $password, []]);
+            $uid = (int)($decoded ?? 0);
             header('Content-Type: application/json');
             http_response_code(200);
             echo json_encode([
