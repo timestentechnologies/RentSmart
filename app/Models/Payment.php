@@ -84,7 +84,84 @@ class Payment extends Model
             'notes' => (string)($data['notes'] ?? ''),
         ]);
 
-        return $this->db->lastInsertId();
+        $id = (int)$this->db->lastInsertId();
+        // Auto-post to ledger + create an invoice (Realtor payments are contract-based).
+        $this->postPaymentToLedgerIfNeeded($id, $data);
+        $this->createInvoiceForRealtorPaymentIfNeeded($id, $data);
+        return $id;
+    }
+
+    private function createInvoiceForRealtorPaymentIfNeeded(int $paymentId, array $data): void
+    {
+        try {
+            $status = $data['status'] ?? 'completed';
+            if (!$this->shouldPostToLedger($status)) return;
+
+            $userId = (int)($data['realtor_user_id'] ?? 0);
+            if ($userId <= 0) return;
+
+            $amount = (float)($data['amount'] ?? 0);
+            if ($amount <= 0) return;
+
+            // Prevent duplicates if called twice.
+            $tag = 'REALTOR_PAYMENT#' . (int)$paymentId;
+            $chk = $this->db->prepare("SELECT id FROM invoices WHERE user_id = ? AND notes LIKE ? ORDER BY id DESC LIMIT 1");
+            $chk->execute([$userId, '%' . $tag . '%']);
+            $exists = $chk->fetch(\PDO::FETCH_ASSOC);
+            if (!empty($exists)) return;
+
+            $clientId = (int)($data['realtor_client_id'] ?? 0);
+            $listingId = (int)($data['realtor_listing_id'] ?? 0);
+            $contractId = (int)($data['realtor_contract_id'] ?? 0);
+            $date = (string)($data['payment_date'] ?? date('Y-m-d'));
+
+            $clientName = '';
+            $listingTitle = '';
+            try {
+                if ($clientId > 0) {
+                    $s = $this->db->prepare("SELECT name FROM realtor_clients WHERE id = ? LIMIT 1");
+                    $s->execute([$clientId]);
+                    $clientName = (string)($s->fetch(\PDO::FETCH_ASSOC)['name'] ?? '');
+                }
+            } catch (\Exception $e) {
+            }
+            try {
+                if ($listingId > 0) {
+                    $s = $this->db->prepare("SELECT title FROM realtor_listings WHERE id = ? LIMIT 1");
+                    $s->execute([$listingId]);
+                    $listingTitle = (string)($s->fetch(\PDO::FETCH_ASSOC)['title'] ?? '');
+                }
+            } catch (\Exception $e) {
+            }
+
+            $desc = 'Contract Payment';
+            $suffixParts = [];
+            if ($contractId > 0) $suffixParts[] = 'Contract #' . $contractId;
+            if ($clientName !== '') $suffixParts[] = $clientName;
+            if ($listingTitle !== '') $suffixParts[] = $listingTitle;
+            if (!empty($suffixParts)) {
+                $desc .= ' - ' . implode(' / ', $suffixParts);
+            }
+
+            $inv = new Invoice();
+            $inv->createInvoice([
+                'tenant_id' => null,
+                'issue_date' => $date,
+                'due_date' => null,
+                'status' => 'sent',
+                'notes' => trim($tag . ' ' . (string)($data['notes'] ?? '')),
+                'user_id' => $userId,
+            ], [
+                [
+                    'description' => $desc,
+                    'quantity' => 1,
+                    'unit_price' => $amount,
+                ]
+            ]);
+        } catch (\Exception $e) {
+            // Do not block payment
+            error_log('Realtor invoice create failed: ' . $e->getMessage());
+        }
     }
 
     public function getPaymentsForRealtor($userId)
@@ -108,6 +185,27 @@ class Payment extends Model
         $stmt = $this->db->prepare($sql);
         $stmt->execute([(int)$userId]);
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+    }
+
+    public function getRealtorPaidTotalsByContract(int $userId): array
+    {
+        $sql = "SELECT realtor_contract_id, COALESCE(SUM(amount),0) AS paid
+                FROM payments
+                WHERE realtor_user_id = ?
+                  AND realtor_contract_id IS NOT NULL
+                  AND status IN ('completed','verified')
+                GROUP BY realtor_contract_id";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([(int)$userId]);
+        $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+
+        $out = [];
+        foreach ($rows as $r) {
+            $cid = (int)($r['realtor_contract_id'] ?? 0);
+            if ($cid <= 0) continue;
+            $out[$cid] = (float)($r['paid'] ?? 0);
+        }
+        return $out;
     }
 
     public function realtorMonthAlreadyPaid($userId, $clientId, $listingId, $appliesToMonth, $paymentType)
@@ -458,7 +556,9 @@ class Payment extends Model
             if (!$this->shouldPostToLedger($status)) return;
 
             $leaseId = (int)($data['lease_id'] ?? 0);
-            if ($leaseId <= 0) return;
+            $realtorUserId = (int)($data['realtor_user_id'] ?? 0);
+            $isRealtorPayment = ($leaseId <= 0 && $realtorUserId > 0);
+            if ($leaseId <= 0 && !$isRealtorPayment) return;
 
             $amount = (float)($data['amount'] ?? 0);
             if ($amount <= 0) return;
@@ -472,17 +572,30 @@ class Payment extends Model
             if (!$cash || !$rev) return;
 
             $userId = $data['user_id'] ?? null;
-            if (empty($userId)) {
-                $userId = $this->resolveAccountingUserIdForLease($leaseId);
-            }
             $propertyId = $data['property_id'] ?? null;
-            if (empty($propertyId)) {
-                $propertyId = $this->resolvePropertyIdForLease($leaseId);
+            if ($isRealtorPayment) {
+                $userId = $realtorUserId;
+                $propertyId = null;
+            } else {
+                if (empty($userId)) {
+                    $userId = $this->resolveAccountingUserIdForLease($leaseId);
+                }
+                if (empty($propertyId)) {
+                    $propertyId = $this->resolvePropertyIdForLease($leaseId);
+                }
             }
 
             $date = $data['payment_date'] ?? date('Y-m-d');
             $type = $data['payment_type'] ?? 'rent';
-            $desc = ucfirst((string)$type) . ' payment #' . $paymentId;
+            if ($isRealtorPayment) {
+                $clientId = (int)($data['realtor_client_id'] ?? 0);
+                $listingId = (int)($data['realtor_listing_id'] ?? 0);
+                $desc = 'Contract payment #' . $paymentId;
+                if ($clientId > 0) $desc .= ' (Client #' . $clientId . ')';
+                if ($listingId > 0) $desc .= ' (Listing #' . $listingId . ')';
+            } else {
+                $desc = ucfirst((string)$type) . ' payment #' . $paymentId;
+            }
 
             // Debit Cash, Credit Revenue
             $ledger->post([

@@ -59,6 +59,45 @@ ob_start();
         </div>
     </div>
 
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="stat-card revenue">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="card-title">Expected Amount</h6>
+                        <h2 class="mt-3 mb-2">Ksh<?= number_format((float)($stats['contracts_expected_amount'] ?? 0), 2) ?></h2>
+                        <p class="mb-0 text-muted">Total from contracts</p>
+                    </div>
+                    <div class="stats-icon"><i class="bi bi-receipt fs-1 text-primary opacity-25"></i></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card occupancy">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="card-title">Amount Received</h6>
+                        <h2 class="mt-3 mb-2">Ksh<?= number_format((float)($stats['contracts_received_amount'] ?? 0), 2) ?></h2>
+                        <p class="mb-0 text-muted">Payments captured</p>
+                    </div>
+                    <div class="stats-icon"><i class="bi bi-cash-stack fs-1 text-success opacity-25"></i></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="stat-card outstanding">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="card-title">Amount Remaining</h6>
+                        <h2 class="mt-3 mb-2">Ksh<?= number_format((float)($stats['contracts_remaining_amount'] ?? 0), 2) ?></h2>
+                        <p class="mb-0 text-muted">Still due</p>
+                    </div>
+                    <div class="stats-icon"><i class="bi bi-exclamation-circle fs-1 text-warning opacity-25"></i></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="row g-4">
         <div class="col-md-6">
             <div class="card h-100">
