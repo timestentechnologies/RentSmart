@@ -33,9 +33,16 @@ class RealtorContractsController
         $model = new RealtorContract();
         $contracts = $model->getAllWithDetails($this->userId);
 
+        $clientModel = new RealtorClient();
+        $listingModel = new RealtorListing();
+        $clients = $clientModel->getAll($this->userId);
+        $listings = $listingModel->getAll($this->userId);
+
         echo view('realtor/contracts', [
             'title' => 'Contracts',
             'contracts' => $contracts,
+            'clients' => $clients,
+            'listings' => $listings,
         ]);
     }
 
