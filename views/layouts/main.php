@@ -1251,6 +1251,40 @@ ob_clean();
                 width: 100%;
             }
         }
+
+        .realtor-filters {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .5rem;
+            align-items: center;
+            justify-content: flex-end;
+        }
+
+        .realtor-filters .input-group {
+            width: 100%;
+            max-width: 520px;
+        }
+
+        .realtor-filters .form-select {
+            width: 100%;
+            max-width: 240px;
+        }
+
+        @media (min-width: 768px) {
+            .realtor-filters {
+                flex-wrap: nowrap;
+            }
+
+            .realtor-filters .input-group {
+                width: 360px;
+                max-width: 360px;
+            }
+
+            .realtor-filters .form-select {
+                width: 180px;
+                max-width: 180px;
+            }
+        }
     </style>
 </head>
 <body>
