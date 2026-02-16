@@ -60,6 +60,9 @@ function monthAddPhp(string $ym, int $n): string {
                 <a class="btn btn-sm btn-outline-dark" href="<?= BASE_URL ?>/realtor/contracts/print/<?= (int)$contractId ?>" target="_blank">
                     <i class="bi bi-printer me-1"></i>Print
                 </a>
+                <a class="btn btn-sm btn-primary" href="<?= BASE_URL ?>/realtor/contracts/pdf/<?= (int)$contractId ?>">
+                    <i class="bi bi-download me-1"></i>Download PDF
+                </a>
                 <a class="btn btn-sm btn-outline-secondary" href="<?= BASE_URL ?>/realtor/contracts">Back</a>
             </div>
         </div>

@@ -478,6 +478,7 @@ $routes = [
     'realtor/contracts/show/(\d+)' => ['controller' => 'RealtorContractsController', 'action' => 'show'],
     'realtor/contracts/update/(\d+)' => ['controller' => 'RealtorContractsController', 'action' => 'update'],
     'realtor/contracts/print/(\d+)' => ['controller' => 'RealtorContractsController', 'action' => 'print'],
+    'realtor/contracts/pdf/(\d+)' => ['controller' => 'RealtorContractsController', 'action' => 'pdf'],
 
     // Agent CRM (property-based)
     'agent/clients' => ['controller' => 'AgentClientsController', 'action' => 'index'],
@@ -743,6 +744,7 @@ $protectedRoutes = [
     'realtor/contracts/show/(\d+)',
     'realtor/contracts/update/(\d+)',
     'realtor/contracts/print/(\d+)',
+    'realtor/contracts/pdf/(\d+)',
 
     'agent/clients',
     'agent/clients/store',
