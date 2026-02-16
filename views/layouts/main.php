@@ -1360,21 +1360,25 @@ ob_clean();
                     <li class="nav-item mt-3">
                         <small class="nav-header text-uppercase px-3">FINANCIAL</small>
                     </li>
-                    <li class="nav-item">
-                        <a href="<?= BASE_URL ?>/payment-methods" class="nav-link <?= strpos($current_uri, 'payment-methods') === 0 ? 'active' : '' ?>">
-                            <i class="bi bi-credit-card me-2"></i> Payment Methods
-                        </a>
-                    </li>
+                    <?php if (strtolower((string)($_SESSION['user_role'] ?? '')) !== 'realtor'): ?>
+                        <li class="nav-item">
+                            <a href="<?= BASE_URL ?>/payment-methods" class="nav-link <?= strpos($current_uri, 'payment-methods') === 0 ? 'active' : '' ?>">
+                                <i class="bi bi-credit-card me-2"></i> Payment Methods
+                            </a>
+                        </li>
+                    <?php endif; ?>
                     <li class="nav-item">
                         <a href="<?= BASE_URL ?>/payments" class="nav-link <?= strpos($current_uri, 'payments') === 0 ? 'active' : '' ?>">
                             <i class="bi bi-cash-stack me-2"></i> Payments
                         </a>
                     </li>
-                    <li class="nav-item">
-                        <a href="<?= BASE_URL ?>/mpesa-verification" class="nav-link <?= strpos($current_uri, 'mpesa-verification') === 0 ? 'active' : '' ?>">
-                            <i class="bi bi-shield-check me-2"></i> M-Pesa Verification
-                        </a>
-                    </li>
+                    <?php if (strtolower((string)($_SESSION['user_role'] ?? '')) !== 'realtor'): ?>
+                        <li class="nav-item">
+                            <a href="<?= BASE_URL ?>/mpesa-verification" class="nav-link <?= strpos($current_uri, 'mpesa-verification') === 0 ? 'active' : '' ?>">
+                                <i class="bi bi-shield-check me-2"></i> M-Pesa Verification
+                            </a>
+                        </li>
+                    <?php endif; ?>
                     <li class="nav-item">
                         <a href="<?= BASE_URL ?>/expenses" class="nav-link <?= strpos($current_uri, 'expenses') === 0 ? 'active' : '' ?>">
                             <i class="bi bi-receipt me-2"></i> Expenses
