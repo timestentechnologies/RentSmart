@@ -62,12 +62,17 @@ ob_start();
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label">Property</label>
-                            <select class="form-select" name="property_id" required>
-                                <option value="">Select property</option>
-                                <?php foreach (($properties ?? []) as $p): ?>
-                                    <option value="<?= (int)($p['id'] ?? 0) ?>"><?= htmlspecialchars((string)($p['name'] ?? '')) ?></option>
-                                <?php endforeach; ?>
-                            </select>
+                            <div class="d-flex gap-2">
+                                <select class="form-select" name="property_id" id="agent_client_property" required>
+                                    <option value="">Select property</option>
+                                    <?php foreach (($properties ?? []) as $p): ?>
+                                        <option value="<?= (int)($p['id'] ?? 0) ?>"><?= htmlspecialchars((string)($p['name'] ?? '')) ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <button type="button" class="btn btn-outline-primary" id="agentClientAddPropertyBtn" title="Add Property">
+                                    <i class="bi bi-plus-circle"></i>
+                                </button>
+                            </div>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Name</label>
@@ -95,6 +100,119 @@ ob_start();
         </div>
     </div>
 </div>
+
+<div class="modal fade" id="agentClientAddPropertyModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <form id="agentClientAddPropertyForm">
+        <div class="modal-header">
+          <h5 class="modal-title">Add Property</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Name</label>
+              <input class="form-control" name="name" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Property Type</label>
+              <select class="form-select" name="property_type" required>
+                <option value="">Select Type</option>
+                <option value="apartment">Apartment</option>
+                <option value="house">House</option>
+                <option value="commercial">Commercial</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Address</label>
+              <input class="form-control" name="address" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">City</label>
+              <input class="form-control" name="city" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">State</label>
+              <input class="form-control" name="state" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">ZIP Code</label>
+              <input class="form-control" name="zip_code" required>
+            </div>
+            <div class="col-12">
+              <label class="form-label">Description</label>
+              <textarea class="form-control" name="description" rows="3"></textarea>
+            </div>
+          </div>
+          <div class="alert alert-danger mt-3 d-none" id="agentClientAddPropertyError"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="agentClientAddPropertySubmit">Create Property</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  function csrfToken(){
+    return (document.querySelector('meta[name="csrf-token"]')||{}).content || '';
+  }
+
+  const propertySel = document.getElementById('agent_client_property');
+  const addPropBtn = document.getElementById('agentClientAddPropertyBtn');
+  const addPropModalEl = document.getElementById('agentClientAddPropertyModal');
+  const addPropForm = document.getElementById('agentClientAddPropertyForm');
+  const addPropErr = document.getElementById('agentClientAddPropertyError');
+  const addPropSubmit = document.getElementById('agentClientAddPropertySubmit');
+  const addPropModal = addPropModalEl ? new bootstrap.Modal(addPropModalEl) : null;
+
+  if(addPropBtn && addPropModal){
+    addPropBtn.addEventListener('click', ()=>{
+      if(addPropErr){ addPropErr.classList.add('d-none'); addPropErr.textContent = ''; }
+      addPropForm?.reset();
+      addPropModal.show();
+    });
+  }
+
+  addPropForm?.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    if(!propertySel) return;
+    if(addPropErr){ addPropErr.classList.add('d-none'); addPropErr.textContent = ''; }
+    if(addPropSubmit) addPropSubmit.disabled = true;
+    try {
+      const fd = new FormData(addPropForm);
+      fd.append('csrf_token', csrfToken());
+      const res = await fetch('<?= BASE_URL ?>/properties/store', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: fd
+      });
+      const data = await res.json();
+      if(!data || !data.success || !data.property_id){
+        throw new Error((data && data.message) ? data.message : 'Failed to create property');
+      }
+      const opt = document.createElement('option');
+      opt.value = String(data.property_id);
+      opt.textContent = String(fd.get('name') || 'New Property');
+      propertySel.appendChild(opt);
+      propertySel.value = opt.value;
+      addPropModal?.hide();
+    } catch (err){
+      if(addPropErr){
+        addPropErr.textContent = String(err && err.message ? err.message : err);
+        addPropErr.classList.remove('d-none');
+      }
+    } finally {
+      if(addPropSubmit) addPropSubmit.disabled = false;
+    }
+  });
+})();
+</script>
 
 <?php
 $content = ob_get_clean();

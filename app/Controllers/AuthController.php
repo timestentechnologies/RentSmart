@@ -11,6 +11,7 @@ use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception as MailException;
 use Exception;
 use DateTime;
+use App\Database\Connection;
 
 class AuthController
 {
@@ -161,6 +162,20 @@ class AuthController
             // Create subscription with Basic plan (id=1)
             $this->subscription->createSubscription($userId, 1);
 
+            // Create Odoo CRM lead (do not block registration on failures)
+            try {
+                $this->createOdooLeadFromRegistration([
+                    'name' => $name,
+                    'email' => $email,
+                    'phone' => $phone,
+                    'address' => $address,
+                    'role' => $role,
+                    'user_id' => $userId,
+                ]);
+            } catch (\Exception $ex) {
+                error_log('Odoo lead create failed (non-blocking): ' . $ex->getMessage());
+            }
+
             // Activity Log: auth.register
             try {
                 $ip = $_SERVER['REMOTE_ADDR'] ?? null;
@@ -280,6 +295,127 @@ class AuthController
             header('Location: ' . BASE_URL . '/register');
             exit;
         }
+    }
+
+    private function createOdooLeadFromRegistration(array $payload): void
+    {
+        $cfg = $this->getOdooConfig();
+        if (empty($cfg['url']) || empty($cfg['db']) || empty($cfg['username']) || empty($cfg['password'])) {
+            return;
+        }
+
+        $urlBase = rtrim((string)$cfg['url'], '/');
+        $db = (string)$cfg['db'];
+        $username = (string)$cfg['username'];
+        $password = (string)$cfg['password'];
+
+        $uid = $this->odooAuthenticate($urlBase, $db, $username, $password);
+        if (empty($uid)) {
+            return;
+        }
+
+        $name = (string)($payload['name'] ?? '');
+        $email = (string)($payload['email'] ?? '');
+        $phone = (string)($payload['phone'] ?? '');
+        $address = (string)($payload['address'] ?? '');
+        $role = (string)($payload['role'] ?? '');
+        $userId = (int)($payload['user_id'] ?? 0);
+
+        $leadTitle = trim($name !== '' ? $name : $email);
+        if ($leadTitle === '') {
+            $leadTitle = 'New Website Registration';
+        }
+
+        $descParts = [];
+        if ($role !== '') $descParts[] = 'Role: ' . $role;
+        if ($address !== '') $descParts[] = 'Address: ' . $address;
+        if ($userId > 0) $descParts[] = 'RentSmart User ID: ' . $userId;
+        $descParts[] = 'Source: Website Registration';
+        $description = implode("\n", $descParts);
+
+        $leadData = [
+            'name' => 'RentSmart - ' . $leadTitle,
+            'type' => 'lead',
+            'contact_name' => $name,
+            'email_from' => $email,
+            'phone' => $phone,
+            'description' => $description,
+        ];
+
+        $this->odooExecuteKw($urlBase, $db, (int)$uid, $password, 'crm.lead', 'create', [$leadData]);
+    }
+
+    private function getOdooConfig(): array
+    {
+        $out = [
+            'url' => getenv('ODOO_URL') ?: null,
+            'db' => getenv('ODOO_DB') ?: null,
+            'username' => getenv('ODOO_USERNAME') ?: null,
+            'password' => getenv('ODOO_PASSWORD') ?: null,
+        ];
+
+        try {
+            $db = Connection::getInstance()->getConnection();
+            $stmt = $db->prepare("SELECT setting_key, setting_value FROM settings WHERE setting_key IN ('odoo_url','odoo_database','odoo_username','odoo_password')");
+            $stmt->execute();
+            $rows = $stmt->fetchAll(\PDO::FETCH_KEY_PAIR) ?: [];
+            if (!empty($rows['odoo_url'])) $out['url'] = (string)$rows['odoo_url'];
+            if (!empty($rows['odoo_database'])) $out['db'] = (string)$rows['odoo_database'];
+            if (!empty($rows['odoo_username'])) $out['username'] = (string)$rows['odoo_username'];
+            if (!empty($rows['odoo_password'])) $out['password'] = (string)$rows['odoo_password'];
+        } catch (\Exception $e) {
+            // ignore
+        }
+
+        return $out;
+    }
+
+    private function odooAuthenticate(string $urlBase, string $db, string $username, string $password): ?int
+    {
+        $url = $urlBase . '/xmlrpc/2/common';
+        $req = xmlrpc_encode_request('authenticate', [$db, $username, $password, []]);
+        $ctx = stream_context_create([
+            'http' => [
+                'method' => 'POST',
+                'header' => "Content-Type: text/xml\r\n",
+                'content' => $req,
+                'timeout' => 10,
+            ]
+        ]);
+        $resp = @file_get_contents($url, false, $ctx);
+        if ($resp === false) {
+            return null;
+        }
+        $decoded = xmlrpc_decode($resp);
+        if (is_array($decoded) && xmlrpc_is_fault($decoded)) {
+            error_log('Odoo auth fault: ' . ($decoded['faultString'] ?? 'unknown'));
+            return null;
+        }
+        $uid = (int)$decoded;
+        return $uid > 0 ? $uid : null;
+    }
+
+    private function odooExecuteKw(string $urlBase, string $db, int $uid, string $password, string $model, string $method, array $params = [])
+    {
+        $url = $urlBase . '/xmlrpc/2/object';
+        $req = xmlrpc_encode_request('execute_kw', [$db, $uid, $password, $model, $method, $params]);
+        $ctx = stream_context_create([
+            'http' => [
+                'method' => 'POST',
+                'header' => "Content-Type: text/xml\r\n",
+                'content' => $req,
+                'timeout' => 10,
+            ]
+        ]);
+        $resp = @file_get_contents($url, false, $ctx);
+        if ($resp === false) {
+            throw new \Exception('Failed to connect to Odoo');
+        }
+        $decoded = xmlrpc_decode($resp);
+        if (is_array($decoded) && xmlrpc_is_fault($decoded)) {
+            throw new \Exception('Odoo API fault: ' . ($decoded['faultString'] ?? 'unknown'));
+        }
+        return $decoded;
     }
 
     public function login()
