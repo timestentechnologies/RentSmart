@@ -130,7 +130,15 @@ ob_start();
                                 <td class="text-truncate" style="max-width:240px;" title="<?= htmlspecialchars((string)($x['notes'] ?? '')) ?>"><?= htmlspecialchars((string)($x['notes'] ?? '')) ?></td>
                                 <td>
                                     <?php if (!empty($x['realtor_listing_id'] ?? null)): ?>
-                                        <button type="button" class="btn btn-sm btn-outline-success me-1" onclick="openClientContractModal(<?= (int)$x['id'] ?>, <?= (int)($x['realtor_listing_id'] ?? 0) ?>, '<?= htmlspecialchars((string)($x['name'] ?? ''), ENT_QUOTES) ?>', '<?= htmlspecialchars((string)($x['listing_title'] ?? ''), ENT_QUOTES) ?>')" title="Create Contract">
+                                        <button
+                                            type="button"
+                                            class="btn btn-sm btn-outline-success me-1 js-open-client-contract"
+                                            data-client-id="<?= (int)($x['id'] ?? 0) ?>"
+                                            data-listing-id="<?= (int)($x['realtor_listing_id'] ?? 0) ?>"
+                                            data-client-name="<?= htmlspecialchars((string)($x['name'] ?? '')) ?>"
+                                            data-listing-title="<?= htmlspecialchars((string)($x['listing_title'] ?? '')) ?>"
+                                            title="Create Contract"
+                                        >
                                             <i class="bi bi-file-earmark-plus"></i>
                                         </button>
                                     <?php endif; ?>
@@ -256,6 +264,16 @@ function toggleClientContractTerms(){
 }
 
 document.getElementById('cc_terms_type')?.addEventListener('change', toggleClientContractTerms);
+
+document.addEventListener('click', function (e) {
+  const btn = e.target && e.target.closest ? e.target.closest('.js-open-client-contract') : null;
+  if (!btn) return;
+  const clientId = btn.getAttribute('data-client-id') || '';
+  const listingId = btn.getAttribute('data-listing-id') || '';
+  const clientName = btn.getAttribute('data-client-name') || '';
+  const listingTitle = btn.getAttribute('data-listing-title') || '';
+  openClientContractModal(clientId, listingId, clientName, listingTitle);
+});
 
 function editRealtorClient(id){
   fetch('<?= BASE_URL ?>' + '/realtor/clients/get/' + id)
