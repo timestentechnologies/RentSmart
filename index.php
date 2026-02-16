@@ -478,6 +478,12 @@ $routes = [
     'realtor/contracts/show/(\d+)' => ['controller' => 'RealtorContractsController', 'action' => 'show'],
     'realtor/contracts/update/(\d+)' => ['controller' => 'RealtorContractsController', 'action' => 'update'],
     'realtor/contracts/print/(\d+)' => ['controller' => 'RealtorContractsController', 'action' => 'print'],
+
+    // Agent CRM (property-based)
+    'agent/clients' => ['controller' => 'AgentClientsController', 'action' => 'index'],
+    'agent/clients/store' => ['controller' => 'AgentClientsController', 'action' => 'store'],
+    'agent/contracts' => ['controller' => 'AgentContractsController', 'action' => 'index'],
+    'agent/contracts/store' => ['controller' => 'AgentContractsController', 'action' => 'store'],
 ];
 
 // Protected routes that require authentication
@@ -733,6 +739,11 @@ $protectedRoutes = [
     'realtor/contracts/show/(\d+)',
     'realtor/contracts/update/(\d+)',
     'realtor/contracts/print/(\d+)',
+
+    'agent/clients',
+    'agent/clients/store',
+    'agent/contracts',
+    'agent/contracts/store',
 ];
 
 // Check if the current route requires authentication
