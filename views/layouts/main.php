@@ -416,11 +416,13 @@ ob_clean();
             z-index: 1030;
             opacity: 0;
             transition: opacity 0.3s ease;
+            pointer-events: none;
         }
 
         .sidebar-overlay.show {
             display: block;
             opacity: 1;
+            pointer-events: auto;
         }
 
         .sidebar-nav {
