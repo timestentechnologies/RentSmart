@@ -2,8 +2,14 @@
 // Lightweight standalone diagnostic endpoint.
 // This file is intentionally NOT loading index.php so it can work even when the app is down.
 
-$expectedKey = ''; // TODO: set a strong random key before uploading, e.g. '9f3c2b7c...'
 $key = (string)($_GET['key'] ?? '');
+$expectedKey = (string)(getenv('DEBUG_KEY') ?: '');
+$fallbackKey = ''; // optional: set only if DEBUG_KEY is not available on the server
+
+if ($expectedKey === '') {
+    $expectedKey = $fallbackKey;
+}
+
 if ($expectedKey === '' || $key === '' || !hash_equals($expectedKey, $key)) {
     http_response_code(403);
     header('Content-Type: text/plain; charset=utf-8');
