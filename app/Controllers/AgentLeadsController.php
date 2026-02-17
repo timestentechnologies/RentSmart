@@ -74,11 +74,20 @@ class AgentLeadsController
             $propertyId = (int)($_POST['property_id'] ?? 0);
             $unitId = (int)($_POST['unit_id'] ?? 0);
             $name = trim((string)($_POST['name'] ?? ''));
+            $phone = trim((string)($_POST['phone'] ?? ''));
+            $email = trim((string)($_POST['email'] ?? ''));
             $contact = trim((string)($_POST['contact'] ?? ''));
             $message = trim((string)($_POST['message'] ?? ''));
 
+            if ($contact === '') {
+                $parts = [];
+                if ($phone !== '') { $parts[] = $phone; }
+                if ($email !== '') { $parts[] = $email; }
+                $contact = implode(' / ', $parts);
+            }
+
             if ($propertyId <= 0 || $name === '' || $contact === '') {
-                $_SESSION['flash_message'] = 'Property, name and contact are required';
+                $_SESSION['flash_message'] = 'Property, name and phone/email are required';
                 $_SESSION['flash_type'] = 'danger';
                 header('Location: ' . BASE_URL . '/agent/leads');
                 exit;
