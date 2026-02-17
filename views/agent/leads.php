@@ -307,14 +307,34 @@ ob_start();
   const addPropForm = document.getElementById('agentAddPropertyForm');
   const addPropErr = document.getElementById('agentAddPropertyError');
   const addPropSubmit = document.getElementById('agentAddPropertySubmit');
-  const addPropModal = (addPropModalEl && window.bootstrap && window.bootstrap.Modal)
-    ? window.bootstrap.Modal.getOrCreateInstance(addPropModalEl)
-    : null;
+  const leadModalEl = document.getElementById('addAgentLeadModal');
+  function getModal(el){
+    if(!el) return null;
+    if(!(window.bootstrap && window.bootstrap.Modal)) return null;
+    return window.bootstrap.Modal.getOrCreateInstance(el);
+  }
+
+  function upsertPropertyOption(selectEl, id, label){
+    if(!selectEl) return;
+    const val = String(id);
+    const existing = Array.from(selectEl.options).find(o => o.value === val);
+    if(existing){
+      existing.textContent = label;
+    } else {
+      const opt = document.createElement('option');
+      opt.value = val;
+      opt.textContent = label;
+      selectEl.appendChild(opt);
+    }
+  }
 
   if(addPropBtn){
     addPropBtn.addEventListener('click', ()=>{
       if(addPropErr){ addPropErr.classList.add('d-none'); addPropErr.textContent = ''; }
       addPropForm?.reset();
+      // Ensure only one modal is active
+      const lm = getModal(leadModalEl);
+      if(lm) lm.hide();
     });
   }
 
@@ -335,15 +355,16 @@ ob_start();
       if(!data || !data.success || !data.property_id){
         throw new Error((data && data.message) ? data.message : 'Failed to create property');
       }
-      const opt = document.createElement('option');
-      opt.value = String(data.property_id);
-      opt.textContent = String(fd.get('name') || 'New Property');
-      propertySel.appendChild(opt);
-      propertySel.value = opt.value;
-      propertySel.dispatchEvent(new Event('change'));
-      if (addPropModal) {
-        addPropModal.hide();
+      const label = String(fd.get('name') || 'New Property');
+      upsertPropertyOption(propertySel, data.property_id, label);
+      if(propertySel){
+        propertySel.value = String(data.property_id);
+        propertySel.dispatchEvent(new Event('change'));
       }
+      const pm = getModal(addPropModalEl);
+      if(pm) pm.hide();
+      const lm = getModal(leadModalEl);
+      if(lm) lm.show();
     } catch (err){
       if(addPropErr){
         addPropErr.textContent = String(err && err.message ? err.message : err);

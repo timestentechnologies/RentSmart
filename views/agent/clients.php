@@ -327,14 +327,31 @@ ob_start();
   });
 
   const propertySel = document.getElementById('agent_client_property');
+  const editPropertySel = document.getElementById('edit_client_property');
   const addPropBtn = document.getElementById('agentClientAddPropertyBtn');
   const addPropModalEl = document.getElementById('agentClientAddPropertyModal');
   const addPropForm = document.getElementById('agentClientAddPropertyForm');
   const addPropErr = document.getElementById('agentClientAddPropertyError');
   const addPropSubmit = document.getElementById('agentClientAddPropertySubmit');
-  const addPropModal = (addPropModalEl && window.bootstrap && window.bootstrap.Modal)
-    ? window.bootstrap.Modal.getOrCreateInstance(addPropModalEl)
-    : null;
+  function getAddPropModal(){
+    if(!addPropModalEl) return null;
+    if(!(window.bootstrap && window.bootstrap.Modal)) return null;
+    return window.bootstrap.Modal.getOrCreateInstance(addPropModalEl);
+  }
+
+  function upsertPropertyOption(selectEl, id, label){
+    if(!selectEl) return;
+    const val = String(id);
+    const existing = Array.from(selectEl.options).find(o => o.value === val);
+    if(existing){
+      existing.textContent = label;
+    } else {
+      const opt = document.createElement('option');
+      opt.value = val;
+      opt.textContent = label;
+      selectEl.appendChild(opt);
+    }
+  }
 
   if(addPropBtn){
     addPropBtn.addEventListener('click', ()=>{
@@ -360,14 +377,15 @@ ob_start();
       if(!data || !data.success || !data.property_id){
         throw new Error((data && data.message) ? data.message : 'Failed to create property');
       }
-      const opt = document.createElement('option');
-      opt.value = String(data.property_id);
-      opt.textContent = String(fd.get('name') || 'New Property');
-      propertySel.appendChild(opt);
-      propertySel.value = opt.value;
-      if (addPropModal) {
-        addPropModal.hide();
+      const label = String(fd.get('name') || 'New Property');
+      upsertPropertyOption(propertySel, data.property_id, label);
+      upsertPropertyOption(editPropertySel, data.property_id, label);
+      if(propertySel) propertySel.value = String(data.property_id);
+      if(editPropertySel && editPropertySel.value === '') {
+        // don't force-change edit modal selection unless empty
       }
+      const addPropModal = getAddPropModal();
+      if (addPropModal) addPropModal.hide();
     } catch (err){
       if(addPropErr){
         addPropErr.textContent = String(err && err.message ? err.message : err);
