@@ -269,14 +269,27 @@ function setting_json_pretty($key, $defaultJson = '[]') {
                     <div class="col-md-6">
                         <label class="form-label">Split Image</label>
                         <input type="file" class="form-control" name="home_split_image" accept="image/*">
-                        <?php if (!empty($settings['home_split_image'])): ?>
-                            <div class="form-text">Current: <?= htmlspecialchars($settings['home_split_image']) ?></div>
+                        <?php $currentSplitImage = (string)setting_raw('home_split_image', ''); ?>
+                        <?php if ($currentSplitImage !== ''): ?>
+                            <div class="form-text">Current: <?= htmlspecialchars($currentSplitImage) ?></div>
                             <div class="mt-2">
                                 <img
-                                    src="<?= htmlspecialchars(asset('images/' . (string)$settings['home_split_image'])) ?>"
+                                    src="<?= htmlspecialchars(asset('images/' . $currentSplitImage)) ?>"
                                     alt="Current split image"
                                     class="img-fluid rounded border"
                                     style="max-height: 140px;"
+                                    onerror="this.style.display='none'"
+                                >
+                            </div>
+                        <?php else: ?>
+                            <div class="form-text">Current: Default</div>
+                            <div class="mt-2">
+                                <img
+                                    src="<?= htmlspecialchars(asset('images/new.png')) ?>"
+                                    alt="Default split image"
+                                    class="img-fluid rounded border"
+                                    style="max-height: 140px;"
+                                    onerror="this.style.display='none'"
                                 >
                             </div>
                         <?php endif; ?>
