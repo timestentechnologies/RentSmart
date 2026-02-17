@@ -332,11 +332,31 @@ document.getElementById('confirmDeleteUserBtn').onclick = function() {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
+            let detailsHtml = '';
+            try {
+                if (data.deleted && typeof data.deleted === 'object') {
+                    const entries = Object.entries(data.deleted)
+                        .filter(([k,v]) => v !== null && v !== undefined && String(v) !== '' && Number(v) !== 0);
+                    if (entries.length) {
+                        detailsHtml = '<div class="text-start mt-2">'
+                            + '<div class="fw-semibold mb-2">Deleted data summary</div>'
+                            + '<div class="table-responsive"><table class="table table-sm table-striped mb-0">'
+                            + '<thead><tr><th>Item</th><th class="text-end">Count</th></tr></thead><tbody>'
+                            + entries.map(([k,v]) => {
+                                const label = String(k).replace(/_/g, ' ');
+                                const count = Number(v);
+                                return '<tr><td>' + label + '</td><td class="text-end">' + (isNaN(count) ? String(v) : count.toLocaleString()) + '</td></tr>';
+                              }).join('')
+                            + '</tbody></table></div>'
+                            + '</div>';
+                    }
+                }
+            } catch (e) {}
             // Show success message
             Swal.fire({
                 icon: 'success',
                 title: 'User Deleted!',
-                text: data.message || 'User and all related records have been deleted successfully.',
+                html: '<div>' + (data.message || 'User and all related records have been deleted successfully.') + '</div>' + detailsHtml,
                 confirmButtonText: 'OK',
                 allowOutsideClick: false
             }).then((result) => {

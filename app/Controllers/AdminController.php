@@ -308,6 +308,8 @@ class AdminController
             $db->beginTransaction();
 
             try {
+                $deleted = [];
+
                 // Delete related records in correct order
                 error_log("Starting user deletion for user ID: {$id}, role: {$user['role']}");
 
@@ -315,6 +317,7 @@ class AdminController
                 error_log("Deleting journal entries for user...");
                 $stmt = $db->prepare("DELETE FROM journal_entries WHERE user_id = ?");
                 $stmt->execute([(int)$id]);
+                $deleted['journal_entries'] = (int)$stmt->rowCount();
                 error_log("Journal entries deleted successfully");
                 
                 // 1. Delete subscription payment logs first (foreign key to subscription_payments)
@@ -323,23 +326,32 @@ class AdminController
                     SELECT id FROM subscription_payments WHERE user_id = ?
                 )");
                 $stmt->execute([$id]);
+                $deleted['subscription_payment_logs'] = (int)$stmt->rowCount();
                 error_log("Subscription payment logs deleted successfully");
                 
                 // 2. Delete subscription payments (foreign key to users)
                 error_log("Deleting subscription payments...");
                 $stmt = $db->prepare("DELETE FROM subscription_payments WHERE user_id = ?");
                 $stmt->execute([$id]);
+                $deleted['subscription_payments'] = (int)$stmt->rowCount();
                 error_log("Subscription payments deleted successfully");
                 
                 // 2. Set manual_mpesa_payments.verified_by to NULL (foreign key to users)
                 error_log("Nullifying manual mpesa payment verifier references...");
                 $stmt = $db->prepare("UPDATE manual_mpesa_payments SET verified_by = NULL WHERE verified_by = ?");
                 $stmt->execute([$id]);
+                $deleted['manual_mpesa_payments_nullified'] = (int)$stmt->rowCount();
                 error_log("Manual mpesa payment references nullified");
                 
                 // 3. Delete subscriptions
                 error_log("Deleting subscriptions...");
                 $subscriptionModel = new \App\Models\Subscription();
+                try {
+                    $stmt = $db->prepare("SELECT COUNT(*) AS c FROM subscriptions WHERE user_id = ?");
+                    $stmt->execute([(int)$id]);
+                    $deleted['subscriptions'] = (int)($stmt->fetch(\PDO::FETCH_ASSOC)['c'] ?? 0);
+                } catch (\Exception $e) {
+                }
                 $subscriptionModel->deleteByUserId($id);
                 error_log("Subscriptions deleted successfully");
 
@@ -348,11 +360,13 @@ class AdminController
                 try {
                     $stmt = $db->prepare("DELETE FROM employee_payments WHERE employee_id IN (SELECT id FROM employees WHERE user_id = ?)");
                     $stmt->execute([(int)$id]);
+                    $deleted['employee_payments'] = (int)$stmt->rowCount();
                 } catch (\Exception $e) {
                 }
                 try {
                     $stmt = $db->prepare("DELETE FROM employees WHERE user_id = ?");
                     $stmt->execute([(int)$id]);
+                    $deleted['employees'] = (int)$stmt->rowCount();
                 } catch (\Exception $e) {
                 }
                 error_log("Employees deleted successfully");
@@ -362,6 +376,7 @@ class AdminController
                 try {
                     $stmt = $db->prepare("DELETE FROM expenses WHERE user_id = ?");
                     $stmt->execute([(int)$id]);
+                    $deleted['expenses'] = (int)$stmt->rowCount();
                 } catch (\Exception $e) {
                 }
                 error_log("Expenses deleted successfully");
@@ -371,16 +386,19 @@ class AdminController
                 try {
                     $stmt = $db->prepare("DELETE FROM notices WHERE user_id = ?");
                     $stmt->execute([(int)$id]);
+                    $deleted['notices'] = (int)$stmt->rowCount();
                 } catch (\Exception $e) {
                 }
                 try {
                     $stmt = $db->prepare("DELETE FROM messages WHERE sender_type = 'user' AND sender_id = ?");
                     $stmt->execute([(int)$id]);
+                    $deleted['messages_sent'] = (int)$stmt->rowCount();
                 } catch (\Exception $e) {
                 }
                 try {
                     $stmt = $db->prepare("DELETE FROM contact_message_replies WHERE user_id = ?");
                     $stmt->execute([(int)$id]);
+                    $deleted['contact_message_replies'] = (int)$stmt->rowCount();
                 } catch (\Exception $e) {
                 }
                 error_log("Notices/messages deleted successfully");
@@ -390,11 +408,13 @@ class AdminController
                 try {
                     $stmt = $db->prepare("DELETE FROM payment_method_properties WHERE payment_method_id IN (SELECT id FROM payment_methods WHERE owner_user_id = ?)");
                     $stmt->execute([(int)$id]);
+                    $deleted['payment_method_properties'] = (int)$stmt->rowCount();
                 } catch (\Exception $e) {
                 }
                 try {
                     $stmt = $db->prepare("DELETE FROM payment_methods WHERE owner_user_id = ?");
                     $stmt->execute([(int)$id]);
+                    $deleted['payment_methods'] = (int)$stmt->rowCount();
                 } catch (\Exception $e) {
                 }
                 error_log("Payment methods deleted successfully");
@@ -407,6 +427,7 @@ class AdminController
                     try {
                         $stmt = $db->prepare("DELETE FROM payments WHERE realtor_user_id = ?");
                         $stmt->execute([(int)$id]);
+                        $deleted['realtor_payments'] = (int)$stmt->rowCount();
                     } catch (\Exception $e) {
                     }
 
@@ -414,6 +435,7 @@ class AdminController
                     try {
                         $stmt = $db->prepare("DELETE FROM realtor_contracts WHERE user_id = ?");
                         $stmt->execute([(int)$id]);
+                        $deleted['realtor_contracts'] = (int)$stmt->rowCount();
                     } catch (\Exception $e) {
                     }
 
@@ -421,6 +443,7 @@ class AdminController
                     try {
                         $stmt = $db->prepare("DELETE FROM realtor_clients WHERE user_id = ?");
                         $stmt->execute([(int)$id]);
+                        $deleted['realtor_clients'] = (int)$stmt->rowCount();
                     } catch (\Exception $e) {
                     }
 
@@ -428,6 +451,7 @@ class AdminController
                     try {
                         $stmt = $db->prepare("DELETE FROM realtor_listings WHERE user_id = ?");
                         $stmt->execute([(int)$id]);
+                        $deleted['realtor_listings'] = (int)$stmt->rowCount();
                     } catch (\Exception $e) {
                     }
 
@@ -435,11 +459,13 @@ class AdminController
                     try {
                         $stmt = $db->prepare("DELETE FROM realtor_leads WHERE user_id = ?");
                         $stmt->execute([(int)$id]);
+                        $deleted['realtor_leads'] = (int)$stmt->rowCount();
                     } catch (\Exception $e) {
                     }
                     try {
                         $stmt = $db->prepare("DELETE FROM realtor_lead_stages WHERE user_id = ?");
                         $stmt->execute([(int)$id]);
+                        $deleted['realtor_lead_stages'] = (int)$stmt->rowCount();
                     } catch (\Exception $e) {
                     }
 
@@ -447,6 +473,7 @@ class AdminController
                     try {
                         $stmt = $db->prepare("DELETE FROM inquiries WHERE realtor_user_id = ?");
                         $stmt->execute([(int)$id]);
+                        $deleted['realtor_inquiries'] = (int)$stmt->rowCount();
                     } catch (\Exception $e) {
                     }
 
@@ -463,6 +490,7 @@ class AdminController
                     $stmt = $db->prepare("SELECT id FROM properties WHERE owner_id = ? OR manager_id = ? OR agent_id = ?");
                     $stmt->execute([(int)$id, (int)$id, (int)$id]);
                     $propIds = $stmt->fetchAll(\PDO::FETCH_COLUMN) ?: [];
+                    $deleted['properties'] = (int)count($propIds);
                     foreach ($propIds as $pid) {
                         $propertyModel->delete((int)$pid);
                     }
@@ -491,11 +519,13 @@ class AdminController
                 error_log("Deleting file uploads...");
                 $stmt = $db->prepare("DELETE FROM file_uploads WHERE uploaded_by = ?");
                 $stmt->execute([$id]);
+                $deleted['file_uploads'] = (int)$stmt->rowCount();
                 error_log("File uploads deleted successfully");
 
                 // 7. Finally delete the user
                 error_log("Deleting user record...");
                 $this->user->delete($id);
+                $deleted['users'] = 1;
                 error_log("User deleted successfully");
 
                 // Commit transaction
@@ -506,7 +536,7 @@ class AdminController
                 $agent = $_SERVER['HTTP_USER_AGENT'] ?? null;
                 $this->activityLog->add($_SESSION['user_id'] ?? null, $_SESSION['user_role'] ?? null, 'user.delete', 'user', (int)$id, null, null, $ip, $agent);
 
-                echo json_encode(['success' => true, 'message' => 'User deleted successfully']);
+                echo json_encode(['success' => true, 'message' => 'User deleted successfully', 'deleted' => $deleted]);
             } catch (\Exception $e) {
                 // Rollback on error
                 error_log("Error during user deletion, rolling back: " . $e->getMessage());
