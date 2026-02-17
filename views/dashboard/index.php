@@ -269,10 +269,15 @@ document.addEventListener('DOMContentLoaded', function () {
                                         <small class="text-muted">Monthly Revenue</small>
                                     </div>
                                 </div>
+                                <?php
+                                    $tu = (int)($property['total_units'] ?? 0);
+                                    $ou = (int)($property['occupied_units'] ?? 0);
+                                    $pct = $tu > 0 ? ($ou / $tu) * 100 : 0;
+                                ?>
                                 <div class="progress" style="height: 6px;">
                                     <div class="progress-bar bg-success" role="progressbar" 
-                                        style="width: <?= ($property['occupied_units'] / $property['total_units']) * 100 ?>%" 
-                                        aria-valuenow="<?= ($property['occupied_units'] / $property['total_units']) * 100 ?>" 
+                                        style="width: <?= $pct ?>%" 
+                                        aria-valuenow="<?= $pct ?>" 
                                         aria-valuemin="0" 
                                         aria-valuemax="100">
                                     </div>

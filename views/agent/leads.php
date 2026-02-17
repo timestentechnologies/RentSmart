@@ -230,8 +230,13 @@ ob_start();
               <input class="form-control" name="name" required>
             </div>
             <div class="col-md-6">
-              <label class="form-label">Contact</label>
-              <input class="form-control" name="contact" required>
+              <label class="form-label">Phone</label>
+              <input class="form-control" name="phone" placeholder="e.g. 0712345678">
+              <div class="form-text">Provide phone or email (at least one).</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Email</label>
+              <input class="form-control" type="email" name="email" placeholder="e.g. name@example.com">
             </div>
             <div class="col-12">
               <label class="form-label">Message/Notes</label>
