@@ -262,6 +262,15 @@ ob_start();
   }
   computeWinStageKey();
 
+  function setCardWonUI(card, isWon){
+    if(!card) return;
+    const btn = card.querySelector('[data-role="win-btn"]');
+    if(btn){
+      btn.style.display = isWon ? 'none' : '';
+      btn.disabled = false;
+    }
+  }
+
   async function setStage(id, stage){
     const fd = new FormData();
     fd.append('csrf_token', csrfToken());
@@ -368,11 +377,17 @@ ob_start();
       if(!draggedId || !stage) return;
       const card = document.querySelector('.lead-card[data-id="' + draggedId + '"]');
       if(!card) return;
+
+      computeWinStageKey();
+      const isWonTarget = (winStageKey && stage === winStageKey);
+
       zone.appendChild(card);
       recomputeCounts();
 
       try {
         const data = await setStage(draggedId, stage);
+        card.setAttribute('data-stage', stage);
+        setCardWonUI(card, isWonTarget);
         if(winStageKey && stage === winStageKey && data.contract_id){
           window.location.href = '<?= BASE_URL ?>' + '/agent/contracts';
           return;
