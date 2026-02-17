@@ -18,6 +18,7 @@ class RealtorLead extends Model
             id INT AUTO_INCREMENT PRIMARY KEY,
             user_id INT NOT NULL,
             realtor_listing_id INT NULL,
+            amount DECIMAL(12,2) NOT NULL DEFAULT 0,
             name VARCHAR(255) NOT NULL,
             phone VARCHAR(50) NOT NULL,
             email VARCHAR(150) NULL,
@@ -37,6 +38,11 @@ class RealtorLead extends Model
 
         try {
             $this->db->exec("ALTER TABLE {$this->table} ADD COLUMN realtor_listing_id INT NULL AFTER user_id");
+        } catch (\Exception $e) {
+        }
+
+        try {
+            $this->db->exec("ALTER TABLE {$this->table} ADD COLUMN amount DECIMAL(12,2) NOT NULL DEFAULT 0 AFTER realtor_listing_id");
         } catch (\Exception $e) {
         }
 

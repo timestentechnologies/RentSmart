@@ -488,7 +488,14 @@ $routes = [
 
     'agent/leads' => ['controller' => 'AgentLeadsController', 'action' => 'index'],
     'agent/leads/store' => ['controller' => 'AgentLeadsController', 'action' => 'store'],
+    'agent/leads/get/(\d+)' => ['controller' => 'AgentLeadsController', 'action' => 'get'],
+    'agent/leads/update/(\d+)' => ['controller' => 'AgentLeadsController', 'action' => 'update'],
     'agent/leads/update-stage/(\d+)' => ['controller' => 'AgentLeadsController', 'action' => 'updateStage'],
+
+    'agent/leads/stages' => ['controller' => 'AgentLeadsController', 'action' => 'stages'],
+    'agent/leads/stages/store' => ['controller' => 'AgentLeadsController', 'action' => 'storeStage'],
+    'agent/leads/stages/update/(\d+)' => ['controller' => 'AgentLeadsController', 'action' => 'updateStageDef'],
+    'agent/leads/stages/delete/(\d+)' => ['controller' => 'AgentLeadsController', 'action' => 'deleteStageDef'],
 
     // Debug (protected by DEBUG_KEY)
     'debug/last-error' => ['controller' => 'DebugController', 'action' => 'lastError'],
@@ -751,7 +758,13 @@ $protectedRoutes = [
     'realtor/contracts/print/(\d+)',
     'realtor/contracts/pdf/(\d+)',
 
-    'agent/clients',
+    'agent/clientget/(\d+)',
+    'agent/leads/s',e/(\d+)',
+    'agnt/leads/updatee/(\d+)',
+    'agent/leads/stages',
+    'agent/leads/stages/store',
+    'agent/leads/stages/update/(\d+)',
+    'agent/leads/stages/delet
     'agent/clients/store',
     'agent/contracts',
     'agent/contracts/store',
