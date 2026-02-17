@@ -27,7 +27,7 @@ ob_start();
             </button>
         </div>
 
-<div class="modal fade" id="sellListingModal" tabindex="-1" aria-hidden="true">
+<div class="modal" id="sellListingModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">
       <form method="POST" action="<?= BASE_URL ?>/realtor/contracts/store" id="sellListingForm">
@@ -344,6 +344,15 @@ let __sellListingModal = null;
 function getSellListingModal(){
   const el = document.getElementById('sellListingModal');
   if(!el) return null;
+  if(!el.__rsBackdropCleanupAttached){
+    el.__rsBackdropCleanupAttached = true;
+    el.addEventListener('show.bs.modal', function(){
+      const backdrops = document.querySelectorAll('.modal-backdrop');
+      if(backdrops.length > 1){
+        backdrops.forEach((b, idx) => { if(idx > 0) b.remove(); });
+      }
+    });
+  }
   if(!__sellListingModal){
     __sellListingModal = bootstrap.Modal.getOrCreateInstance(el);
   }
