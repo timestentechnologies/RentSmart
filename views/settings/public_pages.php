@@ -271,6 +271,14 @@ function setting_json_pretty($key, $defaultJson = '[]') {
                         <input type="file" class="form-control" name="home_split_image" accept="image/*">
                         <?php if (!empty($settings['home_split_image'])): ?>
                             <div class="form-text">Current: <?= htmlspecialchars($settings['home_split_image']) ?></div>
+                            <div class="mt-2">
+                                <img
+                                    src="<?= htmlspecialchars(asset('images/' . (string)$settings['home_split_image'])) ?>"
+                                    alt="Current split image"
+                                    class="img-fluid rounded border"
+                                    style="max-height: 140px;"
+                                >
+                            </div>
                         <?php endif; ?>
                     </div>
                     <div class="col-md-6">
