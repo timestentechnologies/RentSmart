@@ -249,7 +249,7 @@ ob_start();
 </div>
 
 <script>
-(function(){
+window.addEventListener('DOMContentLoaded', function(){
   let draggedId = null;
   let winStageKey = null;
   function csrfToken(){
@@ -572,7 +572,7 @@ ob_start();
   }
 
   document.getElementById('manageAgentStagesModal')?.addEventListener('shown.bs.modal', loadAgentStages);
-})();
+});
 </script>
 
 <div class="modal fade" id="agentAddPropertyModal" tabindex="-1" aria-hidden="true">
