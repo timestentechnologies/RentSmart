@@ -339,6 +339,17 @@ ob_start();
 </div>
 
 <script>
+let __sellListingModal = null;
+
+function getSellListingModal(){
+  const el = document.getElementById('sellListingModal');
+  if(!el) return null;
+  if(!__sellListingModal){
+    __sellListingModal = bootstrap.Modal.getOrCreateInstance(el);
+  }
+  return __sellListingModal;
+}
+
 function openSellListingModal(listingId, listingTitle){
   document.getElementById('sell_listing_id').value = listingId;
   document.getElementById('sell_listing_title').textContent = listingTitle || '';
@@ -348,7 +359,12 @@ function openSellListingModal(listingId, listingTitle){
   document.getElementById('sell_start_month').value = '';
   document.getElementById('sell_duration_months').value = '';
   toggleSellTermsFields();
-  new bootstrap.Modal(document.getElementById('sellListingModal')).show();
+
+  const m = getSellListingModal();
+  if(!m) return;
+  const el = document.getElementById('sellListingModal');
+  if(el && el.classList.contains('show')) return;
+  m.show();
 }
 
 function monthAdd(ym, n){
