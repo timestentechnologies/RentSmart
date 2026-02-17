@@ -43,12 +43,20 @@ class RealtorListingsController
 
     public function store()
     {
+        $isAjax = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower((string)$_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest')
+            || (!empty($_SERVER['HTTP_ACCEPT']) && stripos((string)$_SERVER['HTTP_ACCEPT'], 'application/json') !== false);
+
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             header('Location: ' . BASE_URL . '/realtor/listings');
             exit;
         }
         try {
             if (!verify_csrf_token()) {
+                if ($isAjax) {
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => false, 'message' => 'Invalid security token']);
+                    exit;
+                }
                 $_SESSION['flash_message'] = 'Invalid security token';
                 $_SESSION['flash_type'] = 'danger';
                 header('Location: ' . BASE_URL . '/realtor/listings');
@@ -66,6 +74,11 @@ class RealtorListingsController
             ];
 
             if ($data['title'] === '' || $data['location'] === '') {
+                if ($isAjax) {
+                    header('Content-Type: application/json');
+                    echo json_encode(['success' => false, 'message' => 'Title and location are required']);
+                    exit;
+                }
                 $_SESSION['flash_message'] = 'Title and location are required';
                 $_SESSION['flash_type'] = 'danger';
                 header('Location: ' . BASE_URL . '/realtor/listings');
@@ -98,8 +111,25 @@ class RealtorListingsController
 
             $_SESSION['flash_message'] = 'Listing added successfully';
             $_SESSION['flash_type'] = 'success';
+
+            if ($isAjax) {
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'Listing added successfully',
+                    'listing_id' => (int)$listingId,
+                    'title' => (string)($data['title'] ?? ''),
+                    'location' => (string)($data['location'] ?? ''),
+                ]);
+                exit;
+            }
         } catch (\Exception $e) {
             error_log('RealtorListings store failed: ' . $e->getMessage());
+            if ($isAjax) {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => false, 'message' => 'Failed to add listing']);
+                exit;
+            }
             $_SESSION['flash_message'] = 'Failed to add listing';
             $_SESSION['flash_type'] = 'danger';
         }
