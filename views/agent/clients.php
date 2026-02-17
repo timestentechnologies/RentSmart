@@ -39,6 +39,9 @@ ob_start();
                                     <button type="button" class="btn btn-sm btn-outline-primary" onclick="editAgentClient(<?= (int)($c['id'] ?? 0) ?>)">
                                         <i class="bi bi-pencil"></i>
                                     </button>
+                                    <button type="button" class="btn btn-sm btn-outline-danger ms-1" onclick="deleteAgentClient(<?= (int)($c['id'] ?? 0) ?>)">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -249,6 +252,21 @@ ob_start();
         editModal.show();
       })
       .catch(()=>alert('Failed to load client'));
+  }
+
+  window.deleteAgentClient = async function(id){
+    const ok = confirm('Delete this client? This will also delete all contracts for this client.');
+    if(!ok) return;
+    const fd = new FormData();
+    fd.set('csrf_token', csrfToken());
+    try{
+      const res = await fetch('<?= BASE_URL ?>' + '/agent/clients/delete/' + id, { method:'POST', body: fd });
+      const data = await res.json();
+      if(!data.success){ alert(data.message || 'Failed to delete client'); return; }
+      location.reload();
+    }catch(e){
+      alert('Failed to delete client');
+    }
   }
 
   document.getElementById('editClientForm')?.addEventListener('submit', async (e)=>{

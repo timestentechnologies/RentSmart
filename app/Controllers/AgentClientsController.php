@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Models\AgentClient;
+use App\Models\AgentContract;
 use App\Models\Property;
 
 class AgentClientsController
@@ -171,6 +172,52 @@ class AgentClientsController
         } catch (\Exception $e) {
             error_log('AgentClients update failed: ' . $e->getMessage());
             echo json_encode(['success' => false, 'message' => 'Failed to update client']);
+        }
+        exit;
+    }
+
+    public function delete($id)
+    {
+        header('Content-Type: application/json');
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo json_encode(['success' => false, 'message' => 'Invalid request']);
+            exit;
+        }
+
+        try {
+            if (!verify_csrf_token()) {
+                echo json_encode(['success' => false, 'message' => 'Invalid security token']);
+                exit;
+            }
+
+            $clientModel = new AgentClient();
+            $row = $clientModel->getByIdWithAccess((int)$id, $this->userId);
+            if (!$row) {
+                echo json_encode(['success' => false, 'message' => 'Client not found']);
+                exit;
+            }
+
+            $contractModel = new AgentContract();
+
+            $clientModel->beginTransaction();
+            try {
+                $stmt = $contractModel->getDb()->prepare(
+                    "DELETE FROM agent_contracts WHERE agent_client_id = ? AND user_id = ?"
+                );
+                $stmt->execute([(int)$id, (int)$this->userId]);
+
+                $clientModel->deleteById((int)$id);
+
+                $clientModel->commit();
+            } catch (\Exception $e) {
+                $clientModel->rollback();
+                throw $e;
+            }
+
+            echo json_encode(['success' => true]);
+        } catch (\Exception $e) {
+            error_log('AgentClients delete failed: ' . $e->getMessage());
+            echo json_encode(['success' => false, 'message' => 'Failed to delete client']);
         }
         exit;
     }
