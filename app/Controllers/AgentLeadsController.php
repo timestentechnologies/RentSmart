@@ -8,7 +8,6 @@ use App\Models\Unit;
 use App\Models\AgentClient;
 use App\Models\Tenant;
 use App\Models\Lease;
-use App\Models\AgentLeadStage;
 
 class AgentLeadsController
 {
@@ -39,9 +38,6 @@ class AgentLeadsController
         $inquiryModel = new Inquiry();
         $inquiries = $inquiryModel->allVisibleForUser($this->userId, $this->role);
 
-        $stageModel = new AgentLeadStage();
-        $stages = $stageModel->getAll($this->userId);
-
         $propertyModel = new Property();
         $properties = $propertyModel->getAll($this->userId);
 
@@ -53,7 +49,6 @@ class AgentLeadsController
             'inquiries' => $inquiries,
             'properties' => $properties,
             'units' => $units,
-            'stages' => $stages,
         ]);
     }
 
@@ -77,7 +72,6 @@ class AgentLeadsController
             $name = trim((string)($_POST['name'] ?? ''));
             $contact = trim((string)($_POST['contact'] ?? ''));
             $message = trim((string)($_POST['message'] ?? ''));
-            $amount = (float)($_POST['amount'] ?? 0);
 
             if ($propertyId <= 0 || $name === '' || $contact === '') {
                 $_SESSION['flash_message'] = 'Property, name and contact are required';
@@ -112,7 +106,6 @@ class AgentLeadsController
                 'contact' => $contact,
                 'message' => $message,
                 'source' => 'agent_crm',
-                'amount' => $amount,
             ]);
 
             try {
@@ -132,164 +125,6 @@ class AgentLeadsController
         exit;
     }
 
-    public function get($id)
-    {
-        header('Content-Type: application/json');
-        try {
-            $model = new Inquiry();
-            $row = $model->getByIdVisibleForUser((int)$id, (int)$this->userId, $this->role);
-            if (!$row) {
-                http_response_code(404);
-                echo json_encode(['success' => false, 'message' => 'Lead not found']);
-                exit;
-            }
-            echo json_encode(['success' => true, 'data' => $row]);
-        } catch (\Exception $e) {
-            http_response_code(500);
-            echo json_encode(['success' => false, 'message' => 'Server error']);
-        }
-        exit;
-    }
-
-    public function update($id)
-    {
-        header('Content-Type: application/json');
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            echo json_encode(['success' => false, 'message' => 'Invalid request']);
-            exit;
-        }
-        try {
-            if (!verify_csrf_token()) {
-                echo json_encode(['success' => false, 'message' => 'Invalid security token']);
-                exit;
-            }
-
-            $model = new Inquiry();
-            $row = $model->getByIdVisibleForUser((int)$id, (int)$this->userId, $this->role);
-            if (!$row) {
-                echo json_encode(['success' => false, 'message' => 'Lead not found']);
-                exit;
-            }
-
-            $name = trim((string)($_POST['name'] ?? ($row['name'] ?? '')));
-            $contact = trim((string)($_POST['contact'] ?? ($row['contact'] ?? '')));
-            $message = trim((string)($_POST['message'] ?? ($row['message'] ?? '')));
-            $amount = (float)($_POST['amount'] ?? ($row['amount'] ?? 0));
-
-            $stmt = $model->db->prepare("UPDATE inquiries SET name = ?, contact = ?, message = ?, amount = ? WHERE id = ?");
-            $ok = (bool)$stmt->execute([(string)$name, (string)$contact, (string)$message, (float)$amount, (int)$id]);
-            echo json_encode(['success' => $ok]);
-        } catch (\Exception $e) {
-            error_log('AgentLeads update failed: ' . $e->getMessage());
-            echo json_encode(['success' => false, 'message' => 'Server error']);
-        }
-        exit;
-    }
-
-    public function stages()
-    {
-        header('Content-Type: application/json');
-        try {
-            $stageModel = new AgentLeadStage();
-            $stages = $stageModel->getAll($this->userId);
-            echo json_encode(['success' => true, 'data' => $stages]);
-        } catch (\Exception $e) {
-            echo json_encode(['success' => false, 'message' => 'Failed to load stages']);
-        }
-        exit;
-    }
-
-    public function storeStage()
-    {
-        header('Content-Type: application/json');
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            echo json_encode(['success' => false, 'message' => 'Invalid request']);
-            exit;
-        }
-        try {
-            $stageKey = strtolower(trim((string)($_POST['stage_key'] ?? '')));
-            $label = trim((string)($_POST['label'] ?? ''));
-            $colorClass = trim((string)($_POST['color_class'] ?? 'secondary'));
-            $sortOrder = (int)($_POST['sort_order'] ?? 0);
-            $isWon = (int)($_POST['is_won'] ?? 0) === 1 ? 1 : 0;
-            $isLost = (int)($_POST['is_lost'] ?? 0) === 1 ? 1 : 0;
-            if ($stageKey === '' || $label === '') {
-                echo json_encode(['success' => false, 'message' => 'Stage key and label are required']);
-                exit;
-            }
-            $stageModel = new AgentLeadStage();
-            $id = $stageModel->insert([
-                'user_id' => (int)$this->userId,
-                'stage_key' => $stageKey,
-                'label' => $label,
-                'color_class' => $colorClass,
-                'sort_order' => $sortOrder,
-                'is_won' => $isWon,
-                'is_lost' => $isLost,
-            ]);
-            echo json_encode(['success' => true, 'id' => (int)$id]);
-        } catch (\Exception $e) {
-            error_log('Agent storeStage failed: ' . $e->getMessage());
-            echo json_encode(['success' => false, 'message' => 'Failed to add stage']);
-        }
-        exit;
-    }
-
-    public function updateStageDef($id)
-    {
-        header('Content-Type: application/json');
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            echo json_encode(['success' => false, 'message' => 'Invalid request']);
-            exit;
-        }
-        try {
-            $stageModel = new AgentLeadStage();
-            $row = $stageModel->getByIdWithAccess((int)$id, $this->userId);
-            if (!$row) {
-                echo json_encode(['success' => false, 'message' => 'Stage not found']);
-                exit;
-            }
-            $data = [
-                'label' => trim((string)($_POST['label'] ?? ($row['label'] ?? ''))),
-                'color_class' => trim((string)($_POST['color_class'] ?? ($row['color_class'] ?? 'secondary'))),
-                'sort_order' => (int)($_POST['sort_order'] ?? ($row['sort_order'] ?? 0)),
-                'is_won' => (int)($_POST['is_won'] ?? ($row['is_won'] ?? 0)) === 1 ? 1 : 0,
-                'is_lost' => (int)($_POST['is_lost'] ?? ($row['is_lost'] ?? 0)) === 1 ? 1 : 0,
-            ];
-            $ok = $stageModel->updateById((int)$id, $data);
-            echo json_encode(['success' => (bool)$ok]);
-        } catch (\Exception $e) {
-            echo json_encode(['success' => false, 'message' => 'Failed to update stage']);
-        }
-        exit;
-    }
-
-    public function deleteStageDef($id)
-    {
-        header('Content-Type: application/json');
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            echo json_encode(['success' => false, 'message' => 'Invalid request']);
-            exit;
-        }
-        try {
-            $stageModel = new AgentLeadStage();
-            $row = $stageModel->getByIdWithAccess((int)$id, $this->userId);
-            if (!$row) {
-                echo json_encode(['success' => false, 'message' => 'Stage not found']);
-                exit;
-            }
-            if (in_array((string)($row['stage_key'] ?? ''), ['new','contacted','qualified','won','lost'], true)) {
-                echo json_encode(['success' => false, 'message' => 'Default stages cannot be deleted']);
-                exit;
-            }
-            $ok = $stageModel->deleteById((int)$id);
-            echo json_encode(['success' => (bool)$ok]);
-        } catch (\Exception $e) {
-            echo json_encode(['success' => false, 'message' => 'Failed to delete stage']);
-        }
-        exit;
-    }
-
     public function updateStage($id)
     {
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -306,13 +141,8 @@ class AgentLeadsController
             $payloadStage = $_POST['stage'] ?? '';
             $stage = strtolower(trim((string)$payloadStage));
 
-            try {
-                $stageModel = new AgentLeadStage();
-                $found = $stageModel->getByKey((int)$this->userId, (string)$stage);
-                if (!$found) {
-                    $stage = 'new';
-                }
-            } catch (\Exception $e) {
+            $allowed = ['new', 'contacted', 'qualified', 'won', 'lost'];
+            if (!in_array($stage, $allowed, true)) {
                 $stage = 'new';
             }
 

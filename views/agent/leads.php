@@ -5,14 +5,9 @@ ob_start();
     <div class="card page-header mb-4">
         <div class="card-body d-flex justify-content-between align-items-center">
             <h1 class="h3 mb-0"><i class="bi bi-kanban text-primary me-2"></i>CRM - Leads</h1>
-            <div class="d-flex gap-2">
-              <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="modal" data-bs-target="#manageAgentStagesModal">
-                <i class="bi bi-sliders me-1"></i>Stages
-              </button>
-              <button class="btn btn-sm btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#addAgentLeadModal">
-                  <i class="bi bi-plus-circle me-1"></i>Add Lead
-              </button>
-            </div>
+            <button class="btn btn-sm btn-primary" type="button" data-bs-toggle="modal" data-bs-target="#addAgentLeadModal">
+                <i class="bi bi-plus-circle me-1"></i>Add Lead
+            </button>
         </div>
     </div>
 
@@ -32,31 +27,17 @@ ob_start();
     </style>
 
     <?php
-        $stagesArr = is_array($stages ?? null) ? $stages : [];
-        if (empty($stagesArr)) {
-            $stagesArr = [
-                ['stage_key'=>'new','label'=>'New','color_class'=>'primary','is_won'=>0,'is_lost'=>0],
-                ['stage_key'=>'contacted','label'=>'Contacted','color_class'=>'warning','is_won'=>0,'is_lost'=>0],
-                ['stage_key'=>'qualified','label'=>'Qualified','color_class'=>'info','is_won'=>0,'is_lost'=>0],
-                ['stage_key'=>'won','label'=>'Won','color_class'=>'success','is_won'=>1,'is_lost'=>0],
-                ['stage_key'=>'lost','label'=>'Lost','color_class'=>'danger','is_won'=>0,'is_lost'=>1],
-            ];
-        }
-        $stageMap = [];
-        $grouped = [];
-        foreach ($stagesArr as $s) {
-            $k = strtolower((string)($s['stage_key'] ?? ''));
-            if ($k === '') continue;
-            $stageMap[$k] = $s;
-            $grouped[$k] = [];
-        }
+        $stagesArr = [
+            ['stage_key'=>'new','label'=>'New','color_class'=>'primary','is_won'=>0,'is_lost'=>0],
+            ['stage_key'=>'contacted','label'=>'Contacted','color_class'=>'warning','is_won'=>0,'is_lost'=>0],
+            ['stage_key'=>'qualified','label'=>'Qualified','color_class'=>'info','is_won'=>0,'is_lost'=>0],
+            ['stage_key'=>'won','label'=>'Won','color_class'=>'success','is_won'=>1,'is_lost'=>0],
+            ['stage_key'=>'lost','label'=>'Lost','color_class'=>'danger','is_won'=>0,'is_lost'=>1],
+        ];
+        $grouped = [ 'new'=>[], 'contacted'=>[], 'qualified'=>[], 'won'=>[], 'lost'=>[] ];
         foreach (($inquiries ?? []) as $x) {
             $st = strtolower((string)($x['crm_stage'] ?? 'new'));
-            if (!isset($grouped[$st])) {
-                $firstKey = 'new';
-                foreach ($grouped as $kk => $_v) { $firstKey = $kk; break; }
-                $st = $firstKey ?: 'new';
-            }
+            if (!isset($grouped[$st])) { $st = 'new'; }
             $grouped[$st][] = $x;
         }
         $accentToHex = function($c){
@@ -92,13 +73,9 @@ ob_start();
                             $propertyName = (string)($x['property_name'] ?? '');
                             $unit = (string)($x['unit_number'] ?? '');
                             $message = (string)($x['message'] ?? '');
-                            $amount = (float)($x['amount'] ?? 0);
                         ?>
                         <div class="lead-card" draggable="true" data-id="<?= $id ?>" data-stage="<?= htmlspecialchars($key) ?>">
-                            <div class="d-flex justify-content-between align-items-start">
-                              <div class="lead-title"><?= htmlspecialchars($name) ?></div>
-                              <div class="lead-sub">Ksh <?= number_format((float)$amount, 2) ?></div>
-                            </div>
+                            <div class="lead-title"><?= htmlspecialchars($name) ?></div>
                             <div class="lead-sub mt-1"><?= htmlspecialchars($contact) ?></div>
                             <div class="mt-2 d-flex flex-wrap gap-2">
                                 <?php if ($propertyName !== ''): ?>
@@ -117,7 +94,6 @@ ob_start();
                                     <button type="button" class="btn btn-sm btn-outline-success" data-role="win-btn" data-id="<?= $id ?>">
                                         <i class="bi bi-check2-circle"></i> Win
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="editAgentLead(<?= $id ?>)"><i class="bi bi-pencil"></i></button>
                                 </div>
                             <?php endif; ?>
                         </div>
@@ -126,68 +102,6 @@ ob_start();
             </div>
         <?php endforeach; ?>
     </div>
-</div>
-
-<div class="modal fade" id="manageAgentStagesModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Manage Stages</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">
-        <div class="row g-2 mb-3">
-          <div class="col-md-3"><input type="text" id="a_new_stage_key" class="form-control" placeholder="key e.g follow_up"></div>
-          <div class="col-md-3"><input type="text" id="a_new_stage_label" class="form-control" placeholder="Label"></div>
-          <div class="col-md-3">
-            <select id="a_new_stage_color" class="form-select">
-              <option value="primary">Blue</option>
-              <option value="success">Green</option>
-              <option value="warning">Orange</option>
-              <option value="danger">Red</option>
-              <option value="info">Cyan</option>
-              <option value="secondary">Gray</option>
-              <option value="dark">Dark</option>
-            </select>
-          </div>
-          <div class="col-md-1"><input type="number" id="a_new_stage_sort" class="form-control" placeholder="Order"></div>
-          <div class="col-md-1 d-flex align-items-center justify-content-center">
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" id="a_new_stage_is_won">
-              <label class="form-check-label" for="a_new_stage_is_won">Won</label>
-            </div>
-          </div>
-          <div class="col-md-1 d-flex align-items-center justify-content-center">
-            <div class="form-check">
-              <input class="form-check-input" type="checkbox" id="a_new_stage_is_lost">
-              <label class="form-check-label" for="a_new_stage_is_lost">Lost</label>
-            </div>
-          </div>
-          <div class="col-md-1 d-grid"><button class="btn btn-primary" type="button" onclick="agentAddStage()">Add</button></div>
-        </div>
-        <div class="table-responsive">
-          <table class="table table-sm align-middle">
-            <thead>
-              <tr>
-                <th>Key</th>
-                <th>Label</th>
-                <th>Color</th>
-                <th>Order</th>
-                <th>Won</th>
-                <th>Lost</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody id="aStagesTableBody"></tbody>
-          </table>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-        <button type="button" class="btn btn-primary" onclick="location.reload()">Apply</button>
-      </div>
-    </div>
-  </div>
 </div>
 
 <div class="modal fade" id="addAgentLeadModal" tabindex="-1" aria-hidden="true">
@@ -239,60 +153,11 @@ ob_start();
               <label class="form-label">Message/Notes</label>
               <textarea class="form-control" name="message" rows="3"></textarea>
             </div>
-            <div class="col-md-6">
-              <label class="form-label">Amount</label>
-              <div class="input-group">
-                <span class="input-group-text">Ksh</span>
-                <input class="form-control" name="amount" type="number" step="0.01" min="0" value="0">
-              </div>
-            </div>
           </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
           <button type="submit" class="btn btn-primary">Save Lead</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
-
-<div class="modal fade" id="editAgentLeadModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
-    <div class="modal-content">
-      <form id="editAgentLeadForm">
-        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
-        <div class="modal-header">
-          <h5 class="modal-title">Edit Lead</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <input type="hidden" id="a_edit_id">
-          <div class="row g-3">
-            <div class="col-md-6">
-              <label class="form-label">Name</label>
-              <input class="form-control" name="name" id="a_edit_name" required>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Contact</label>
-              <input class="form-control" name="contact" id="a_edit_contact" required>
-            </div>
-            <div class="col-12">
-              <label class="form-label">Message/Notes</label>
-              <textarea class="form-control" name="message" id="a_edit_message" rows="3"></textarea>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Amount</label>
-              <div class="input-group">
-                <span class="input-group-text">Ksh</span>
-                <input class="form-control" name="amount" id="a_edit_amount" type="number" step="0.01" min="0" value="0">
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-primary">Save Changes</button>
         </div>
       </form>
     </div>
@@ -397,114 +262,6 @@ ob_start();
       if(badge) badge.textContent = String(count);
     });
   }
-
-  async function loadStages(){
-    try{
-      const res = await fetch('<?= BASE_URL ?>/agent/leads/stages');
-      const data = await res.json();
-      if(!data || !data.success) return;
-      const body = document.getElementById('aStagesTableBody');
-      if(!body) return;
-      body.innerHTML = '';
-      (data.data || []).forEach(s=>{
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td>${String(s.stage_key||'')}</td>
-          <td><input class="form-control form-control-sm" value="${String(s.label||'')}" data-role="lbl" /></td>
-          <td><input class="form-control form-control-sm" value="${String(s.color_class||'secondary')}" data-role="clr" /></td>
-          <td><input class="form-control form-control-sm" type="number" value="${parseInt(s.sort_order||0,10)}" data-role="ord" /></td>
-          <td class="text-center"><input type="checkbox" ${parseInt(s.is_won||0,10)===1?'checked':''} data-role="won" /></td>
-          <td class="text-center"><input type="checkbox" ${parseInt(s.is_lost||0,10)===1?'checked':''} data-role="lost" /></td>
-          <td class="text-end">
-            <button class="btn btn-sm btn-outline-primary" type="button" data-role="save" data-id="${s.id}"><i class="bi bi-save"></i></button>
-            <button class="btn btn-sm btn-outline-danger" type="button" data-role="del" data-id="${s.id}"><i class="bi bi-trash"></i></button>
-          </td>
-        `;
-        body.appendChild(tr);
-      });
-    }catch(e){}
-  }
-
-  window.agentAddStage = async function(){
-    const key = (document.getElementById('a_new_stage_key')?.value || '').trim();
-    const label = (document.getElementById('a_new_stage_label')?.value || '').trim();
-    const color = (document.getElementById('a_new_stage_color')?.value || 'secondary').trim();
-    const sort = parseInt(document.getElementById('a_new_stage_sort')?.value || '0', 10);
-    const isWon = document.getElementById('a_new_stage_is_won')?.checked ? 1 : 0;
-    const isLost = document.getElementById('a_new_stage_is_lost')?.checked ? 1 : 0;
-    if(!key || !label){ alert('Stage key and label required'); return; }
-    const fd = new FormData();
-    fd.append('csrf_token', csrfToken());
-    fd.append('stage_key', key);
-    fd.append('label', label);
-    fd.append('color_class', color);
-    fd.append('sort_order', String(isNaN(sort) ? 0 : sort));
-    fd.append('is_won', String(isWon));
-    fd.append('is_lost', String(isLost));
-    const res = await fetch('<?= BASE_URL ?>/agent/leads/stages/store', { method:'POST', body: fd });
-    const data = await res.json();
-    if(!data || !data.success){ alert((data && data.message) ? data.message : 'Failed'); return; }
-    await loadStages();
-  };
-
-  window.editAgentLead = async function(id){
-    try{
-      const res = await fetch('<?= BASE_URL ?>/agent/leads/get/' + id);
-      const data = await res.json();
-      if(!data || !data.success){ alert('Lead not found'); return; }
-      const e = data.data;
-      document.getElementById('a_edit_id').value = e.id;
-      document.getElementById('a_edit_name').value = e.name || '';
-      document.getElementById('a_edit_contact').value = e.contact || '';
-      document.getElementById('a_edit_message').value = e.message || '';
-      document.getElementById('a_edit_amount').value = (e.amount !== undefined && e.amount !== null) ? e.amount : 0;
-      bootstrap.Modal.getOrCreateInstance(document.getElementById('editAgentLeadModal')).show();
-    } catch(e){
-      alert('Failed to load lead');
-    }
-  };
-
-  document.getElementById('editAgentLeadForm')?.addEventListener('submit', async (e)=>{
-    e.preventDefault();
-    const id = document.getElementById('a_edit_id').value;
-    const fd = new FormData(e.target);
-    const res = await fetch('<?= BASE_URL ?>/agent/leads/update/' + id, { method:'POST', body: fd });
-    const data = await res.json();
-    if(data && data.success){ location.reload(); }
-    else { alert((data && data.message) ? data.message : 'Failed'); }
-  });
-
-  document.getElementById('manageAgentStagesModal')?.addEventListener('shown.bs.modal', loadStages);
-
-  document.addEventListener('click', async (e)=>{
-    const saveBtn = e.target && e.target.closest ? e.target.closest('#aStagesTableBody [data-role="save"]') : null;
-    if(saveBtn){
-      const tr = saveBtn.closest('tr');
-      const id = saveBtn.getAttribute('data-id');
-      const fd = new FormData();
-      fd.append('csrf_token', csrfToken());
-      fd.append('label', tr.querySelector('[data-role="lbl"]').value);
-      fd.append('color_class', tr.querySelector('[data-role="clr"]').value);
-      fd.append('sort_order', tr.querySelector('[data-role="ord"]').value);
-      fd.append('is_won', tr.querySelector('[data-role="won"]').checked ? '1':'0');
-      fd.append('is_lost', tr.querySelector('[data-role="lost"]').checked ? '1':'0');
-      const res = await fetch('<?= BASE_URL ?>/agent/leads/stages/update/' + id, { method:'POST', body: fd });
-      const data = await res.json();
-      if(!data || !data.success){ alert((data && data.message) ? data.message : 'Failed'); }
-      return;
-    }
-    const delBtn = e.target && e.target.closest ? e.target.closest('#aStagesTableBody [data-role="del"]') : null;
-    if(delBtn){
-      if(!confirm('Delete this stage?')) return;
-      const id = delBtn.getAttribute('data-id');
-      const fd = new FormData();
-      fd.append('csrf_token', csrfToken());
-      const res = await fetch('<?= BASE_URL ?>/agent/leads/stages/delete/' + id, { method:'POST', body: fd });
-      const data = await res.json();
-      if(!data || !data.success){ alert((data && data.message) ? data.message : 'Failed'); return; }
-      await loadStages();
-    }
-  });
 
   document.querySelectorAll('.lead-card').forEach(card=>{
     card.addEventListener('dragstart', ()=>{ draggedId = card.getAttribute('data-id'); });
