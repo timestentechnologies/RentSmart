@@ -202,6 +202,11 @@ ob_start();
 
 <script>
 (function(){
+  // Defensive cleanup: sometimes a leftover backdrop can block clicks on buttons.
+  document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+  document.body.classList.remove('modal-open');
+  document.body.style.removeProperty('padding-right');
+
   const terms = document.getElementById('terms_type');
   const durationWrap = document.getElementById('duration_wrap');
   const startWrap = document.getElementById('start_wrap');
