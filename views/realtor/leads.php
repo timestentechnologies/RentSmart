@@ -444,6 +444,18 @@ fun   <div class="modal-body">Are you sure you want to delete this lead?</div>
   function getModal(el){
     if(!el) return null;
     if(!(window.bootstrap && window.bootstrap.Modal)) return null;
+    if(el.parentElement && el.parentElement !== document.body){
+      document.body.appendChild(el);
+    }
+    if(!el.__rsBackdropCleanupAttached){
+      el.__rsBackdropCleanupAttached = true;
+      el.addEventListener('show.bs.modal', function(){
+        const backdrops = document.querySelectorAll('.modal-backdrop');
+        if(backdrops.length > 1){
+          backdrops.forEach((b, idx) => { if(idx > 0) b.remove(); });
+        }
+      });
+    }
     return window.bootstrap.Modal.getOrCreateInstance(el);
   }
 
@@ -453,12 +465,15 @@ fun   <div class="modal-body">Are you sure you want to delete this lead?</div>
   }
 
   document.getElementById('realtorLeadAddListingBtn')?.addEventListener('click', ()=>{
-    const lm = getModal(leadModalEl);
-    if(lm) lm.hide();
     resetListingForm();
   });
   document.getElementById('realtorLeadAddListingBtn2')?.addEventListener('click', ()=>{
     resetListingForm();
+  });
+
+  listingModalEl?.addEventListener('show.bs.modal', ()=>{
+    const lm = getModal(leadModalEl);
+    if(lm) lm.hide();
   });
 
   addListingForm?.addEventListener('submit', async (e)=>{
