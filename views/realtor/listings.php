@@ -344,6 +344,9 @@ let __sellListingModal = null;
 function getSellListingModal(){
   const el = document.getElementById('sellListingModal');
   if(!el) return null;
+  if(el.parentElement && el.parentElement !== document.body){
+    document.body.appendChild(el);
+  }
   if(!el.__rsBackdropCleanupAttached){
     el.__rsBackdropCleanupAttached = true;
     el.addEventListener('show.bs.modal', function(){
