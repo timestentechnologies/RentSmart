@@ -44,6 +44,39 @@ class FileUploadHelper
     private $maxFileSize = 10485760; // 10MB
     private $maxImageSize = 5242880; // 5MB
 
+    private function buildPublicFileUrl(string $uploadPath): string
+    {
+        $baseUrl = defined('BASE_URL') ? BASE_URL : '';
+        $uploadPath = ltrim((string)$uploadPath, '/');
+
+        $projectRoot = realpath(__DIR__ . '/../../');
+        if (!$projectRoot) {
+            $projectRoot = __DIR__ . '/../../';
+        }
+
+        // Common cases
+        // - projectRoot/public/<uploadPath>
+        // - projectRoot/<uploadPath> (when docroot is already public/)
+        $pathInPublic = rtrim($projectRoot, '/\\') . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $uploadPath);
+        $pathInRoot = rtrim($projectRoot, '/\\') . DIRECTORY_SEPARATOR . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $uploadPath);
+
+        if (file_exists($pathInPublic)) {
+            return $baseUrl . '/public/' . $uploadPath;
+        }
+        if (file_exists($pathInRoot)) {
+            return $baseUrl . '/' . $uploadPath;
+        }
+
+        // Fallback to previous behavior
+        if (strpos($uploadPath, 'public/') === 0) {
+            return $baseUrl . '/' . $uploadPath;
+        }
+        if (strpos($uploadPath, 'uploads/') === 0) {
+            return $baseUrl . '/public/' . $uploadPath;
+        }
+        return $baseUrl . '/public/uploads/' . ltrim($uploadPath, '/');
+    }
+
     public function __construct()
     {
         $this->db = Connection::getInstance()->getConnection();
@@ -195,7 +228,7 @@ class FileUploadHelper
             'original_name' => $file['name'],
             'file_type' => $fileType,
             'upload_path' => $uploadPath,
-            'url' => BASE_URL . '/public/' . ltrim($uploadPath, '/')
+            'url' => $this->buildPublicFileUrl($uploadPath)
         ];
     }
 
@@ -337,20 +370,8 @@ class FileUploadHelper
 
         // Add full URL to each file
         foreach ($files as &$file) {
-            $baseUrl = defined('BASE_URL') ? BASE_URL : '';
-            $uploadPath = $file['upload_path'];
-            
-            // Ensure path starts with public/
-            if (strpos($uploadPath, 'public/') === 0) {
-                // Already has public/ prefix
-                $file['url'] = $baseUrl . '/' . $uploadPath;
-            } elseif (strpos($uploadPath, 'uploads/') === 0) {
-                // Has uploads/ prefix, add public/
-                $file['url'] = $baseUrl . '/public/' . $uploadPath;
-            } else {
-                // No prefix, add public/uploads/
-                $file['url'] = $baseUrl . '/public/uploads/' . ltrim($uploadPath, '/');
-            }
+            $uploadPath = (string)($file['upload_path'] ?? '');
+            $file['url'] = $this->buildPublicFileUrl($uploadPath);
             // original_name already exists in the database, no need to rename
         }
 
