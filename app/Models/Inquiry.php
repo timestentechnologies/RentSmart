@@ -66,12 +66,20 @@ class Inquiry extends Model
             }
         } catch (\Exception $e) {
         }
+
+        try {
+            $stmt = $this->db->query("SHOW COLUMNS FROM {$this->table} LIKE 'amount'");
+            if ($stmt && $stmt->rowCount() === 0) {
+                $this->db->exec("ALTER TABLE {$this->table} ADD COLUMN amount DECIMAL(12,2) NOT NULL DEFAULT 0 AFTER crm_stage");
+            }
+        } catch (\Exception $e) {
+        }
     }
 
     public function create(array $data)
     {
-        $sql = "INSERT INTO {$this->table} (unit_id, realtor_listing_id, realtor_user_id, property_id, name, contact, preferred_date, message, source)
-                VALUES (:unit_id, :realtor_listing_id, :realtor_user_id, :property_id, :name, :contact, :preferred_date, :message, :source)";
+        $sql = "INSERT INTO {$this->table} (unit_id, realtor_listing_id, realtor_user_id, property_id, name, contact, preferred_date, message, source, amount)
+                VALUES (:unit_id, :realtor_listing_id, :realtor_user_id, :property_id, :name, :contact, :preferred_date, :message, :source, :amount)";
         $stmt = $this->db->prepare($sql);
         $stmt->execute([
             'unit_id' => $data['unit_id'] ?? null,
@@ -83,6 +91,7 @@ class Inquiry extends Model
             'preferred_date' => $data['preferred_date'] ?? null,
             'message' => $data['message'] ?? null,
             'source' => $data['source'] ?? 'vacant_units',
+            'amount' => (float)($data['amount'] ?? 0),
         ]);
         return $this->db->lastInsertId();
     }

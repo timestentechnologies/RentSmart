@@ -117,7 +117,7 @@ ob_start();
                             $email = (string)($x['email'] ?? '');
                             $source = (string)($x['source'] ?? '');
                             $status = strtolower((string)($x['status'] ?? 'new'));
-                            $amount = 0;
+                            $amount = (float)($x['amount'] ?? 0);
                             $stageDef = $stageMap[$status] ?? ['label'=>$label,'color_class'=>$colorClass,'is_won'=>0];
                             $stageLabel = (string)($stageDef['label'] ?? $label);
                             $stageColorClass = (string)($stageDef['color_class'] ?? 'secondary');
@@ -264,6 +264,13 @@ ob_start();
                     <option value="won">Won</option>
                 </select>
             </div>
+            <div class="mb-3">
+                <label class="form-label">Amount</label>
+                <div class="input-group">
+                    <span class="input-group-text">Ksh</span>
+                    <input type="number" step="0.01" min="0" name="amount" class="form-control" value="0">
+                </div>
+            </div>
             <div class="mb-3"><label class="form-label">Notes</label><textarea name="notes" class="form-control" rows="3"></textarea></div>
         </div>
         <div class="modal-footer">
@@ -307,6 +314,13 @@ ob_start();
                     <option value="lost">Lost</option>
                     <option value="won">Won</option>
                 </select>
+            </div>
+            <div class="mb-3">
+                <label class="form-label">Amount</label>
+                <div class="input-group">
+                    <span class="input-group-text">Ksh</span>
+                    <input type="number" step="0.01" min="0" id="edit_lead_amount" name="amount" class="form-control" value="0">
+                </div>
             </div>
             <div class="mb-3"><label class="form-label">Notes</label><textarea id="edit_lead_notes" name="notes" class="form-control" rows="3"></textarea></div>
         </div>
@@ -448,9 +462,9 @@ function editRealtorLead(id){
       document.getElementById('edit_lead_phone').value = e.phone || '';
       document.getElementById('edit_lead_email').value = e.email || '';
       document.getElementById('edit_lead_source').value = e.source || '';
-      const listingEl = document.getElementById('edit_lead_listing_id');
-      if(listingEl){
-        listingEl.value = (e.realtor_listing_id !== undefined && e.realtor_listing_id !== null) ? String(e.realtor_listing_id) : '';
+      document.getElementById('edit_lead_amount').value = (e.amount !== undefined && e.amount !== null) ? e.amount : 0;
+      if (document.getElementById('edit_lead_listing_id')) {
+        document.getElementById('edit_lead_listing_id').value = e.realtor_listing_id || '';
       }
       document.getElementById('edit_lead_status').value = e.status || 'new';
       document.getElementById('edit_lead_notes').value = e.notes || '';
