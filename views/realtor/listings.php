@@ -1,6 +1,23 @@
 <?php
 ob_start();
 ?>
+<style>
+  .listing-actions .btn{
+    min-width:36px;
+    min-height:36px;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:50% !important;
+    transition:none !important;
+    box-shadow:none !important;
+  }
+  .listing-actions .btn:focus,
+  .listing-actions .btn:active{
+    box-shadow:none !important;
+    outline:0 !important;
+  }
+</style>
 <div class="container-fluid pt-4">
     <div class="card page-header mb-4">
         <div class="card-body d-flex justify-content-between align-items-center">
@@ -129,9 +146,11 @@ ob_start();
                                     <span class="badge bg-<?= $badge ?>"><?= htmlspecialchars($label) ?></span>
                                 </td>
                                 <td>
-                                    <button type="button" class="btn btn-sm btn-outline-success me-1" onclick="openSellListingModal(<?= (int)$x['id'] ?>, '<?= htmlspecialchars((string)($x['title'] ?? ''), ENT_QUOTES) ?>')"><i class="bi bi-cash-coin"></i></button>
-                                    <button type="button" class="btn btn-sm btn-outline-primary me-1" onclick="editRealtorListing(<?= (int)$x['id'] ?>)"><i class="bi bi-pencil"></i></button>
-                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="confirmDeleteRealtorListing(<?= (int)$x['id'] ?>)"><i class="bi bi-trash"></i></button>
+                                    <div class="listing-actions">
+                                      <button type="button" class="btn btn-sm btn-outline-success me-1" onclick="openSellListingModal(<?= (int)$x['id'] ?>, '<?= htmlspecialchars((string)($x['title'] ?? ''), ENT_QUOTES) ?>')"><i class="bi bi-cash-coin"></i></button>
+                                      <button type="button" class="btn btn-sm btn-outline-primary me-1" onclick="editRealtorListing(<?= (int)$x['id'] ?>)"><i class="bi bi-pencil"></i></button>
+                                      <button type="button" class="btn btn-sm btn-outline-danger" onclick="confirmDeleteRealtorListing(<?= (int)$x['id'] ?>)"><i class="bi bi-trash"></i></button>
+                                    </div>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -452,7 +471,18 @@ function editRealtorListing(id){
       const previews = document.getElementById('edit_listing_images_preview');
       if (previews) { previews.style.display = 'none'; previews.innerHTML = ''; }
 
-      const urls = Array.isArray(e.images) ? e.images : [];
+      const normalizeImgUrl = (u) => {
+        u = String(u || '').trim();
+        if(!u) return '';
+        if(/^https?:\/\//i.test(u)) return u;
+        if(u.startsWith('//')) return u;
+        if(u.startsWith('/')) return '<?= BASE_URL ?>' + u;
+        if(u.startsWith('public/')) return '<?= BASE_URL ?>' + '/' + u;
+        if(u.startsWith('uploads/')) return '<?= BASE_URL ?>' + '/public/' + u;
+        return '<?= BASE_URL ?>' + '/public/uploads/' + u.replace(/^\/+/, '');
+      };
+
+      const urls = (Array.isArray(e.images) ? e.images : []).map(normalizeImgUrl).filter(Boolean);
       if(existing){
         if(urls.length){
           existing.style.display = '';

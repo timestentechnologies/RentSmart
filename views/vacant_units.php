@@ -115,6 +115,17 @@ if (!defined('BASE_URL')) { define('BASE_URL', ''); }
                             elseif ($st === 'inactive') { $badge = 'secondary'; $label = 'Unavailable'; }
                             $limgs = isset($listing['images']) && is_array($listing['images']) ? $listing['images'] : [];
                             if (empty($limgs) && !empty($listing['image'])) { $limgs = [ $listing['image'] ]; }
+                            $normalizeImgUrl = function ($u) {
+                                $u = trim((string)$u);
+                                if ($u === '') return '';
+                                if (preg_match('~^https?://~i', $u)) return $u;
+                                if (strpos($u, '//') === 0) return $u;
+                                if (strpos($u, '/') === 0) return BASE_URL . $u;
+                                if (strpos($u, 'public/') === 0) return BASE_URL . '/' . $u;
+                                if (strpos($u, 'uploads/') === 0) return BASE_URL . '/public/' . $u;
+                                return BASE_URL . '/public/uploads/' . ltrim($u, '/');
+                            };
+                            $limgs = array_values(array_filter(array_map($normalizeImgUrl, $limgs), function ($u) { return $u !== ''; }));
                             if (empty($limgs)) {
                                 $limgs = [ 'https://ui-avatars.com/api/?name=' . urlencode($title) . '&size=400&background=6B3E99&color=fff&bold=true' ];
                             }
@@ -173,6 +184,20 @@ if (!defined('BASE_URL')) { define('BASE_URL', ''); }
                             ]);
                             $addressStr = implode(', ', $addressBits);
                             $images = isset($unit['images']) && is_array($unit['images']) ? $unit['images'] : [ $unit['image'] ?? '' ];
+                            $normalizeImgUrl = function ($u) {
+                                $u = trim((string)$u);
+                                if ($u === '') return '';
+                                if (preg_match('~^https?://~i', $u)) return $u;
+                                if (strpos($u, '//') === 0) return $u;
+                                if (strpos($u, '/') === 0) return BASE_URL . $u;
+                                if (strpos($u, 'public/') === 0) return BASE_URL . '/' . $u;
+                                if (strpos($u, 'uploads/') === 0) return BASE_URL . '/public/' . $u;
+                                return BASE_URL . '/public/uploads/' . ltrim($u, '/');
+                            };
+                            $images = array_values(array_filter(array_map($normalizeImgUrl, $images), function ($u) { return $u !== ''; }));
+                            if (empty($images)) {
+                                $images = [ 'https://ui-avatars.com/api/?name=' . urlencode(($unit['property_name'] ?? '') . ' ' . ($unit['unit_number'] ?? '')) . '&size=400&background=4F46E5&color=fff&bold=true' ];
+                            }
                             $carouselId = 'unitCarousel_' . (int)$unit['id'];
                         ?>
                         <div class="col-md-4 unit-card" data-location="<?= htmlspecialchars(strtolower($addressStr)) ?>" data-type="<?= htmlspecialchars(strtolower($unit['type'])) ?>" data-rent="<?= (float)$unit['rent_amount'] ?>" data-name="<?= htmlspecialchars(strtolower($unit['property_name'].' '.$unit['unit_number'])) ?>">
