@@ -338,6 +338,12 @@ ob_start();
     });
   }
 
+  if(addPropSubmit){
+    addPropSubmit.addEventListener('click', ()=>{
+      try { console.log('[CRM Leads] Add Property submit clicked'); } catch(e) {}
+    });
+  }
+
   addPropForm?.addEventListener('submit', async (e)=>{
     e.preventDefault();
     if(!propertySel) return;
@@ -346,12 +352,16 @@ ob_start();
     try {
       const fd = new FormData(addPropForm);
       fd.append('csrf_token', csrfToken());
+      try {
+        console.log('[CRM Leads] Add Property submit fired', Object.fromEntries(fd.entries()));
+      } catch(e) {}
       const res = await fetch('<?= BASE_URL ?>/properties/store', {
         method: 'POST',
         headers: { 'X-Requested-With': 'XMLHttpRequest' },
         body: fd
       });
       const raw = await res.text();
+      try { console.log('[CRM Leads] /properties/store raw response', raw); } catch(e) {}
       let data = null;
       try {
         data = raw ? JSON.parse(raw) : null;
