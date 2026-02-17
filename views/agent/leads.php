@@ -373,8 +373,8 @@ ob_start();
 
       try {
         const data = await setStage(draggedId, stage);
-        if(winStageKey && stage === winStageKey && data.lease_id){
-          window.location.href = '<?= BASE_URL ?>' + '/leases/edit/' + data.lease_id;
+        if(winStageKey && stage === winStageKey && data.contract_id){
+          window.location.href = '<?= BASE_URL ?>' + '/agent/contracts';
           return;
         }
       } catch (err){
@@ -395,8 +395,8 @@ ob_start();
     btn.disabled = true;
     try {
       const data = await setStage(id, winStageKey);
-      if(data.lease_id){
-        window.location.href = '<?= BASE_URL ?>' + '/leases/edit/' + data.lease_id;
+      if(data.contract_id){
+        window.location.href = '<?= BASE_URL ?>' + '/agent/contracts';
         return;
       }
       location.reload();
