@@ -4,7 +4,7 @@
 
 $key = (string)($_GET['key'] ?? '');
 $expectedKey = (string)(getenv('DEBUG_KEY') ?: '');
-$fallbackKey = ''; // optional: set only if DEBUG_KEY is not available on the server
+$fallbackKey = 'd64d26855a79ea22b96cc7ef5ec97eccf6b6ed2fe1ce1ccc3ea95a053b1e7d5'; // optional: set only if DEBUG_KEY is not available on the server
 
 if ($expectedKey === '') {
     $expectedKey = $fallbackKey;
