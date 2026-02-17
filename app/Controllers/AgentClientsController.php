@@ -201,6 +201,46 @@ class AgentClientsController
 
             $clientModel->beginTransaction();
             try {
+                // Reset linked agent CRM lead (inquiries) back to 'new' for this client
+                // We infer linkage by property + contact details.
+                $wonStageKey = 'won';
+                try {
+                    $stmt = $clientModel->getDb()->prepare(
+                        "SELECT stage_key FROM agent_lead_stages WHERE user_id = ? AND is_won = 1 ORDER BY id DESC LIMIT 1"
+                    );
+                    $stmt->execute([(int)$this->userId]);
+                    $rowStage = $stmt->fetch(\PDO::FETCH_ASSOC);
+                    if (!empty($rowStage['stage_key'])) {
+                        $wonStageKey = (string)$rowStage['stage_key'];
+                    }
+                } catch (\Exception $e) {
+                }
+
+                $clientPhone = trim((string)($row['phone'] ?? ''));
+                $clientEmail = trim((string)($row['email'] ?? ''));
+                $propertyId = (int)($row['property_id'] ?? 0);
+                if ($propertyId > 0 && ($clientPhone !== '' || $clientEmail !== '')) {
+                    $stmt = $clientModel->getDb()->prepare(
+                        "UPDATE inquiries i\n"
+                        . "LEFT JOIN properties p ON p.id = i.property_id\n"
+                        . "SET i.crm_stage = 'new'\n"
+                        . "WHERE i.property_id = ?\n"
+                        . "  AND i.crm_stage = ?\n"
+                        . "  AND (i.contact = ? OR i.contact = ?)\n"
+                        . "  AND (p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ?)"
+                    );
+                    $stmt->execute([
+                        (int)$propertyId,
+                        (string)$wonStageKey,
+                        (string)$clientPhone,
+                        (string)($clientEmail !== '' ? $clientEmail : $clientPhone),
+                        (int)$this->userId,
+                        (int)$this->userId,
+                        (int)$this->userId,
+                        (int)$this->userId,
+                    ]);
+                }
+
                 $stmt = $contractModel->getDb()->prepare(
                     "DELETE FROM agent_contracts WHERE agent_client_id = ? AND user_id = ?"
                 );
