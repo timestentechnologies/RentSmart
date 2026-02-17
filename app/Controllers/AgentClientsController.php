@@ -99,4 +99,79 @@ class AgentClientsController
         header('Location: ' . BASE_URL . '/agent/clients');
         exit;
     }
+
+    public function get($id)
+    {
+        header('Content-Type: application/json');
+        try {
+            $clientModel = new AgentClient();
+            $row = $clientModel->getByIdWithAccess((int)$id, $this->userId);
+            if (!$row) {
+                http_response_code(404);
+                echo json_encode(['success' => false, 'message' => 'Client not found']);
+                exit;
+            }
+            echo json_encode(['success' => true, 'data' => $row]);
+        } catch (\Exception $e) {
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Internal server error']);
+        }
+        exit;
+    }
+
+    public function update($id)
+    {
+        header('Content-Type: application/json');
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo json_encode(['success' => false, 'message' => 'Invalid request']);
+            exit;
+        }
+        try {
+            if (!verify_csrf_token()) {
+                echo json_encode(['success' => false, 'message' => 'Invalid security token']);
+                exit;
+            }
+
+            $clientModel = new AgentClient();
+            $row = $clientModel->getByIdWithAccess((int)$id, $this->userId);
+            if (!$row) {
+                echo json_encode(['success' => false, 'message' => 'Client not found']);
+                exit;
+            }
+
+            $propertyId = array_key_exists('property_id', $_POST)
+                ? (($_POST['property_id'] !== '' && $_POST['property_id'] !== null) ? (int)$_POST['property_id'] : null)
+                : (int)($row['property_id'] ?? 0);
+            $name = trim((string)($_POST['name'] ?? ($row['name'] ?? '')));
+            $phone = trim((string)($_POST['phone'] ?? ($row['phone'] ?? '')));
+            $email = trim((string)($_POST['email'] ?? ($row['email'] ?? '')));
+            $notes = trim((string)($_POST['notes'] ?? ($row['notes'] ?? '')));
+
+            if (!$propertyId || $name === '' || $phone === '') {
+                echo json_encode(['success' => false, 'message' => 'Property, name and phone are required']);
+                exit;
+            }
+
+            $propertyModel = new Property();
+            $prop = $propertyModel->getById((int)$propertyId, $this->userId);
+            if (!$prop) {
+                echo json_encode(['success' => false, 'message' => 'Invalid property selected']);
+                exit;
+            }
+
+            $ok = $clientModel->updateById((int)$id, [
+                'property_id' => (int)$propertyId,
+                'name' => $name,
+                'phone' => $phone,
+                'email' => $email,
+                'notes' => $notes,
+            ]);
+
+            echo json_encode(['success' => (bool)$ok]);
+        } catch (\Exception $e) {
+            error_log('AgentClients update failed: ' . $e->getMessage());
+            echo json_encode(['success' => false, 'message' => 'Failed to update client']);
+        }
+        exit;
+    }
 }

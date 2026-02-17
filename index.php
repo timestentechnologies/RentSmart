@@ -483,8 +483,12 @@ $routes = [
     // Agent CRM (property-based)
     'agent/clients' => ['controller' => 'AgentClientsController', 'action' => 'index'],
     'agent/clients/store' => ['controller' => 'AgentClientsController', 'action' => 'store'],
+    'agent/clients/get/(\d+)' => ['controller' => 'AgentClientsController', 'action' => 'get'],
+    'agent/clients/update/(\d+)' => ['controller' => 'AgentClientsController', 'action' => 'update'],
     'agent/contracts' => ['controller' => 'AgentContractsController', 'action' => 'index'],
     'agent/contracts/store' => ['controller' => 'AgentContractsController', 'action' => 'store'],
+    'agent/contracts/get/(\d+)' => ['controller' => 'AgentContractsController', 'action' => 'get'],
+    'agent/contracts/update/(\d+)' => ['controller' => 'AgentContractsController', 'action' => 'update'],
 
     'agent/leads' => ['controller' => 'AgentLeadsController', 'action' => 'index'],
     'agent/leads/store' => ['controller' => 'AgentLeadsController', 'action' => 'store'],
@@ -758,8 +762,12 @@ $protectedRoutes = [
 
     'agent/clients',
     'agent/clients/store',
+    'agent/clients/get/(\d+)',
+    'agent/clients/update/(\d+)',
     'agent/contracts',
     'agent/contracts/store',
+    'agent/contracts/get/(\d+)',
+    'agent/contracts/update/(\d+)',
 
     'agent/leads',
     'agent/leads/store',

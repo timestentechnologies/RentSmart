@@ -23,6 +23,7 @@ ob_start();
                             <th>Email</th>
                             <th>Notes</th>
                             <th>Created</th>
+                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -34,16 +35,70 @@ ob_start();
                                 <td><?= htmlspecialchars((string)($c['email'] ?? '')) ?></td>
                                 <td><?= nl2br(htmlspecialchars((string)($c['notes'] ?? ''))) ?></td>
                                 <td><?= htmlspecialchars((string)($c['created_at'] ?? '')) ?></td>
+                                <td class="text-end">
+                                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="editAgentClient(<?= (int)($c['id'] ?? 0) ?>)">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                </td>
                             </tr>
                         <?php endforeach; ?>
                         <?php if (empty($clients)): ?>
                             <tr>
-                                <td colspan="6" class="text-center text-muted">No clients found.</td>
+                                <td colspan="7" class="text-center text-muted">No clients found.</td>
                             </tr>
                         <?php endif; ?>
                     </tbody>
                 </table>
             </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editClientModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <form id="editClientForm">
+                <div class="modal-header">
+                    <h5 class="modal-title">Edit Client</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
+                    <input type="hidden" id="edit_client_id">
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Property</label>
+                            <select class="form-select" name="property_id" id="edit_client_property" required>
+                                <option value="">Select property</option>
+                                <?php foreach (($properties ?? []) as $p): ?>
+                                    <option value="<?= (int)($p['id'] ?? 0) ?>"><?= htmlspecialchars((string)($p['name'] ?? '')) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Name</label>
+                            <input class="form-control" name="name" id="edit_client_name" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Phone</label>
+                            <input class="form-control" name="phone" id="edit_client_phone" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Email</label>
+                            <input class="form-control" name="email" id="edit_client_email" type="email">
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Notes</label>
+                            <textarea class="form-control" name="notes" id="edit_client_notes" rows="3"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
@@ -162,6 +217,43 @@ ob_start();
   function csrfToken(){
     return (document.querySelector('meta[name="csrf-token"]')||{}).content || '';
   }
+
+  const editModalEl = document.getElementById('editClientModal');
+  const editModal = (editModalEl && window.bootstrap && window.bootstrap.Modal)
+    ? window.bootstrap.Modal.getOrCreateInstance(editModalEl)
+    : null;
+
+  window.editAgentClient = function(id){
+    fetch('<?= BASE_URL ?>' + '/agent/clients/get/' + id)
+      .then(r=>r.json()).then(resp=>{
+        if(!resp.success){ alert(resp.message || 'Client not found'); return; }
+        const c = resp.data || {};
+        document.getElementById('edit_client_id').value = String(c.id || id);
+        document.getElementById('edit_client_property').value = (c.property_id !== undefined && c.property_id !== null) ? String(c.property_id) : '';
+        document.getElementById('edit_client_name').value = c.name || '';
+        document.getElementById('edit_client_phone').value = c.phone || '';
+        document.getElementById('edit_client_email').value = c.email || '';
+        document.getElementById('edit_client_notes').value = c.notes || '';
+        if(editModal){ editModal.show(); }
+      })
+      .catch(()=>alert('Failed to load client'));
+  }
+
+  document.getElementById('editClientForm')?.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const id = document.getElementById('edit_client_id').value;
+    if(!id) return;
+    const fd = new FormData(e.target);
+    fd.set('csrf_token', csrfToken() || fd.get('csrf_token') || '');
+    try{
+      const res = await fetch('<?= BASE_URL ?>' + '/agent/clients/update/' + id, { method:'POST', body: fd });
+      const data = await res.json();
+      if(!data.success){ alert(data.message || 'Failed to update'); return; }
+      location.reload();
+    }catch(err){
+      alert('Failed to update');
+    }
+  });
 
   const propertySel = document.getElementById('agent_client_property');
   const addPropBtn = document.getElementById('agentClientAddPropertyBtn');
