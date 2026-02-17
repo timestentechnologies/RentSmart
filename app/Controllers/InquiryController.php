@@ -59,6 +59,8 @@ class InquiryController
                     $leadModel = new RealtorLead();
                     $leadModel->insert([
                         'user_id' => (int)$realtorUserId,
+                        'realtor_listing_id' => (int)$realtorListingId,
+                        'amount' => isset($listing['price']) ? (float)$listing['price'] : null,
                         'name' => $name,
                         'phone' => $phone,
                         'email' => $email ?: null,

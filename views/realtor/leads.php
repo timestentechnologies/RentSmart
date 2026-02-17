@@ -117,7 +117,7 @@ ob_start();
                             $email = (string)($x['email'] ?? '');
                             $source = (string)($x['source'] ?? '');
                             $status = strtolower((string)($x['status'] ?? 'new'));
-                            $amount = 0;
+                            $amount = (float)($x['amount'] ?? 0);
                             $stageDef = $stageMap[$status] ?? ['label'=>$label,'color_class'=>$colorClass,'is_won'=>0];
                             $stageLabel = (string)($stageDef['label'] ?? $label);
                             $stageColorClass = (string)($stageDef['color_class'] ?? 'secondary');
@@ -247,6 +247,13 @@ ob_start();
             <div class="mb-3"><label class="form-label">Email</label><input type="email" name="email" class="form-control"></div>
             <div class="mb-3"><label class="form-label">Source</label><input type="text" name="source" class="form-control" placeholder="e.g., Facebook, Walk-in, Referral"></div>
             <div class="mb-3">
+                <label class="form-label">Amount</label>
+                <div class="input-group">
+                    <span class="input-group-text">Ksh</span>
+                    <input type="number" step="0.01" min="0" name="amount" class="form-control" placeholder="0.00">
+                </div>
+            </div>
+            <div class="mb-3">
                 <label class="form-label">Listing / Property</label>
                 <select name="realtor_listing_id" class="form-select">
                     <option value="">(Optional) Select Listing</option>
@@ -290,6 +297,13 @@ ob_start();
             <div class="mb-3"><label class="form-label">Phone</label><input type="text" id="edit_lead_phone" name="phone" class="form-control" required></div>
             <div class="mb-3"><label class="form-label">Email</label><input type="email" id="edit_lead_email" name="email" class="form-control"></div>
             <div class="mb-3"><label class="form-label">Source</label><input type="text" id="edit_lead_source" name="source" class="form-control"></div>
+            <div class="mb-3">
+                <label class="form-label">Amount</label>
+                <div class="input-group">
+                    <span class="input-group-text">Ksh</span>
+                    <input type="number" step="0.01" min="0" id="edit_lead_amount" name="amount" class="form-control" placeholder="0.00">
+                </div>
+            </div>
             <div class="mb-3">
                 <label class="form-label">Listing / Property</label>
                 <select id="edit_lead_listing_id" name="realtor_listing_id" class="form-select">
@@ -448,6 +462,7 @@ function editRealtorLead(id){
       document.getElementById('edit_lead_phone').value = e.phone || '';
       document.getElementById('edit_lead_email').value = e.email || '';
       document.getElementById('edit_lead_source').value = e.source || '';
+      document.getElementById('edit_lead_amount').value = (e.amount !== undefined && e.amount !== null) ? String(e.amount) : '';
       const listingEl = document.getElementById('edit_lead_listing_id');
       if(listingEl){
         listingEl.value = (e.realtor_listing_id !== undefined && e.realtor_listing_id !== null) ? String(e.realtor_listing_id) : '';
