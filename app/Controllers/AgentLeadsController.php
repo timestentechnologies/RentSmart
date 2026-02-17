@@ -8,6 +8,7 @@ use App\Models\Unit;
 use App\Models\AgentClient;
 use App\Models\Tenant;
 use App\Models\Lease;
+use App\Models\AgentLeadStage;
 
 class AgentLeadsController
 {
@@ -38,6 +39,9 @@ class AgentLeadsController
         $inquiryModel = new Inquiry();
         $inquiries = $inquiryModel->allVisibleForUser($this->userId, $this->role);
 
+        $stageModel = new AgentLeadStage();
+        $stages = $stageModel->getAll($this->userId);
+
         $propertyModel = new Property();
         $properties = $propertyModel->getAll($this->userId);
 
@@ -47,6 +51,7 @@ class AgentLeadsController
         echo view('agent/leads', [
             'title' => 'CRM - Leads',
             'inquiries' => $inquiries,
+            'stages' => $stages,
             'properties' => $properties,
             'units' => $units,
         ]);
@@ -141,9 +146,22 @@ class AgentLeadsController
             $payloadStage = $_POST['stage'] ?? '';
             $stage = strtolower(trim((string)$payloadStage));
 
-            $allowed = ['new', 'contacted', 'qualified', 'won', 'lost'];
-            if (!in_array($stage, $allowed, true)) {
-                $stage = 'new';
+            $stageModel = new AgentLeadStage();
+            $stages = $stageModel->getAll($this->userId);
+            $allowedKeys = [];
+            $wonKey = null;
+            foreach (($stages ?? []) as $s) {
+                $k = strtolower((string)($s['stage_key'] ?? ''));
+                if ($k === '') {
+                    continue;
+                }
+                $allowedKeys[] = $k;
+                if ((int)($s['is_won'] ?? 0) === 1 && $wonKey === null) {
+                    $wonKey = $k;
+                }
+            }
+            if (!in_array($stage, $allowedKeys, true)) {
+                $stage = in_array('new', $allowedKeys, true) ? 'new' : (($allowedKeys[0] ?? '') ?: 'new');
             }
 
             $model = new Inquiry();
@@ -151,7 +169,7 @@ class AgentLeadsController
 
             $clientId = null;
             $leaseId = null;
-            if ($ok && $stage === 'won') {
+            if ($ok && ($wonKey !== null && $stage === $wonKey)) {
                 try {
                     $conv = $this->maybeConvertInquiryToClientAndLease((int)$id);
                     $clientId = $conv['client_id'] ?? null;
@@ -170,6 +188,156 @@ class AgentLeadsController
         } catch (\Exception $e) {
             error_log('AgentLeads updateStage failed: ' . $e->getMessage());
             echo json_encode(['success' => false, 'message' => 'Server error']);
+        }
+        exit;
+    }
+
+    public function stages()
+    {
+        header('Content-Type: application/json');
+        try {
+            $stageModel = new AgentLeadStage();
+            $stages = $stageModel->getAll($this->userId);
+            echo json_encode(['success' => true, 'data' => $stages]);
+        } catch (\Exception $e) {
+            echo json_encode(['success' => false, 'message' => 'Failed to load stages']);
+        }
+        exit;
+    }
+
+    public function storeStage()
+    {
+        header('Content-Type: application/json');
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo json_encode(['success' => false, 'message' => 'Invalid request']);
+            exit;
+        }
+        try {
+            if (!verify_csrf_token()) {
+                echo json_encode(['success' => false, 'message' => 'Invalid security token']);
+                exit;
+            }
+            $stageKey = strtolower(trim((string)($_POST['stage_key'] ?? '')));
+            $label = trim((string)($_POST['label'] ?? ''));
+            $colorClass = trim((string)($_POST['color_class'] ?? 'secondary'));
+            $sortOrder = (int)($_POST['sort_order'] ?? 0);
+            $isWon = (int)($_POST['is_won'] ?? 0) === 1 ? 1 : 0;
+            $isLost = (int)($_POST['is_lost'] ?? 0) === 1 ? 1 : 0;
+
+            if ($stageKey === '' || $label === '') {
+                echo json_encode(['success' => false, 'message' => 'Stage key and label are required']);
+                exit;
+            }
+
+            $stageModel = new AgentLeadStage();
+            $id = $stageModel->insert([
+                'user_id' => $this->userId,
+                'stage_key' => $stageKey,
+                'label' => $label,
+                'color_class' => $colorClass,
+                'sort_order' => $sortOrder,
+                'is_won' => $isWon,
+                'is_lost' => $isLost,
+            ]);
+            echo json_encode(['success' => true, 'id' => (int)$id]);
+        } catch (\Exception $e) {
+            error_log('Agent storeStage failed: ' . $e->getMessage());
+            echo json_encode(['success' => false, 'message' => 'Failed to add stage']);
+        }
+        exit;
+    }
+
+    public function updateStageMeta($id)
+    {
+        header('Content-Type: application/json');
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo json_encode(['success' => false, 'message' => 'Invalid request']);
+            exit;
+        }
+        try {
+            if (!verify_csrf_token()) {
+                echo json_encode(['success' => false, 'message' => 'Invalid security token']);
+                exit;
+            }
+
+            $stageModel = new AgentLeadStage();
+            $row = $stageModel->getByIdWithAccess((int)$id, $this->userId);
+            if (!$row) {
+                echo json_encode(['success' => false, 'message' => 'Stage not found']);
+                exit;
+            }
+
+            $data = [
+                'label' => trim((string)($_POST['label'] ?? ($row['label'] ?? ''))),
+                'color_class' => trim((string)($_POST['color_class'] ?? ($row['color_class'] ?? 'secondary'))),
+                'sort_order' => (int)($_POST['sort_order'] ?? ($row['sort_order'] ?? 0)),
+                'is_won' => (int)($_POST['is_won'] ?? ($row['is_won'] ?? 0)) === 1 ? 1 : 0,
+                'is_lost' => (int)($_POST['is_lost'] ?? ($row['is_lost'] ?? 0)) === 1 ? 1 : 0,
+            ];
+
+            $ok = $stageModel->updateById((int)$id, $data);
+            echo json_encode(['success' => (bool)$ok]);
+        } catch (\Exception $e) {
+            echo json_encode(['success' => false, 'message' => 'Failed to update stage']);
+        }
+        exit;
+    }
+
+    public function deleteStage($id)
+    {
+        header('Content-Type: application/json');
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo json_encode(['success' => false, 'message' => 'Invalid request']);
+            exit;
+        }
+        try {
+            if (!verify_csrf_token()) {
+                echo json_encode(['success' => false, 'message' => 'Invalid security token']);
+                exit;
+            }
+
+            $stageModel = new AgentLeadStage();
+            $row = $stageModel->getByIdWithAccess((int)$id, $this->userId);
+            if (!$row) {
+                echo json_encode(['success' => false, 'message' => 'Stage not found']);
+                exit;
+            }
+
+            if (in_array((string)($row['stage_key'] ?? ''), ['new', 'contacted', 'qualified', 'won', 'lost'], true)) {
+                echo json_encode(['success' => false, 'message' => 'Default stages cannot be deleted']);
+                exit;
+            }
+
+            $transferTo = strtolower(trim((string)($_POST['transfer_to'] ?? '')));
+            $inquiryModel = new Inquiry();
+            $countRows = $inquiryModel->query(
+                "SELECT COUNT(*) AS c FROM inquiries i LEFT JOIN properties p ON p.id = i.property_id WHERE (p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ?) AND i.crm_stage = ?",
+                [(int)$this->userId, (int)$this->userId, (int)$this->userId, (int)$this->userId, (string)($row['stage_key'] ?? '')]
+            );
+            $inqCount = (int)($countRows[0]['c'] ?? 0);
+
+            if ($inqCount > 0) {
+                if ($transferTo === '') {
+                    echo json_encode(['success' => false, 'message' => 'This stage has leads. Choose "Move Leads To" first.']);
+                    exit;
+                }
+                $targetStage = $stageModel->getByKey($this->userId, $transferTo);
+                if (!$targetStage) {
+                    echo json_encode(['success' => false, 'message' => 'Target stage not found']);
+                    exit;
+                }
+
+                // Transfer visible inquiries only (same scope as allVisibleForUser for non-admin)
+                $inquiryModel->query(
+                    "UPDATE inquiries i LEFT JOIN properties p ON p.id = i.property_id SET i.crm_stage = ? WHERE (p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ?) AND i.crm_stage = ?",
+                    [(string)$transferTo, (int)$this->userId, (int)$this->userId, (int)$this->userId, (int)$this->userId, (string)($row['stage_key'] ?? '')]
+                );
+            }
+
+            $ok = $stageModel->deleteById((int)$id);
+            echo json_encode(['success' => (bool)$ok]);
+        } catch (\Exception $e) {
+            echo json_encode(['success' => false, 'message' => 'Failed to delete stage']);
         }
         exit;
     }
