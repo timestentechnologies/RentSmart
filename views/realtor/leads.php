@@ -2,6 +2,17 @@
 ob_start();
 ?>
 <div class="container-fluid pt-4">
+    <?php
+        $stagesArr = is_array($stages ?? null) ? $stages : [];
+        if (empty($stagesArr)) {
+            $stagesArr = [
+                ['stage_key'=>'new','label'=>'New','color_class'=>'primary','is_won'=>0,'is_lost'=>0],
+                ['stage_key'=>'contacted','label'=>'Qualified','color_class'=>'warning','is_won'=>0,'is_lost'=>0],
+                ['stage_key'=>'won','label'=>'Won','color_class'=>'success','is_won'=>1,'is_lost'=>0],
+                ['stage_key'=>'lost','label'=>'Lost','color_class'=>'danger','is_won'=>0,'is_lost'=>1],
+            ];
+        }
+    ?>
     <div class="card page-header mb-4">
         <div class="card-body d-flex justify-content-between align-items-center">
             <h1 class="h3 mb-0"><i class="bi bi-kanban text-primary me-2"></i>CRM - Leads</h1>
@@ -57,15 +68,6 @@ ob_start();
     </style>
 
     <?php
-        $stagesArr = is_array($stages ?? null) ? $stages : [];
-        if (empty($stagesArr)) {
-            $stagesArr = [
-                ['stage_key'=>'new','label'=>'New','color_class'=>'primary','is_won'=>0,'is_lost'=>0],
-                ['stage_key'=>'contacted','label'=>'Qualified','color_class'=>'warning','is_won'=>0,'is_lost'=>0],
-                ['stage_key'=>'won','label'=>'Won','color_class'=>'success','is_won'=>1,'is_lost'=>0],
-                ['stage_key'=>'lost','label'=>'Lost','color_class'=>'danger','is_won'=>0,'is_lost'=>1],
-            ];
-        }
         $stageMap = [];
         $grouped = [];
         foreach ($stagesArr as $s) {
@@ -217,6 +219,7 @@ ob_start();
                 <th>Order</th>
                 <th>Won</th>
                 <th>Lost</th>
+                <th>Move Leads To</th>
                 <th></th>
               </tr>
             </thead>
@@ -265,10 +268,10 @@ ob_start();
             <div class="mb-3">
                 <label class="form-label">Status</label>
                 <select name="status" class="form-select" required>
-                    <option value="new">New</option>
-                    <option value="contacted">Contacted</option>
-                    <option value="lost">Lost</option>
-                    <option value="won">Won</option>
+                    <?php foreach (($stagesArr ?? []) as $s): ?>
+                        <?php $k = strtolower((string)($s['stage_key'] ?? '')); if ($k === '') continue; ?>
+                        <option value="<?= htmlspecialchars($k) ?>"><?= htmlspecialchars((string)($s['label'] ?? $k)) ?></option>
+                    <?php endforeach; ?>
                 </select>
             </div>
             <div class="mb-3"><label class="form-label">Notes</label><textarea name="notes" class="form-control" rows="3"></textarea></div>
@@ -316,10 +319,10 @@ ob_start();
             <div class="mb-3">
                 <label class="form-label">Status</label>
                 <select id="edit_lead_status" name="status" class="form-select" required>
-                    <option value="new">New</option>
-                    <option value="contacted">Contacted</option>
-                    <option value="lost">Lost</option>
-                    <option value="won">Won</option>
+                    <?php foreach (($stagesArr ?? []) as $s): ?>
+                        <?php $k = strtolower((string)($s['stage_key'] ?? '')); if ($k === '') continue; ?>
+                        <option value="<?= htmlspecialchars($k) ?>"><?= htmlspecialchars((string)($s['label'] ?? $k)) ?></option>
+                    <?php endforeach; ?>
                 </select>
             </div>
             <div class="mb-3"><label class="form-label">Notes</label><textarea id="edit_lead_notes" name="notes" class="form-control" rows="3"></textarea></div>
@@ -505,8 +508,16 @@ async function loadStages(){
     const body = document.getElementById('stagesTableBody');
     if(!body) return;
     body.innerHTML = '';
-    (data.data || []).forEach(s=>{
+    const stageList = (data.data || []);
+    const stageOptionsHtml = stageList.map(ss => {
+      const k = (ss.stage_key || '');
+      const l = (ss.label || k);
+      return `<option value="${String(k).replace(/"/g,'&quot;')}">${String(l).replace(/"/g,'&quot;')}</option>`;
+    }).join('');
+    stageList.forEach(s=>{
       const tr = document.createElement('tr');
+      const stageKey = (s.stage_key || '');
+      const deleteDisabled = ['new','contacted','won','lost'].includes(String(stageKey));
       tr.innerHTML = `
         <td><code>${(s.stage_key||'')}</code></td>
         <td><input class="form-control form-control-sm" value="${(s.label||'').replace(/\"/g,'&quot;')}" data-id="${s.id}" data-field="label"></td>
@@ -524,9 +535,15 @@ async function loadStages(){
         <td><input type="number" class="form-control form-control-sm" value="${parseInt(s.sort_order||0,10)}" data-id="${s.id}" data-field="sort_order"></td>
         <td class="text-center"><input type="checkbox" ${parseInt(s.is_won||0,10)===1?'checked':''} data-id="${s.id}" data-field="is_won"></td>
         <td class="text-center"><input type="checkbox" ${parseInt(s.is_lost||0,10)===1?'checked':''} data-id="${s.id}" data-field="is_lost"></td>
+        <td>
+          <select class="form-select form-select-sm" data-id="${s.id}" data-field="transfer_to">
+            <option value="">(Choose)</option>
+            ${stageOptionsHtml}
+          </select>
+        </td>
         <td class="text-end">
           <button class="btn btn-sm btn-outline-primary me-1" type="button" onclick="saveStage(${s.id})"><i class="bi bi-save"></i></button>
-          <button class="btn btn-sm btn-outline-danger" type="button" onclick="deleteStage(${s.id})"><i class="bi bi-trash"></i></button>
+          <button class="btn btn-sm btn-outline-danger" type="button" ${deleteDisabled?'disabled':''} onclick="deleteStage(${s.id})"><i class="bi bi-trash"></i></button>
         </td>
       `;
       body.appendChild(tr);
@@ -581,9 +598,12 @@ async function saveStage(id){
 }
 
 async function deleteStage(id){
-  if(!confirm('Delete this stage?')) return;
+  const transfer_to = document.querySelector(`[data-id="${id}"][data-field="transfer_to"]`)?.value || '';
+  if(!confirm('Delete this stage? If leads exist in this stage, you must choose "Move Leads To".')) return;
   try{
-    const res = await fetch('<?= BASE_URL ?>' + '/realtor/leads/stages/delete/' + id, { method:'POST' });
+    const fd = new FormData();
+    fd.append('transfer_to', transfer_to);
+    const res = await fetch('<?= BASE_URL ?>' + '/realtor/leads/stages/delete/' + id, { method:'POST', body: fd });
     const data = await res.json();
     if(!data.success){ alert(data.message || 'Failed to delete'); return; }
     await loadStages();

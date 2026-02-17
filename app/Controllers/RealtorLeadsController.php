@@ -475,6 +475,30 @@ class RealtorLeadsController
                 echo json_encode(['success' => false, 'message' => 'Default stages cannot be deleted']);
                 exit;
             }
+
+            $transferTo = strtolower(trim((string)($_POST['transfer_to'] ?? '')));
+            $leadModel = new RealtorLead();
+            $countRows = $leadModel->query(
+                "SELECT COUNT(*) AS c FROM realtor_leads WHERE user_id = ? AND status = ?",
+                [(int)$this->userId, (string)($row['stage_key'] ?? '')]
+            );
+            $leadCount = (int)($countRows[0]['c'] ?? 0);
+            if ($leadCount > 0) {
+                if ($transferTo === '') {
+                    echo json_encode(['success' => false, 'message' => 'This stage has leads. Choose "Move Leads To" first.']);
+                    exit;
+                }
+                $targetStage = $stageModel->getByKey($this->userId, $transferTo);
+                if (!$targetStage) {
+                    echo json_encode(['success' => false, 'message' => 'Target stage not found']);
+                    exit;
+                }
+                $leadModel->query(
+                    "UPDATE realtor_leads SET status = ? WHERE user_id = ? AND status = ?",
+                    [(string)$transferTo, (int)$this->userId, (string)($row['stage_key'] ?? '')]
+                );
+            }
+
             $ok = $stageModel->deleteById((int)$id);
             echo json_encode(['success' => (bool)$ok]);
         } catch (\Exception $e) {
