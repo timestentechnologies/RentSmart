@@ -10,6 +10,72 @@ if ($expectedKey === '') {
     $expectedKey = $fallbackKey;
 }
 
+function run_probe(string $root): array {
+    $steps = [];
+    $safe = function(string $name, callable $fn) use (&$steps) {
+        try {
+            $res = $fn();
+            $steps[] = ['step' => $name, 'ok' => true, 'result' => $res];
+        } catch (\Throwable $e) {
+            $steps[] = [
+                'step' => $name,
+                'ok' => false,
+                'error' => [
+                    'message' => $e->getMessage(),
+                    'file' => $e->getFile() . ':' . $e->getLine(),
+                    'trace' => $e->getTraceAsString(),
+                ],
+            ];
+        }
+    };
+
+    $safe('require vendor/autoload.php', function() use ($root) {
+        require_once $root . '/vendor/autoload.php';
+        return 'loaded';
+    });
+
+    $safe('require config/database.php', function() use ($root) {
+        require_once $root . '/config/database.php';
+        return 'loaded';
+    });
+
+    $safe('require app/helpers.php', function() use ($root) {
+        require_once $root . '/app/helpers.php';
+        return 'loaded';
+    });
+
+    $safe('session_start', function() {
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            @session_start();
+        }
+        return 'status=' . session_status();
+    });
+
+    $safe('dotenv load .env', function() use ($root) {
+        if (!class_exists('Dotenv\\Dotenv')) {
+            throw new \RuntimeException('Dotenv class not found');
+        }
+        if (!file_exists($root . '/.env')) {
+            throw new \RuntimeException('.env not found');
+        }
+        $dotenv = \Dotenv\Dotenv::createImmutable($root . '/');
+        $dotenv->load();
+        return ['APP_ENV' => getenv('APP_ENV') ?: null];
+    });
+
+    $safe('db connect (Connection::getInstance)', function() {
+        if (!class_exists('App\\Database\\Connection')) {
+            throw new \RuntimeException('App\\Database\\Connection class not found');
+        }
+        $db = \App\Database\Connection::getInstance()->getConnection();
+        $stmt = $db->query('SELECT 1');
+        $row = $stmt ? $stmt->fetch() : null;
+        return $row;
+    });
+
+    return $steps;
+}
+
 if ($expectedKey === '' || $key === '' || !hash_equals($expectedKey, $key)) {
     http_response_code(403);
     header('Content-Type: text/plain; charset=utf-8');
@@ -79,6 +145,11 @@ if ($tmpErrorRaw !== false) {
     $tmpErrorPayload = json_decode($tmpErrorRaw, true);
 }
 
+$probe = null;
+if (!empty($_GET['probe'])) {
+    $probe = run_probe($root);
+}
+
 echo json_encode([
     'success' => true,
     'checks' => $checks,
@@ -87,4 +158,5 @@ echo json_encode([
     'recent_error_lines' => extract_recent_errors($phpLogTail, 120),
     'tmp_last_error_file' => $tmpErrorFile,
     'tmp_last_error_payload' => $tmpErrorPayload,
+    'probe' => $probe,
 ], JSON_PRETTY_PRINT);
