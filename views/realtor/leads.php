@@ -258,12 +258,17 @@ ob_start();
             </div>
             <div class="mb-3">
                 <label class="form-label">Listing / Property</label>
-                <select name="realtor_listing_id" class="form-select">
-                    <option value="">(Optional) Select Listing</option>
-                    <?php foreach (($listings ?? []) as $l): ?>
-                        <option value="<?= (int)($l['id'] ?? 0) ?>"><?= htmlspecialchars((string)($l['title'] ?? '')) ?><?= !empty($l['location'] ?? null) ? ' - ' . htmlspecialchars((string)($l['location'] ?? '')) : '' ?></option>
-                    <?php endforeach; ?>
-                </select>
+                <div class="d-flex gap-2">
+                    <select name="realtor_listing_id" id="realtor_lead_listing_id" class="form-select">
+                        <option value="">(Optional) Select Listing</option>
+                        <?php foreach (($listings ?? []) as $l): ?>
+                            <option value="<?= (int)($l['id'] ?? 0) ?>"><?= htmlspecialchars((string)($l['title'] ?? '')) ?><?= !empty($l['location'] ?? null) ? ' - ' . htmlspecialchars((string)($l['location'] ?? '')) : '' ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <button type="button" class="btn btn-outline-primary" id="realtorLeadAddListingBtn" title="Add Listing" data-bs-toggle="modal" data-bs-target="#realtorLeadAddListingModal">
+                        <i class="bi bi-plus-circle"></i>
+                    </button>
+                </div>
             </div>
             <div class="mb-3">
                 <label class="form-label">Status</label>
@@ -309,12 +314,17 @@ ob_start();
             </div>
             <div class="mb-3">
                 <label class="form-label">Listing / Property</label>
-                <select id="edit_lead_listing_id" name="realtor_listing_id" class="form-select">
-                    <option value="">(Optional) Select Listing</option>
-                    <?php foreach (($listings ?? []) as $l): ?>
-                        <option value="<?= (int)($l['id'] ?? 0) ?>"><?= htmlspecialchars((string)($l['title'] ?? '')) ?><?= !empty($l['location'] ?? null) ? ' - ' . htmlspecialchars((string)($l['location'] ?? '')) : '' ?></option>
-                    <?php endforeach; ?>
-                </select>
+                <div class="d-flex gap-2">
+                    <select id="edit_lead_listing_id" name="realtor_listing_id" class="form-select">
+                        <option value="">(Optional) Select Listing</option>
+                        <?php foreach (($listings ?? []) as $l): ?>
+                            <option value="<?= (int)($l['id'] ?? 0) ?>"><?= htmlspecialchars((string)($l['title'] ?? '')) ?><?= !empty($l['location'] ?? null) ? ' - ' . htmlspecialchars((string)($l['location'] ?? '')) : '' ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <button type="button" class="btn btn-outline-primary" id="realtorLeadAddListingBtn2" title="Add Listing" data-bs-toggle="modal" data-bs-target="#realtorLeadAddListingModal">
+                        <i class="bi bi-plus-circle"></i>
+                    </button>
+                </div>
             </div>
             <div class="mb-3">
                 <label class="form-label">Status</label>
@@ -342,10 +352,154 @@ ob_start();
       <div class="modal-header">
         <h5 class="modal-title">Confirm Delete</h5>
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body">Are you sure you want to delete this lead?</div>
+ div class="modal fade" id="realtorLeadAddListingModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form id="realtorLeadAddListingForm" enctype="multipart/form-data">
+        <?= csrf_field() ?>
+        <div class="modal-header">
+          <h5 class="modal-title">Add Listing</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Title</label>
+            <input type="text" name="title" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Type</label>
+            <select name="listing_type" class="form-select" required>
+              <option value="plot">Plot</option>
+              <option value="commercial_apartment">Commercial Apartment</option>
+              <option value="residential_apartment">Residential Apartment</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Location</label>
+            <input type="text" name="location" class="form-control" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Price</label>
+            <div class="input-group">
+              <span class="input-group-text">Ksh</span>
+              <input type="number" step="0.01" name="price" class="form-control" required>
+            </div>
+          </div>
+          <div clas ="mb-3">
+            <label  lass="form-label">Status</label>
+            <select name="status" class="form-select" requi ed>
+              <option value="active">Act ve</o <ion/div>
+              <option value="inactive">Inactive</option>
+              <option value="sold">Sold</option>
+              <option value="rented">Rented</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class=" orm-label">Description</label>
+            <textarea name="description" class="form-control" rows="3"></textarea>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Images</label>
+            <inp t type="file"  ame="listing_images[]" class="form-control" accept="image/*" multiple>
+          </div>
+          <div class="alert alert-danger d-none" id="realtorLeadAddListingError"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="realtorLeadAddListingSubmit">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+fun   <div class="modal-body">Are you sure you want to delete this lead?</div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+ 
+
+(function(){
+  function upsertOption(selectEl, id, label){
+    if(!selectEl) return;
+    const val = String(id);
+    const existing = Array.from(selectEl.options).find(o => o.value === val);
+    if(existing){
+      existing.textContent = label;
+    } else {
+      const opt = document.createElement('option');
+      opt.value = val;
+      opt.textContent = label;
+      selectEl.appendChild(opt);
+    }
+  }
+
+  const addListingForm = document.getElementById('realtorLeadAddListingForm');
+  const addListingErr = document.getElementById('realtorLeadAddListingError');
+  const addListingSubmit = document.getElementById('realtorLeadAddListingSubmit');
+  const listingSelAdd = document.getElementById('realtor_lead_listing_id');
+  const listingSelEdit = document.getElementById('edit_lead_listing_id');
+  const leadModalEl = document.getElementById('addLeadModal');
+  const listingModalEl = document.getElementById('realtorLeadAddListingModal');
+
+  function getModal(el){
+    if(!el) return null;
+    if(!(window.bootstrap && window.bootstrap.Modal)) return null;
+    return window.bootstrap.Modal.getOrCreateInstance(el);
+  }
+
+  function resetListingForm(){
+    if(addListingErr){ addListingErr.classList.add('d-none'); addListingErr.textContent = ''; }
+    addListingForm?.reset();
+  }
+
+  document.getElementById('realtorLeadAddListingBtn')?.addEventListener('click', ()=>{
+    const lm = getModal(leadModalEl);
+    if(lm) lm.hide();
+    resetListingForm();
+  });
+  document.getElementById('realtorLeadAddListingBtn2')?.addEventListener('click', ()=>{
+    resetListingForm();
+  });
+
+  addListingForm?.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    if(addListingErr){ addListingErr.classList.add('d-none'); addListingErr.textContent = ''; }
+    if(addListingSubmit) addListingSubmit.disabled = true;
+    try {
+      const fd = new FormData(addListingForm);
+      const res = await fetch('<?= BASE_URL ?>/realtor/listings/store', {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest' },
+        body: fd
+      });
+      const raw = await res.text();
+      let data = null;
+      try { data = raw ? JSON.parse(raw) : null; } catch(_e) { throw new Error(raw || 'Failed to add listing'); }
+      if(!data || !data.success || !data.listing_id){
+        throw new Error((data && data.message) ? data.message : 'Failed to add listing');
+      }
+      const label = (String(data.title || '').trim() || 'New Listing') + (data.location ? (' - ' + String(data.location)) : '');
+      upsertOption(listingSelAdd, data.listing_id, label);
+      upsertOption(listingSelEdit, data.listing_id, label);
+      if(listingSelAdd){ listingSelAdd.value = String(data.listing_id); }
+      if(listingSelEdit && listingSelEdit.value === ''){
+        // don't force edit lead selection if already set
+      }
+
+      const mm = getModal(listingModalEl);
+      if(mm) mm.hide();
+      const lm = getModal(leadModalEl);
+      if(lm) lm.show();
+    } catch(err){
+      if(addListingErr){
+        addListingErr.textContent = String(err && err.message ? err.message : err);
+        addListingErr.classList.remove('d-none');
+      }
+    } finally {
+      if(addListingSubmit) addListingSubmit.disabled = false;
+    }
+  });
+})();       <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
         <button type="button" id="confirmDeleteLeadBtn" class="btn btn-danger">Delete</button>
       </div>
     </div>
