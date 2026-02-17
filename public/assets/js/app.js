@@ -637,6 +637,62 @@ document.addEventListener('DOMContentLoaded', function() {
 // Only define deleteProperty if it doesn't already exist (prevent duplicate declaration)
 if (typeof window.deleteProperty === 'undefined') {
     window.deleteProperty = async (id) => {
+        // Prefer Bootstrap confirmation modal when available
+        const modalEl = document.getElementById('deletePropertyModal');
+        const confirmBtn = document.getElementById('confirmDeletePropertyBtn');
+
+        if (modalEl && confirmBtn && window.bootstrap && window.bootstrap.Modal) {
+            window.__propertyIdToDelete = id;
+
+            if (!window.__deletePropertyModalBound) {
+                window.__deletePropertyModalBound = true;
+                confirmBtn.addEventListener('click', async () => {
+                    const pid = window.__propertyIdToDelete;
+                    if (!pid) return;
+                    try {
+                        confirmBtn.disabled = true;
+                        const response = await fetch(`${BASE_URL}/properties/delete/${pid}`, {
+                            method: 'POST',
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'Accept': 'application/json'
+                            }
+                        });
+
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+
+                        const data = await response.json();
+
+                        if (!data.success) {
+                            throw new Error(data.message || 'Failed to delete property');
+                        }
+
+                        const inst = window.bootstrap.Modal.getInstance(modalEl);
+                        if (inst) {
+                            try { inst.hide(); } catch (e) {}
+                        }
+
+                        showAlert('success', 'Property deleted successfully', true, () => {
+                            window.location.reload();
+                        });
+                    } catch (error) {
+                        console.error('Error:', error);
+                        showAlert('error', 'An error occurred while deleting the property');
+                    } finally {
+                        confirmBtn.disabled = false;
+                        window.__propertyIdToDelete = null;
+                    }
+                });
+            }
+
+            const modal = window.bootstrap.Modal.getOrCreateInstance(modalEl);
+            modal.show();
+            return;
+        }
+
+        // Fallback to browser confirm
         if (!confirm('Are you sure you want to delete this property? This action cannot be undone.')) {
             return;
         }
@@ -655,7 +711,7 @@ if (typeof window.deleteProperty === 'undefined') {
             }
 
             const data = await response.json();
-            
+
             if (!data.success) {
                 throw new Error(data.message || 'Failed to delete property');
             }
