@@ -351,7 +351,13 @@ ob_start();
         headers: { 'X-Requested-With': 'XMLHttpRequest' },
         body: fd
       });
-      const data = await res.json();
+      const raw = await res.text();
+      let data = null;
+      try {
+        data = raw ? JSON.parse(raw) : null;
+      } catch(_e) {
+        throw new Error(raw || 'Failed to create property');
+      }
       if(!data || !data.success || !data.property_id){
         throw new Error((data && data.message) ? data.message : 'Failed to create property');
       }
