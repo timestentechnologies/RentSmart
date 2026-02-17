@@ -163,6 +163,91 @@ ob_start();
 })();
 </script>
 
+<script>
+(function(){
+  function upsertClientOption(selectEl, id, label){
+    if(!selectEl) return;
+    const val = String(id);
+    const existing = Array.from(selectEl.options).find(o => o.value === val);
+    if(existing){
+      existing.textContent = label;
+    }
+  }
+
+  const btn = document.getElementById('erc_edit_client_btn');
+  const contractModalEl = document.getElementById('editRealtorContractModal');
+  const clientModalEl = document.getElementById('editRealtorClientModal');
+  const clientSel = document.getElementById('erc_client_id');
+  const err = document.getElementById('ercu_error');
+  const submitBtn = document.getElementById('ercu_submit');
+  const form = document.getElementById('editRealtorClientForm');
+
+  function getModal(el){
+    if(!el || !(window.bootstrap && window.bootstrap.Modal)) return null;
+    return window.bootstrap.Modal.getOrCreateInstance(el);
+  }
+
+  btn?.addEventListener('click', ()=>{
+    const id = clientSel ? (clientSel.value || '') : '';
+    if(!id) return;
+    if(err){ err.classList.add('d-none'); err.textContent = ''; }
+    if(submitBtn) submitBtn.disabled = true;
+
+    fetch('<?= BASE_URL ?>' + '/realtor/clients/get/' + id)
+      .then(r=>r.json())
+      .then(resp=>{
+        if(!resp || !resp.success || !resp.data){ throw new Error(resp && resp.message ? resp.message : 'Failed to load client'); }
+        const c = resp.data;
+        document.getElementById('edit_realtor_client_id').value = String(id);
+        document.getElementById('ercu_name').value = String(c.name || '');
+        document.getElementById('ercu_phone').value = String(c.phone || '');
+        document.getElementById('ercu_email').value = String(c.email || '');
+        document.getElementById('ercu_notes').value = String(c.notes || '');
+
+        const cm = getModal(clientModalEl);
+        const pm = getModal(contractModalEl);
+        if(pm) pm.hide();
+        if(cm) cm.show();
+      })
+      .catch(e=>{
+        if(err){ err.textContent = String(e && e.message ? e.message : e); err.classList.remove('d-none'); }
+        const cm = getModal(clientModalEl);
+        if(cm) cm.show();
+      })
+      .finally(()=>{ if(submitBtn) submitBtn.disabled = false; });
+  });
+
+  clientModalEl?.addEventListener('hidden.bs.modal', ()=>{
+    const pm = getModal(contractModalEl);
+    if(pm) pm.show();
+  });
+
+  form?.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const id = document.getElementById('edit_realtor_client_id')?.value || '';
+    if(!id) return;
+    if(err){ err.classList.add('d-none'); err.textContent = ''; }
+    if(submitBtn) submitBtn.disabled = true;
+    try{
+      const fd = new FormData(form);
+      const res = await fetch('<?= BASE_URL ?>' + '/realtor/clients/update/' + id, { method:'POST', body: fd });
+      const data = await res.json();
+      if(!data || !data.success){
+        throw new Error(data && data.message ? data.message : 'Failed to update client');
+      }
+      const label = String(fd.get('name') || '') + ' (' + String(fd.get('phone') || '') + ')';
+      upsertClientOption(clientSel, id, label);
+      const cm = getModal(clientModalEl);
+      if(cm) cm.hide();
+    }catch(e2){
+      if(err){ err.textContent = String(e2 && e2.message ? e2.message : e2); err.classList.remove('d-none'); }
+    }finally{
+      if(submitBtn) submitBtn.disabled = false;
+    }
+  });
+})();
+</script>
+
 <div class="modal fade" id="editRealtorContractModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
@@ -175,6 +260,22 @@ ob_start();
         </div>
         <div class="modal-body">
           <div class="row g-3">
+            <div class="col-md-8">
+              <label class="form-label">Client</label>
+              <div class="d-flex gap-2">
+                <select class="form-select" name="realtor_client_id" id="erc_client_id" required>
+                  <option value="">Select client</option>
+                  <?php foreach (($clients ?? []) as $cl): ?>
+                    <option value="<?= (int)($cl['id'] ?? 0) ?>">
+                      <?= htmlspecialchars((string)($cl['name'] ?? '')) ?> (<?= htmlspecialchars((string)($cl['phone'] ?? '')) ?>)
+                    </option>
+                  <?php endforeach; ?>
+                </select>
+                <button type="button" class="btn btn-outline-secondary" id="erc_edit_client_btn" title="Edit Client">
+                  <i class="bi bi-person-gear"></i>
+                </button>
+              </div>
+            </div>
             <div class="col-md-4">
               <label class="form-label">Terms</label>
               <select class="form-select" name="terms_type" id="erc_terms_type" required>
@@ -213,6 +314,44 @@ ob_start();
         <div class="modal-footer">
           <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
           <button type="submit" class="btn btn-primary" id="erc_submit">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="editRealtorClientModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form method="POST" id="editRealtorClientForm">
+        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
+        <input type="hidden" id="edit_realtor_client_id" value="">
+        <div class="modal-header">
+          <h5 class="modal-title">Edit Client</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label class="form-label">Name</label>
+            <input class="form-control" name="name" id="ercu_name" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Phone</label>
+            <input class="form-control" name="phone" id="ercu_phone" required>
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Email</label>
+            <input class="form-control" name="email" id="ercu_email" type="email">
+          </div>
+          <div class="mb-3">
+            <label class="form-label">Notes</label>
+            <textarea class="form-control" name="notes" id="ercu_notes" rows="3"></textarea>
+          </div>
+          <div class="alert alert-danger d-none" id="ercu_error"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="ercu_submit">Save</button>
         </div>
       </form>
     </div>
@@ -322,6 +461,10 @@ function editRealtorContract(id){
       if(form) form.action = '<?= BASE_URL ?>' + '/realtor/contracts/update/' + id;
 
       document.getElementById('edit_realtor_contract_id').value = String(id);
+      const clientSel = document.getElementById('erc_client_id');
+      if(clientSel){
+        clientSel.value = c.realtor_client_id ? String(c.realtor_client_id) : '';
+      }
       document.getElementById('erc_terms_type').value = String(c.terms_type || 'one_time');
       document.getElementById('erc_total_amount').value = String(c.total_amount || 0);
       document.getElementById('erc_status').value = String(c.status || 'active');

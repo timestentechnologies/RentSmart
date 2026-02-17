@@ -345,6 +345,7 @@ class RealtorContractsController
         $startMonth = trim((string)($_POST['start_month'] ?? ''));
         $instructions = trim((string)($_POST['instructions'] ?? ($contract['instructions'] ?? '')));
         $status = trim((string)($_POST['status'] ?? ($contract['status'] ?? 'active')));
+        $newClientId = (int)($_POST['realtor_client_id'] ?? 0);
 
         if (!in_array($termsType, ['one_time', 'monthly'], true)) {
             $termsType = 'one_time';
@@ -358,6 +359,15 @@ class RealtorContractsController
 
         if (!in_array($status, ['active', 'completed', 'cancelled'], true)) {
             $status = (string)($contract['status'] ?? 'active');
+        }
+
+        $clientIdToSave = (int)($contract['realtor_client_id'] ?? 0);
+        if ($newClientId > 0 && $newClientId !== $clientIdToSave) {
+            $clientModel = new RealtorClient();
+            $c = $clientModel->getByIdWithAccess((int)$newClientId, $this->userId);
+            if ($c) {
+                $clientIdToSave = (int)$newClientId;
+            }
         }
 
         $monthlyAmount = null;
@@ -384,6 +394,7 @@ class RealtorContractsController
 
         try {
             $ok = $contractModel->updateById((int)$id, [
+                'realtor_client_id' => (int)$clientIdToSave,
                 'terms_type' => (string)$termsType,
                 'total_amount' => (float)$totalAmount,
                 'monthly_amount' => $monthlyAmount,
@@ -392,6 +403,17 @@ class RealtorContractsController
                 'instructions' => $instructions,
                 'status' => (string)$status,
             ]);
+
+            // Keep payments consistent if client changed
+            if ($ok && (int)$clientIdToSave !== (int)($contract['realtor_client_id'] ?? 0)) {
+                try {
+                    $paymentModel = new Payment();
+                    $db = $paymentModel->getDb();
+                    $stmt = $db->prepare("UPDATE payments SET realtor_client_id = ? WHERE realtor_user_id = ? AND realtor_contract_id = ?");
+                    $stmt->execute([(int)$clientIdToSave, (int)$this->userId, (int)$id]);
+                } catch (\Throwable $e) {
+                }
+            }
             $_SESSION['flash_message'] = $ok ? 'Contract updated' : 'Failed to update contract';
             $_SESSION['flash_type'] = $ok ? 'success' : 'danger';
         } catch (\Exception $e) {
