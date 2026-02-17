@@ -490,6 +490,11 @@ $routes = [
     'agent/leads/store' => ['controller' => 'AgentLeadsController', 'action' => 'store'],
     'agent/leads/update-stage/(\d+)' => ['controller' => 'AgentLeadsController', 'action' => 'updateStage'],
 
+    'agent/leads/stages' => ['controller' => 'AgentLeadsController', 'action' => 'stages'],
+    'agent/leads/stages/store' => ['controller' => 'AgentLeadsController', 'action' => 'storeStage'],
+    'agent/leads/stages/update/(\d+)' => ['controller' => 'AgentLeadsController', 'action' => 'updateStageMeta'],
+    'agent/leads/stages/delete/(\d+)' => ['controller' => 'AgentLeadsController', 'action' => 'deleteStage'],
+
     // Debug (protected by DEBUG_KEY)
     'debug/last-error' => ['controller' => 'DebugController', 'action' => 'lastError'],
     'debug/odoo-test' => ['controller' => 'DebugController', 'action' => 'odooTest'],
@@ -759,6 +764,11 @@ $protectedRoutes = [
     'agent/leads',
     'agent/leads/store',
     'agent/leads/update-stage/(\d+)',
+
+    'agent/leads/stages',
+    'agent/leads/stages/store',
+    'agent/leads/stages/update/(\d+)',
+    'agent/leads/stages/delete/(\d+)',
 ];
 
 // Check if the current route requires authentication
