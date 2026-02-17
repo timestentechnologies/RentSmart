@@ -475,6 +475,7 @@ $routes = [
 
     'realtor/contracts' => ['controller' => 'RealtorContractsController', 'action' => 'index'],
     'realtor/contracts/store' => ['controller' => 'RealtorContractsController', 'action' => 'store'],
+    'realtor/contracts/get/(\d+)' => ['controller' => 'RealtorContractsController', 'action' => 'get'],
     'realtor/contracts/show/(\d+)' => ['controller' => 'RealtorContractsController', 'action' => 'show'],
     'realtor/contracts/update/(\d+)' => ['controller' => 'RealtorContractsController', 'action' => 'update'],
     'realtor/contracts/print/(\d+)' => ['controller' => 'RealtorContractsController', 'action' => 'print'],
@@ -756,6 +757,7 @@ $protectedRoutes = [
 
     'realtor/contracts',
     'realtor/contracts/store',
+    'realtor/contracts/get/(\d+)',
     'realtor/contracts/show/(\d+)',
     'realtor/contracts/update/(\d+)',
     'realtor/contracts/print/(\d+)',

@@ -21,12 +21,31 @@ class RealtorContractsController
             header('Location: ' . BASE_URL . '/');
             exit;
         }
+
         if (strtolower((string)($_SESSION['user_role'] ?? '')) !== 'realtor') {
             $_SESSION['flash_message'] = 'Access denied';
             $_SESSION['flash_type'] = 'danger';
             header('Location: ' . BASE_URL . '/dashboard');
             exit;
         }
+    }
+
+    public function get($id)
+    {
+        try {
+            $contractModel = new RealtorContract();
+            $contract = $contractModel->getByIdWithAccess((int)$id, $this->userId);
+            if (!$contract) {
+                http_response_code(404);
+                echo json_encode(['success' => false, 'message' => 'Contract not found']);
+                exit;
+            }
+            echo json_encode(['success' => true, 'data' => $contract]);
+        } catch (\Exception $e) {
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Internal server error']);
+        }
+        exit;
     }
 
     public function index()
@@ -325,6 +344,7 @@ class RealtorContractsController
         $durationMonths = (int)($_POST['duration_months'] ?? ($contract['duration_months'] ?? 0));
         $startMonth = trim((string)($_POST['start_month'] ?? ''));
         $instructions = trim((string)($_POST['instructions'] ?? ($contract['instructions'] ?? '')));
+        $status = trim((string)($_POST['status'] ?? ($contract['status'] ?? 'active')));
 
         if (!in_array($termsType, ['one_time', 'monthly'], true)) {
             $termsType = 'one_time';
@@ -334,6 +354,10 @@ class RealtorContractsController
             $_SESSION['flash_type'] = 'danger';
             header('Location: ' . BASE_URL . '/realtor/contracts/show/' . (int)$id);
             exit;
+        }
+
+        if (!in_array($status, ['active', 'completed', 'cancelled'], true)) {
+            $status = (string)($contract['status'] ?? 'active');
         }
 
         $monthlyAmount = null;
@@ -366,6 +390,7 @@ class RealtorContractsController
                 'duration_months' => $durationToSave,
                 'start_month' => $startMonthDate,
                 'instructions' => $instructions,
+                'status' => (string)$status,
             ]);
             $_SESSION['flash_message'] = $ok ? 'Contract updated' : 'Failed to update contract';
             $_SESSION['flash_type'] = $ok ? 'success' : 'danger';
