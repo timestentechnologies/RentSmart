@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use App\Models\RealtorClient;
 use App\Models\RealtorListing;
+use App\Database\Connection;
 
 class RealtorClientsController
 {
@@ -141,8 +142,99 @@ class RealtorClientsController
                 echo json_encode(['success' => false, 'message' => 'Client not found']);
                 exit;
             }
-            $ok = $model->deleteById((int)$id);
-            echo json_encode(['success' => (bool)$ok, 'message' => $ok ? 'Deleted' : 'Failed to delete']);
+
+            $db = Connection::getInstance()->getConnection();
+            $db->beginTransaction();
+
+            try {
+                $listingId = !empty($row['realtor_listing_id']) ? (int)$row['realtor_listing_id'] : 0;
+
+                // Delete payments linked to this client (realtor payments)
+                try {
+                    $stmtPay = $db->prepare("DELETE FROM payments WHERE realtor_user_id = ? AND realtor_client_id = ?");
+                    $stmtPay->execute([(int)$this->userId, (int)$id]);
+                } catch (\Throwable $e) {
+                }
+
+                // Delete payments linked to contracts of this client (in case client_id was not populated)
+                try {
+                    $stmtPay2 = $db->prepare(
+                        "DELETE p FROM payments p\n"
+                        . "JOIN realtor_contracts c ON c.id = p.realtor_contract_id\n"
+                        . "WHERE c.user_id = ? AND c.realtor_client_id = ?"
+                    );
+                    $stmtPay2->execute([(int)$this->userId, (int)$id]);
+                } catch (\Throwable $e) {
+                }
+
+                // Delete contracts for this client
+                try {
+                    $stmtC = $db->prepare("DELETE FROM realtor_contracts WHERE user_id = ? AND realtor_client_id = ?");
+                    $stmtC->execute([(int)$this->userId, (int)$id]);
+                } catch (\Throwable $e) {
+                }
+
+                // Reset linked lead back to new (and unconvert)
+                try {
+                    $stmtLead = $db->prepare("UPDATE realtor_leads SET status = 'new', converted_client_id = NULL WHERE user_id = ? AND converted_client_id = ?");
+                    $stmtLead->execute([(int)$this->userId, (int)$id]);
+                } catch (\Throwable $e) {
+                }
+
+                // Detach listing from any leads before deleting listing
+                if ($listingId > 0) {
+                    try {
+                        $stmtDetach = $db->prepare("UPDATE realtor_leads SET realtor_listing_id = NULL WHERE user_id = ? AND realtor_listing_id = ?");
+                        $stmtDetach->execute([(int)$this->userId, (int)$listingId]);
+                    } catch (\Throwable $e) {
+                    }
+                }
+
+                // Delete listing associated with this client (only if not referenced elsewhere)
+                if ($listingId > 0) {
+                    $refCount = 0;
+                    try {
+                        $stmtRef1 = $db->prepare("SELECT COUNT(*) AS c FROM realtor_clients WHERE user_id = ? AND realtor_listing_id = ? AND id <> ?");
+                        $stmtRef1->execute([(int)$this->userId, (int)$listingId, (int)$id]);
+                        $refCount += (int)($stmtRef1->fetch(\PDO::FETCH_ASSOC)['c'] ?? 0);
+                    } catch (\Throwable $e) {
+                    }
+                    try {
+                        $stmtRef2 = $db->prepare("SELECT COUNT(*) AS c FROM realtor_contracts WHERE user_id = ? AND realtor_listing_id = ?");
+                        $stmtRef2->execute([(int)$this->userId, (int)$listingId]);
+                        $refCount += (int)($stmtRef2->fetch(\PDO::FETCH_ASSOC)['c'] ?? 0);
+                    } catch (\Throwable $e) {
+                    }
+                    try {
+                        $stmtRef3 = $db->prepare("SELECT COUNT(*) AS c FROM payments WHERE realtor_user_id = ? AND realtor_listing_id = ?");
+                        $stmtRef3->execute([(int)$this->userId, (int)$listingId]);
+                        $refCount += (int)($stmtRef3->fetch(\PDO::FETCH_ASSOC)['c'] ?? 0);
+                    } catch (\Throwable $e) {
+                    }
+
+                    if ($refCount <= 0) {
+                        try {
+                            $stmtDelL = $db->prepare("DELETE FROM realtor_listings WHERE user_id = ? AND id = ?");
+                            $stmtDelL->execute([(int)$this->userId, (int)$listingId]);
+                        } catch (\Throwable $e) {
+                        }
+                    }
+                }
+
+                // Finally delete the client
+                $ok = (bool)$model->deleteById((int)$id);
+                if (!$ok) {
+                    throw new \Exception('Failed to delete');
+                }
+
+                $db->commit();
+                echo json_encode(['success' => true, 'message' => 'Deleted']);
+            } catch (\Throwable $e) {
+                if ($db->inTransaction()) {
+                    $db->rollBack();
+                }
+                echo json_encode(['success' => false, 'message' => 'Failed to delete']);
+            }
         } catch (\Exception $e) {
             http_response_code(500);
             echo json_encode(['success' => false, 'message' => 'Internal server error']);
