@@ -53,15 +53,12 @@ class InquiryController
                     'preferred_date' => $preferredDate ?: null,
                     'message' => $message ?: null,
                     'source' => 'vacant_units',
-                    'amount' => (float)($listing['price'] ?? 0),
                 ]);
 
                 try {
                     $leadModel = new RealtorLead();
                     $leadModel->insert([
                         'user_id' => (int)$realtorUserId,
-                        'realtor_listing_id' => (int)$realtorListingId,
-                        'amount' => (float)($listing['price'] ?? 0),
                         'name' => $name,
                         'phone' => $phone,
                         'email' => $email ?: null,
@@ -89,7 +86,6 @@ class InquiryController
                     'preferred_date' => $preferredDate ?: null,
                     'message' => $message ?: null,
                     'source' => 'vacant_units',
-                    'amount' => (float)($unit['rent_amount'] ?? 0),
                 ]);
             }
 

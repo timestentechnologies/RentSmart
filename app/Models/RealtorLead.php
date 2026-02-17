@@ -18,7 +18,6 @@ class RealtorLead extends Model
             id INT AUTO_INCREMENT PRIMARY KEY,
             user_id INT NOT NULL,
             realtor_listing_id INT NULL,
-            amount DECIMAL(12,2) NOT NULL DEFAULT 0,
             name VARCHAR(255) NOT NULL,
             phone VARCHAR(50) NOT NULL,
             email VARCHAR(150) NULL,
@@ -41,17 +40,12 @@ class RealtorLead extends Model
         } catch (\Exception $e) {
         }
 
-        try {
-            $this->db->exec("ALTER TABLE {$this->table} ADD COLUMN amount DECIMAL(12,2) NOT NULL DEFAULT 0 AFTER realtor_listing_id");
-        } catch (\Exception $e) {
-        }
-
         // If the column exists as ENUM (older installs), widen it to VARCHAR for custom stages
         try {
             $stmt = $this->db->query("SHOW COLUMNS FROM {$this->table} LIKE 'status'");
             $col = $stmt ? $stmt->fetch(\PDO::FETCH_ASSOC) : null;
             $type = strtolower((string)($col['Type'] ?? ''));
-            if ($type !== '' && strpos($type, 'enum(') === 0)) {
+            if ($type !== '' && strpos($type, 'enum(') === 0) {
                 $this->db->exec("ALTER TABLE {$this->table} MODIFY status VARCHAR(50) NOT NULL DEFAULT 'new'");
             }
         } catch (\Exception $e) {

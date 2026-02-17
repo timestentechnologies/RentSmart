@@ -173,7 +173,6 @@ class RealtorLeadsController
             $data = [
                 'user_id' => $this->userId,
                 'realtor_listing_id' => !empty($_POST['realtor_listing_id']) ? (int)$_POST['realtor_listing_id'] : null,
-                'amount' => (float)($_POST['amount'] ?? 0),
                 'name' => trim((string)($_POST['name'] ?? '')),
                 'phone' => trim((string)($_POST['phone'] ?? '')),
                 'email' => trim((string)($_POST['email'] ?? '')),
@@ -238,7 +237,6 @@ class RealtorLeadsController
 
             $data = [
                 'realtor_listing_id' => array_key_exists('realtor_listing_id', $_POST) ? (($_POST['realtor_listing_id'] !== '' && $_POST['realtor_listing_id'] !== null) ? (int)$_POST['realtor_listing_id'] : null) : ($row['realtor_listing_id'] ?? null),
-                'amount' => array_key_exists('amount', $_POST) ? (float)($_POST['amount'] ?? 0) : (float)($row['amount'] ?? 0),
                 'name' => trim((string)($_POST['name'] ?? ($row['name'] ?? ''))),
                 'phone' => trim((string)($_POST['phone'] ?? ($row['phone'] ?? ''))),
                 'email' => trim((string)($_POST['email'] ?? ($row['email'] ?? ''))),
