@@ -156,6 +156,14 @@ class PropertyController
                 'total_area' => filter_var($_POST['total_area'] ?? '', FILTER_VALIDATE_FLOAT),
                 // caretaker fields now handled via caretaker_employee_id
             ];
+
+            // Normalize optional numeric fields: filter_var returns false when empty/invalid
+            if ($data['year_built'] === false || $data['year_built'] === '') {
+                $data['year_built'] = null;
+            }
+            if ($data['total_area'] === false || $data['total_area'] === '') {
+                $data['total_area'] = null;
+            }
             $caretakerEmployeeId = isset($_POST['caretaker_employee_id']) ? (int)$_POST['caretaker_employee_id'] : 0;
 
             // Set owner_id, manager_id, or agent_id based on role
