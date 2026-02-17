@@ -1423,6 +1423,17 @@ class Payment extends Model
     {
         $user = new User();
         $userData = $user->find($userId);
+
+        // Realtor revenue is contract-based (payments.lease_id is NULL)
+        if ($userId && isset($userData['role']) && strtolower((string)$userData['role']) === 'realtor') {
+            $sql = "SELECT COALESCE(SUM(CASE WHEN p.amount > 0 THEN p.amount ELSE 0 END), 0) AS total\n"
+                . "FROM payments p\n"
+                . "WHERE p.realtor_user_id = ? AND p.payment_date BETWEEN ? AND ?\n"
+                . "  AND p.status IN ('completed','verified')";
+            $result = $this->query($sql, [(int)$userId, $startDate, $endDate]);
+            return $result[0]['total'] ?? 0;
+        }
+
         $sql = "SELECT COALESCE(SUM(p.amount), 0) as total 
                 FROM payments p 
                 JOIN leases l ON p.lease_id = l.id 
@@ -1462,6 +1473,9 @@ class Payment extends Model
             }
             if (!empty($roleFilter)) {
                 $where[] = '(' . implode(' OR ', $roleFilter) . ')';
+            } else {
+                // Unrecognized non-admin role: no access
+                $where[] = '1=0';
             }
         }
         if (!empty($where)) {
