@@ -180,9 +180,10 @@ class PropertyController
                 throw new Exception('The following fields are required: ' . implode(', ', $missingFields));
             }
 
-            // Validate ZIP code format
-            if (!preg_match('/^[0-9]{5}(-[0-9]{4})?$/', $data['zip_code'])) {
-                throw new Exception('Invalid ZIP code format. Use 12345 or 12345-6789');
+            // Validate ZIP/postal code format (allow international formats)
+            $zip = trim((string)($data['zip_code'] ?? ''));
+            if ($zip === '' || !preg_match('/^[A-Za-z0-9\-\s]{3,12}$/', $zip)) {
+                throw new Exception('Invalid ZIP/Postal code');
             }
 
             // Plan limits: enforce property limit per subscription plan (dynamic from DB, fallback by plan name)
