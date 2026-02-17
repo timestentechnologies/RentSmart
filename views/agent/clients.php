@@ -106,6 +106,24 @@ ob_start();
     </div>
 </div>
 
+<div class="modal fade" id="deleteClientModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Delete Client</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Delete this client? This will also delete all contracts for this client.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteClientBtn">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="modal fade" id="addClientModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -254,20 +272,43 @@ ob_start();
       .catch(()=>alert('Failed to load client'));
   }
 
-  window.deleteAgentClient = async function(id){
-    const ok = confirm('Delete this client? This will also delete all contracts for this client.');
-    if(!ok) return;
+  const deleteModalEl = document.getElementById('deleteClientModal');
+  const confirmDeleteBtn = document.getElementById('confirmDeleteClientBtn');
+  let pendingDeleteClientId = null;
+
+  function getDeleteModal(){
+    if(!deleteModalEl) return null;
+    if(!(window.bootstrap && window.bootstrap.Modal)) return null;
+    return window.bootstrap.Modal.getOrCreateInstance(deleteModalEl);
+  }
+
+  window.deleteAgentClient = function(id){
+    pendingDeleteClientId = id;
+    const m = getDeleteModal();
+    if(!m){
+      alert('Delete modal is not ready. Please refresh and try again.');
+      return;
+    }
+    m.show();
+  }
+
+  confirmDeleteBtn?.addEventListener('click', async function(){
+    const id = pendingDeleteClientId;
+    if(!id) return;
     const fd = new FormData();
     fd.set('csrf_token', csrfToken());
     try{
+      confirmDeleteBtn.disabled = true;
       const res = await fetch('<?= BASE_URL ?>' + '/agent/clients/delete/' + id, { method:'POST', body: fd });
       const data = await res.json();
       if(!data.success){ alert(data.message || 'Failed to delete client'); return; }
       location.reload();
     }catch(e){
       alert('Failed to delete client');
+    }finally{
+      confirmDeleteBtn.disabled = false;
     }
-  }
+  });
 
   document.getElementById('editClientForm')?.addEventListener('submit', async (e)=>{
     e.preventDefault();
