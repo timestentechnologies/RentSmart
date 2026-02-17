@@ -256,9 +256,11 @@ ob_start();
   }
 
   const editModalEl = document.getElementById('editContractModal');
-  const editModal = (editModalEl && window.bootstrap && window.bootstrap.Modal)
-    ? window.bootstrap.Modal.getOrCreateInstance(editModalEl)
-    : null;
+  function getEditModal(){
+    if(!editModalEl) return null;
+    if(!(window.bootstrap && window.bootstrap.Modal)) return null;
+    return window.bootstrap.Modal.getOrCreateInstance(editModalEl);
+  }
 
   window.editAgentContract = function(id){
     fetch('<?= BASE_URL ?>' + '/agent/contracts/get/' + id)
@@ -280,7 +282,12 @@ ob_start();
         document.getElementById('edit_status').value = c.status || 'active';
         document.getElementById('edit_instructions').value = c.instructions || '';
         editSync();
-        if(editModal){ editModal.show(); }
+        const editModal = getEditModal();
+        if(!editModal){
+          alert('Edit modal is not ready. Please refresh and try again.');
+          return;
+        }
+        editModal.show();
       })
       .catch(()=>alert('Failed to load contract'));
   }

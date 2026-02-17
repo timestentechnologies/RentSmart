@@ -224,9 +224,11 @@ ob_start();
   }
 
   const editModalEl = document.getElementById('editClientModal');
-  const editModal = (editModalEl && window.bootstrap && window.bootstrap.Modal)
-    ? window.bootstrap.Modal.getOrCreateInstance(editModalEl)
-    : null;
+  function getEditModal(){
+    if(!editModalEl) return null;
+    if(!(window.bootstrap && window.bootstrap.Modal)) return null;
+    return window.bootstrap.Modal.getOrCreateInstance(editModalEl);
+  }
 
   window.editAgentClient = function(id){
     fetch('<?= BASE_URL ?>' + '/agent/clients/get/' + id)
@@ -239,7 +241,12 @@ ob_start();
         document.getElementById('edit_client_phone').value = c.phone || '';
         document.getElementById('edit_client_email').value = c.email || '';
         document.getElementById('edit_client_notes').value = c.notes || '';
-        if(editModal){ editModal.show(); }
+        const editModal = getEditModal();
+        if(!editModal){
+          alert('Edit modal is not ready. Please refresh and try again.');
+          return;
+        }
+        editModal.show();
       })
       .catch(()=>alert('Failed to load client'));
   }
