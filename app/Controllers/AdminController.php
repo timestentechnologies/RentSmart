@@ -399,6 +399,60 @@ class AdminController
                 }
                 error_log("Payment methods deleted successfully");
 
+                // Delete realtor-module data (clients, listings, contracts, leads, payments)
+                if (strtolower((string)($user['role'] ?? '')) === 'realtor') {
+                    error_log("Deleting realtor module data...");
+
+                    // Payments created for realtor contracts
+                    try {
+                        $stmt = $db->prepare("DELETE FROM payments WHERE realtor_user_id = ?");
+                        $stmt->execute([(int)$id]);
+                    } catch (\Exception $e) {
+                    }
+
+                    // Realtor contracts (and any linked payments already deleted above)
+                    try {
+                        $stmt = $db->prepare("DELETE FROM realtor_contracts WHERE user_id = ?");
+                        $stmt->execute([(int)$id]);
+                    } catch (\Exception $e) {
+                    }
+
+                    // Realtor clients
+                    try {
+                        $stmt = $db->prepare("DELETE FROM realtor_clients WHERE user_id = ?");
+                        $stmt->execute([(int)$id]);
+                    } catch (\Exception $e) {
+                    }
+
+                    // Realtor listings
+                    try {
+                        $stmt = $db->prepare("DELETE FROM realtor_listings WHERE user_id = ?");
+                        $stmt->execute([(int)$id]);
+                    } catch (\Exception $e) {
+                    }
+
+                    // Realtor leads and stages
+                    try {
+                        $stmt = $db->prepare("DELETE FROM realtor_leads WHERE user_id = ?");
+                        $stmt->execute([(int)$id]);
+                    } catch (\Exception $e) {
+                    }
+                    try {
+                        $stmt = $db->prepare("DELETE FROM realtor_lead_stages WHERE user_id = ?");
+                        $stmt->execute([(int)$id]);
+                    } catch (\Exception $e) {
+                    }
+
+                    // Inquiries captured from realtor listings
+                    try {
+                        $stmt = $db->prepare("DELETE FROM inquiries WHERE realtor_user_id = ?");
+                        $stmt->execute([(int)$id]);
+                    } catch (\Exception $e) {
+                    }
+
+                    error_log("Realtor module data deleted successfully");
+                }
+
                 // Treat landlord/manager/agent as property owners: delete all their property data.
                 // For caretakers/other staff: only unlink assignments.
                 $isPropertyOwnerRole = in_array((string)($user['role'] ?? ''), ['landlord', 'manager', 'agent'], true);
