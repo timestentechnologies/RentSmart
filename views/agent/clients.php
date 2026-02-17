@@ -214,6 +214,11 @@ ob_start();
 
 <script>
 (function(){
+  // Defensive cleanup: sometimes a leftover backdrop can block clicks on buttons.
+  document.querySelectorAll('.modal-backdrop').forEach(el => el.remove());
+  document.body.classList.remove('modal-open');
+  document.body.style.removeProperty('padding-right');
+
   function csrfToken(){
     return (document.querySelector('meta[name="csrf-token"]')||{}).content || '';
   }
