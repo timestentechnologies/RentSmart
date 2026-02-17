@@ -122,13 +122,33 @@ class RealtorListingsController
                 $fileUploadHelper = new FileUploadHelper();
                 $imgs = $fileUploadHelper->getEntityFiles('realtor_listing', (int)$id, 'image');
                 $urls = [];
+                $meta = [];
+
+                $projectRoot = realpath(__DIR__ . '/../../');
+                if (!$projectRoot) {
+                    $projectRoot = __DIR__ . '/../../';
+                }
                 foreach (($imgs ?? []) as $img) {
                     if (!empty($img['url'])) { $urls[] = $img['url']; }
+
+                    $uploadPath = (string)($img['upload_path'] ?? '');
+                    $uploadPathNorm = ltrim($uploadPath, '/');
+                    $pathInPublic = rtrim($projectRoot, '/\\') . DIRECTORY_SEPARATOR . 'public' . DIRECTORY_SEPARATOR . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $uploadPathNorm);
+                    $pathInRoot = rtrim($projectRoot, '/\\') . DIRECTORY_SEPARATOR . str_replace(['/', '\\'], DIRECTORY_SEPARATOR, $uploadPathNorm);
+                    $meta[] = [
+                        'id' => (int)($img['id'] ?? 0),
+                        'upload_path' => $uploadPath,
+                        'url' => (string)($img['url'] ?? ''),
+                        'exists_public' => (bool)($uploadPathNorm !== '' && file_exists($pathInPublic)),
+                        'exists_root' => (bool)($uploadPathNorm !== '' && file_exists($pathInRoot)),
+                    ];
                 }
                 $row['images'] = $urls;
+                $row['images_meta'] = $meta;
             } catch (\Exception $e) {
                 error_log('Failed to load realtor listing images: ' . $e->getMessage());
                 $row['images'] = [];
+                $row['images_meta'] = [];
             }
             echo json_encode(['success' => true, 'data' => $row]);
         } catch (\Exception $e) {
