@@ -51,7 +51,7 @@ class RealtorLead extends Model
             $stmt = $this->db->query("SHOW COLUMNS FROM {$this->table} LIKE 'status'");
             $col = $stmt ? $stmt->fetch(\PDO::FETCH_ASSOC) : null;
             $type = strtolower((string)($col['Type'] ?? ''));
-            if ($type !== '' && strpos($type, 'enum(') === 0) {
+            if ($type !== '' && strpos($type, 'enum(') === 0)) {
                 $this->db->exec("ALTER TABLE {$this->table} MODIFY status VARCHAR(50) NOT NULL DEFAULT 'new'");
             }
         } catch (\Exception $e) {
