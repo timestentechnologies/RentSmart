@@ -30,6 +30,30 @@ function tail_file(string $path, int $maxBytes = 65536): string {
     return $data === false ? "(unable to read file)" : $data;
 }
 
+function extract_recent_errors(string $logChunk, int $maxLines = 80): array {
+    $lines = preg_split('/\r\n|\r|\n/', $logChunk);
+    if (!is_array($lines)) return [];
+    $matched = [];
+    $patterns = [
+        '/fatal error/i',
+        '/uncaught/i',
+        '/parse error/i',
+        '/exception/i',
+        '/allowed memory size/i',
+    ];
+    foreach ($lines as $line) {
+        $line = (string)$line;
+        foreach ($patterns as $p) {
+            if (preg_match($p, $line)) {
+                $matched[] = $line;
+                break;
+            }
+        }
+    }
+    if (count($matched) <= $maxLines) return $matched;
+    return array_slice($matched, -$maxLines);
+}
+
 $root = __DIR__;
 $checks = [
     'time_utc' => gmdate('c'),
@@ -47,8 +71,20 @@ $checks = [
 
 header('Content-Type: application/json; charset=utf-8');
 
+$phpLogTail = tail_file($root . '/logs/php_errors.log', 400000);
+$tmpErrorFile = rtrim(sys_get_temp_dir(), '/\\') . DIRECTORY_SEPARATOR . 'rentsmart_last_error.json';
+$tmpErrorRaw = @file_get_contents($tmpErrorFile);
+$tmpErrorPayload = null;
+if ($tmpErrorRaw !== false) {
+    $tmpErrorPayload = json_decode($tmpErrorRaw, true);
+}
+
 echo json_encode([
     'success' => true,
     'checks' => $checks,
-    'last_php_errors_log_tail' => tail_file($root . '/logs/php_errors.log', 120000),
+    'php_errors_log_path' => $root . '/logs/php_errors.log',
+    'last_php_errors_log_tail' => $phpLogTail,
+    'recent_error_lines' => extract_recent_errors($phpLogTail, 120),
+    'tmp_last_error_file' => $tmpErrorFile,
+    'tmp_last_error_payload' => $tmpErrorPayload,
 ], JSON_PRETTY_PRINT);
