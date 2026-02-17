@@ -105,6 +105,9 @@ ob_start();
                                     <a class="btn btn-sm btn-outline-primary" href="<?= BASE_URL ?>/realtor/contracts/show/<?= (int)($x['id'] ?? 0) ?>">
                                         <i class="bi bi-eye"></i>
                                     </a>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" onclick="editRealtorContract(<?= (int)($x['id'] ?? 0) ?>)" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -159,6 +162,62 @@ ob_start();
   apply();
 })();
 </script>
+
+<div class="modal fade" id="editRealtorContractModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <form method="POST" id="editRealtorContractForm">
+        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
+        <input type="hidden" id="edit_realtor_contract_id" value="">
+        <div class="modal-header">
+          <h5 class="modal-title">Edit Contract</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-4">
+              <label class="form-label">Terms</label>
+              <select class="form-select" name="terms_type" id="erc_terms_type" required>
+                <option value="one_time">One-time</option>
+                <option value="monthly">Monthly</option>
+              </select>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Total Amount</label>
+              <input class="form-control" name="total_amount" id="erc_total_amount" type="number" step="0.01" min="0" required>
+            </div>
+            <div class="col-md-4">
+              <label class="form-label">Status</label>
+              <select class="form-select" name="status" id="erc_status" required>
+                <option value="active">Active</option>
+                <option value="completed">Completed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+            </div>
+
+            <div class="col-md-4" id="erc_duration_wrap" style="display:none;">
+              <label class="form-label">Duration (months)</label>
+              <input class="form-control" name="duration_months" id="erc_duration_months" type="number" min="1">
+            </div>
+            <div class="col-md-4" id="erc_start_wrap" style="display:none;">
+              <label class="form-label">Start Month</label>
+              <input class="form-control" name="start_month" id="erc_start_month" type="month">
+            </div>
+            <div class="col-12">
+              <label class="form-label">Instructions / Notes</label>
+              <textarea class="form-control" name="instructions" id="erc_instructions" rows="4"></textarea>
+            </div>
+          </div>
+          <div class="alert alert-danger d-none mt-3" id="erc_error"></div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="erc_submit">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
 
 <div class="modal fade" id="addContractModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
@@ -230,6 +289,65 @@ ob_start();
   const terms = document.getElementById('realtor_terms_type');
   const durationWrap = document.getElementById('realtor_duration_wrap');
   const startWrap = document.getElementById('realtor_start_wrap');
+  function sync(){
+    const isMonthly = (terms && terms.value === 'monthly');
+    if(durationWrap) durationWrap.style.display = isMonthly ? '' : 'none';
+    if(startWrap) startWrap.style.display = isMonthly ? '' : 'none';
+  }
+  if(terms){
+    terms.addEventListener('change', sync);
+    sync();
+  }
+})();
+</script>
+
+<script>
+function editRealtorContract(id){
+  const modalEl = document.getElementById('editRealtorContractModal');
+  if(!modalEl || !(window.bootstrap && window.bootstrap.Modal)) return;
+  const m = window.bootstrap.Modal.getOrCreateInstance(modalEl);
+
+  const err = document.getElementById('erc_error');
+  const submitBtn = document.getElementById('erc_submit');
+  if(err){ err.classList.add('d-none'); err.textContent = ''; }
+  if(submitBtn) submitBtn.disabled = true;
+
+  fetch('<?= BASE_URL ?>' + '/realtor/contracts/get/' + id)
+    .then(r=>r.json())
+    .then(resp=>{
+      if(!resp || !resp.success || !resp.data){ throw new Error(resp && resp.message ? resp.message : 'Failed to load'); }
+      const c = resp.data;
+
+      const form = document.getElementById('editRealtorContractForm');
+      if(form) form.action = '<?= BASE_URL ?>' + '/realtor/contracts/update/' + id;
+
+      document.getElementById('edit_realtor_contract_id').value = String(id);
+      document.getElementById('erc_terms_type').value = String(c.terms_type || 'one_time');
+      document.getElementById('erc_total_amount').value = String(c.total_amount || 0);
+      document.getElementById('erc_status').value = String(c.status || 'active');
+      document.getElementById('erc_duration_months').value = c.duration_months ? String(c.duration_months) : '';
+      document.getElementById('erc_start_month').value = c.start_month ? String(c.start_month).slice(0,7) : '';
+      document.getElementById('erc_instructions').value = String(c.instructions || '');
+
+      const isMonthly = (document.getElementById('erc_terms_type').value === 'monthly');
+      const dw = document.getElementById('erc_duration_wrap');
+      const sw = document.getElementById('erc_start_wrap');
+      if(dw) dw.style.display = isMonthly ? '' : 'none';
+      if(sw) sw.style.display = isMonthly ? '' : 'none';
+
+      m.show();
+    })
+    .catch(e=>{
+      if(err){ err.textContent = String(e && e.message ? e.message : e); err.classList.remove('d-none'); }
+      m.show();
+    })
+    .finally(()=>{ if(submitBtn) submitBtn.disabled = false; });
+}
+
+(function(){
+  const terms = document.getElementById('erc_terms_type');
+  const durationWrap = document.getElementById('erc_duration_wrap');
+  const startWrap = document.getElementById('erc_start_wrap');
   function sync(){
     const isMonthly = (terms && terms.value === 'monthly');
     if(durationWrap) durationWrap.style.display = isMonthly ? '' : 'none';
