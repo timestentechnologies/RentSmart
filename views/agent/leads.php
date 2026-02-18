@@ -166,7 +166,7 @@ ob_start();
               <label class="form-check-label" for="new_agent_stage_is_lost">Lost</label>
             </div>
           </div>
-          <div class="col-md-1 d-grid"><button class="btn btn-primary" type="button" onclick="addAgentStage()">Add</button></div>
+          <div class="col-md-1 d-grid"><button class="btn btn-primary" type="button" id="addAgentStageBtn">Add</button></div>
         </div>
 
         <div class="table-responsive">
@@ -474,8 +474,8 @@ window.addEventListener('DOMContentLoaded', function(){
             </select>
           </td>
           <td class="text-end">
-            <button class="btn btn-sm btn-outline-primary me-1" type="button" onclick="saveAgentStage(${s.id})"><i class="bi bi-save"></i></button>
-            <button class="btn btn-sm btn-outline-danger" type="button" ${deleteDisabled?'disabled':''} onclick="deleteAgentStage(${s.id})"><i class="bi bi-trash"></i></button>
+            <button class="btn btn-sm btn-outline-primary me-1" type="button" data-action="save-stage" data-id="${s.id}"><i class="bi bi-save"></i></button>
+            <button class="btn btn-sm btn-outline-danger" type="button" data-action="delete-stage" data-id="${s.id}" ${deleteDisabled?'disabled':''}><i class="bi bi-trash"></i></button>
           </td>
         `;
         body.appendChild(tr);
@@ -546,6 +546,24 @@ window.addEventListener('DOMContentLoaded', function(){
   }
 
   document.getElementById('manageAgentStagesModal')?.addEventListener('shown.bs.modal', loadAgentStages);
+
+  document.getElementById('addAgentStageBtn')?.addEventListener('click', function(){
+    if (typeof window.addAgentStage === 'function') window.addAgentStage();
+  });
+
+  document.getElementById('agentStagesTableBody')?.addEventListener('click', function(e){
+    const btn = e.target && e.target.closest ? e.target.closest('button[data-action]') : null;
+    if(!btn) return;
+    const action = btn.getAttribute('data-action');
+    const id = parseInt(btn.getAttribute('data-id') || '0', 10);
+    if(!id) return;
+    if(action === 'save-stage' && typeof window.saveAgentStage === 'function'){
+      window.saveAgentStage(id);
+    }
+    if(action === 'delete-stage' && typeof window.deleteAgentStage === 'function'){
+      window.deleteAgentStage(id);
+    }
+  });
 });
 </script>
 
