@@ -218,6 +218,10 @@ class AgentLeadsController
                     $propData['agent_id'] = (int)$this->userId;
                 }
 
+                if (!isset($propData['owner_id']) && !isset($propData['manager_id']) && !isset($propData['agent_id'])) {
+                    $propData['agent_id'] = (int)$this->userId;
+                }
+
                 $propertyId = (int)$propertyModel->create($propData);
                 if ($propertyId <= 0) {
                     throw new \Exception('Failed to create property');
@@ -236,7 +240,7 @@ class AgentLeadsController
             ]);
         } catch (\Exception $e) {
             error_log('AgentLeads winCreateProperty failed: ' . $e->getMessage());
-            echo json_encode(['success' => false, 'message' => 'Server error']);
+            echo json_encode(['success' => false, 'message' => $e->getMessage() ?: 'Server error']);
         }
         exit;
     }
