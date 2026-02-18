@@ -12,6 +12,22 @@ class Inquiry extends Model
         $this->table = 'inquiries';
 
         try {
+            $stmt = $this->db->query("SHOW COLUMNS FROM {$this->table} LIKE 'crm_user_id'");
+            if ($stmt && $stmt->rowCount() === 0) {
+                $this->db->exec("ALTER TABLE {$this->table} ADD COLUMN crm_user_id INT NULL AFTER realtor_user_id");
+            }
+        } catch (\Exception $e) {
+        }
+
+        try {
+            $stmt = $this->db->query("SHOW COLUMNS FROM {$this->table} LIKE 'property_name'");
+            if ($stmt && $stmt->rowCount() === 0) {
+                $this->db->exec("ALTER TABLE {$this->table} ADD COLUMN property_name VARCHAR(255) NULL AFTER property_id");
+            }
+        } catch (\Exception $e) {
+        }
+
+        try {
             $stmt = $this->db->query("SHOW COLUMNS FROM {$this->table} LIKE 'source'");
             if ($stmt && $stmt->rowCount() === 0) {
                 $this->db->exec("ALTER TABLE {$this->table} ADD COLUMN source VARCHAR(50) NULL AFTER message");
@@ -70,14 +86,16 @@ class Inquiry extends Model
 
     public function create(array $data)
     {
-        $sql = "INSERT INTO {$this->table} (unit_id, realtor_listing_id, realtor_user_id, property_id, name, contact, preferred_date, message, source)
-                VALUES (:unit_id, :realtor_listing_id, :realtor_user_id, :property_id, :name, :contact, :preferred_date, :message, :source)";
+        $sql = "INSERT INTO {$this->table} (unit_id, realtor_listing_id, realtor_user_id, crm_user_id, property_id, property_name, name, contact, preferred_date, message, source)
+                VALUES (:unit_id, :realtor_listing_id, :realtor_user_id, :crm_user_id, :property_id, :property_name, :name, :contact, :preferred_date, :message, :source)";
         $stmt = $this->db->prepare($sql);
         $stmt->execute([
             'unit_id' => $data['unit_id'] ?? null,
             'realtor_listing_id' => $data['realtor_listing_id'] ?? null,
             'realtor_user_id' => $data['realtor_user_id'] ?? null,
+            'crm_user_id' => $data['crm_user_id'] ?? null,
             'property_id' => $data['property_id'] ?? null,
+            'property_name' => $data['property_name'] ?? null,
             'name' => $data['name'],
             'contact' => $data['contact'],
             'preferred_date' => $data['preferred_date'] ?? null,
@@ -93,7 +111,7 @@ class Inquiry extends Model
         $params = [];
         $sql = "SELECT i.*, 
                        u.unit_number, 
-                       p.name as property_name,
+                       COALESCE(NULLIF(i.property_name, ''), p.name) as property_name,
                        rl.title as listing_title
                 FROM {$this->table} i
                 LEFT JOIN units u ON u.id = i.unit_id
@@ -105,7 +123,8 @@ class Inquiry extends Model
                 $sql .= " WHERE i.realtor_user_id = ? AND (i.source = 'vacant_units' OR i.source IS NULL OR i.source = '')";
                 $params[] = $userId;
             } else {
-                $sql .= " WHERE (p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ?)";
+                $sql .= " WHERE ((p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ?) OR (i.crm_user_id = ? AND i.source = 'agent_crm'))";
+                $params[] = $userId;
                 $params[] = $userId;
                 $params[] = $userId;
                 $params[] = $userId;
@@ -122,7 +141,7 @@ class Inquiry extends Model
     {
         $role = strtolower((string)$role);
         $params = [(int)$id];
-        $sql = "SELECT i.*, u.unit_number, u.rent_amount AS unit_rent_amount, u.status AS unit_status, p.name AS property_name\n"
+        $sql = "SELECT i.*, u.unit_number, u.rent_amount AS unit_rent_amount, u.status AS unit_status, COALESCE(NULLIF(i.property_name, ''), p.name) AS property_name\n"
             . "FROM {$this->table} i\n"
             . "LEFT JOIN units u ON u.id = i.unit_id\n"
             . "LEFT JOIN properties p ON p.id = i.property_id\n"
@@ -133,7 +152,8 @@ class Inquiry extends Model
                 $sql .= " AND i.realtor_user_id = ?";
                 $params[] = (int)$userId;
             } else {
-                $sql .= " AND (p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ?)";
+                $sql .= " AND ((p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ?) OR (i.crm_user_id = ? AND i.source = 'agent_crm'))";
+                $params[] = (int)$userId;
                 $params[] = (int)$userId;
                 $params[] = (int)$userId;
                 $params[] = (int)$userId;
@@ -167,7 +187,8 @@ class Inquiry extends Model
                 $sql .= " AND i.realtor_user_id = ?";
                 $params[] = (int)$userId;
             } else {
-                $sql .= " AND (p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ?)";
+                $sql .= " AND ((p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ?) OR (i.crm_user_id = ? AND i.source = 'agent_crm'))";
+                $params[] = (int)$userId;
                 $params[] = (int)$userId;
                 $params[] = (int)$userId;
                 $params[] = (int)$userId;
