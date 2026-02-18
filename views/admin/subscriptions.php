@@ -151,6 +151,7 @@ ob_start();
                         <th class="text-muted">PLAN NAME</th>
                         <th class="text-muted">PRICE</th>
                         <th class="text-muted">PROPERTY LIMIT</th>
+                        <th class="text-muted">LISTING LIMIT</th>
                         <th class="text-muted">DESCRIPTION</th>
                         <th class="text-muted">FEATURES</th>
                         <th class="text-muted">ACTIONS</th>
@@ -180,6 +181,15 @@ ob_start();
                                     elseif ($nameLower === 'enterprise') { $limit = null; }
                                 }
                                 echo $limit === null ? '<span class="badge bg-success">Unlimited</span>' : '<span class="badge bg-secondary">' . (int)$limit . '</span>';
+                                ?>
+                            </td>
+                            <td>
+                                <?php
+                                $listingLimit = null;
+                                if (isset($plan['listing_limit']) && $plan['listing_limit'] !== null && $plan['listing_limit'] !== '' && (int)$plan['listing_limit'] > 0) {
+                                    $listingLimit = (int)$plan['listing_limit'];
+                                }
+                                echo $listingLimit === null ? '<span class="badge bg-success">Unlimited</span>' : '<span class="badge bg-secondary">' . (int)$listingLimit . '</span>';
                                 ?>
                             </td>
                             <td><?= htmlspecialchars($plan['description']) ?></td>
@@ -298,6 +308,10 @@ ob_start();
                         </div>
                     </div>
                     <div class="mb-3">
+                        <label class="form-label">Listing Limit</label>
+                        <input type="number" class="form-control" name="listing_limit" id="editPlanListingLimit" placeholder="Unlimited if blank or 0" min="0">
+                    </div>
+                    <div class="mb-3">
                         <label class="form-label">Description</label>
                         <textarea class="form-control" name="description" id="editPlanDescription" rows="3" required></textarea>
                     </div>
@@ -385,8 +399,10 @@ function editPlan(planId) {
             // Limits (may be null or undefined if columns not yet created)
             const propLimitEl = document.getElementById('editPlanPropertyLimit');
             const unitLimitEl = document.getElementById('editPlanUnitLimit');
+            const listingLimitEl = document.getElementById('editPlanListingLimit');
             if (propLimitEl) { propLimitEl.value = (plan.property_limit !== null && plan.property_limit !== undefined) ? plan.property_limit : ''; }
             if (unitLimitEl) { unitLimitEl.value = (plan.unit_limit !== null && plan.unit_limit !== undefined) ? plan.unit_limit : ''; }
+            if (listingLimitEl) { listingLimitEl.value = (plan.listing_limit !== null && plan.listing_limit !== undefined) ? plan.listing_limit : ''; }
             document.getElementById('editPlanDescription').value = plan.description;
             document.getElementById('editPlanFeatures').value = plan.features;
             

@@ -617,10 +617,13 @@ class AdminController
             // Optional limits: treat blank/0 as unlimited (NULL)
             $propertyLimitRaw = $_POST['property_limit'] ?? '';
             $unitLimitRaw = $_POST['unit_limit'] ?? '';
+            $listingLimitRaw = $_POST['listing_limit'] ?? '';
             $propertyLimit = is_numeric($propertyLimitRaw) ? (int)$propertyLimitRaw : null;
             $unitLimit = is_numeric($unitLimitRaw) ? (int)$unitLimitRaw : null;
+            $listingLimit = is_numeric($listingLimitRaw) ? (int)$listingLimitRaw : null;
             if ($propertyLimit !== null && $propertyLimit <= 0) { $propertyLimit = null; }
             if ($unitLimit !== null && $unitLimit <= 0) { $unitLimit = null; }
+            if ($listingLimit !== null && $listingLimit <= 0) { $listingLimit = null; }
 
             if (!$planId || !$name || $price === false || !$description || !$features) {
                 $_SESSION['flash_message'] = 'All fields are required';
@@ -637,6 +640,7 @@ class AdminController
             // Include limits in payload (null => set to NULL)
             $payload['property_limit'] = $propertyLimit;
             $payload['unit_limit'] = $unitLimit;
+            $payload['listing_limit'] = $listingLimit;
 
             $this->subscription->updatePlan($planId, $payload);
 
@@ -653,7 +657,8 @@ class AdminController
                     'name' => $name,
                     'price' => $price,
                     'property_limit' => $propertyLimit,
-                    'unit_limit' => $unitLimit
+                    'unit_limit' => $unitLimit,
+                    'listing_limit' => $listingLimit
                 ]),
                 $ip,
                 $agent

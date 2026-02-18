@@ -253,6 +253,9 @@ class Subscription extends Model
         try {
             $this->db->query("SHOW COLUMNS FROM subscription_plans LIKE 'unit_limit'")->fetch(PDO::FETCH_ASSOC) ?: $this->db->exec("ALTER TABLE subscription_plans ADD COLUMN unit_limit INT NULL DEFAULT NULL");
         } catch (\Exception $e) {}
+        try {
+            $this->db->query("SHOW COLUMNS FROM subscription_plans LIKE 'listing_limit'")->fetch(PDO::FETCH_ASSOC) ?: $this->db->exec("ALTER TABLE subscription_plans ADD COLUMN listing_limit INT NULL DEFAULT NULL");
+        } catch (\Exception $e) {}
 
         $fields = [];
         $params = [];
