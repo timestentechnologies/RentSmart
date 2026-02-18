@@ -36,6 +36,11 @@ ob_start();
         .btn-brand-orange:hover { background:#e98300; border-color:#e98300; color:#fff; }
         .btn-brand-purple { background:#6f42c1; border-color:#6f42c1; color:#fff; }
         .btn-brand-purple:hover { background:#5a34a3; border-color:#5a34a3; color:#fff; }
+
+        #manageAgentStagesModal .modal-content,
+        #manageAgentStagesModal .modal-body,
+        #manageAgentStagesModal .table-responsive,
+        #manageAgentStagesModal button { pointer-events: auto; }
     </style>
 
     <?php
@@ -189,7 +194,7 @@ ob_start();
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-        <button type="button" class="btn btn-primary" onclick="location.reload()">Apply</button>
+        <button type="button" class="btn btn-primary" id="applyAgentStagesBtn">Apply</button>
       </div>
     </div>
   </div>
@@ -547,15 +552,27 @@ window.addEventListener('DOMContentLoaded', function(){
 
   document.getElementById('manageAgentStagesModal')?.addEventListener('shown.bs.modal', loadAgentStages);
 
-  document.getElementById('addAgentStageBtn')?.addEventListener('click', function(){
-    if (typeof window.addAgentStage === 'function') window.addAgentStage();
-  });
+  // Use document-level delegation to avoid any issues with dynamic table rendering / modal stacking.
+  document.addEventListener('click', function(e){
+    const addBtn = e.target && e.target.closest ? e.target.closest('#addAgentStageBtn') : null;
+    if(addBtn){
+      e.preventDefault();
+      if (typeof window.addAgentStage === 'function') window.addAgentStage();
+      return;
+    }
 
-  document.getElementById('agentStagesTableBody')?.addEventListener('click', function(e){
-    const btn = e.target && e.target.closest ? e.target.closest('button[data-action]') : null;
-    if(!btn) return;
-    const action = btn.getAttribute('data-action');
-    const id = parseInt(btn.getAttribute('data-id') || '0', 10);
+    const applyBtn = e.target && e.target.closest ? e.target.closest('#applyAgentStagesBtn') : null;
+    if(applyBtn){
+      e.preventDefault();
+      location.reload();
+      return;
+    }
+
+    const actionBtn = e.target && e.target.closest ? e.target.closest('#agentStagesTableBody button[data-action]') : null;
+    if(!actionBtn) return;
+    e.preventDefault();
+    const action = actionBtn.getAttribute('data-action');
+    const id = parseInt(actionBtn.getAttribute('data-id') || '0', 10);
     if(!id) return;
     if(action === 'save-stage' && typeof window.saveAgentStage === 'function'){
       window.saveAgentStage(id);
@@ -563,7 +580,7 @@ window.addEventListener('DOMContentLoaded', function(){
     if(action === 'delete-stage' && typeof window.deleteAgentStage === 'function'){
       window.deleteAgentStage(id);
     }
-  });
+  }, true);
 });
 </script>
 
