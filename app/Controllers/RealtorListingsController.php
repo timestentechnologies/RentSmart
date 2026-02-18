@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use App\Models\RealtorListing;
 use App\Models\RealtorClient;
+use App\Models\Subscription;
 use App\Helpers\FileUploadHelper;
 
 class RealtorListingsController
@@ -83,6 +84,45 @@ class RealtorListingsController
                 $_SESSION['flash_type'] = 'danger';
                 header('Location: ' . BASE_URL . '/realtor/listings');
                 exit;
+            }
+
+            // Plan limits: enforce listing limit per subscription plan (dynamic from DB). Blank/0/NULL => unlimited.
+            try {
+                $subModel = new Subscription();
+                $sub = $subModel->getUserSubscription((int)$this->userId);
+                $listingLimit = null;
+                if (isset($sub['listing_limit']) && $sub['listing_limit'] !== null && $sub['listing_limit'] !== '') {
+                    $listingLimit = (int)$sub['listing_limit'];
+                    if ($listingLimit <= 0) {
+                        $listingLimit = null;
+                    }
+                }
+
+                $modelCount = new RealtorListing();
+                $currentCount = (int)$modelCount->countAll((int)$this->userId);
+                if ($listingLimit !== null && $currentCount >= $listingLimit) {
+                    $msg = 'You have reached your plan limit of ' . $listingLimit . ' listings. Please upgrade to add more.';
+                    if ($isAjax) {
+                        header('Content-Type: application/json');
+                        echo json_encode([
+                            'success' => false,
+                            'over_limit' => true,
+                            'type' => 'listing',
+                            'limit' => $listingLimit,
+                            'current' => $currentCount,
+                            'plan' => $sub['name'] ?? ($sub['plan_type'] ?? ''),
+                            'upgrade_url' => BASE_URL . '/subscription/renew',
+                            'message' => $msg,
+                        ]);
+                        exit;
+                    }
+                    $_SESSION['flash_message'] = $msg;
+                    $_SESSION['flash_type'] = 'warning';
+                    header('Location: ' . BASE_URL . '/subscription/renew');
+                    exit;
+                }
+            } catch (\Exception $e) {
+                // ignore; do not block listing creation if subscription tables are not available
             }
 
             $model = new RealtorListing();

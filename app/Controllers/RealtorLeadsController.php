@@ -7,6 +7,7 @@ use App\Models\RealtorClient;
 use App\Models\RealtorLeadStage;
 use App\Models\RealtorListing;
 use App\Models\RealtorContract;
+use App\Models\Subscription;
 
 class RealtorLeadsController
 {
@@ -41,6 +42,37 @@ class RealtorLeadsController
             if (!verify_csrf_token()) {
                 echo json_encode(['success' => false, 'message' => 'Invalid security token']);
                 exit;
+            }
+
+            // Plan limits: enforce listing limit per subscription plan (dynamic from DB). Blank/0/NULL => unlimited.
+            try {
+                $subModel = new Subscription();
+                $sub = $subModel->getUserSubscription((int)$this->userId);
+                $listingLimit = null;
+                if (isset($sub['listing_limit']) && $sub['listing_limit'] !== null && $sub['listing_limit'] !== '') {
+                    $listingLimit = (int)$sub['listing_limit'];
+                    if ($listingLimit <= 0) {
+                        $listingLimit = null;
+                    }
+                }
+                $listingModelCount = new RealtorListing();
+                $currentCount = (int)$listingModelCount->countAll((int)$this->userId);
+                if ($listingLimit !== null && $currentCount >= $listingLimit) {
+                    $msg = 'You have reached your plan limit of ' . $listingLimit . ' listings. Please upgrade to add more.';
+                    echo json_encode([
+                        'success' => false,
+                        'over_limit' => true,
+                        'type' => 'listing',
+                        'limit' => $listingLimit,
+                        'current' => $currentCount,
+                        'plan' => $sub['name'] ?? ($sub['plan_type'] ?? ''),
+                        'upgrade_url' => BASE_URL . '/subscription/renew',
+                        'message' => $msg,
+                    ]);
+                    exit;
+                }
+            } catch (\Exception $e) {
+                // ignore; do not block listing creation if subscription tables are not available
             }
 
             $leadModel = new RealtorLead();
