@@ -435,11 +435,6 @@ class AgentLeadsController
                 exit;
             }
 
-            if (in_array((string)($row['stage_key'] ?? ''), ['new', 'contacted', 'qualified', 'won', 'lost'], true)) {
-                echo json_encode(['success' => false, 'message' => 'Default stages cannot be deleted']);
-                exit;
-            }
-
             $transferTo = strtolower(trim((string)($_POST['transfer_to'] ?? '')));
             $inquiryModel = new Inquiry();
             $countRows = $inquiryModel->query(
