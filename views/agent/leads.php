@@ -252,6 +252,42 @@ ob_start();
 </div>
 
 <script>
+// Global handler (not dependent on DOMContentLoaded) to ensure stage actions always respond.
+if (!window.__agentStagesGlobalClickBound) {
+  window.__agentStagesGlobalClickBound = true;
+  document.addEventListener('click', function(e){
+    const addBtn = e.target && e.target.closest ? e.target.closest('#addAgentStageBtn') : null;
+    if(addBtn){
+      e.preventDefault();
+      console.log('[agent stages] add clicked');
+      if (typeof window.addAgentStage === 'function') window.addAgentStage();
+      return;
+    }
+
+    const applyBtn = e.target && e.target.closest ? e.target.closest('#applyAgentStagesBtn') : null;
+    if(applyBtn){
+      e.preventDefault();
+      console.log('[agent stages] apply clicked');
+      location.reload();
+      return;
+    }
+
+    const actionBtn = e.target && e.target.closest ? e.target.closest('#agentStagesTableBody button[data-action]') : null;
+    if(!actionBtn) return;
+    e.preventDefault();
+    const action = actionBtn.getAttribute('data-action');
+    const id = parseInt(actionBtn.getAttribute('data-id') || '0', 10);
+    console.log('[agent stages] action clicked', action, id);
+    if(!id) return;
+    if(action === 'save-stage' && typeof window.saveAgentStage === 'function'){
+      window.saveAgentStage(id);
+    }
+    if(action === 'delete-stage' && typeof window.deleteAgentStage === 'function'){
+      window.deleteAgentStage(id);
+    }
+  }, true);
+}
+
 window.addEventListener('DOMContentLoaded', function(){
   let draggedId = null;
   let winStageKey = null;
@@ -552,35 +588,6 @@ window.addEventListener('DOMContentLoaded', function(){
 
   document.getElementById('manageAgentStagesModal')?.addEventListener('shown.bs.modal', loadAgentStages);
 
-  // Use document-level delegation to avoid any issues with dynamic table rendering / modal stacking.
-  document.addEventListener('click', function(e){
-    const addBtn = e.target && e.target.closest ? e.target.closest('#addAgentStageBtn') : null;
-    if(addBtn){
-      e.preventDefault();
-      if (typeof window.addAgentStage === 'function') window.addAgentStage();
-      return;
-    }
-
-    const applyBtn = e.target && e.target.closest ? e.target.closest('#applyAgentStagesBtn') : null;
-    if(applyBtn){
-      e.preventDefault();
-      location.reload();
-      return;
-    }
-
-    const actionBtn = e.target && e.target.closest ? e.target.closest('#agentStagesTableBody button[data-action]') : null;
-    if(!actionBtn) return;
-    e.preventDefault();
-    const action = actionBtn.getAttribute('data-action');
-    const id = parseInt(actionBtn.getAttribute('data-id') || '0', 10);
-    if(!id) return;
-    if(action === 'save-stage' && typeof window.saveAgentStage === 'function'){
-      window.saveAgentStage(id);
-    }
-    if(action === 'delete-stage' && typeof window.deleteAgentStage === 'function'){
-      window.deleteAgentStage(id);
-    }
-  }, true);
 });
 </script>
 
