@@ -788,6 +788,17 @@ const removeLoadingAlerts = () => {
 let currentPropertyId = null;
 let propertyIdToDelete = null;
 
+document.addEventListener('DOMContentLoaded', () => {
+    try {
+        const params = new URLSearchParams(window.location.search || '');
+        const editId = parseInt(params.get('edit') || '0', 10);
+        if (editId && typeof editProperty === 'function') {
+            editProperty(editId);
+        }
+    } catch (e) {
+    }
+});
+
 // Property Management Functions
 const viewProperty = async (id) => {
     try {
