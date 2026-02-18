@@ -64,10 +64,11 @@ class AgentLeadsController
             }
 
             $propertyName = trim((string)($_POST['property_name'] ?? ''));
+            $address = trim((string)($_POST['address'] ?? ''));
             $name = trim((string)($_POST['name'] ?? ''));
             $phone = trim((string)($_POST['phone'] ?? ''));
             $email = trim((string)($_POST['email'] ?? ''));
-            $contact = trim((string)($_POST['contact'] ?? ''));
+            $contact = '';
             $message = trim((string)($_POST['message'] ?? ''));
 
             if ($contact === '') {
@@ -89,6 +90,7 @@ class AgentLeadsController
                 'unit_id' => null,
                 'property_id' => null,
                 'property_name' => $propertyName !== '' ? $propertyName : null,
+                'address' => $address !== '' ? $address : null,
                 'crm_user_id' => (int)$this->userId,
                 'name' => $name,
                 'contact' => $contact,
