@@ -17,7 +17,7 @@ class AgentContract extends Model
         $sql = "CREATE TABLE IF NOT EXISTS agent_contracts (
             id INT AUTO_INCREMENT PRIMARY KEY,
             user_id INT NOT NULL,
-            property_id INT NOT NULL,
+            property_id INT NULL,
             agent_client_id INT NOT NULL,
             terms_type ENUM('one_time','monthly') NOT NULL DEFAULT 'one_time',
             total_amount DECIMAL(12,2) NOT NULL DEFAULT 0,
@@ -37,6 +37,11 @@ class AgentContract extends Model
             $this->db->exec($sql);
         } catch (\Exception $e) {
             // ignore (e.g., missing CREATE privilege on some hosting)
+        }
+
+        try {
+            $this->db->exec("ALTER TABLE {$this->table} MODIFY property_id INT NULL");
+        } catch (\Exception $e) {
         }
 
         try {
