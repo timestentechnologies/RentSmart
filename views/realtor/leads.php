@@ -38,8 +38,8 @@ ob_start();
       </div>
       <div class="modal-footer" style="display:flex; flex-wrap:nowrap; gap:8px;">
         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-success" id="realtorWinOnlyBtn" style="white-space:nowrap;">Won Only</button>
-        <button type="button" class="btn btn-primary" id="realtorWinCreateListingBtn" style="white-space:nowrap;">Won + Create Listing</button>
+        <button type="button" class="btn" id="realtorWinOnlyBtn" style="white-space:nowrap; background:#f59e0b; border-color:#f59e0b; color:#fff;">Won Only</button>
+        <button type="button" class="btn" id="realtorWinCreateListingBtn" style="white-space:nowrap; background:#6f42c1; border-color:#6f42c1; color:#fff;">Won + Create Listing</button>
       </div>
     </div>
   </div>
