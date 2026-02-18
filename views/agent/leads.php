@@ -29,6 +29,12 @@ ob_start();
         .lead-card .lead-sub { font-size: .875rem; color: #6c757d; }
         .crm-drop-hover { outline: 2px dashed rgba(13,110,253,.5); outline-offset: 4px; }
         .lead-tag { font-size: .75rem; }
+
+        .agent-win-footer { display:flex; flex-wrap:wrap; gap: 10px; justify-content:flex-end; }
+        .btn-brand-orange { background:#f7941d; border-color:#f7941d; color:#fff; }
+        .btn-brand-orange:hover { background:#e98300; border-color:#e98300; color:#fff; }
+        .btn-brand-purple { background:#6f42c1; border-color:#6f42c1; color:#fff; }
+        .btn-brand-purple:hover { background:#5a34a3; border-color:#5a34a3; color:#fff; }
     </style>
 
     <?php
@@ -555,9 +561,11 @@ window.addEventListener('DOMContentLoaded', function(){
         <div class="form-text mt-1"><strong>Mark as won and create property</strong> will create a real Property and <strong>counts toward your subscription property limit</strong>.</div>
       </div>
       <div class="modal-footer">
-        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="button" class="btn btn-success" id="agentLeadWinOnlyBtn">Mark as won only</button>
-        <button type="button" class="btn btn-primary" id="agentLeadWinCreatePropertyBtn">Mark as won and create property</button>
+        <div class="agent-win-footer w-100">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="button" class="btn btn-brand-orange" id="agentLeadWinOnlyBtn">Mark as won only</button>
+          <button type="button" class="btn btn-brand-purple" id="agentLeadWinCreatePropertyBtn">Mark as won and create property</button>
+        </div>
       </div>
     </div>
   </div>
