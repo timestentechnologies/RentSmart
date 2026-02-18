@@ -17,7 +17,7 @@ class AgentClient extends Model
         $sql = "CREATE TABLE IF NOT EXISTS agent_clients (
             id INT AUTO_INCREMENT PRIMARY KEY,
             user_id INT NOT NULL,
-            property_id INT NOT NULL,
+            property_id INT NULL,
             name VARCHAR(255) NOT NULL,
             phone VARCHAR(50) NOT NULL,
             email VARCHAR(150) NULL,
@@ -32,6 +32,11 @@ class AgentClient extends Model
             $this->db->exec($sql);
         } catch (\Exception $e) {
             // ignore (e.g., missing CREATE privilege on some hosting)
+        }
+
+        try {
+            $this->db->exec("ALTER TABLE {$this->table} MODIFY property_id INT NULL");
+        } catch (\Exception $e) {
         }
     }
 

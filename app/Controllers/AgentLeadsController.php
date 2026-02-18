@@ -192,6 +192,8 @@ class AgentLeadsController
 
             $db = $inquiryModel->getDb();
             $db->beginTransaction();
+            $clientId = null;
+            $contractId = null;
             try {
                 $ok = $inquiryModel->updateCrmStageWithAccess((int)$id, (int)$this->userId, $this->role, $wonKey);
                 if (!$ok) {
@@ -227,6 +229,19 @@ class AgentLeadsController
                     throw new \Exception('Failed to create property');
                 }
 
+                try {
+                    $stmt = $db->prepare("UPDATE inquiries SET property_id = ? WHERE id = ?");
+                    $stmt->execute([(int)$propertyId, (int)$id]);
+                } catch (\Exception $e) {
+                }
+
+                try {
+                    $conv = $this->maybeConvertInquiryToClientAndContract((int)$id);
+                    $clientId = $conv['client_id'] ?? null;
+                    $contractId = $conv['contract_id'] ?? null;
+                } catch (\Exception $e) {
+                }
+
                 $db->commit();
             } catch (\Exception $ex) {
                 $db->rollBack();
@@ -237,6 +252,8 @@ class AgentLeadsController
                 'success' => true,
                 'property_id' => (int)$propertyId,
                 'redirect_url' => BASE_URL . '/properties/edit/' . (int)$propertyId,
+                'client_id' => $clientId,
+                'contract_id' => $contractId,
             ]);
         } catch (\Exception $e) {
             error_log('AgentLeads winCreateProperty failed: ' . $e->getMessage());
@@ -465,24 +482,27 @@ class AgentLeadsController
             return ['client_id' => null, 'contract_id' => null];
         }
 
-        $propertyId = (int)($inq['property_id'] ?? 0);
+        $propertyId = null;
+        if (isset($inq['property_id']) && (int)$inq['property_id'] > 0) {
+            $propertyId = (int)$inq['property_id'];
+        }
         $name = trim((string)($inq['name'] ?? ''));
         $contact = trim((string)($inq['contact'] ?? ''));
         $message = trim((string)($inq['message'] ?? ''));
 
         $clientId = null;
-        if ($propertyId > 0 && ($name !== '' || $contact !== '')) {
+        if (($name !== '' || $contact !== '')) {
             $clientModel = new AgentClient();
             $existing = $clientModel->query(
-                "SELECT id FROM agent_clients WHERE user_id = ? AND property_id = ? AND (phone = ? OR email = ?) ORDER BY id DESC LIMIT 1",
-                [(int)$this->userId, (int)$propertyId, (string)$contact, (string)$contact]
+                "SELECT id FROM agent_clients WHERE user_id = ? AND property_id <=> ? AND (phone = ? OR email = ?) ORDER BY id DESC LIMIT 1",
+                [(int)$this->userId, $propertyId, (string)$contact, (string)$contact]
             );
             if (!empty($existing)) {
                 $clientId = (int)($existing[0]['id'] ?? 0);
             } else {
                 $clientId = (int)$clientModel->insert([
                     'user_id' => (int)$this->userId,
-                    'property_id' => (int)$propertyId,
+                    'property_id' => $propertyId,
                     'name' => $name !== '' ? $name : $contact,
                     'phone' => $contact,
                     'email' => (strpos($contact, '@') !== false) ? $contact : null,
@@ -492,19 +512,19 @@ class AgentLeadsController
         }
 
         $contractId = null;
-        if ($clientId && $propertyId > 0) {
+        if ($clientId) {
             try {
                 $contractModel = new AgentContract();
                 $existing = $contractModel->query(
-                    "SELECT id FROM agent_contracts WHERE user_id = ? AND property_id = ? AND agent_client_id = ? ORDER BY id DESC LIMIT 1",
-                    [(int)$this->userId, (int)$propertyId, (int)$clientId]
+                    "SELECT id FROM agent_contracts WHERE user_id = ? AND property_id <=> ? AND agent_client_id = ? ORDER BY id DESC LIMIT 1",
+                    [(int)$this->userId, $propertyId, (int)$clientId]
                 );
                 if (!empty($existing)) {
                     $contractId = (int)($existing[0]['id'] ?? 0);
                 } else {
                     $contractId = (int)$contractModel->insert([
                         'user_id' => (int)$this->userId,
-                        'property_id' => (int)$propertyId,
+                        'property_id' => $propertyId,
                         'agent_client_id' => (int)$clientId,
                         'terms_type' => 'one_time',
                         'total_amount' => 0,
