@@ -55,6 +55,7 @@ ob_start();
       <div class="modal-body" id="realtorPlanLimitModalMessage"></div>
       <div class="modal-footer" style="display:flex; flex-wrap:nowrap; gap:8px;">
         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+        <button type="button" class="btn" id="realtorPlanLimitModalWonOnly" style="white-space:nowrap; background:#f59e0b; border-color:#f59e0b; color:#fff;">Won Only</button>
         <a class="btn" id="realtorPlanLimitModalUpgrade" href="<?= BASE_URL ?>/subscription/renew" style="white-space:nowrap; background:#6f42c1; border-color:#6f42c1; color:#fff;">Upgrade</a>
       </div>
     </div>
@@ -524,6 +525,7 @@ let realtorWinModalInstance = null;
 let realtorWinModalOpen = false;
 let realtorWinModalLastShowAt = 0;
 let realtorPlanLimitModalInstance = null;
+let realtorPlanLimitLeadId = null;
 
 function getWonStageKey(){
   const winCol = document.querySelector('.crm-col[data-is-won="1"]');
@@ -563,12 +565,13 @@ function showWinModal(id){
   realtorWinModalInstance.show();
 }
 
-function showPlanLimitModal(message, upgradeUrl){
+function showPlanLimitModal(message, upgradeUrl, leadId){
   const el = document.getElementById('realtorPlanLimitModal');
   if(!el || !(window.bootstrap && window.bootstrap.Modal)){
     alert(message || 'Plan limit reached');
     return;
   }
+  realtorPlanLimitLeadId = (leadId !== undefined && leadId !== null) ? (parseInt(leadId, 10) || null) : realtorPlanLimitLeadId;
   if(el.parentElement && el.parentElement !== document.body){
     document.body.appendChild(el);
   }
@@ -579,6 +582,14 @@ function showPlanLimitModal(message, upgradeUrl){
   realtorPlanLimitModalInstance = window.bootstrap.Modal.getOrCreateInstance(el, { backdrop: true, focus: true });
   realtorPlanLimitModalInstance.show();
 }
+
+document.getElementById('realtorPlanLimitModalWonOnly')?.addEventListener('click', function(){
+  const id = realtorPlanLimitLeadId;
+  const m = realtorPlanLimitModalInstance || bootstrap.Modal.getInstance(document.getElementById('realtorPlanLimitModal'));
+  if(m) m.hide();
+  if(!id) return;
+  markWonOnly(id);
+});
 
 async function markWonOnly(id){
   const wonKey = getWonStageKey();
@@ -611,7 +622,7 @@ async function markWonCreateListing(id){
     const data = await res.json();
     if(!data.success){
       if (data && data.over_limit) {
-        showPlanLimitModal(data.message || 'You have reached your plan limit.', data.upgrade_url || '<?= BASE_URL ?>/subscription/renew');
+        showPlanLimitModal(data.message || 'You have reached your plan limit.', data.upgrade_url || '<?= BASE_URL ?>/subscription/renew', id);
         return;
       }
       alert(data.message || 'Failed');
