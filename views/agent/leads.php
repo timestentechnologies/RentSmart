@@ -204,9 +204,8 @@ ob_start();
               <input class="form-control" name="property_name" placeholder="Type property name (not linked)" required>
             </div>
             <div class="col-md-6">
-              <label class="form-label">Contact (Phone / Email)</label>
-              <input class="form-control" name="contact" placeholder="e.g. 0712345678 / name@example.com">
-              <div class="form-text">If empty, we will use phone/email fields.</div>
+              <label class="form-label">Address</label>
+              <input class="form-control" name="address" placeholder="e.g. Westlands, Nairobi">
             </div>
             <div class="col-md-6">
               <label class="form-label">Name</label>

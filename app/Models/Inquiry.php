@@ -28,6 +28,14 @@ class Inquiry extends Model
         }
 
         try {
+            $stmt = $this->db->query("SHOW COLUMNS FROM {$this->table} LIKE 'address'");
+            if ($stmt && $stmt->rowCount() === 0) {
+                $this->db->exec("ALTER TABLE {$this->table} ADD COLUMN address VARCHAR(255) NULL AFTER contact");
+            }
+        } catch (\Exception $e) {
+        }
+
+        try {
             $stmt = $this->db->query("SHOW COLUMNS FROM {$this->table} LIKE 'source'");
             if ($stmt && $stmt->rowCount() === 0) {
                 $this->db->exec("ALTER TABLE {$this->table} ADD COLUMN source VARCHAR(50) NULL AFTER message");
@@ -86,8 +94,8 @@ class Inquiry extends Model
 
     public function create(array $data)
     {
-        $sql = "INSERT INTO {$this->table} (unit_id, realtor_listing_id, realtor_user_id, crm_user_id, property_id, property_name, name, contact, preferred_date, message, source)
-                VALUES (:unit_id, :realtor_listing_id, :realtor_user_id, :crm_user_id, :property_id, :property_name, :name, :contact, :preferred_date, :message, :source)";
+        $sql = "INSERT INTO {$this->table} (unit_id, realtor_listing_id, realtor_user_id, crm_user_id, property_id, property_name, name, contact, address, preferred_date, message, source)
+                VALUES (:unit_id, :realtor_listing_id, :realtor_user_id, :crm_user_id, :property_id, :property_name, :name, :contact, :address, :preferred_date, :message, :source)";
         $stmt = $this->db->prepare($sql);
         $stmt->execute([
             'unit_id' => $data['unit_id'] ?? null,
@@ -98,6 +106,7 @@ class Inquiry extends Model
             'property_name' => $data['property_name'] ?? null,
             'name' => $data['name'],
             'contact' => $data['contact'],
+            'address' => $data['address'] ?? null,
             'preferred_date' => $data['preferred_date'] ?? null,
             'message' => $data['message'] ?? null,
             'source' => $data['source'] ?? 'vacant_units',
