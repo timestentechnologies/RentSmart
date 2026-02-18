@@ -201,8 +201,7 @@ ob_start();
           <div class="row g-3">
             <div class="col-md-6">
               <label class="form-label">Client Name</label>
-              <input class="form-control" name="name" required>
-              <div class="form-text">John Doe</div>
+              <input class="form-control" name="name" placeholder="John Doe" required>
             </div>
             <div class="col-md-6">
               <label class="form-label">Property</label>
