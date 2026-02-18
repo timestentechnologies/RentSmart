@@ -632,6 +632,7 @@ class SettingsController
             'home_split_badge' => 'All-in-one platform',
             'home_split_title' => 'Manage Rent, Utilities & Maintenance in One Place',
             'home_split_description' => 'Track payments, utilities, and maintenance requests with clear records and automated invoicing—so landlords and tenants always know what is due and what has been paid.',
+            'home_split_image' => '',
             'home_split_bullets_json' => json_encode([
                 ['title' => 'Accurate payment types', 'text' => 'Rent, utilities, and maintenance always recorded correctly.'],
                 ['title' => 'Automated invoicing', 'text' => 'Invoices update based on what was paid—no confusion.'],
