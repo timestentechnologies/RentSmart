@@ -41,6 +41,8 @@ ob_start();
         #manageAgentStagesModal .modal-body,
         #manageAgentStagesModal .table-responsive,
         #manageAgentStagesModal button { pointer-events: auto; }
+
+        #confirmDeleteAgentStageModal { z-index: 1085; }
     </style>
 
     <?php
@@ -627,6 +629,20 @@ window.addEventListener('DOMContentLoaded', function(){
     if(!id) return;
     window.__pendingDeleteStageId = 0;
     await performDeleteAgentStage(id);
+  });
+
+  // Ensure confirm modal stacks above the Manage Stages modal (Bootstrap doesn't always handle nested modals).
+  document.getElementById('confirmDeleteAgentStageModal')?.addEventListener('show.bs.modal', function(){
+    const openCount = document.querySelectorAll('.modal.show').length;
+    const zIndex = 1055 + (openCount * 20);
+    this.style.zIndex = String(zIndex);
+    setTimeout(function(){
+      const backdrops = document.querySelectorAll('.modal-backdrop');
+      const bd = backdrops[backdrops.length - 1];
+      if(bd){
+        bd.style.zIndex = String(zIndex - 10);
+      }
+    }, 0);
   });
 
   document.getElementById('manageAgentStagesModal')?.addEventListener('shown.bs.modal', loadAgentStages);
