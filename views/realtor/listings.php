@@ -542,6 +542,17 @@ function editRealtorListing(id){
     }).catch(()=>alert('Failed to load listing'));
 }
 
+// Auto-open edit modal when redirected from lead conversion flow
+(function(){
+  try {
+    const params = new URLSearchParams(window.location.search || '');
+    const id = parseInt(params.get('edit') || '0', 10);
+    if(id > 0){
+      editRealtorListing(id);
+    }
+  } catch(e) {}
+})();
+
 document.getElementById('editListingForm')?.addEventListener('submit', function(ev){
   ev.preventDefault();
   const id = document.getElementById('edit_listing_id').value;

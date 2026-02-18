@@ -465,6 +465,7 @@ $routes = [
     'realtor/leads/store' => ['controller' => 'RealtorLeadsController', 'action' => 'store'],
     'realtor/leads/get/(\d+)' => ['controller' => 'RealtorLeadsController', 'action' => 'get'],
     'realtor/leads/update/(\d+)' => ['controller' => 'RealtorLeadsController', 'action' => 'update'],
+    'realtor/leads/win-create-listing/(\d+)' => ['controller' => 'RealtorLeadsController', 'action' => 'winCreateListing'],
     'realtor/leads/convert/(\d+)' => ['controller' => 'RealtorLeadsController', 'action' => 'convert'],
     'realtor/leads/delete/(\d+)' => ['controller' => 'RealtorLeadsController', 'action' => 'delete'],
 
@@ -753,6 +754,7 @@ $protectedRoutes = [
     'realtor/leads/store',
     'realtor/leads/get/(\d+)',
     'realtor/leads/update/(\d+)',
+    'realtor/leads/win-create-listing/(\d+)',
     'realtor/leads/convert/(\d+)',
     'realtor/leads/delete/(\d+)',
 

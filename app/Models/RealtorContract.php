@@ -18,7 +18,7 @@ class RealtorContract extends Model
             id INT AUTO_INCREMENT PRIMARY KEY,
             user_id INT NOT NULL,
             realtor_client_id INT NOT NULL,
-            realtor_listing_id INT NOT NULL,
+            realtor_listing_id INT NULL,
             terms_type ENUM('one_time','monthly') NOT NULL DEFAULT 'one_time',
             total_amount DECIMAL(12,2) NOT NULL DEFAULT 0,
             monthly_amount DECIMAL(12,2) NULL,
@@ -36,6 +36,12 @@ class RealtorContract extends Model
             $this->db->exec($sql);
         } catch (\Exception $e) {
             // ignore (e.g., missing CREATE privilege on some hosting)
+        }
+
+        // Allow listing_id to be nullable for CRM leads that are not linked to a listing.
+        try {
+            $this->db->exec("ALTER TABLE {$this->table} MODIFY realtor_listing_id INT NULL");
+        } catch (\Exception $e) {
         }
 
         try {
