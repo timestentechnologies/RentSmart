@@ -8,6 +8,7 @@ use App\Models\Unit;
 use App\Models\AgentClient;
 use App\Models\AgentContract;
 use App\Models\AgentLeadStage;
+use App\Models\Subscription;
 
 class AgentLeadsController
 {
@@ -112,6 +113,131 @@ class AgentLeadsController
         }
 
         header('Location: ' . BASE_URL . '/agent/leads');
+        exit;
+    }
+
+    public function winCreateProperty($id)
+    {
+        header('Content-Type: application/json');
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo json_encode(['success' => false, 'message' => 'Invalid request']);
+            exit;
+        }
+
+        try {
+            if (!verify_csrf_token()) {
+                echo json_encode(['success' => false, 'message' => 'Invalid security token']);
+                exit;
+            }
+
+            $stageModel = new AgentLeadStage();
+            $stages = $stageModel->getAll($this->userId);
+            $wonKey = null;
+            foreach (($stages ?? []) as $s) {
+                if ((int)($s['is_won'] ?? 0) === 1) {
+                    $wonKey = strtolower((string)($s['stage_key'] ?? 'won'));
+                    break;
+                }
+            }
+            if ($wonKey === null || $wonKey === '') {
+                $wonKey = 'won';
+            }
+
+            $inquiryModel = new Inquiry();
+            $inq = $inquiryModel->getByIdVisibleForUser((int)$id, (int)$this->userId, $this->role);
+            if (!$inq) {
+                echo json_encode(['success' => false, 'message' => 'Lead not found']);
+                exit;
+            }
+
+            $propertyName = trim((string)($inq['property_name'] ?? ''));
+            $leadAddress = trim((string)($inq['address'] ?? ''));
+
+            if ($propertyName === '') {
+                echo json_encode(['success' => false, 'message' => 'Property name is required to create a property']);
+                exit;
+            }
+
+            // Enforce subscription property limits (same logic as PropertyController)
+            $subModel = new Subscription();
+            $sub = $subModel->getUserSubscription((int)$this->userId);
+            $planName = strtolower($sub['name'] ?? ($sub['plan_type'] ?? ''));
+            $propertyLimit = null;
+            if (isset($sub['property_limit']) && $sub['property_limit'] !== null && $sub['property_limit'] !== '') {
+                $propertyLimit = (int)$sub['property_limit'];
+                if ($propertyLimit <= 0) { $propertyLimit = null; }
+            } else {
+                if ($planName === 'basic') { $propertyLimit = 10; }
+                elseif ($planName === 'professional') { $propertyLimit = 50; }
+                elseif ($planName === 'enterprise') { $propertyLimit = null; }
+            }
+
+            $propertyModel = new Property();
+            $currentProps = $propertyModel->getAll((int)$this->userId);
+            $propCount = is_array($currentProps) ? count($currentProps) : 0;
+            if ($propertyLimit !== null && $propCount >= $propertyLimit) {
+                $msg = 'You have reached your plan limit of ' . $propertyLimit . ' properties. Please upgrade to add more.';
+                echo json_encode([
+                    'success' => false,
+                    'over_limit' => true,
+                    'type' => 'property',
+                    'limit' => $propertyLimit,
+                    'current' => $propCount,
+                    'plan' => $sub['name'] ?? ($sub['plan_type'] ?? ''),
+                    'upgrade_url' => BASE_URL . '/subscription/renew',
+                    'message' => $msg,
+                ]);
+                exit;
+            }
+
+            $db = $inquiryModel->getDb();
+            $db->beginTransaction();
+            try {
+                $ok = $inquiryModel->updateCrmStageWithAccess((int)$id, (int)$this->userId, $this->role, $wonKey);
+                if (!$ok) {
+                    throw new \Exception('Failed to mark lead as won');
+                }
+
+                $propData = [
+                    'name' => $propertyName,
+                    'address' => $leadAddress !== '' ? $leadAddress : $propertyName,
+                    'city' => 'Nairobi',
+                    'state' => 'Kenya',
+                    'zip_code' => '00000',
+                    'property_type' => 'apartment',
+                    'description' => null,
+                    'year_built' => null,
+                    'total_area' => null,
+                ];
+
+                if ($this->role === 'landlord') {
+                    $propData['owner_id'] = (int)$this->userId;
+                } elseif ($this->role === 'manager') {
+                    $propData['manager_id'] = (int)$this->userId;
+                } elseif ($this->role === 'agent') {
+                    $propData['agent_id'] = (int)$this->userId;
+                }
+
+                $propertyId = (int)$propertyModel->create($propData);
+                if ($propertyId <= 0) {
+                    throw new \Exception('Failed to create property');
+                }
+
+                $db->commit();
+            } catch (\Exception $ex) {
+                $db->rollBack();
+                throw $ex;
+            }
+
+            echo json_encode([
+                'success' => true,
+                'property_id' => (int)$propertyId,
+                'redirect_url' => BASE_URL . '/properties/edit/' . (int)$propertyId,
+            ]);
+        } catch (\Exception $e) {
+            error_log('AgentLeads winCreateProperty failed: ' . $e->getMessage());
+            echo json_encode(['success' => false, 'message' => 'Server error']);
+        }
         exit;
     }
 

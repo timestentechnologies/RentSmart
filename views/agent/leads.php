@@ -245,6 +245,8 @@ window.addEventListener('DOMContentLoaded', function(){
   let winStageKey = null;
   let pendingWinLeadId = null;
   let pendingWinStage = null;
+  let pendingWinCard = null;
+  let pendingWinFromZone = null;
   function csrfToken(){
     return (document.querySelector('meta[name="csrf-token"]')||{}).content || '';
   }
@@ -288,16 +290,50 @@ window.addEventListener('DOMContentLoaded', function(){
     if(!pendingWinLeadId || !pendingWinStage) return;
     const id = pendingWinLeadId;
     const stage = pendingWinStage;
+    const card = pendingWinCard;
+    const fromZone = pendingWinFromZone;
     pendingWinLeadId = null;
     pendingWinStage = null;
+    pendingWinCard = null;
+    pendingWinFromZone = null;
+
+    // Move UI only after user confirms
     try {
+      const targetZone = document.querySelector(`[data-dropzone="1"][data-stage="${stage}"]`);
+      if(targetZone && card){
+        targetZone.appendChild(card);
+        recomputeCounts();
+      }
+    } catch(e){}
+
+    try {
+      if(action === 'create_property'){
+        const fd = new FormData();
+        fd.append('csrf_token', csrfToken());
+        const res = await fetch('<?= BASE_URL ?>/agent/leads/win-create-property/' + id, { method: 'POST', body: fd });
+        const data = await res.json();
+        if(!data || !data.success){
+          if(data && data.over_limit && data.upgrade_url){
+            alert(data.message || 'You have reached your property limit.');
+            window.location.href = data.upgrade_url;
+            return;
+          }
+          throw new Error(data && data.message ? data.message : 'Failed');
+        }
+        window.location.href = data.redirect_url || ('<?= BASE_URL ?>' + '/properties');
+        return;
+      }
+
       await setStage(id, stage);
     } catch(e){
+      // Revert UI on failure
+      try {
+        if(fromZone && card){
+          fromZone.appendChild(card);
+          recomputeCounts();
+        }
+      } catch(_e){}
       location.reload();
-      return;
-    }
-    if(action === 'create_property'){
-      window.location.href = '<?= BASE_URL ?>' + '/properties';
       return;
     }
     location.reload();
@@ -312,6 +348,14 @@ window.addEventListener('DOMContentLoaded', function(){
     const m = window.bootstrap && window.bootstrap.Modal ? window.bootstrap.Modal.getInstance(document.getElementById('agentLeadWinModal')) : null;
     if(m) m.hide();
     confirmWin('create_property');
+  });
+
+  // If user cancels/closes the modal, do not keep any pending win state.
+  document.getElementById('agentLeadWinModal')?.addEventListener('hidden.bs.modal', function(){
+    pendingWinLeadId = null;
+    pendingWinStage = null;
+    pendingWinCard = null;
+    pendingWinFromZone = null;
   });
 
   function recomputeCounts(){
@@ -341,14 +385,16 @@ window.addEventListener('DOMContentLoaded', function(){
       computeWinStageKey();
       const isWonTarget = (winStageKey && stage === winStageKey);
 
-      zone.appendChild(card);
-      recomputeCounts();
-
       try {
         if(isWonTarget){
+          pendingWinCard = card;
+          pendingWinFromZone = card.parentElement;
           showWinModal(draggedId, stage);
           return;
         }
+
+        zone.appendChild(card);
+        recomputeCounts();
         await setStage(draggedId, stage);
         card.setAttribute('data-stage', stage);
         setCardWonUI(card, false);
@@ -369,6 +415,9 @@ window.addEventListener('DOMContentLoaded', function(){
     }
     btn.disabled = true;
     try {
+      const card = document.querySelector('.lead-card[data-id="' + id + '"]');
+      pendingWinCard = card;
+      pendingWinFromZone = card ? card.parentElement : null;
       showWinModal(id, winStageKey);
     } catch(err){
       location.reload();
@@ -502,7 +551,8 @@ window.addEventListener('DOMContentLoaded', function(){
       </div>
       <div class="modal-body">
         <div class="mb-2">Choose what you want to do:</div>
-        <div class="form-text">CRM leads are not linked to Properties to avoid subscription property limits.</div>
+        <div class="form-text">Mark as won only keeps this as a CRM lead and does not affect your property limit.</div>
+        <div class="form-text mt-1"><strong>Mark as won and create property</strong> will create a real Property and <strong>counts toward your subscription property limit</strong>.</div>
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
