@@ -1317,6 +1317,11 @@ ob_clean();
                         <small class="nav-header text-uppercase px-3">REALTOR</small>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link <?= (strpos($current_uri, 'realtor/leads') === 0) ? 'active' : '' ?>" href="<?= BASE_URL ?>/realtor/leads">
+                            <i class="bi bi-kanban me-2"></i> CRM Leads
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link <?= (strpos($current_uri, 'realtor/listings') === 0) ? 'active' : '' ?>" href="<?= BASE_URL ?>/realtor/listings">
                             <i class="bi bi-building me-2"></i> Listings
                         </a>
@@ -1331,11 +1336,7 @@ ob_clean();
                             <i class="bi bi-file-text me-2"></i> Contracts
                         </a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link <?= (strpos($current_uri, 'realtor/leads') === 0) ? 'active' : '' ?>" href="<?= BASE_URL ?>/realtor/leads">
-                            <i class="bi bi-kanban me-2"></i> CRM Leads
-                        </a>
-                    </li>
+                    
                 <?php else: ?>
                     <!-- PROPERTY MANAGEMENT Section -->
                     <li class="nav-item mt-3">

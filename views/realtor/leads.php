@@ -44,6 +44,22 @@ ob_start();
     </div>
   </div>
 </div>
+
+<div class="modal fade" id="realtorPlanLimitModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Plan Limit Reached</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="realtorPlanLimitModalMessage"></div>
+      <div class="modal-footer" style="display:flex; flex-wrap:nowrap; gap:8px;">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+        <a class="btn" id="realtorPlanLimitModalUpgrade" href="<?= BASE_URL ?>/subscription/renew" style="white-space:nowrap; background:#6f42c1; border-color:#6f42c1; color:#fff;">Upgrade</a>
+      </div>
+    </div>
+  </div>
+</div>
         </div>
     </div>
 
@@ -507,6 +523,7 @@ let pendingWinLeadId = null;
 let realtorWinModalInstance = null;
 let realtorWinModalOpen = false;
 let realtorWinModalLastShowAt = 0;
+let realtorPlanLimitModalInstance = null;
 
 function getWonStageKey(){
   const winCol = document.querySelector('.crm-col[data-is-won="1"]');
@@ -546,6 +563,23 @@ function showWinModal(id){
   realtorWinModalInstance.show();
 }
 
+function showPlanLimitModal(message, upgradeUrl){
+  const el = document.getElementById('realtorPlanLimitModal');
+  if(!el || !(window.bootstrap && window.bootstrap.Modal)){
+    alert(message || 'Plan limit reached');
+    return;
+  }
+  if(el.parentElement && el.parentElement !== document.body){
+    document.body.appendChild(el);
+  }
+  const msgEl = document.getElementById('realtorPlanLimitModalMessage');
+  if(msgEl){ msgEl.textContent = String(message || 'Plan limit reached'); }
+  const upEl = document.getElementById('realtorPlanLimitModalUpgrade');
+  if(upEl){ upEl.setAttribute('href', String(upgradeUrl || '<?= BASE_URL ?>/subscription/renew')); }
+  realtorPlanLimitModalInstance = window.bootstrap.Modal.getOrCreateInstance(el, { backdrop: true, focus: true });
+  realtorPlanLimitModalInstance.show();
+}
+
 async function markWonOnly(id){
   const wonKey = getWonStageKey();
   const fd = new FormData();
@@ -553,7 +587,14 @@ async function markWonOnly(id){
   try{
     const res = await fetch('<?= BASE_URL ?>' + '/realtor/leads/update/' + id, { method:'POST', body: fd });
     const data = await res.json();
-    if(!data.success){ alert(data.message || 'Failed'); return; }
+    if(!data.success){
+      if (data && data.over_limit) {
+        showPlanLimitModal(data.message || 'You have reached your plan limit.', data.upgrade_url || '<?= BASE_URL ?>/subscription/renew');
+        return;
+      }
+      alert(data.message || 'Failed');
+      return;
+    }
     if(data.contract_id){
       window.location.href = '<?= BASE_URL ?>' + '/realtor/contracts/show/' + data.contract_id;
       return;
@@ -568,7 +609,14 @@ async function markWonCreateListing(id){
     fd.append('csrf_token', (document.querySelector('input[name="csrf_token"]')||{}).value || '');
     const res = await fetch('<?= BASE_URL ?>' + '/realtor/leads/win-create-listing/' + id, { method:'POST', body: fd });
     const data = await res.json();
-    if(!data.success){ alert(data.message || 'Failed'); return; }
+    if(!data.success){
+      if (data && data.over_limit) {
+        showPlanLimitModal(data.message || 'You have reached your plan limit.', data.upgrade_url || '<?= BASE_URL ?>/subscription/renew');
+        return;
+      }
+      alert(data.message || 'Failed');
+      return;
+    }
     window.location.href = data.redirect_url || ('<?= BASE_URL ?>' + '/realtor/listings');
   }catch(e){ alert('Failed'); }
 }
