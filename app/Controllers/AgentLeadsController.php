@@ -41,18 +41,10 @@ class AgentLeadsController
         $stageModel = new AgentLeadStage();
         $stages = $stageModel->getAll($this->userId);
 
-        $propertyModel = new Property();
-        $properties = $propertyModel->getAll($this->userId);
-
-        $unitModel = new Unit();
-        $units = $unitModel->getAll($this->userId);
-
         echo view('agent/leads', [
             'title' => 'CRM - Leads',
             'inquiries' => $inquiries,
             'stages' => $stages,
-            'properties' => $properties,
-            'units' => $units,
         ]);
     }
 
@@ -71,8 +63,7 @@ class AgentLeadsController
                 exit;
             }
 
-            $propertyId = (int)($_POST['property_id'] ?? 0);
-            $unitId = (int)($_POST['unit_id'] ?? 0);
+            $propertyName = trim((string)($_POST['property_name'] ?? ''));
             $name = trim((string)($_POST['name'] ?? ''));
             $phone = trim((string)($_POST['phone'] ?? ''));
             $email = trim((string)($_POST['email'] ?? ''));
@@ -86,35 +77,19 @@ class AgentLeadsController
                 $contact = implode(' / ', $parts);
             }
 
-            if ($propertyId <= 0 || $name === '' || $contact === '') {
-                $_SESSION['flash_message'] = 'Property, name and phone/email are required';
+            if ($name === '' || $contact === '') {
+                $_SESSION['flash_message'] = 'Name and phone/email are required';
                 $_SESSION['flash_type'] = 'danger';
                 header('Location: ' . BASE_URL . '/agent/leads');
                 exit;
-            }
-
-            $propertyModel = new Property();
-            $property = $propertyModel->getById($propertyId, $this->userId);
-            if (!$property) {
-                $_SESSION['flash_message'] = 'Invalid property selected';
-                $_SESSION['flash_type'] = 'danger';
-                header('Location: ' . BASE_URL . '/agent/leads');
-                exit;
-            }
-
-            $resolvedUnitId = null;
-            if ($unitId > 0) {
-                $unitModel = new Unit();
-                $unit = $unitModel->getById($unitId, $this->userId);
-                if ($unit && (int)($unit['property_id'] ?? 0) === $propertyId) {
-                    $resolvedUnitId = (int)$unitId;
-                }
             }
 
             $inquiryModel = new Inquiry();
             $inquiryId = $inquiryModel->create([
-                'unit_id' => $resolvedUnitId,
-                'property_id' => $propertyId,
+                'unit_id' => null,
+                'property_id' => null,
+                'property_name' => $propertyName !== '' ? $propertyName : null,
+                'crm_user_id' => (int)$this->userId,
                 'name' => $name,
                 'contact' => $contact,
                 'message' => $message,
@@ -319,8 +294,8 @@ class AgentLeadsController
             $transferTo = strtolower(trim((string)($_POST['transfer_to'] ?? '')));
             $inquiryModel = new Inquiry();
             $countRows = $inquiryModel->query(
-                "SELECT COUNT(*) AS c FROM inquiries i LEFT JOIN properties p ON p.id = i.property_id WHERE (p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ?) AND i.crm_stage = ?",
-                [(int)$this->userId, (int)$this->userId, (int)$this->userId, (int)$this->userId, (string)($row['stage_key'] ?? '')]
+                "SELECT COUNT(*) AS c FROM inquiries i LEFT JOIN properties p ON p.id = i.property_id WHERE ((p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ?) OR (i.crm_user_id = ? AND i.source = 'agent_crm')) AND i.crm_stage = ?",
+                [(int)$this->userId, (int)$this->userId, (int)$this->userId, (int)$this->userId, (int)$this->userId, (string)($row['stage_key'] ?? '')]
             );
             $inqCount = (int)($countRows[0]['c'] ?? 0);
 
@@ -337,8 +312,8 @@ class AgentLeadsController
 
                 // Transfer visible inquiries only (same scope as allVisibleForUser for non-admin)
                 $inquiryModel->query(
-                    "UPDATE inquiries i LEFT JOIN properties p ON p.id = i.property_id SET i.crm_stage = ? WHERE (p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ?) AND i.crm_stage = ?",
-                    [(string)$transferTo, (int)$this->userId, (int)$this->userId, (int)$this->userId, (int)$this->userId, (string)($row['stage_key'] ?? '')]
+                    "UPDATE inquiries i LEFT JOIN properties p ON p.id = i.property_id SET i.crm_stage = ? WHERE ((p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ?) OR (i.crm_user_id = ? AND i.source = 'agent_crm')) AND i.crm_stage = ?",
+                    [(string)$transferTo, (int)$this->userId, (int)$this->userId, (int)$this->userId, (int)$this->userId, (int)$this->userId, (string)($row['stage_key'] ?? '')]
                 );
             }
 

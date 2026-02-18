@@ -201,29 +201,12 @@ ob_start();
           <div class="row g-3">
             <div class="col-md-6">
               <label class="form-label">Property</label>
-              <div class="d-flex gap-2">
-                <select class="form-select" name="property_id" id="agent_lead_property" required>
-                  <option value="">Select property</option>
-                  <?php foreach (($properties ?? []) as $p): ?>
-                    <option value="<?= (int)($p['id'] ?? 0) ?>"><?= htmlspecialchars((string)($p['name'] ?? '')) ?></option>
-                  <?php endforeach; ?>
-                </select>
-                <button type="button" class="btn btn-outline-primary" id="agentLeadAddPropertyBtn" title="Add Property" data-bs-toggle="modal" data-bs-target="#agentAddPropertyModal">
-                  <i class="bi bi-plus-circle"></i>
-                </button>
-              </div>
+              <input class="form-control" name="property_name" placeholder="Type property name (not linked)" required>
             </div>
             <div class="col-md-6">
-              <label class="form-label">Unit (optional)</label>
-              <select class="form-select" name="unit_id" id="agent_lead_unit">
-                <option value="">Select unit</option>
-                <?php foreach (($units ?? []) as $u): ?>
-                  <option value="<?= (int)($u['id'] ?? 0) ?>" data-property-id="<?= (int)($u['property_id'] ?? 0) ?>">
-                    <?= htmlspecialchars((string)($u['property_name'] ?? '')) ?> - Unit <?= htmlspecialchars((string)($u['unit_number'] ?? '')) ?>
-                  </option>
-                <?php endforeach; ?>
-              </select>
-              <div class="form-text">Units list is filtered by selected property.</div>
+              <label class="form-label">Contact (Phone / Email)</label>
+              <input class="form-control" name="contact" placeholder="e.g. 0712345678 / name@example.com">
+              <div class="form-text">If empty, we will use phone/email fields.</div>
             </div>
             <div class="col-md-6">
               <label class="form-label">Name</label>
@@ -237,6 +220,9 @@ ob_start();
             <div class="col-md-6">
               <label class="form-label">Email</label>
               <input class="form-control" type="email" name="email" placeholder="e.g. name@example.com">
+            </div>
+            <div class="col-12">
+              <div class="form-text">Note: CRM leads are no longer linked to your Properties list, so they are not limited by subscription property caps.</div>
             </div>
             <div class="col-12">
               <label class="form-label">Message/Notes</label>
@@ -257,6 +243,8 @@ ob_start();
 window.addEventListener('DOMContentLoaded', function(){
   let draggedId = null;
   let winStageKey = null;
+  let pendingWinLeadId = null;
+  let pendingWinStage = null;
   function csrfToken(){
     return (document.querySelector('meta[name="csrf-token"]')||{}).content || '';
   }
@@ -288,112 +276,42 @@ window.addEventListener('DOMContentLoaded', function(){
     return data;
   }
 
-  const propertySel = document.getElementById('agent_lead_property');
-  const unitSel = document.getElementById('agent_lead_unit');
-  function filterUnits(){
-    if(!propertySel || !unitSel) return;
-    const pid = propertySel.value;
-    Array.from(unitSel.options).forEach(opt=>{
-      if(!opt.value) return;
-      const ok = !pid || opt.getAttribute('data-property-id') === pid;
-      opt.hidden = !ok;
-    });
-    if(unitSel.selectedOptions.length && unitSel.selectedOptions[0].hidden){
-      unitSel.value = '';
-    }
-  }
-  if(propertySel){
-    propertySel.addEventListener('change', filterUnits);
-    filterUnits();
-  }
-
-  const addPropBtn = document.getElementById('agentLeadAddPropertyBtn');
-  const addPropModalEl = document.getElementById('agentAddPropertyModal');
-  const addPropForm = document.getElementById('agentAddPropertyForm');
-  const addPropErr = document.getElementById('agentAddPropertyError');
-  const addPropSubmit = document.getElementById('agentAddPropertySubmit');
-  const leadModalEl = document.getElementById('addAgentLeadModal');
-  function getModal(el){
-    if(!el) return null;
-    if(!(window.bootstrap && window.bootstrap.Modal)) return null;
-    return window.bootstrap.Modal.getOrCreateInstance(el);
-  }
-
-  function upsertPropertyOption(selectEl, id, label){
-    if(!selectEl) return;
-    const val = String(id);
-    const existing = Array.from(selectEl.options).find(o => o.value === val);
-    if(existing){
-      existing.textContent = label;
-    } else {
-      const opt = document.createElement('option');
-      opt.value = val;
-      opt.textContent = label;
-      selectEl.appendChild(opt);
+  function showWinModal(leadId, stageKey){
+    pendingWinLeadId = leadId;
+    pendingWinStage = stageKey;
+    if(window.bootstrap && window.bootstrap.Modal){
+      window.bootstrap.Modal.getOrCreateInstance(document.getElementById('agentLeadWinModal')).show();
     }
   }
 
-  if(addPropBtn){
-    addPropBtn.addEventListener('click', ()=>{
-      if(addPropErr){ addPropErr.classList.add('d-none'); addPropErr.textContent = ''; }
-      addPropForm?.reset();
-      // Ensure only one modal is active
-      const lm = getModal(leadModalEl);
-      if(lm) lm.hide();
-    });
-  }
-
-  if(addPropSubmit){
-    addPropSubmit.addEventListener('click', ()=>{
-      try { console.log('[CRM Leads] Add Property submit clicked'); } catch(e) {}
-    });
-  }
-
-  addPropForm?.addEventListener('submit', async (e)=>{
-    e.preventDefault();
-    if(!propertySel) return;
-    if(addPropErr){ addPropErr.classList.add('d-none'); addPropErr.textContent = ''; }
-    if(addPropSubmit) addPropSubmit.disabled = true;
+  async function confirmWin(action){
+    if(!pendingWinLeadId || !pendingWinStage) return;
+    const id = pendingWinLeadId;
+    const stage = pendingWinStage;
+    pendingWinLeadId = null;
+    pendingWinStage = null;
     try {
-      const fd = new FormData(addPropForm);
-      fd.append('csrf_token', csrfToken());
-      try {
-        console.log('[CRM Leads] Add Property submit fired', Object.fromEntries(fd.entries()));
-      } catch(e) {}
-      const res = await fetch('<?= BASE_URL ?>/properties/store', {
-        method: 'POST',
-        headers: { 'X-Requested-With': 'XMLHttpRequest' },
-        body: fd
-      });
-      const raw = await res.text();
-      try { console.log('[CRM Leads] /properties/store raw response', raw); } catch(e) {}
-      let data = null;
-      try {
-        data = raw ? JSON.parse(raw) : null;
-      } catch(_e) {
-        throw new Error(raw || 'Failed to create property');
-      }
-      if(!data || !data.success || !data.property_id){
-        throw new Error((data && data.message) ? data.message : 'Failed to create property');
-      }
-      const label = String(fd.get('name') || 'New Property');
-      upsertPropertyOption(propertySel, data.property_id, label);
-      if(propertySel){
-        propertySel.value = String(data.property_id);
-        propertySel.dispatchEvent(new Event('change'));
-      }
-      const pm = getModal(addPropModalEl);
-      if(pm) pm.hide();
-      const lm = getModal(leadModalEl);
-      if(lm) lm.show();
-    } catch (err){
-      if(addPropErr){
-        addPropErr.textContent = String(err && err.message ? err.message : err);
-        addPropErr.classList.remove('d-none');
-      }
-    } finally {
-      if(addPropSubmit) addPropSubmit.disabled = false;
+      await setStage(id, stage);
+    } catch(e){
+      location.reload();
+      return;
     }
+    if(action === 'create_property'){
+      window.location.href = '<?= BASE_URL ?>' + '/properties';
+      return;
+    }
+    location.reload();
+  }
+
+  document.getElementById('agentLeadWinOnlyBtn')?.addEventListener('click', function(){
+    const m = window.bootstrap && window.bootstrap.Modal ? window.bootstrap.Modal.getInstance(document.getElementById('agentLeadWinModal')) : null;
+    if(m) m.hide();
+    confirmWin('won_only');
+  });
+  document.getElementById('agentLeadWinCreatePropertyBtn')?.addEventListener('click', function(){
+    const m = window.bootstrap && window.bootstrap.Modal ? window.bootstrap.Modal.getInstance(document.getElementById('agentLeadWinModal')) : null;
+    if(m) m.hide();
+    confirmWin('create_property');
   });
 
   function recomputeCounts(){
@@ -427,13 +345,13 @@ window.addEventListener('DOMContentLoaded', function(){
       recomputeCounts();
 
       try {
-        const data = await setStage(draggedId, stage);
-        card.setAttribute('data-stage', stage);
-        setCardWonUI(card, isWonTarget);
-        if(winStageKey && stage === winStageKey && data.contract_id){
-          window.location.href = '<?= BASE_URL ?>' + '/agent/contracts';
+        if(isWonTarget){
+          showWinModal(draggedId, stage);
           return;
         }
+        await setStage(draggedId, stage);
+        card.setAttribute('data-stage', stage);
+        setCardWonUI(card, false);
       } catch (err){
         location.reload();
       }
@@ -451,12 +369,7 @@ window.addEventListener('DOMContentLoaded', function(){
     }
     btn.disabled = true;
     try {
-      const data = await setStage(id, winStageKey);
-      if(data.contract_id){
-        window.location.href = '<?= BASE_URL ?>' + '/agent/contracts';
-        return;
-      }
-      location.reload();
+      showWinModal(id, winStageKey);
     } catch(err){
       location.reload();
     }
@@ -580,58 +493,22 @@ window.addEventListener('DOMContentLoaded', function(){
 });
 </script>
 
-<div class="modal fade" id="agentAddPropertyModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog modal-lg">
+<div class="modal fade" id="agentLeadWinModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
     <div class="modal-content">
-      <form id="agentAddPropertyForm">
-        <div class="modal-header">
-          <h5 class="modal-title">Add Property</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <div class="row g-3">
-            <div class="col-md-6">
-              <label class="form-label">Name</label>
-              <input class="form-control" name="name" required>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Property Type</label>
-              <select class="form-select" name="property_type" required>
-                <option value="">Select Type</option>
-                <option value="apartment">Apartment</option>
-                <option value="house">House</option>
-                <option value="commercial">Commercial</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Address</label>
-              <input class="form-control" name="address" required>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">City</label>
-              <input class="form-control" name="city" required>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">State</label>
-              <input class="form-control" name="state" required>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">ZIP Code</label>
-              <input class="form-control" name="zip_code" required>
-            </div>
-            <div class="col-12">
-              <label class="form-label">Description</label>
-              <textarea class="form-control" name="description" rows="3"></textarea>
-            </div>
-          </div>
-          <div class="alert alert-danger mt-3 d-none" id="agentAddPropertyError"></div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-primary" id="agentAddPropertySubmit">Create Property</button>
-        </div>
-      </form>
+      <div class="modal-header">
+        <h5 class="modal-title">Mark Lead as Won</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-2">Choose what you want to do:</div>
+        <div class="form-text">CRM leads are not linked to Properties to avoid subscription property limits.</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-success" id="agentLeadWinOnlyBtn">Mark as won only</button>
+        <button type="button" class="btn btn-primary" id="agentLeadWinCreatePropertyBtn">Mark as won and create property</button>
+      </div>
     </div>
   </div>
 </div>
