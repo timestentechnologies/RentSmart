@@ -793,6 +793,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const params = new URLSearchParams(window.location.search || '');
         const editId = parseInt(params.get('edit') || '0', 10);
         if (editId && typeof editProperty === 'function') {
+            // Consume the edit param so subsequent reloads (e.g. after saving) don't reopen the modal.
+            try {
+                params.delete('edit');
+                const qs = params.toString();
+                const newUrl = window.location.pathname + (qs ? ('?' + qs) : '') + (window.location.hash || '');
+                window.history.replaceState({}, document.title, newUrl);
+            } catch (_e) {
+            }
             editProperty(editId);
         }
     } catch (e) {
