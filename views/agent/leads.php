@@ -29,6 +29,9 @@ ob_start();
         .lead-card .lead-sub { font-size: .875rem; color: #6c757d; }
         .crm-drop-hover { outline: 2px dashed rgba(13,110,253,.5); outline-offset: 4px; }
         .lead-tag { font-size: .75rem; }
+        .lead-actions { display:flex; gap: 8px; justify-content:flex-end; align-items:center; }
+        .lead-actions .btn { padding: .15rem .4rem; }
+        .lead-stage-badge { font-size: .70rem; }
 
         .agent-win-footer { display:flex; flex-wrap:nowrap; gap: 10px; justify-content:flex-end; align-items:center; }
         .agent-win-footer .btn { white-space: nowrap; }
@@ -108,9 +111,15 @@ ob_start();
                             $propertyName = (string)($x['property_name'] ?? '');
                             $unit = (string)($x['unit_number'] ?? '');
                             $message = (string)($x['message'] ?? '');
+                            $cardStageMeta = $stageMap[$key] ?? $stage;
+                            $cardStageLabel = (string)($cardStageMeta['label'] ?? $key);
+                            $cardStageColor = (string)($cardStageMeta['color_class'] ?? $colorClass);
                         ?>
                         <div class="lead-card" draggable="true" data-id="<?= $id ?>" data-stage="<?= htmlspecialchars($key) ?>">
-                            <div class="lead-title"><?= htmlspecialchars($name) ?></div>
+                            <div class="d-flex align-items-start justify-content-between gap-2">
+                                <div class="lead-title"><?= htmlspecialchars($name) ?></div>
+                                <span class="badge bg-<?= htmlspecialchars($cardStageColor) ?> lead-stage-badge"><?= htmlspecialchars($cardStageLabel) ?></span>
+                            </div>
                             <div class="lead-sub mt-1"><?= htmlspecialchars($contact) ?></div>
                             <div class="mt-2 d-flex flex-wrap gap-2">
                                 <?php if ($propertyName !== ''): ?>
@@ -124,13 +133,23 @@ ob_start();
                                 <div class="lead-sub mt-2" style="white-space: pre-wrap;"><?php echo htmlspecialchars($message) ?></div>
                             <?php endif; ?>
 
-                            <?php if (!$isWonStage): ?>
-                                <div class="mt-2 d-flex gap-2">
-                                    <button type="button" class="btn btn-sm btn-outline-success" data-role="win-btn" data-id="<?= $id ?>">
-                                        <i class="bi bi-check2-circle"></i> Win
+                            <div class="mt-2 d-flex align-items-center justify-content-between gap-2">
+                                <div>
+                                    <?php if (!$isWonStage): ?>
+                                        <button type="button" class="btn btn-sm btn-outline-success" data-role="win-btn" data-id="<?= $id ?>">
+                                            <i class="bi bi-check2-circle"></i> Win
+                                        </button>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="lead-actions">
+                                    <button type="button" class="btn btn-sm btn-outline-primary" data-role="edit-lead" data-id="<?= $id ?>" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" data-role="delete-lead" data-id="<?= $id ?>" title="Delete">
+                                        <i class="bi bi-trash"></i>
                                     </button>
                                 </div>
-                            <?php endif; ?>
+                            </div>
                         </div>
                     <?php endforeach; ?>
                 </div>
@@ -287,6 +306,70 @@ ob_start();
   </div>
 </div>
 
+<div class="modal fade" id="editAgentLeadModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <form id="editAgentLeadForm">
+        <input type="hidden" name="csrf_token" value="<?= htmlspecialchars(csrf_token()) ?>">
+        <input type="hidden" name="lead_id" id="edit_agent_lead_id" value="">
+        <div class="modal-header">
+          <h5 class="modal-title">Edit Lead</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="row g-3">
+            <div class="col-md-6">
+              <label class="form-label">Client Name</label>
+              <input class="form-control" name="name" id="edit_agent_lead_name" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Property</label>
+              <input class="form-control" name="property_name" id="edit_agent_lead_property_name" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Phone</label>
+              <input class="form-control" name="phone" id="edit_agent_lead_phone" placeholder="e.g. 0712345678">
+              <div class="form-text">Provide phone or email (at least one).</div>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Email</label>
+              <input class="form-control" type="email" name="email" id="edit_agent_lead_email" placeholder="e.g. name@example.com">
+            </div>
+            <div class="col-12">
+              <label class="form-label">Address</label>
+              <input class="form-control" name="address" id="edit_agent_lead_address" placeholder="e.g. Westlands, Nairobi">
+            </div>
+            <div class="col-12">
+              <label class="form-label">Message/Notes</label>
+              <textarea class="form-control" name="message" id="edit_agent_lead_message" rows="3"></textarea>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="saveEditAgentLeadBtn">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="confirmDeleteAgentLeadModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Delete Lead</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">Delete this lead? This cannot be undone.</div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger" id="confirmDeleteAgentLeadBtn">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 // Global handler (not dependent on DOMContentLoaded) to ensure stage actions always respond.
 if (!window.__agentStagesGlobalClickBound) {
@@ -339,8 +422,23 @@ window.addEventListener('DOMContentLoaded', function(){
   let pendingWinStage = null;
   let pendingWinCard = null;
   let pendingWinFromZone = null;
+  let pendingDeleteLeadId = null;
   function csrfToken(){
     return (document.querySelector('meta[name="csrf-token"]')||{}).content || '';
+  }
+
+  function parseContactToPhoneEmail(contact){
+    const out = { phone: '', email: '' };
+    const c = String(contact || '');
+    const parts = c.split('/').map(p => p.trim()).filter(Boolean);
+    parts.forEach(p => {
+      if (p.includes('@')) {
+        if (!out.email) out.email = p;
+      } else {
+        if (!out.phone) out.phone = p;
+      }
+    });
+    return out;
   }
 
   function computeWinStageKey(){
@@ -511,6 +609,53 @@ window.addEventListener('DOMContentLoaded', function(){
   });
 
   document.addEventListener('click', async (e)=>{
+    const editBtn = e.target && e.target.closest ? e.target.closest('[data-role="edit-lead"]') : null;
+    if(editBtn){
+      e.preventDefault();
+      const id = editBtn.getAttribute('data-id');
+      if(!id) return;
+      try {
+        const res = await fetch('<?= BASE_URL ?>' + '/agent/leads/get/' + id);
+        const data = await res.json();
+        if(!data || !data.success || !data.data){
+          location.reload();
+          return;
+        }
+        const lead = data.data;
+        const ce = parseContactToPhoneEmail(lead.contact || '');
+        const idEl = document.getElementById('edit_agent_lead_id');
+        if(idEl) idEl.value = String(id);
+        const nEl = document.getElementById('edit_agent_lead_name');
+        if(nEl) nEl.value = String(lead.name || '');
+        const pnEl = document.getElementById('edit_agent_lead_property_name');
+        if(pnEl) pnEl.value = String(lead.property_name || '');
+        const pEl = document.getElementById('edit_agent_lead_phone');
+        if(pEl) pEl.value = String(ce.phone || '');
+        const emEl = document.getElementById('edit_agent_lead_email');
+        if(emEl) emEl.value = String(ce.email || '');
+        const aEl = document.getElementById('edit_agent_lead_address');
+        if(aEl) aEl.value = String(lead.address || '');
+        const mEl = document.getElementById('edit_agent_lead_message');
+        if(mEl) mEl.value = String(lead.message || '');
+        if(window.bootstrap && window.bootstrap.Modal){
+          window.bootstrap.Modal.getOrCreateInstance(document.getElementById('editAgentLeadModal')).show();
+        }
+      } catch(err){ location.reload(); }
+      return;
+    }
+
+    const delBtn = e.target && e.target.closest ? e.target.closest('[data-role="delete-lead"]') : null;
+    if(delBtn){
+      e.preventDefault();
+      const id = delBtn.getAttribute('data-id');
+      pendingDeleteLeadId = parseInt(id || '0', 10) || null;
+      const mEl = document.getElementById('confirmDeleteAgentLeadModal');
+      if(window.bootstrap && window.bootstrap.Modal && mEl){
+        window.bootstrap.Modal.getOrCreateInstance(mEl).show();
+      }
+      return;
+    }
+
     const btn = e.target && e.target.closest ? e.target.closest('[data-role="win-btn"]') : null;
     if(!btn) return;
     const id = btn.getAttribute('data-id');
@@ -528,6 +673,48 @@ window.addEventListener('DOMContentLoaded', function(){
     } catch(err){
       location.reload();
     }
+  });
+
+  document.getElementById('editAgentLeadForm')?.addEventListener('submit', async function(e){
+    e.preventDefault();
+    const id = document.getElementById('edit_agent_lead_id')?.value || '';
+    if(!id) return;
+    try {
+      const fd = new FormData(this);
+      const res = await fetch('<?= BASE_URL ?>' + '/agent/leads/update/' + id, { method: 'POST', body: fd });
+      const data = await res.json();
+      if(!data || !data.success){
+        location.reload();
+        return;
+      }
+    } catch(err){
+      location.reload();
+      return;
+    }
+    location.reload();
+  });
+
+  document.getElementById('confirmDeleteAgentLeadBtn')?.addEventListener('click', async function(){
+    const id = parseInt(pendingDeleteLeadId || 0, 10);
+    const mEl = document.getElementById('confirmDeleteAgentLeadModal');
+    const m = window.bootstrap && window.bootstrap.Modal && mEl ? window.bootstrap.Modal.getInstance(mEl) : null;
+    if(m) m.hide();
+    if(!id) return;
+    pendingDeleteLeadId = null;
+    try {
+      const fd = new FormData();
+      fd.append('csrf_token', csrfToken());
+      const res = await fetch('<?= BASE_URL ?>' + '/agent/leads/delete/' + id, { method: 'POST', body: fd });
+      const data = await res.json();
+      if(!data || !data.success){
+        location.reload();
+        return;
+      }
+    } catch(err){
+      location.reload();
+      return;
+    }
+    location.reload();
   });
 
   async function loadAgentStages(){

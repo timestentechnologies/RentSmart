@@ -495,6 +495,9 @@ $routes = [
 
     'agent/leads' => ['controller' => 'AgentLeadsController', 'action' => 'index'],
     'agent/leads/store' => ['controller' => 'AgentLeadsController', 'action' => 'store'],
+    'agent/leads/get/(\d+)' => ['controller' => 'AgentLeadsController', 'action' => 'get'],
+    'agent/leads/update/(\d+)' => ['controller' => 'AgentLeadsController', 'action' => 'update'],
+    'agent/leads/delete/(\d+)' => ['controller' => 'AgentLeadsController', 'action' => 'delete'],
     'agent/leads/update-stage/(\d+)' => ['controller' => 'AgentLeadsController', 'action' => 'updateStage'],
     'agent/leads/win-create-property/(\d+)' => ['controller' => 'AgentLeadsController', 'action' => 'winCreateProperty'],
 
@@ -778,6 +781,9 @@ $protectedRoutes = [
 
     'agent/leads',
     'agent/leads/store',
+    'agent/leads/get/(\d+)',
+    'agent/leads/update/(\d+)',
+    'agent/leads/delete/(\d+)',
     'agent/leads/update-stage/(\d+)',
     'agent/leads/win-create-property/(\d+)',
 
