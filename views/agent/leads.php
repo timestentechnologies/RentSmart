@@ -255,10 +255,11 @@ ob_start();
 // Global handler (not dependent on DOMContentLoaded) to ensure stage actions always respond.
 if (!window.__agentStagesGlobalClickBound) {
   window.__agentStagesGlobalClickBound = true;
-  document.addEventListener('click', function(e){
+  const handleStageActionEvent = function(e){
     const addBtn = e.target && e.target.closest ? e.target.closest('#addAgentStageBtn') : null;
     if(addBtn){
       e.preventDefault();
+      window.__agentStagesLastEvent = { type: e.type, action: 'add' };
       console.log('[agent stages] add clicked');
       if (typeof window.addAgentStage === 'function') window.addAgentStage();
       return;
@@ -267,6 +268,7 @@ if (!window.__agentStagesGlobalClickBound) {
     const applyBtn = e.target && e.target.closest ? e.target.closest('#applyAgentStagesBtn') : null;
     if(applyBtn){
       e.preventDefault();
+      window.__agentStagesLastEvent = { type: e.type, action: 'apply' };
       console.log('[agent stages] apply clicked');
       location.reload();
       return;
@@ -277,6 +279,7 @@ if (!window.__agentStagesGlobalClickBound) {
     e.preventDefault();
     const action = actionBtn.getAttribute('data-action');
     const id = parseInt(actionBtn.getAttribute('data-id') || '0', 10);
+    window.__agentStagesLastEvent = { type: e.type, action, id };
     console.log('[agent stages] action clicked', action, id);
     if(!id) return;
     if(action === 'save-stage' && typeof window.saveAgentStage === 'function'){
@@ -285,7 +288,12 @@ if (!window.__agentStagesGlobalClickBound) {
     if(action === 'delete-stage' && typeof window.deleteAgentStage === 'function'){
       window.deleteAgentStage(id);
     }
-  }, true);
+  };
+
+  // Some environments suppress click; listen to pointerup/mouseup as well.
+  document.addEventListener('click', handleStageActionEvent, true);
+  document.addEventListener('pointerup', handleStageActionEvent, true);
+  document.addEventListener('mouseup', handleStageActionEvent, true);
 }
 
 window.addEventListener('DOMContentLoaded', function(){
