@@ -21,12 +21,95 @@ class RealtorLeadsController
             header('Location: ' . BASE_URL . '/');
             exit;
         }
+
         if (strtolower((string)($_SESSION['user_role'] ?? '')) !== 'realtor') {
             $_SESSION['flash_message'] = 'Access denied';
             $_SESSION['flash_type'] = 'danger';
             header('Location: ' . BASE_URL . '/dashboard');
             exit;
         }
+    }
+
+    public function winCreateListing($id)
+    {
+        header('Content-Type: application/json');
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo json_encode(['success' => false, 'message' => 'Invalid request']);
+            exit;
+        }
+        try {
+            if (!verify_csrf_token()) {
+                echo json_encode(['success' => false, 'message' => 'Invalid security token']);
+                exit;
+            }
+
+            $leadModel = new RealtorLead();
+            $lead = $leadModel->getByIdWithAccess((int)$id, $this->userId);
+            if (!$lead) {
+                echo json_encode(['success' => false, 'message' => 'Lead not found']);
+                exit;
+            }
+
+            $stageModel = new RealtorLeadStage();
+            $stages = $stageModel->getAll($this->userId);
+            $wonKey = null;
+            foreach (($stages ?? []) as $s) {
+                if ((int)($s['is_won'] ?? 0) === 1) {
+                    $wonKey = strtolower((string)($s['stage_key'] ?? 'won'));
+                    break;
+                }
+            }
+            if ($wonKey === null || $wonKey === '') {
+                $wonKey = 'won';
+            }
+
+            $title = trim((string)($lead['listing_name'] ?? ''));
+            $location = trim((string)($lead['address'] ?? ''));
+            if ($title === '') {
+                echo json_encode(['success' => false, 'message' => 'Listing name is required to create a listing']);
+                exit;
+            }
+            if ($location === '') {
+                $location = $title;
+            }
+            $price = (float)($lead['amount'] ?? 0);
+
+            $listingModel = new RealtorListing();
+            $listingId = (int)$listingModel->insert([
+                'user_id' => (int)$this->userId,
+                'title' => $title,
+                'listing_type' => 'plot',
+                'location' => $location,
+                'price' => $price,
+                'status' => 'active',
+                'description' => '',
+            ]);
+            if ($listingId <= 0) {
+                echo json_encode(['success' => false, 'message' => 'Failed to create listing']);
+                exit;
+            }
+
+            // Link lead to the newly created listing and mark as won
+            $leadModel->updateById((int)$id, [
+                'realtor_listing_id' => (int)$listingId,
+                'status' => $wonKey,
+            ]);
+
+            // Convert to client + contract
+            $conv = $this->maybeConvertToClient((int)$id);
+
+            echo json_encode([
+                'success' => true,
+                'listing_id' => (int)$listingId,
+                'client_id' => $conv['client_id'] ?? null,
+                'contract_id' => $conv['contract_id'] ?? null,
+                'redirect_url' => BASE_URL . '/realtor/listings?edit=' . (int)$listingId,
+            ]);
+        } catch (\Exception $e) {
+            error_log('RealtorLeads winCreateListing failed: ' . $e->getMessage());
+            echo json_encode(['success' => false, 'message' => 'Server error']);
+        }
+        exit;
     }
 
     public function index()
@@ -91,18 +174,16 @@ class RealtorLeadsController
 
         if (!empty($lead['converted_client_id'])) {
             $contractId = null;
-            if (!empty($lead['realtor_listing_id'])) {
-                try {
-                    $contractModel = new RealtorContract();
-                    $existing = $contractModel->query(
-                        "SELECT id FROM realtor_contracts WHERE user_id = ? AND realtor_client_id = ? AND realtor_listing_id = ? ORDER BY id DESC LIMIT 1",
-                        [(int)$this->userId, (int)$lead['converted_client_id'], (int)$lead['realtor_listing_id']]
-                    );
-                    if (!empty($existing)) {
-                        $contractId = (int)($existing[0]['id'] ?? 0);
-                    }
-                } catch (\Exception $e) {
+            try {
+                $contractModel = new RealtorContract();
+                $existing = $contractModel->query(
+                    "SELECT id FROM realtor_contracts WHERE user_id = ? AND realtor_client_id = ? AND realtor_listing_id <=> ? ORDER BY id DESC LIMIT 1",
+                    [(int)$this->userId, (int)$lead['converted_client_id'], !empty($lead['realtor_listing_id']) ? (int)$lead['realtor_listing_id'] : null]
+                );
+                if (!empty($existing)) {
+                    $contractId = (int)($existing[0]['id'] ?? 0);
                 }
+            } catch (\Exception $e) {
             }
             return ['converted' => false, 'client_id' => (int)$lead['converted_client_id'], 'contract_id' => $contractId];
         }
@@ -118,35 +199,44 @@ class RealtorLeadsController
         ]);
 
         $contractId = null;
-        if (!empty($lead['realtor_listing_id'])) {
-            try {
-                $listingModel = new RealtorListing();
-                $listing = $listingModel->getByIdWithAccess((int)$lead['realtor_listing_id'], $this->userId);
-                $total = (float)($listing['price'] ?? 0);
-
-                $contractModel = new RealtorContract();
-                $existing = $contractModel->query(
-                    "SELECT id FROM realtor_contracts WHERE user_id = ? AND realtor_client_id = ? AND realtor_listing_id = ? ORDER BY id DESC LIMIT 1",
-                    [(int)$this->userId, (int)$clientId, (int)$lead['realtor_listing_id']]
-                );
-                if (empty($existing)) {
-                    $contractId = $contractModel->insert([
-                        'user_id' => (int)$this->userId,
-                        'realtor_client_id' => (int)$clientId,
-                        'realtor_listing_id' => (int)$lead['realtor_listing_id'],
-                        'terms_type' => 'one_time',
-                        'total_amount' => (float)$total,
-                        'monthly_amount' => null,
-                        'duration_months' => null,
-                        'start_month' => null,
-                        'status' => 'active',
-                    ]);
-                } else {
-                    $contractId = (int)($existing[0]['id'] ?? 0);
+        try {
+            $listingId = !empty($lead['realtor_listing_id']) ? (int)$lead['realtor_listing_id'] : null;
+            $total = null;
+            if ($listingId) {
+                try {
+                    $listingModel = new RealtorListing();
+                    $listing = $listingModel->getByIdWithAccess((int)$listingId, $this->userId);
+                    $total = (float)($listing['price'] ?? 0);
+                } catch (\Exception $e) {
+                    $total = null;
                 }
-            } catch (\Exception $e) {
-                // ignore contract creation errors
             }
+            if ($total === null) {
+                $total = (float)($lead['amount'] ?? 0);
+            }
+
+            $contractModel = new RealtorContract();
+            $existing = $contractModel->query(
+                "SELECT id FROM realtor_contracts WHERE user_id = ? AND realtor_client_id = ? AND realtor_listing_id <=> ? ORDER BY id DESC LIMIT 1",
+                [(int)$this->userId, (int)$clientId, $listingId]
+            );
+            if (empty($existing)) {
+                $contractId = $contractModel->insert([
+                    'user_id' => (int)$this->userId,
+                    'realtor_client_id' => (int)$clientId,
+                    'realtor_listing_id' => $listingId,
+                    'terms_type' => 'one_time',
+                    'total_amount' => (float)$total,
+                    'monthly_amount' => null,
+                    'duration_months' => null,
+                    'start_month' => null,
+                    'status' => 'active',
+                ]);
+            } else {
+                $contractId = (int)($existing[0]['id'] ?? 0);
+            }
+        } catch (\Exception $e) {
+            // ignore contract creation errors
         }
 
         $leadModel->updateById((int)$leadId, [
@@ -172,7 +262,9 @@ class RealtorLeadsController
 
             $data = [
                 'user_id' => $this->userId,
-                'realtor_listing_id' => !empty($_POST['realtor_listing_id']) ? (int)$_POST['realtor_listing_id'] : null,
+                'realtor_listing_id' => null,
+                'listing_name' => trim((string)($_POST['listing_name'] ?? '')),
+                'address' => trim((string)($_POST['address'] ?? '')),
                 'amount' => array_key_exists('amount', $_POST) && $_POST['amount'] !== '' ? (float)$_POST['amount'] : null,
                 'name' => trim((string)($_POST['name'] ?? '')),
                 'phone' => trim((string)($_POST['phone'] ?? '')),
@@ -237,7 +329,9 @@ class RealtorLeadsController
             }
 
             $data = [
-                'realtor_listing_id' => array_key_exists('realtor_listing_id', $_POST) ? (($_POST['realtor_listing_id'] !== '' && $_POST['realtor_listing_id'] !== null) ? (int)$_POST['realtor_listing_id'] : null) : ($row['realtor_listing_id'] ?? null),
+                'realtor_listing_id' => null,
+                'listing_name' => trim((string)($_POST['listing_name'] ?? ($row['listing_name'] ?? ''))),
+                'address' => trim((string)($_POST['address'] ?? ($row['address'] ?? ''))),
                 'amount' => array_key_exists('amount', $_POST) ? (($_POST['amount'] !== '' && $_POST['amount'] !== null) ? (float)$_POST['amount'] : null) : ($row['amount'] ?? null),
                 'name' => trim((string)($_POST['name'] ?? ($row['name'] ?? ''))),
                 'phone' => trim((string)($_POST['phone'] ?? ($row['phone'] ?? ''))),

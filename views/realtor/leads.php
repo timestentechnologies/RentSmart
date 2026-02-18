@@ -24,6 +24,26 @@ ob_start();
                     <i class="bi bi-plus-circle me-1"></i>Add Lead
                 </button>
             </div>
+
+<div class="modal fade" id="realtorLeadWinModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Mark Lead as Won</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-2">Choose how you want to mark this lead as won.</div>
+        <div class="small text-muted">If you choose "Won + Create Listing", a new listing will be created from the lead's listing name and address.</div>
+      </div>
+      <div class="modal-footer" style="display:flex; flex-wrap:nowrap; gap:8px;">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-success" id="realtorWinOnlyBtn" style="white-space:nowrap;">Won Only</button>
+        <button type="button" class="btn btn-primary" id="realtorWinCreateListingBtn" style="white-space:nowrap;">Won + Create Listing</button>
+      </div>
+    </div>
+  </div>
+</div>
         </div>
     </div>
 
@@ -152,14 +172,16 @@ ob_start();
                                 <?php endif; ?>
                                 <?php if (!empty($x['listing_title'] ?? null)): ?>
                                     <span class="badge bg-light text-dark lead-tag"><?= htmlspecialchars((string)($x['listing_title'] ?? '')) ?></span>
+                                <?php elseif (!empty($x['listing_name'] ?? null)): ?>
+                                    <span class="badge bg-light text-dark lead-tag"><?= htmlspecialchars((string)($x['listing_name'] ?? '')) ?></span>
                                 <?php endif; ?>
                                 <span class="badge bg-<?= htmlspecialchars($stageColorClass) ?> lead-tag" data-role="stage-badge"><?= htmlspecialchars($stageLabel) ?></span>
                             </div>
                             <div class="mt-2 d-flex gap-2">
                                 <?php if (!$isWonStage): ?>
-                                    <button type="button" class="btn btn-sm btn-outline-success" data-role="win-btn" onclick="convertLead(<?= $leadId ?>)"><i class="bi bi-check2-circle"></i> Win</button>
+                                    <button type="button" class="btn btn-sm btn-outline-success" data-role="win-btn" onclick="showWinModal(<?= $leadId ?>)"><i class="bi bi-check2-circle"></i> Win</button>
                                 <?php else: ?>
-                                    <button type="button" class="btn btn-sm btn-outline-success" data-role="win-btn" style="display:none;" onclick="convertLead(<?= $leadId ?>)"><i class="bi bi-check2-circle"></i> Win</button>
+                                    <button type="button" class="btn btn-sm btn-outline-success" data-role="win-btn" style="display:none;" onclick="showWinModal(<?= $leadId ?>)"><i class="bi bi-check2-circle"></i> Win</button>
                                 <?php endif; ?>
                                 <button type="button" class="btn btn-sm btn-outline-primary" onclick="editRealtorLead(<?= $leadId ?>)"><i class="bi bi-pencil"></i></button>
                                 <button type="button" class="btn btn-sm btn-outline-danger" onclick="confirmDeleteRealtorLead(<?= $leadId ?>)"><i class="bi bi-trash"></i></button>
@@ -257,19 +279,10 @@ ob_start();
                 </div>
             </div>
             <div class="mb-3">
-                <label class="form-label">Listing / Property</label>
-                <div class="d-flex gap-2">
-                    <select name="realtor_listing_id" id="realtor_lead_listing_id" class="form-select">
-                        <option value="">(Optional) Select Listing</option>
-                        <?php foreach (($listings ?? []) as $l): ?>
-                            <option value="<?= (int)($l['id'] ?? 0) ?>"><?= htmlspecialchars((string)($l['title'] ?? '')) ?><?= !empty($l['location'] ?? null) ? ' - ' . htmlspecialchars((string)($l['location'] ?? '')) : '' ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                    <button type="button" class="btn btn-outline-primary" id="realtorLeadAddListingBtn" title="Add Listing" data-bs-toggle="modal" data-bs-target="#realtorLeadAddListingModal">
-                        <i class="bi bi-plus-circle"></i>
-                    </button>
-                </div>
+                <label class="form-label">Listing</label>
+                <input type="text" name="listing_name" class="form-control" placeholder="e.g. 2BR Apartment - Westlands">
             </div>
+            <div class="mb-3"><label class="form-label">Address</label><input type="text" name="address" class="form-control" placeholder="e.g. Westlands, Nairobi"></div>
             <div class="mb-3">
                 <label class="form-label">Status</label>
                 <select name="status" class="form-select" required>
@@ -313,19 +326,10 @@ ob_start();
                 </div>
             </div>
             <div class="mb-3">
-                <label class="form-label">Listing / Property</label>
-                <div class="d-flex gap-2">
-                    <select id="edit_lead_listing_id" name="realtor_listing_id" class="form-select">
-                        <option value="">(Optional) Select Listing</option>
-                        <?php foreach (($listings ?? []) as $l): ?>
-                            <option value="<?= (int)($l['id'] ?? 0) ?>"><?= htmlspecialchars((string)($l['title'] ?? '')) ?><?= !empty($l['location'] ?? null) ? ' - ' . htmlspecialchars((string)($l['location'] ?? '')) : '' ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                    <button type="button" class="btn btn-outline-primary" id="realtorLeadAddListingBtn2" title="Add Listing" data-bs-toggle="modal" data-bs-target="#realtorLeadAddListingModal">
-                        <i class="bi bi-plus-circle"></i>
-                    </button>
-                </div>
+                <label class="form-label">Listing</label>
+                <input type="text" id="edit_lead_listing_name" name="listing_name" class="form-control" placeholder="e.g. 2BR Apartment - Westlands">
             </div>
+            <div class="mb-3"><label class="form-label">Address</label><input type="text" id="edit_lead_address" name="address" class="form-control" placeholder="e.g. Westlands, Nairobi"></div>
             <div class="mb-3">
                 <label class="form-label">Status</label>
                 <select id="edit_lead_status" name="status" class="form-select" required>
@@ -361,167 +365,6 @@ ob_start();
     </div>
   </div>
 </div>
-
-<div class="modal fade" id="realtorLeadAddListingModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <form id="realtorLeadAddListingForm" enctype="multipart/form-data">
-        <?= csrf_field() ?>
-        <div class="modal-header">
-          <h5 class="modal-title">Add Listing</h5>
-          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-        </div>
-        <div class="modal-body">
-          <div class="mb-3">
-            <label class="form-label">Title</label>
-            <input type="text" name="title" class="form-control" required>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Type</label>
-            <select name="listing_type" class="form-select" required>
-              <option value="plot">Plot</option>
-              <option value="commercial_apartment">Commercial Apartment</option>
-              <option value="residential_apartment">Residential Apartment</option>
-            </select>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Location</label>
-            <input type="text" name="location" class="form-control" required>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Price</label>
-            <div class="input-group">
-              <span class="input-group-text">Ksh</span>
-              <input type="number" step="0.01" name="price" class="form-control" required>
-            </div>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Status</label>
-            <select name="status" class="form-select" required>
-              <option value="active">Active</option>
-              <option value="inactive">Inactive</option>
-              <option value="sold">Sold</option>
-              <option value="rented">Rented</option>
-            </select>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Description</label>
-            <textarea name="description" class="form-control" rows="3"></textarea>
-          </div>
-          <div class="mb-3">
-            <label class="form-label">Images</label>
-            <input type="file" name="listing_images[]" class="form-control" accept="image/*" multiple>
-          </div>
-          <div class="alert alert-danger d-none" id="realtorLeadAddListingError"></div>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-          <button type="submit" class="btn btn-primary" id="realtorLeadAddListingSubmit">Save</button>
-        </div>
-      </form>
-    </div>
-  </div>
-</div>
-
-<script>
-(function(){
-  function upsertOption(selectEl, id, label){
-    if(!selectEl) return;
-    const val = String(id);
-    const existing = Array.from(selectEl.options).find(o => o.value === val);
-    if(existing){
-      existing.textContent = label;
-    } else {
-      const opt = document.createElement('option');
-      opt.value = val;
-      opt.textContent = label;
-      selectEl.appendChild(opt);
-    }
-  }
-
-  const addListingForm = document.getElementById('realtorLeadAddListingForm');
-  const addListingErr = document.getElementById('realtorLeadAddListingError');
-  const addListingSubmit = document.getElementById('realtorLeadAddListingSubmit');
-  const listingSelAdd = document.getElementById('realtor_lead_listing_id');
-  const listingSelEdit = document.getElementById('edit_lead_listing_id');
-  const leadModalEl = document.getElementById('addLeadModal');
-  const listingModalEl = document.getElementById('realtorLeadAddListingModal');
-
-  function getModal(el){
-    if(!el) return null;
-    if(!(window.bootstrap && window.bootstrap.Modal)) return null;
-    if(el.parentElement && el.parentElement !== document.body){
-      document.body.appendChild(el);
-    }
-    if(!el.__rsBackdropCleanupAttached){
-      el.__rsBackdropCleanupAttached = true;
-      el.addEventListener('show.bs.modal', function(){
-        const backdrops = document.querySelectorAll('.modal-backdrop');
-        if(backdrops.length > 1){
-          backdrops.forEach((b, idx) => { if(idx > 0) b.remove(); });
-        }
-      });
-    }
-    return window.bootstrap.Modal.getOrCreateInstance(el);
-  }
-
-  function resetListingForm(){
-    if(addListingErr){ addListingErr.classList.add('d-none'); addListingErr.textContent = ''; }
-    addListingForm?.reset();
-  }
-
-  document.getElementById('realtorLeadAddListingBtn')?.addEventListener('click', ()=>{
-    resetListingForm();
-  });
-  document.getElementById('realtorLeadAddListingBtn2')?.addEventListener('click', ()=>{
-    resetListingForm();
-  });
-
-  listingModalEl?.addEventListener('show.bs.modal', ()=>{
-    const lm = getModal(leadModalEl);
-    if(lm) lm.hide();
-  });
-
-  addListingForm?.addEventListener('submit', async (e)=>{
-    e.preventDefault();
-    if(addListingErr){ addListingErr.classList.add('d-none'); addListingErr.textContent = ''; }
-    if(addListingSubmit) addListingSubmit.disabled = true;
-    try {
-      const fd = new FormData(addListingForm);
-      const res = await fetch('<?= BASE_URL ?>/realtor/listings/store', {
-        method: 'POST',
-        headers: { 'X-Requested-With': 'XMLHttpRequest' },
-        body: fd
-      });
-      const raw = await res.text();
-      let data = null;
-      try { data = raw ? JSON.parse(raw) : null; } catch(_e) { throw new Error(raw || 'Failed to add listing'); }
-      if(!data || !data.success || !data.listing_id){
-        throw new Error((data && data.message) ? data.message : 'Failed to add listing');
-      }
-      const label = (String(data.title || '').trim() || 'New Listing') + (data.location ? (' - ' + String(data.location)) : '');
-      upsertOption(listingSelAdd, data.listing_id, label);
-      upsertOption(listingSelEdit, data.listing_id, label);
-      if(listingSelAdd){ listingSelAdd.value = String(data.listing_id); }
-      if(listingSelEdit && listingSelEdit.value === ''){
-        // don't force edit lead selection if already set
-      }
-
-      const mm = getModal(listingModalEl);
-      if(mm) mm.hide();
-      const lm = getModal(leadModalEl);
-      if(lm) lm.show();
-    } catch(err){
-      if(addListingErr){
-        addListingErr.textContent = String(err && err.message ? err.message : err);
-        addListingErr.classList.remove('d-none');
-      }
-    } finally {
-      if(addListingSubmit) addListingSubmit.disabled = false;
-    }
-  });
-})();
-</script>
 
 <script>
 function getAllStageKeys(){
@@ -561,6 +404,9 @@ document.getElementById('leadSearch')?.addEventListener('input', applyLeadSearch
 document.getElementById('leadStageFilter')?.addEventListener('change', applyLeadSearch);
 
 let draggedLeadId = null;
+let pendingWinCard = null;
+let pendingWinFromZone = null;
+let pendingWinTargetStatus = null;
 document.querySelectorAll('.lead-card').forEach(card=>{
   card.addEventListener('dragstart', (e)=>{
     draggedLeadId = card.getAttribute('data-id');
@@ -583,6 +429,16 @@ document.querySelectorAll('[data-dropzone="1"]').forEach(zone=>{
     if(!card) return;
     const currentStatus = card.getAttribute('data-status');
     if(currentStatus === targetStatus) return;
+
+    const targetCol = document.querySelector('.crm-col[data-status="' + targetStatus + '"]');
+    const isWonTarget = (targetCol?.getAttribute('data-is-won') || '0') === '1';
+    if (isWonTarget) {
+      pendingWinCard = card;
+      pendingWinFromZone = card.parentElement;
+      pendingWinTargetStatus = targetStatus;
+      showWinModal(draggedLeadId);
+      return;
+    }
 
     const formData = new FormData();
     formData.append('status', targetStatus);
@@ -637,15 +493,79 @@ function editRealtorLead(id){
       document.getElementById('edit_lead_email').value = e.email || '';
       document.getElementById('edit_lead_source').value = e.source || '';
       document.getElementById('edit_lead_amount').value = (e.amount !== undefined && e.amount !== null) ? String(e.amount) : '';
-      const listingEl = document.getElementById('edit_lead_listing_id');
-      if(listingEl){
-        listingEl.value = (e.realtor_listing_id !== undefined && e.realtor_listing_id !== null) ? String(e.realtor_listing_id) : '';
-      }
+      const listingNameEl = document.getElementById('edit_lead_listing_name');
+      if(listingNameEl){ listingNameEl.value = e.listing_name || ''; }
+      const addrEl = document.getElementById('edit_lead_address');
+      if(addrEl){ addrEl.value = e.address || ''; }
       document.getElementById('edit_lead_status').value = e.status || 'new';
       document.getElementById('edit_lead_notes').value = e.notes || '';
       new bootstrap.Modal(document.getElementById('editLeadModal')).show();
     }).catch(()=>alert('Failed to load lead'));
 }
+
+let pendingWinLeadId = null;
+function getWonStageKey(){
+  const winCol = document.querySelector('.crm-col[data-is-won="1"]');
+  return winCol ? (winCol.getAttribute('data-status') || 'won') : 'won';
+}
+
+function showWinModal(id){
+  pendingWinLeadId = parseInt(id || 0, 10) || null;
+  if(!pendingWinLeadId) return;
+  new bootstrap.Modal(document.getElementById('realtorLeadWinModal')).show();
+}
+
+async function markWonOnly(id){
+  const wonKey = getWonStageKey();
+  const fd = new FormData();
+  fd.append('status', wonKey);
+  try{
+    const res = await fetch('<?= BASE_URL ?>' + '/realtor/leads/update/' + id, { method:'POST', body: fd });
+    const data = await res.json();
+    if(!data.success){ alert(data.message || 'Failed'); return; }
+    if(data.contract_id){
+      window.location.href = '<?= BASE_URL ?>' + '/realtor/contracts/show/' + data.contract_id;
+      return;
+    }
+    location.reload();
+  }catch(e){ alert('Failed'); }
+}
+
+async function markWonCreateListing(id){
+  try{
+    const fd = new FormData();
+    fd.append('csrf_token', (document.querySelector('input[name="csrf_token"]')||{}).value || '');
+    const res = await fetch('<?= BASE_URL ?>' + '/realtor/leads/win-create-listing/' + id, { method:'POST', body: fd });
+    const data = await res.json();
+    if(!data.success){ alert(data.message || 'Failed'); return; }
+    window.location.href = data.redirect_url || ('<?= BASE_URL ?>' + '/realtor/listings');
+  }catch(e){ alert('Failed'); }
+}
+
+document.getElementById('realtorWinOnlyBtn')?.addEventListener('click', function(){
+  const id = pendingWinLeadId;
+  pendingWinLeadId = null;
+  const m = bootstrap.Modal.getInstance(document.getElementById('realtorLeadWinModal'));
+  if(m) m.hide();
+  if(!id) return;
+  markWonOnly(id);
+});
+
+document.getElementById('realtorWinCreateListingBtn')?.addEventListener('click', function(){
+  const id = pendingWinLeadId;
+  pendingWinLeadId = null;
+  const m = bootstrap.Modal.getInstance(document.getElementById('realtorLeadWinModal'));
+  if(m) m.hide();
+  if(!id) return;
+  markWonCreateListing(id);
+});
+
+document.getElementById('realtorLeadWinModal')?.addEventListener('hidden.bs.modal', function(){
+  pendingWinLeadId = null;
+  pendingWinCard = null;
+  pendingWinFromZone = null;
+  pendingWinTargetStatus = null;
+});
 
 document.getElementById('editLeadForm')?.addEventListener('submit', function(ev){
   ev.preventDefault();
@@ -688,7 +608,6 @@ async function loadStages(){
     stageList.forEach(s=>{
       const tr = document.createElement('tr');
       const stageKey = (s.stage_key || '');
-      const deleteDisabled = ['new','contacted','won','lost'].includes(String(stageKey));
       tr.innerHTML = `
         <td><code>${(s.stage_key||'')}</code></td>
         <td><input class="form-control form-control-sm" value="${(s.label||'').replace(/\"/g,'&quot;')}" data-id="${s.id}" data-field="label"></td>
@@ -714,7 +633,7 @@ async function loadStages(){
         </td>
         <td class="text-end">
           <button class="btn btn-sm btn-outline-primary me-1" type="button" onclick="saveStage(${s.id})"><i class="bi bi-save"></i></button>
-          <button class="btn btn-sm btn-outline-danger" type="button" ${deleteDisabled?'disabled':''} onclick="deleteStage(${s.id})"><i class="bi bi-trash"></i></button>
+          <button class="btn btn-sm btn-outline-danger" type="button" onclick="deleteStage(${s.id})"><i class="bi bi-trash"></i></button>
         </td>
       `;
       body.appendChild(tr);
