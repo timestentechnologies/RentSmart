@@ -116,6 +116,115 @@ class AgentLeadsController
         exit;
     }
 
+    public function get($id)
+    {
+        header('Content-Type: application/json');
+        try {
+            $inquiryModel = new Inquiry();
+            $inq = $inquiryModel->getByIdVisibleForUser((int)$id, (int)$this->userId, $this->role);
+            if (!$inq) {
+                http_response_code(404);
+                echo json_encode(['success' => false, 'message' => 'Lead not found']);
+                exit;
+            }
+            echo json_encode(['success' => true, 'data' => $inq]);
+        } catch (\Exception $e) {
+            http_response_code(500);
+            echo json_encode(['success' => false, 'message' => 'Server error']);
+        }
+        exit;
+    }
+
+    public function update($id)
+    {
+        header('Content-Type: application/json');
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo json_encode(['success' => false, 'message' => 'Invalid request']);
+            exit;
+        }
+
+        try {
+            if (!verify_csrf_token()) {
+                echo json_encode(['success' => false, 'message' => 'Invalid security token']);
+                exit;
+            }
+
+            $inquiryModel = new Inquiry();
+            $inq = $inquiryModel->getByIdVisibleForUser((int)$id, (int)$this->userId, $this->role);
+            if (!$inq) {
+                echo json_encode(['success' => false, 'message' => 'Lead not found']);
+                exit;
+            }
+
+            $propertyName = trim((string)($_POST['property_name'] ?? ($inq['property_name'] ?? '')));
+            $address = trim((string)($_POST['address'] ?? ($inq['address'] ?? '')));
+            $name = trim((string)($_POST['name'] ?? ($inq['name'] ?? '')));
+            $phone = trim((string)($_POST['phone'] ?? ''));
+            $email = trim((string)($_POST['email'] ?? ''));
+            $message = trim((string)($_POST['message'] ?? ($inq['message'] ?? '')));
+
+            $contact = '';
+            $parts = [];
+            if ($phone !== '') { $parts[] = $phone; }
+            if ($email !== '') { $parts[] = $email; }
+            $contact = implode(' / ', $parts);
+
+            if ($name === '' || $contact === '') {
+                echo json_encode(['success' => false, 'message' => 'Name and phone/email are required']);
+                exit;
+            }
+
+            $db = $inquiryModel->getDb();
+            $stmt = $db->prepare("UPDATE inquiries SET property_name = ?, address = ?, name = ?, contact = ?, message = ? WHERE id = ?");
+            $ok = (bool)$stmt->execute([
+                $propertyName !== '' ? $propertyName : null,
+                $address !== '' ? $address : null,
+                $name,
+                $contact,
+                $message !== '' ? $message : null,
+                (int)$id,
+            ]);
+
+            echo json_encode(['success' => $ok]);
+        } catch (\Exception $e) {
+            error_log('AgentLeads update failed: ' . $e->getMessage());
+            echo json_encode(['success' => false, 'message' => 'Failed to update lead']);
+        }
+        exit;
+    }
+
+    public function delete($id)
+    {
+        header('Content-Type: application/json');
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo json_encode(['success' => false, 'message' => 'Invalid request']);
+            exit;
+        }
+
+        try {
+            if (!verify_csrf_token()) {
+                echo json_encode(['success' => false, 'message' => 'Invalid security token']);
+                exit;
+            }
+
+            $inquiryModel = new Inquiry();
+            $inq = $inquiryModel->getByIdVisibleForUser((int)$id, (int)$this->userId, $this->role);
+            if (!$inq) {
+                echo json_encode(['success' => false, 'message' => 'Lead not found']);
+                exit;
+            }
+
+            $db = $inquiryModel->getDb();
+            $stmt = $db->prepare('DELETE FROM inquiries WHERE id = ?');
+            $ok = (bool)$stmt->execute([(int)$id]);
+            echo json_encode(['success' => $ok]);
+        } catch (\Exception $e) {
+            error_log('AgentLeads delete failed: ' . $e->getMessage());
+            echo json_encode(['success' => false, 'message' => 'Failed to delete lead']);
+        }
+        exit;
+    }
+
     public function winCreateProperty($id)
     {
         header('Content-Type: application/json');
