@@ -43,6 +43,7 @@ ob_start();
         #manageAgentStagesModal button { pointer-events: auto; }
 
         #confirmDeleteAgentStageModal { z-index: 1085; }
+        #agentStagesMessageModal { z-index: 1085; }
     </style>
 
     <?php
@@ -649,6 +650,20 @@ window.addEventListener('DOMContentLoaded', function(){
       alert(String(msg || ''));
     }
   }
+
+  // Ensure message modal stacks above the Manage Stages modal.
+  document.getElementById('agentStagesMessageModal')?.addEventListener('show.bs.modal', function(){
+    const openCount = document.querySelectorAll('.modal.show').length;
+    const zIndex = 1055 + (openCount * 20);
+    this.style.zIndex = String(zIndex);
+    setTimeout(function(){
+      const backdrops = document.querySelectorAll('.modal-backdrop');
+      const bd = backdrops[backdrops.length - 1];
+      if(bd){
+        bd.style.zIndex = String(zIndex - 10);
+      }
+    }, 0);
+  });
 
   document.getElementById('confirmDeleteAgentStageBtn')?.addEventListener('click', async function(){
     const id = parseInt(window.__pendingDeleteStageId || 0, 10);
