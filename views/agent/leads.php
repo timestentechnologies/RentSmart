@@ -200,16 +200,13 @@ ob_start();
         <div class="modal-body">
           <div class="row g-3">
             <div class="col-md-6">
-              <label class="form-label">Property</label>
-              <input class="form-control" name="property_name" placeholder="Type property name (not linked)" required>
-            </div>
-            <div class="col-md-6">
-              <label class="form-label">Address</label>
-              <input class="form-control" name="address" placeholder="e.g. Westlands, Nairobi">
-            </div>
-            <div class="col-md-6">
               <label class="form-label">Name</label>
               <input class="form-control" name="name" required>
+            </div>
+            <div class="col-md-6">
+              <label class="form-label">Property</label>
+              <input class="form-control" name="property_name" placeholder="Type property name" required>
+              <div class="form-text">Not linked to your Properties list.</div>
             </div>
             <div class="col-md-6">
               <label class="form-label">Phone</label>
@@ -221,7 +218,11 @@ ob_start();
               <input class="form-control" type="email" name="email" placeholder="e.g. name@example.com">
             </div>
             <div class="col-12">
-              <div class="form-text">Note: CRM leads are no longer linked to your Properties list, so they are not limited by subscription property caps.</div>
+              <label class="form-label">Address</label>
+              <input class="form-control" name="address" placeholder="e.g. Westlands, Nairobi">
+            </div>
+            <div class="col-12">
+              <div class="form-text">Note: CRM leads are not linked to your Properties list, so they are not limited by subscription property caps.</div>
             </div>
             <div class="col-12">
               <label class="form-label">Message/Notes</label>
