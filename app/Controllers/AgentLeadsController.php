@@ -300,7 +300,9 @@ class AgentLeadsController
             }
 
             $db = $inquiryModel->getDb();
-            $db->beginTransaction();
+            if (!$db->inTransaction()) {
+                $db->beginTransaction();
+            }
             $clientId = null;
             $contractId = null;
             try {
@@ -351,9 +353,13 @@ class AgentLeadsController
                 } catch (\Exception $e) {
                 }
 
-                $db->commit();
+                if ($db->inTransaction()) {
+                    $db->commit();
+                }
             } catch (\Exception $ex) {
-                $db->rollBack();
+                if ($db->inTransaction()) {
+                    $db->rollBack();
+                }
                 throw $ex;
             }
 
