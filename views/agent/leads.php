@@ -138,6 +138,21 @@ ob_start();
     </div>
 </div>
 
+<div class="modal fade" id="agentStagesMessageModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Stages</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="agentStagesMessageBody"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">OK</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="modal fade" id="confirmDeleteAgentStageModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">
@@ -616,9 +631,23 @@ window.addEventListener('DOMContentLoaded', function(){
       fd.append('transfer_to', transfer_to);
       const res = await fetch('<?= BASE_URL ?>' + '/agent/leads/stages/delete/' + id, { method:'POST', body: fd });
       const data = await res.json();
-      if(!data.success){ alert(data.message || 'Failed to delete'); return; }
+      if(!data.success){
+        showAgentStagesMessage(data.message || 'Failed to delete');
+        return;
+      }
       await loadAgentStages();
-    }catch(e){ alert('Failed to delete'); }
+    }catch(e){ showAgentStagesMessage('Failed to delete'); }
+  }
+
+  function showAgentStagesMessage(msg){
+    const body = document.getElementById('agentStagesMessageBody');
+    if(body) body.textContent = String(msg || '');
+    const el = document.getElementById('agentStagesMessageModal');
+    if(window.bootstrap && window.bootstrap.Modal && el){
+      window.bootstrap.Modal.getOrCreateInstance(el).show();
+    } else {
+      alert(String(msg || ''));
+    }
   }
 
   document.getElementById('confirmDeleteAgentStageBtn')?.addEventListener('click', async function(){
