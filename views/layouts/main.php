@@ -1336,6 +1336,11 @@ ob_clean();
                             <i class="bi bi-file-text me-2"></i> Contracts
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link <?= (strpos($current_uri, 'employees') === 0) ? 'active' : '' ?>" href="<?= BASE_URL ?>/employees">
+                            <i class="bi bi-person-badge me-2"></i> Employees
+                        </a>
+                    </li>
                     
                 <?php else: ?>
                     <!-- PROPERTY MANAGEMENT Section -->
