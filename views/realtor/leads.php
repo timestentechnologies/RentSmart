@@ -504,6 +504,10 @@ function editRealtorLead(id){
 }
 
 let pendingWinLeadId = null;
+let realtorWinModalInstance = null;
+let realtorWinModalOpen = false;
+let realtorWinModalLastShowAt = 0;
+
 function getWonStageKey(){
   const winCol = document.querySelector('.crm-col[data-is-won="1"]');
   return winCol ? (winCol.getAttribute('data-status') || 'won') : 'won';
@@ -512,7 +516,34 @@ function getWonStageKey(){
 function showWinModal(id){
   pendingWinLeadId = parseInt(id || 0, 10) || null;
   if(!pendingWinLeadId) return;
-  new bootstrap.Modal(document.getElementById('realtorLeadWinModal')).show();
+
+  const now = Date.now();
+  if (realtorWinModalOpen) return;
+  if (now - realtorWinModalLastShowAt < 250) return;
+  realtorWinModalLastShowAt = now;
+
+  const el = document.getElementById('realtorLeadWinModal');
+  if(!el || !(window.bootstrap && window.bootstrap.Modal)) return;
+  if(el.parentElement && el.parentElement !== document.body){
+    document.body.appendChild(el);
+  }
+  if(!el.__rsWinModalBackdropCleanupAttached){
+    el.__rsWinModalBackdropCleanupAttached = true;
+    el.addEventListener('show.bs.modal', function(){
+      const backdrops = document.querySelectorAll('.modal-backdrop');
+      if(backdrops.length > 1){
+        backdrops.forEach((b, idx) => { if(idx > 0) b.remove(); });
+      }
+    });
+    el.addEventListener('shown.bs.modal', function(){
+      realtorWinModalOpen = true;
+    });
+    el.addEventListener('hidden.bs.modal', function(){
+      realtorWinModalOpen = false;
+    });
+  }
+  realtorWinModalInstance = window.bootstrap.Modal.getOrCreateInstance(el, { backdrop: true, focus: true });
+  realtorWinModalInstance.show();
 }
 
 async function markWonOnly(id){
@@ -545,7 +576,7 @@ async function markWonCreateListing(id){
 document.getElementById('realtorWinOnlyBtn')?.addEventListener('click', function(){
   const id = pendingWinLeadId;
   pendingWinLeadId = null;
-  const m = bootstrap.Modal.getInstance(document.getElementById('realtorLeadWinModal'));
+  const m = realtorWinModalInstance || bootstrap.Modal.getInstance(document.getElementById('realtorLeadWinModal'));
   if(m) m.hide();
   if(!id) return;
   markWonOnly(id);
@@ -554,7 +585,7 @@ document.getElementById('realtorWinOnlyBtn')?.addEventListener('click', function
 document.getElementById('realtorWinCreateListingBtn')?.addEventListener('click', function(){
   const id = pendingWinLeadId;
   pendingWinLeadId = null;
-  const m = bootstrap.Modal.getInstance(document.getElementById('realtorLeadWinModal'));
+  const m = realtorWinModalInstance || bootstrap.Modal.getInstance(document.getElementById('realtorLeadWinModal'));
   if(m) m.hide();
   if(!id) return;
   markWonCreateListing(id);
