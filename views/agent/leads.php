@@ -501,7 +501,16 @@ window.addEventListener('DOMContentLoaded', function(){
         const fd = new FormData();
         fd.append('csrf_token', csrfToken());
         const res = await fetch('<?= BASE_URL ?>/agent/leads/win-create-property/' + id, { method: 'POST', body: fd });
-        const data = await res.json();
+        let data = null;
+        try {
+          data = await res.json();
+        } catch(_e) {
+          const txt = await res.text();
+          throw new Error('Unexpected response from server. ' + (txt ? String(txt).slice(0, 200) : ''));
+        }
+        if(!res.ok){
+          throw new Error((data && data.message) ? data.message : ('Request failed (' + res.status + ')'));
+        }
         if(!data || !data.success){
           if(data && data.over_limit && data.upgrade_url){
             try {
@@ -524,7 +533,9 @@ window.addEventListener('DOMContentLoaded', function(){
           }
           throw new Error(data && data.message ? data.message : 'Failed');
         }
-        window.location.href = data.redirect_url || ('<?= BASE_URL ?>' + '/properties');
+        const fallback = (data && data.property_id) ? ('<?= BASE_URL ?>' + '/properties?edit=' + String(data.property_id)) : ('<?= BASE_URL ?>' + '/properties');
+        const target = (data && data.redirect_url) ? data.redirect_url : fallback;
+        window.location.assign(target);
         return;
       }
 
@@ -537,7 +548,7 @@ window.addEventListener('DOMContentLoaded', function(){
           recomputeCounts();
         }
       } catch(_e){}
-      location.reload();
+      alert((e && e.message) ? e.message : 'Action failed');
       return;
     }
     location.reload();
