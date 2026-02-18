@@ -129,6 +129,8 @@ ob_start();
                         <p class="text-muted"><?= $plan['description'] ?></p>
                         <?php $__pl = isset($plan['property_limit']) ? (int)$plan['property_limit'] : null; $__pl_text = ($__pl && $__pl > 0) ? ('Up to ' . number_format($__pl) . ' properties') : 'Unlimited properties'; ?>
                         <div class="mb-2"><span class="badge bg-secondary"><?= $__pl_text ?></span></div>
+                        <?php $__ll = isset($plan['listing_limit']) ? (int)$plan['listing_limit'] : null; $__ll_text = ($__ll && $__ll > 0) ? ('Up to ' . number_format($__ll) . ' listings') : 'Unlimited listings'; ?>
+                        <div class="mb-2"><span class="badge bg-secondary"><?= $__ll_text ?></span></div>
                         <ul class="list-unstyled">
                             <?php foreach (explode("\n", $plan['features']) as $feature): ?>
                                 <li><i class="bi bi-check-circle text-success me-2"></i><?= $feature ?></li>
