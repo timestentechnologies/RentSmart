@@ -26,6 +26,11 @@
                                     $pl_text = ($pl && $pl > 0) ? ('Up to ' . number_format($pl) . ' properties') : 'Unlimited properties';
                                 ?>
                                 <span class="badge bg-secondary"><?= $pl_text ?></span>
+                                <?php 
+                                    $ll = isset($subscription['listing_limit']) ? (int)$subscription['listing_limit'] : null; 
+                                    $ll_text = ($ll && $ll > 0) ? ('Up to ' . number_format($ll) . ' listings') : 'Unlimited listings';
+                                ?>
+                                <span class="badge bg-secondary"><?= $ll_text ?></span>
                             </div>
                             <div class="col-md-6">
                                 <h5>Status</h5>

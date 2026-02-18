@@ -1114,6 +1114,19 @@
                             }
                             ?>
                         </div>
+                        <div class="mb-3">
+                            <?php
+                            $listingLimit = null;
+                            if (isset($plan['listing_limit']) && $plan['listing_limit'] !== null && $plan['listing_limit'] !== '' && (int)$plan['listing_limit'] > 0) {
+                                $listingLimit = (int)$plan['listing_limit'];
+                            }
+                            if ($listingLimit === null) {
+                                echo '<span class="badge bg-success">Unlimited Listings</span>';
+                            } else {
+                                echo '<span class="badge bg-secondary">Up to ' . (int)$listingLimit . ' Listings</span>';
+                            }
+                            ?>
+                        </div>
                         <p class="text-muted mb-4"><?= htmlspecialchars($plan['description']) ?></p>
                         <ul class="list-unstyled mb-4">
                             <?php foreach ($plan['features_array'] as $feature): ?>
