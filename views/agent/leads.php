@@ -406,8 +406,22 @@ window.addEventListener('DOMContentLoaded', function(){
         const data = await res.json();
         if(!data || !data.success){
           if(data && data.over_limit && data.upgrade_url){
+            try {
+              window.__agentOverLimitWin = {
+                id: id,
+                stage: stage,
+                upgrade_url: data.upgrade_url,
+                message: data.message || 'You have reached your property limit.'
+              };
+              const modalEl = document.getElementById('agentOverLimitModal');
+              if(modalEl && window.bootstrap && window.bootstrap.Modal){
+                const msgEl = modalEl.querySelector('[data-agent-overlimit-message]');
+                if(msgEl) msgEl.textContent = window.__agentOverLimitWin.message;
+                window.bootstrap.Modal.getOrCreateInstance(modalEl, { backdrop: 'static', keyboard: true }).show();
+                return;
+              }
+            } catch(e){}
             alert(data.message || 'You have reached your property limit.');
-            window.location.href = data.upgrade_url;
             return;
           }
           throw new Error(data && data.message ? data.message : 'Failed');
@@ -691,6 +705,25 @@ window.addEventListener('DOMContentLoaded', function(){
 
   document.getElementById('manageAgentStagesModal')?.addEventListener('shown.bs.modal', loadAgentStages);
 
+  document.getElementById('agentOverLimitWinOnlyBtn')?.addEventListener('click', async function(){
+    const mEl = document.getElementById('agentOverLimitModal');
+    const m = window.bootstrap && window.bootstrap.Modal && mEl ? window.bootstrap.Modal.getInstance(mEl) : null;
+    if(m) m.hide();
+    const payload = window.__agentOverLimitWin || null;
+    window.__agentOverLimitWin = null;
+    if(!payload || !payload.id || !payload.stage) return;
+    try {
+      await setStage(payload.id, payload.stage);
+    } catch(e) {}
+    location.reload();
+  });
+
+  document.getElementById('agentOverLimitUpgradeBtn')?.addEventListener('click', function(){
+    const payload = window.__agentOverLimitWin || null;
+    const target = payload && payload.upgrade_url ? payload.upgrade_url : ('<?= BASE_URL ?>' + '/subscription/renew');
+    window.location.href = target;
+  });
+
 });
 </script>
 
@@ -712,6 +745,26 @@ window.addEventListener('DOMContentLoaded', function(){
           <button type="button" class="btn btn-sm btn-brand-orange" id="agentLeadWinOnlyBtn">Mark as won only</button>
           <button type="button" class="btn btn-sm btn-brand-purple" id="agentLeadWinCreatePropertyBtn">Mark as won and create property</button>
         </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="agentOverLimitModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Upgrade Required</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div data-agent-overlimit-message>You have reached your plan limit. Please upgrade to continue.</div>
+        <div class="form-text mt-2">You can still mark this lead as won only without creating a property.</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-sm btn-brand-orange" id="agentOverLimitWinOnlyBtn">Win Only</button>
+        <button type="button" class="btn btn-sm btn-brand-purple" id="agentOverLimitUpgradeBtn">Upgrade</button>
       </div>
     </div>
   </div>
