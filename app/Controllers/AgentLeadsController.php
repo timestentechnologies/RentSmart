@@ -360,7 +360,7 @@ class AgentLeadsController
             echo json_encode([
                 'success' => true,
                 'property_id' => (int)$propertyId,
-                'redirect_url' => BASE_URL . '/properties/edit/' . (int)$propertyId,
+                'redirect_url' => BASE_URL . '/properties?edit=' . (int)$propertyId,
                 'client_id' => $clientId,
                 'contract_id' => $contractId,
             ]);
