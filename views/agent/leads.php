@@ -200,8 +200,9 @@ ob_start();
         <div class="modal-body">
           <div class="row g-3">
             <div class="col-md-6">
-              <label class="form-label">Name</label>
+              <label class="form-label">Client Name</label>
               <input class="form-control" name="name" required>
+              <div class="form-text">John Doe</div>
             </div>
             <div class="col-md-6">
               <label class="form-label">Property</label>
