@@ -136,6 +136,24 @@ ob_start();
     </div>
 </div>
 
+<div class="modal fade" id="confirmDeleteAgentStageModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Delete Stage</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <div>Delete this stage? If leads exist in this stage, you must choose "Move Leads To" first.</div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger" id="confirmDeleteAgentStageBtn">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="modal fade" id="manageAgentStagesModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog modal-lg">
     <div class="modal-content">
@@ -581,8 +599,15 @@ window.addEventListener('DOMContentLoaded', function(){
   }
 
   window.deleteAgentStage = async function(id){
+    window.__pendingDeleteStageId = parseInt(id || 0, 10) || 0;
+    const mEl = document.getElementById('confirmDeleteAgentStageModal');
+    if(window.bootstrap && window.bootstrap.Modal && mEl){
+      window.bootstrap.Modal.getOrCreateInstance(mEl).show();
+    }
+  }
+
+  async function performDeleteAgentStage(id){
     const transfer_to = document.querySelector(`[data-id="${id}"][data-field="transfer_to"]`)?.value || '';
-    if(!confirm('Delete this stage? If leads exist in this stage, you must choose "Move Leads To".')) return;
     try{
       const fd = new FormData();
       fd.append('csrf_token', csrfToken());
@@ -593,6 +618,16 @@ window.addEventListener('DOMContentLoaded', function(){
       await loadAgentStages();
     }catch(e){ alert('Failed to delete'); }
   }
+
+  document.getElementById('confirmDeleteAgentStageBtn')?.addEventListener('click', async function(){
+    const id = parseInt(window.__pendingDeleteStageId || 0, 10);
+    const mEl = document.getElementById('confirmDeleteAgentStageModal');
+    const m = window.bootstrap && window.bootstrap.Modal && mEl ? window.bootstrap.Modal.getInstance(mEl) : null;
+    if(m) m.hide();
+    if(!id) return;
+    window.__pendingDeleteStageId = 0;
+    await performDeleteAgentStage(id);
+  });
 
   document.getElementById('manageAgentStagesModal')?.addEventListener('shown.bs.modal', loadAgentStages);
 
