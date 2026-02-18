@@ -12,10 +12,12 @@ use App\Models\User;
 class EmployeesController
 {
     private $userId;
+    private $role;
 
     public function __construct()
     {
         $this->userId = $_SESSION['user_id'] ?? null;
+        $this->role = strtolower((string)($_SESSION['user_role'] ?? ''));
         if (!isset($_SESSION['user_id'])) {
             $_SESSION['flash_message'] = 'Please login to access employees';
             $_SESSION['flash_type'] = 'warning';
@@ -27,10 +29,15 @@ class EmployeesController
     public function index()
     {
         $employeeModel = new Employee();
-        $userModel = new User();
-        $userModel->find($this->userId);
-        $employees = $employeeModel->getAll($this->userId);
-        $properties = $userModel->getAccessibleProperties();
+        if ($this->role === 'realtor') {
+            $employees = $employeeModel->getAll($this->userId);
+            $properties = [];
+        } else {
+            $userModel = new User();
+            $userModel->find($this->userId);
+            $employees = $employeeModel->getAll($this->userId);
+            $properties = $userModel->getAccessibleProperties();
+        }
         require 'views/employees/index.php';
     }
 
@@ -44,13 +51,18 @@ class EmployeesController
                     header('Location: ' . BASE_URL . '/employees');
                     exit;
                 }
+
+                $propertyId = null;
+                if ($this->role !== 'realtor') {
+                    $propertyId = !empty($_POST['property_id']) ? (int)$_POST['property_id'] : null;
+                }
                 $data = [
                     'user_id' => $this->userId,
                     'name' => trim($_POST['name'] ?? ''),
                     'email' => $_POST['email'] ?? null,
                     'phone' => $_POST['phone'] ?? null,
                     'salary' => (float)($_POST['salary'] ?? 0),
-                    'property_id' => $_POST['property_id'] ? (int)$_POST['property_id'] : null,
+                    'property_id' => $propertyId,
                     'status' => $_POST['status'] ?? 'active',
                     'role' => $_POST['role'] ?? 'general'
                 ];
@@ -58,7 +70,7 @@ class EmployeesController
                 $employeeId = $employeeModel->insert($data);
 
                 // If caretaker, create a user account and optionally assign to property
-                if ($employeeId && strtolower($data['role']) === 'caretaker') {
+                if ($this->role !== 'realtor' && $employeeId && strtolower($data['role']) === 'caretaker') {
                     $userModel = new \App\Models\User();
                     $db = $userModel->getDb();
                     try {
