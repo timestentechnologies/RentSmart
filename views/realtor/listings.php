@@ -338,8 +338,24 @@ ob_start();
   </div>
 </div>
 
+<div class="modal fade" id="listingUpdateSuccessModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Success</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">Listing updated successfully.</div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-primary" data-bs-dismiss="modal">OK</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 let __sellListingModal = null;
+const __RS_BASE_URL = '<?= BASE_URL ?>';
 
 function getSellListingModal(){
   const el = document.getElementById('sellListingModal');
@@ -483,7 +499,7 @@ document.querySelector('#addListingModal input[name="listing_images[]"]')?.addEv
 });
 
 function editRealtorListing(id){
-  fetch('<?= BASE_URL ?>' + '/realtor/listings/get/' + id)
+  fetch(__RS_BASE_URL + '/realtor/listings/get/' + id)
     .then(r=>r.json()).then(resp=>{
       if(!resp.success){ alert('Listing not found'); return; }
       const e = resp.data;
@@ -511,19 +527,57 @@ function editRealtorListing(id){
       };
 
       const urls = (Array.isArray(e.images) ? e.images : []).map(normalizeImgUrl).filter(Boolean);
+      const meta = Array.isArray(e.images_meta) ? e.images_meta : [];
       if(existing){
         if(urls.length){
           existing.style.display = '';
           existing.innerHTML = '<label class="form-label">Current Images</label><div class="d-flex flex-wrap gap-2"></div>';
           const wrap = existing.querySelector('div');
-          urls.forEach(u => {
+          urls.forEach((u, idx) => {
+            const fileId = parseInt((meta[idx] && meta[idx].id) ? meta[idx].id : '0', 10) || null;
+            const box = document.createElement('div');
+            box.className = 'position-relative';
             const img = document.createElement('img');
             img.src = u;
             img.style.width = '88px';
             img.style.height = '66px';
             img.style.objectFit = 'cover';
             img.className = 'rounded border';
-            wrap.appendChild(img);
+            box.appendChild(img);
+
+            if(fileId){
+              const btn = document.createElement('button');
+              btn.type = 'button';
+              btn.className = 'btn btn-danger btn-sm position-absolute top-0 end-0';
+              btn.style.padding = '2px 6px';
+              btn.innerHTML = '<i class="bi bi-x"></i>';
+              btn.setAttribute('data-file-id', String(fileId));
+              btn.setAttribute('title', 'Delete image');
+              btn.addEventListener('click', async function(ev){
+                ev.preventDefault();
+                if(!confirm('Delete this image?')) return;
+                const fid = parseInt(this.getAttribute('data-file-id') || '0', 10);
+                if(!fid) return;
+                try {
+                  const res = await fetch(__RS_BASE_URL + '/files/delete/' + fid, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+                  const out = await res.json();
+                  if(!out || !out.success){
+                    alert((out && out.message) ? out.message : 'Failed to delete image');
+                    return;
+                  }
+                  box.remove();
+                  if(wrap && wrap.children.length === 0){
+                    existing.style.display = 'none';
+                    existing.innerHTML = '';
+                  }
+                } catch(err){
+                  alert('Failed to delete image');
+                }
+              });
+              box.appendChild(btn);
+            }
+
+            wrap.appendChild(box);
           });
         } else {
           existing.style.display = 'none';
@@ -557,8 +611,23 @@ document.getElementById('editListingForm')?.addEventListener('submit', function(
   ev.preventDefault();
   const id = document.getElementById('edit_listing_id').value;
   const formData = new FormData(ev.target);
-  fetch('<?= BASE_URL ?>' + '/realtor/listings/update/' + id, { method:'POST', body: formData })
-    .then(r=>r.json()).then(resp=>{ if(resp.success){ location.reload(); } else { alert(resp.message || 'Failed'); } })
+  fetch(__RS_BASE_URL + '/realtor/listings/update/' + id, { method:'POST', body: formData })
+    .then(r=>r.json()).then(resp=>{
+      if(resp && resp.success){
+        const editM = bootstrap.Modal.getInstance(document.getElementById('editListingModal'));
+        if(editM) editM.hide();
+        const okEl = document.getElementById('listingUpdateSuccessModal');
+        if(okEl){
+          const okM = bootstrap.Modal.getOrCreateInstance(okEl);
+          okEl.addEventListener('hidden.bs.modal', function(){ location.reload(); }, { once: true });
+          okM.show();
+        } else {
+          location.reload();
+        }
+      } else {
+        alert((resp && resp.message) ? resp.message : 'Failed');
+      }
+    })
     .catch(()=>alert('Failed to update listing'));
 });
 
@@ -570,7 +639,7 @@ function confirmDeleteRealtorListing(id){
 
 document.getElementById('confirmDeleteListingBtn')?.addEventListener('click', function(){
   if(!deleteListingId) return;
-  fetch('<?= BASE_URL ?>' + '/realtor/listings/delete/' + deleteListingId, { method:'POST' })
+  fetch(__RS_BASE_URL + '/realtor/listings/delete/' + deleteListingId, { method:'POST' })
     .then(r=>r.json()).then(resp=>{ if(resp.success){ location.reload(); } else { alert(resp.message || 'Failed'); } })
     .catch(()=>alert('Failed to delete listing'));
 });
