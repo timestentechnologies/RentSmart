@@ -353,9 +353,26 @@ ob_start();
   </div>
 </div>
 
+<div class="modal fade" id="listingDeleteImageModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Delete Image</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">Delete this image?</div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger" id="confirmDeleteListingImageBtn">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script>
 let __sellListingModal = null;
 const __RS_BASE_URL = '<?= BASE_URL ?>';
+let __pendingDeleteListingImage = null;
 
 function getSellListingModal(){
   const el = document.getElementById('sellListingModal');
@@ -555,23 +572,12 @@ function editRealtorListing(id){
               btn.setAttribute('title', 'Delete image');
               btn.addEventListener('click', async function(ev){
                 ev.preventDefault();
-                if(!confirm('Delete this image?')) return;
                 const fid = parseInt(this.getAttribute('data-file-id') || '0', 10);
                 if(!fid) return;
-                try {
-                  const res = await fetch(__RS_BASE_URL + '/files/delete/' + fid, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
-                  const out = await res.json();
-                  if(!out || !out.success){
-                    alert((out && out.message) ? out.message : 'Failed to delete image');
-                    return;
-                  }
-                  box.remove();
-                  if(wrap && wrap.children.length === 0){
-                    existing.style.display = 'none';
-                    existing.innerHTML = '';
-                  }
-                } catch(err){
-                  alert('Failed to delete image');
+                __pendingDeleteListingImage = { fileId: fid, boxEl: box, wrapEl: wrap, existingEl: existing };
+                const mEl = document.getElementById('listingDeleteImageModal');
+                if(mEl){
+                  bootstrap.Modal.getOrCreateInstance(mEl).show();
                 }
               });
               box.appendChild(btn);
@@ -642,6 +648,30 @@ document.getElementById('confirmDeleteListingBtn')?.addEventListener('click', fu
   fetch(__RS_BASE_URL + '/realtor/listings/delete/' + deleteListingId, { method:'POST' })
     .then(r=>r.json()).then(resp=>{ if(resp.success){ location.reload(); } else { alert(resp.message || 'Failed'); } })
     .catch(()=>alert('Failed to delete listing'));
+});
+
+document.getElementById('confirmDeleteListingImageBtn')?.addEventListener('click', async function(){
+  const pending = __pendingDeleteListingImage;
+  __pendingDeleteListingImage = null;
+  const mEl = document.getElementById('listingDeleteImageModal');
+  const m = mEl ? bootstrap.Modal.getInstance(mEl) : null;
+  if(m) m.hide();
+  if(!pending || !pending.fileId) return;
+  try {
+    const res = await fetch(__RS_BASE_URL + '/files/delete/' + pending.fileId, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+    const out = await res.json();
+    if(!out || !out.success){
+      alert((out && out.message) ? out.message : 'Failed to delete image');
+      return;
+    }
+    if(pending.boxEl) pending.boxEl.remove();
+    if(pending.wrapEl && pending.wrapEl.children.length === 0 && pending.existingEl){
+      pending.existingEl.style.display = 'none';
+      pending.existingEl.innerHTML = '';
+    }
+  } catch(_e){
+    alert('Failed to delete image');
+  }
 });
 </script>
 
