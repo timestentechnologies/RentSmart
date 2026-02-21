@@ -90,6 +90,13 @@ ob_start();
                                 </td>
                                 <td>
                                     <code class="bg-light px-2 py-1 rounded"><?= htmlspecialchars((string)($g['transaction_code'] ?? '')) ?></code>
+                                    <?php
+                                        $rawCodes = $g['raw_transaction_codes'] ?? [];
+                                        $rawCount = is_array($rawCodes) ? count($rawCodes) : 0;
+                                    ?>
+                                    <?php if ($rawCount > 1): ?>
+                                        <div class="small text-muted">Grouped <?= (int)$rawCount ?> refs</div>
+                                    <?php endif; ?>
                                 </td>
                                 <td>
                                     <?= !empty($g['payment_date']) ? date('M j, Y', strtotime((string)$g['payment_date'])) : '' ?>

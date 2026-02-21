@@ -12,6 +12,21 @@ class MpesaVerificationController
 {
     private $db;
 
+    private function baseTransactionCode($code)
+    {
+        $code = trim((string)$code);
+        if ($code === '') {
+            return '';
+        }
+        // Some flows suffix codes like CODE-U1, CODE-U2 etc. Group by the base CODE.
+        $pos = strpos($code, '-');
+        if ($pos === false) {
+            return $code;
+        }
+        $base = trim(substr($code, 0, $pos));
+        return $base !== '' ? $base : $code;
+    }
+
     public function __construct()
     {
         $this->db = Connection::getInstance()->getConnection();
@@ -120,15 +135,16 @@ class MpesaVerificationController
 
             $code = urldecode((string)$code);
             $code = trim($code);
-            if ($code === '') {
+            $baseCode = $this->baseTransactionCode($code);
+            if ($baseCode === '') {
                 throw new \Exception('Invalid transaction code');
             }
 
             $this->db->beginTransaction();
 
             // Get all pending manual mpesa rows for this transaction
-            $sel = $this->db->prepare("SELECT id, payment_id FROM manual_mpesa_payments WHERE transaction_code = ? AND verification_status = 'pending'");
-            $sel->execute([$code]);
+            $sel = $this->db->prepare("SELECT id, payment_id FROM manual_mpesa_payments WHERE verification_status = 'pending' AND (transaction_code = ? OR transaction_code LIKE ?)");
+            $sel->execute([$baseCode, $baseCode . '-%']);
             $rows = $sel->fetchAll(\PDO::FETCH_ASSOC) ?: [];
 
             if (empty($rows)) {
@@ -147,8 +163,8 @@ class MpesaVerificationController
             $paymentIds = array_values(array_unique($paymentIds));
 
             // Update manual rows
-            $upd = $this->db->prepare("UPDATE manual_mpesa_payments SET verification_status = ?, verification_notes = ?, verified_at = NOW(), verified_by = ? WHERE transaction_code = ? AND verification_status = 'pending'");
-            $upd->execute([$status, $notes, $userId, $code]);
+            $upd = $this->db->prepare("UPDATE manual_mpesa_payments SET verification_status = ?, verification_notes = ?, verified_at = NOW(), verified_by = ? WHERE verification_status = 'pending' AND (transaction_code = ? OR transaction_code LIKE ?)");
+            $upd->execute([$status, $notes, $userId, $baseCode, $baseCode . '-%']);
 
             // Update payments
             $paymentStatus = ($status === 'verified') ? 'completed' : 'failed';
@@ -243,13 +259,15 @@ class MpesaVerificationController
             // Group by transaction_code so one M-Pesa code can be approved once
             $grouped = [];
             foreach (($pendingPayments ?: []) as $row) {
-                $code = trim((string)($row['transaction_code'] ?? ''));
+                $rawCode = trim((string)($row['transaction_code'] ?? ''));
+                $code = $this->baseTransactionCode($rawCode);
                 if ($code === '') {
                     $code = 'UNKNOWN';
                 }
                 if (!isset($grouped[$code])) {
                     $grouped[$code] = [
                         'transaction_code' => $code,
+                        'raw_transaction_codes' => [],
                         'phone_number' => $row['phone_number'] ?? '',
                         'created_at' => $row['created_at'] ?? null,
                         'payment_date' => $row['payment_date'] ?? null,
@@ -262,6 +280,9 @@ class MpesaVerificationController
                         'payment_types' => [],
                         'items' => []
                     ];
+                }
+                if (!empty($rawCode) && !in_array($rawCode, $grouped[$code]['raw_transaction_codes'], true)) {
+                    $grouped[$code]['raw_transaction_codes'][] = $rawCode;
                 }
                 $grouped[$code]['total_amount'] += (float)($row['amount'] ?? 0);
                 $ptype = strtolower((string)($row['payment_type'] ?? ''));
