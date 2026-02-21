@@ -118,4 +118,15 @@ class RealtorLead extends Model
         $row = $stmt->fetch(\PDO::FETCH_ASSOC);
         return (int)($row['c'] ?? 0);
     }
+
+    public function countWon($userId)
+    {
+        $stmt = $this->db->prepare(
+            "SELECT COUNT(*) AS c FROM {$this->table}
+             WHERE user_id = ? AND (LOWER(status) = 'won' OR converted_client_id IS NOT NULL)"
+        );
+        $stmt->execute([(int)$userId]);
+        $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+        return (int)($row['c'] ?? 0);
+    }
 }

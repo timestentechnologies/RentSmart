@@ -69,6 +69,179 @@ ob_start();
         </div>
         <?php break; ?>
 
+        <?php case 'realtor_financial': ?>
+        <div class="row g-3 mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Realtor Financial Report</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <strong>Total Received:</strong> Ksh<?= number_format((float)($data['received'] ?? 0), 2) ?>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Client</th>
+                                        <th>Listing</th>
+                                        <th>Amount</th>
+                                        <th>Method</th>
+                                        <th>Status</th>
+                                        <th>M-Pesa Code</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php if (empty($data['payments'])): ?>
+                                        <tr><td colspan="7" class="text-center py-4">No payments in this period</td></tr>
+                                    <?php else: ?>
+                                        <?php foreach ($data['payments'] as $p): ?>
+                                            <tr>
+                                                <td><?= !empty($p['payment_date']) ? date('M j, Y', strtotime($p['payment_date'])) : '-' ?></td>
+                                                <td><?= htmlspecialchars($p['client_name'] ?? 'N/A') ?></td>
+                                                <td><?= htmlspecialchars($p['listing_title'] ?? 'N/A') ?></td>
+                                                <td>Ksh<?= number_format((float)($p['amount'] ?? 0), 2) ?></td>
+                                                <td><?= htmlspecialchars($p['payment_method'] ?? '-') ?></td>
+                                                <td><?= htmlspecialchars(ucfirst((string)($p['status'] ?? '-'))) ?></td>
+                                                <td><?= htmlspecialchars($p['transaction_code'] ?? '-') ?></td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php break; ?>
+
+        <?php case 'realtor_listings': ?>
+        <div class="row g-3 mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Listings Sold vs Not Sold</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row text-center mb-3">
+                            <div class="col"><strong>Total</strong><div><?= (int)($data['total'] ?? 0) ?></div></div>
+                            <div class="col"><strong>Sold</strong><div><?= is_array($data['sold'] ?? null) ? count($data['sold']) : 0 ?></div></div>
+                            <div class="col"><strong>Not Sold</strong><div><?= is_array($data['notSold'] ?? null) ? count($data['notSold']) : 0 ?></div></div>
+                        </div>
+
+                        <h6>Sold Listings</h6>
+                        <div class="table-responsive mb-4">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Title</th>
+                                        <th>Type</th>
+                                        <th>Location</th>
+                                        <th>Price</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php if (empty($data['sold'])): ?>
+                                        <tr><td colspan="5" class="text-center py-3">No sold listings</td></tr>
+                                    <?php else: ?>
+                                        <?php foreach ($data['sold'] as $l): ?>
+                                            <tr>
+                                                <td><?= htmlspecialchars($l['title'] ?? '') ?></td>
+                                                <td><?= htmlspecialchars($l['listing_type'] ?? '-') ?></td>
+                                                <td><?= htmlspecialchars($l['location'] ?? '-') ?></td>
+                                                <td>Ksh<?= number_format((float)($l['price'] ?? 0), 2) ?></td>
+                                                <td><?= htmlspecialchars($l['status'] ?? '-') ?></td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <h6>Not Sold Listings</h6>
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Title</th>
+                                        <th>Type</th>
+                                        <th>Location</th>
+                                        <th>Price</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php if (empty($data['notSold'])): ?>
+                                        <tr><td colspan="5" class="text-center py-3">No listings</td></tr>
+                                    <?php else: ?>
+                                        <?php foreach ($data['notSold'] as $l): ?>
+                                            <tr>
+                                                <td><?= htmlspecialchars($l['title'] ?? '') ?></td>
+                                                <td><?= htmlspecialchars($l['listing_type'] ?? '-') ?></td>
+                                                <td><?= htmlspecialchars($l['location'] ?? '-') ?></td>
+                                                <td>Ksh<?= number_format((float)($l['price'] ?? 0), 2) ?></td>
+                                                <td><?= htmlspecialchars($l['status'] ?? '-') ?></td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php break; ?>
+
+        <?php case 'realtor_won_leads': ?>
+        <div class="row g-3 mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Won Leads</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3"><strong>Total Won:</strong> <?= (int)($data['total_won'] ?? 0) ?></div>
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Phone</th>
+                                        <th>Email</th>
+                                        <th>Listing</th>
+                                        <th>Status</th>
+                                        <th>Created</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php if (empty($data['won'])): ?>
+                                        <tr><td colspan="6" class="text-center py-4">No won leads</td></tr>
+                                    <?php else: ?>
+                                        <?php foreach ($data['won'] as $l): ?>
+                                            <tr>
+                                                <td><?= htmlspecialchars($l['name'] ?? '') ?></td>
+                                                <td><?= htmlspecialchars($l['phone'] ?? '-') ?></td>
+                                                <td><?= htmlspecialchars($l['email'] ?? '-') ?></td>
+                                                <td><?= htmlspecialchars(($l['listing_title'] ?? ($l['listing_name'] ?? '')) ?: '-') ?></td>
+                                                <td><?= htmlspecialchars($l['status'] ?? '-') ?></td>
+                                                <td><?= !empty($l['created_at']) ? date('M j, Y', strtotime($l['created_at'])) : '-' ?></td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php break; ?>
+
         <?php case 'occupancy': ?>
         <!-- Occupancy Report -->
         <div class="row g-3 mt-4">

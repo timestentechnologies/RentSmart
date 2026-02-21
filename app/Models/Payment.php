@@ -18,6 +18,33 @@ class Payment extends Model
         $this->ensureRealtorPaymentColumns();
     }
 
+    public function getRealtorPaymentsByDateRange($startDate, $endDate, $userId)
+    {
+        $sql = "SELECT p.*,
+                       rc.name AS client_name,
+                       rc.id AS client_id,
+                       rl.title AS listing_title,
+                       rl.id AS listing_id,
+                       c.terms_type AS contract_terms_type,
+                       c.total_amount AS contract_total_amount,
+                       c.monthly_amount AS contract_monthly_amount,
+                       c.duration_months AS contract_duration_months,
+                       c.start_month AS contract_start_month,
+                       mmp.phone_number,
+                       mmp.transaction_code
+                FROM payments p
+                LEFT JOIN realtor_clients rc ON rc.id = p.realtor_client_id
+                LEFT JOIN realtor_listings rl ON rl.id = p.realtor_listing_id
+                LEFT JOIN realtor_contracts c ON c.id = p.realtor_contract_id
+                LEFT JOIN manual_mpesa_payments mmp ON mmp.payment_id = p.id
+                WHERE p.realtor_user_id = ?
+                  AND p.payment_date BETWEEN ? AND ?
+                ORDER BY p.payment_date DESC, p.id DESC";
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([(int)$userId, (string)$startDate, (string)$endDate]);
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+    }
+
     private function ensureRealtorPaymentColumns(): void
     {
         // Realtor payments are contract-based and do not use leases; allow NULL lease_id.
