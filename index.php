@@ -496,6 +496,7 @@ $routes = [
     'agent/contracts/store' => ['controller' => 'AgentContractsController', 'action' => 'store'],
     'agent/contracts/get/(\d+)' => ['controller' => 'AgentContractsController', 'action' => 'get'],
     'agent/contracts/update/(\d+)' => ['controller' => 'AgentContractsController', 'action' => 'update'],
+    'agent/contracts/delete/(\d+)' => ['controller' => 'AgentContractsController', 'action' => 'delete'],
 
     'agent/leads' => ['controller' => 'AgentLeadsController', 'action' => 'index'],
     'agent/leads/store' => ['controller' => 'AgentLeadsController', 'action' => 'store'],

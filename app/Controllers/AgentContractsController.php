@@ -435,4 +435,76 @@ class AgentContractsController
         }
         exit;
     }
+
+    public function delete($id)
+    {
+        header('Content-Type: application/json');
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            echo json_encode(['success' => false, 'message' => 'Invalid request']);
+            exit;
+        }
+
+        try {
+            if (!verify_csrf_token()) {
+                echo json_encode(['success' => false, 'message' => 'Invalid security token']);
+                exit;
+            }
+
+            $contractModel = new AgentContract();
+            $row = $contractModel->getByIdWithAccess((int)$id, $this->userId);
+            if (!$row) {
+                echo json_encode(['success' => false, 'message' => 'Contract not found']);
+                exit;
+            }
+
+            $clientId = (int)($row['agent_client_id'] ?? 0);
+
+            $db = $contractModel->getDb();
+            $inTransaction = $db->inTransaction();
+            if (!$inTransaction) {
+                $db->beginTransaction();
+            }
+
+            try {
+                // Delete unit links
+                $stmt = $db->prepare("DELETE FROM agent_contract_units WHERE agent_contract_id = ? AND user_id = ?");
+                $stmt->execute([(int)$id, (int)$this->userId]);
+
+                // Delete contract
+                $stmt = $db->prepare("DELETE FROM agent_contracts WHERE id = ? AND user_id = ?");
+                $stmt->execute([(int)$id, (int)$this->userId]);
+
+                // Delete client only if unused (no other contracts and no linked properties)
+                if ($clientId > 0) {
+                    $stmt = $db->prepare("SELECT COUNT(*) FROM agent_contracts WHERE agent_client_id = ? AND user_id = ?");
+                    $stmt->execute([(int)$clientId, (int)$this->userId]);
+                    $remainingContracts = (int)$stmt->fetchColumn();
+
+                    $stmt = $db->prepare("SELECT COUNT(*) FROM agent_client_properties WHERE agent_client_id = ? AND user_id = ?");
+                    $stmt->execute([(int)$clientId, (int)$this->userId]);
+                    $remainingProps = (int)$stmt->fetchColumn();
+
+                    if ($remainingContracts <= 0 && $remainingProps <= 0) {
+                        $stmt = $db->prepare("DELETE FROM agent_clients WHERE id = ? AND user_id = ?");
+                        $stmt->execute([(int)$clientId, (int)$this->userId]);
+                    }
+                }
+
+                if (!$inTransaction) {
+                    $db->commit();
+                }
+            } catch (\Exception $e) {
+                if (!$inTransaction && $db->inTransaction()) {
+                    $db->rollBack();
+                }
+                throw $e;
+            }
+
+            echo json_encode(['success' => true]);
+        } catch (\Exception $e) {
+            error_log('AgentContracts delete failed: ' . $e->getMessage());
+            echo json_encode(['success' => false, 'message' => 'Failed to delete contract']);
+        }
+        exit;
+    }
 }

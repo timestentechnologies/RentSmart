@@ -97,6 +97,9 @@ ob_start();
                                     <button type="button" class="btn btn-sm btn-outline-primary" onclick="editAgentContract(<?= (int)($c['id'] ?? 0) ?>)">
                                         <i class="bi bi-pencil"></i>
                                     </button>
+                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteAgentContract(<?= (int)($c['id'] ?? 0) ?>)">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -570,6 +573,21 @@ ob_start();
       alert('Failed to update');
     }
   });
+
+  window.deleteAgentContract = async function(id){
+    if(!id) return;
+    if(!confirm('Delete this contract?')) return;
+    try{
+      const fd = new FormData();
+      fd.set('csrf_token', csrfToken());
+      const res = await fetch('<?= BASE_URL ?>' + '/agent/contracts/delete/' + id, { method:'POST', body: fd });
+      const data = await res.json();
+      if(!data.success){ alert(data.message || 'Failed to delete contract'); return; }
+      location.reload();
+    }catch(err){
+      alert('Failed to delete contract');
+    }
+  }
 
   const searchEl = document.getElementById('contracts_search');
   const filterPropEl = document.getElementById('contracts_filter_property');
