@@ -119,7 +119,7 @@ class AgentContractsController
             exit;
         }
 
-        if ((int)($client['property_id'] ?? 0) !== $propertyId) {
+        if (!$clientModel->isPropertyLinkedToClient((int)$clientId, (int)$propertyId, (int)$this->userId)) {
             $_SESSION['flash_message'] = 'Client must belong to the selected property';
             $_SESSION['flash_type'] = 'danger';
             header('Location: ' . BASE_URL . '/agent/contracts');
@@ -241,7 +241,7 @@ class AgentContractsController
                 echo json_encode(['success' => false, 'message' => 'Invalid client selected']);
                 exit;
             }
-            if ((int)($client['property_id'] ?? 0) !== (int)$propertyId) {
+            if (!$clientModel->isPropertyLinkedToClient((int)$clientId, (int)$propertyId, (int)$this->userId)) {
                 echo json_encode(['success' => false, 'message' => 'Client must belong to the selected property']);
                 exit;
             }

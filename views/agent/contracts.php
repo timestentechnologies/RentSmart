@@ -83,8 +83,8 @@ ob_start();
                             <select class="form-select" name="agent_client_id" id="edit_contract_client" required>
                                 <option value="">Select client</option>
                                 <?php foreach (($clients ?? []) as $cl): ?>
-                                    <option value="<?= (int)($cl['id'] ?? 0) ?>" data-property-id="<?= (int)($cl['property_id'] ?? 0) ?>">
-                                        <?= htmlspecialchars((string)($cl['name'] ?? '')) ?> (<?= htmlspecialchars((string)($cl['property_name'] ?? '')) ?>)
+                                    <option value="<?= (int)($cl['id'] ?? 0) ?>">
+                                        <?= htmlspecialchars((string)($cl['name'] ?? '')) ?> (<?= htmlspecialchars((string)($cl['property_names'] ?? '')) ?>)
                                     </option>
                                 <?php endforeach; ?>
                             </select>
@@ -160,7 +160,7 @@ ob_start();
                                 <option value="">Select client</option>
                                 <?php foreach (($clients ?? []) as $cl): ?>
                                     <option value="<?= (int)($cl['id'] ?? 0) ?>">
-                                        <?= htmlspecialchars((string)($cl['name'] ?? '')) ?> (<?= htmlspecialchars((string)($cl['property_name'] ?? '')) ?>)
+                                        <?= htmlspecialchars((string)($cl['name'] ?? '')) ?> (<?= htmlspecialchars((string)($cl['property_names'] ?? '')) ?>)
                                     </option>
                                 <?php endforeach; ?>
                             </select>
@@ -238,18 +238,9 @@ ob_start();
   }
 
   const propSel = document.getElementById('edit_contract_property');
-  const clientSel = document.getElementById('edit_contract_client');
   function filterClients(){
-    if(!propSel || !clientSel) return;
-    const pid = propSel.value;
-    Array.from(clientSel.options).forEach(opt=>{
-      if(!opt.value) return;
-      const ok = !pid || opt.getAttribute('data-property-id') === pid;
-      opt.hidden = !ok;
-    });
-    if(clientSel.selectedOptions.length && clientSel.selectedOptions[0].hidden){
-      clientSel.value = '';
-    }
+    // Multi-property clients: keep full list; backend will validate property-client pairing.
+    return;
   }
   if(propSel){
     propSel.addEventListener('change', filterClients);

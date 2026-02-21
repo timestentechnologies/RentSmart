@@ -29,7 +29,7 @@ ob_start();
                     <tbody>
                         <?php foreach (($clients ?? []) as $c): ?>
                             <tr>
-                                <td><?= htmlspecialchars((string)($c['property_name'] ?? '')) ?></td>
+                                <td><?= htmlspecialchars((string)($c['property_names'] ?? '')) ?></td>
                                 <td><?= htmlspecialchars((string)($c['name'] ?? '')) ?></td>
                                 <td><?= htmlspecialchars((string)($c['phone'] ?? '')) ?></td>
                                 <td><?= htmlspecialchars((string)($c['email'] ?? '')) ?></td>
@@ -72,12 +72,12 @@ ob_start();
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label">Property</label>
-                            <select class="form-select" name="property_id" id="edit_client_property" required>
-                                <option value="">Select property</option>
+                            <select class="form-select" name="property_ids[]" id="edit_client_property" multiple required>
                                 <?php foreach (($properties ?? []) as $p): ?>
                                     <option value="<?= (int)($p['id'] ?? 0) ?>"><?= htmlspecialchars((string)($p['name'] ?? '')) ?></option>
                                 <?php endforeach; ?>
                             </select>
+                            <div class="form-text">Select one or more properties.</div>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Name</label>
@@ -139,8 +139,7 @@ ob_start();
                         <div class="col-md-6">
                             <label class="form-label">Property</label>
                             <div class="d-flex gap-2">
-                                <select class="form-select" name="property_id" id="agent_client_property" required>
-                                    <option value="">Select property</option>
+                                <select class="form-select" name="property_ids[]" id="agent_client_property" multiple required>
                                     <?php foreach (($properties ?? []) as $p): ?>
                                         <option value="<?= (int)($p['id'] ?? 0) ?>"><?= htmlspecialchars((string)($p['name'] ?? '')) ?></option>
                                     <?php endforeach; ?>
@@ -257,7 +256,34 @@ ob_start();
         if(!resp.success){ alert(resp.message || 'Client not found'); return; }
         const c = resp.data || {};
         document.getElementById('edit_client_id').value = String(c.id || id);
-        document.getElementById('edit_client_property').value = (c.property_id !== undefined && c.property_id !== null) ? String(c.property_id) : '';
+
+        const editPropSel = document.getElementById('edit_client_property');
+        if (editPropSel) {
+          // Replace options with the backend filtered list (unlinked + this client's linked)
+          const avail = Array.isArray(c.available_properties) ? c.available_properties : [];
+          editPropSel.innerHTML = '';
+          avail.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = String(p.id || '');
+            opt.textContent = String(p.name || '');
+            editPropSel.appendChild(opt);
+          });
+
+          const selectedIds = Array.isArray(c.property_ids) ? c.property_ids.map(v => String(v)) : [];
+          // Safety: ensure selected ids exist as options even if not in avail array
+          selectedIds.forEach(pid => {
+            const exists = Array.from(editPropSel.options).some(o => o.value === pid);
+            if (!exists) {
+              const opt = document.createElement('option');
+              opt.value = pid;
+              opt.textContent = pid;
+              editPropSel.appendChild(opt);
+            }
+          });
+          Array.from(editPropSel.options).forEach(opt => {
+            opt.selected = selectedIds.includes(opt.value);
+          });
+        }
         document.getElementById('edit_client_name').value = c.name || '';
         document.getElementById('edit_client_phone').value = c.phone || '';
         document.getElementById('edit_client_email').value = c.email || '';
@@ -380,7 +406,18 @@ ob_start();
       const label = String(fd.get('name') || 'New Property');
       upsertPropertyOption(propertySel, data.property_id, label);
       upsertPropertyOption(editPropertySel, data.property_id, label);
-      if(propertySel) propertySel.value = String(data.property_id);
+      if(propertySel){
+        const newVal = String(data.property_id);
+        Array.from(propertySel.options).forEach(opt => {
+          if(opt.value === newVal) opt.selected = true;
+        });
+      }
+      if(editPropertySel){
+        const newVal = String(data.property_id);
+        Array.from(editPropertySel.options).forEach(opt => {
+          if(opt.value === newVal) opt.selected = true;
+        });
+      }
       if(editPropertySel && editPropertySel.value === '') {
         // don't force-change edit modal selection unless empty
       }

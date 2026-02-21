@@ -369,6 +369,40 @@ class AdminController
                     $deleted['employees'] = (int)$stmt->rowCount();
                 } catch (\Exception $e) {
                 }
+
+                // If deleting a caretaker login user, also delete matching caretaker employee record(s)
+                // (employees.user_id is the creator/owner, not the caretaker user's id)
+                try {
+                    if (strtolower((string)($user['role'] ?? '')) === 'caretaker') {
+                        $uEmail = trim((string)($user['email'] ?? ''));
+                        $uPhone = trim((string)($user['phone'] ?? ''));
+                        $conditions = ["role = 'caretaker'"];
+                        $params = [];
+                        if ($uEmail !== '') {
+                            $conditions[] = 'email = ?';
+                            $params[] = $uEmail;
+                        }
+                        if ($uPhone !== '') {
+                            $conditions[] = 'phone = ?';
+                            $params[] = $uPhone;
+                        }
+
+                        if (count($params) > 0) {
+                            $where = '(' . implode(' OR ', array_slice($conditions, 1)) . ')';
+                            $stmtE = $db->prepare("SELECT id FROM employees WHERE {$conditions[0]} AND {$where}");
+                            $stmtE->execute($params);
+                            $empIds = $stmtE->fetchAll(\PDO::FETCH_COLUMN) ?: [];
+
+                            if (!empty($empIds)) {
+                                $ph = implode(',', array_fill(0, count($empIds), '?'));
+                                $db->prepare("DELETE FROM employee_payments WHERE employee_id IN ({$ph})")->execute(array_map('intval', $empIds));
+                                $db->prepare("DELETE FROM employees WHERE id IN ({$ph})")->execute(array_map('intval', $empIds));
+                            }
+                        }
+                    }
+                } catch (\Exception $e) {
+                    // ignore
+                }
                 error_log("Employees deleted successfully");
 
                 // Delete expenses created by this user
