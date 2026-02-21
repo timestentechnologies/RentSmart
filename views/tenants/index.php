@@ -863,15 +863,28 @@ document.addEventListener('DOMContentLoaded', function() {
                 .then(response => response.json())
                 .then(data => {
                     if (data.success && data.units) {
+                        let vacantFound = false;
                         data.units.forEach(unit => {
+                            const isSelected = (selectedUnitId && unit.id == selectedUnitId);
+                            const isVacant = (String(unit.status || '').toLowerCase() !== 'occupied');
+                            if (!isVacant && !isSelected) {
+                                return;
+                            }
                             const option = document.createElement('option');
                             option.value = unit.id;
                             option.textContent = `Unit ${unit.unit_number}`;
-                            if (selectedUnitId && unit.id == selectedUnitId) {
+                            if (isSelected) {
                                 option.selected = true;
                             }
                             unitSelect.appendChild(option);
+                            if (isVacant) vacantFound = true;
                         });
+                        if (!vacantFound && !selectedUnitId) {
+                            const option = document.createElement('option');
+                            option.value = '';
+                            option.textContent = 'No vacant units available';
+                            unitSelect.appendChild(option);
+                        }
                     }
                 });
         }
