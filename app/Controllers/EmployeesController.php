@@ -8,6 +8,7 @@ use App\Models\Expense;
 use App\Models\Account;
 use App\Models\LedgerEntry;
 use App\Models\User;
+use App\Models\RealtorListing;
 
 class EmployeesController
 {
@@ -32,11 +33,14 @@ class EmployeesController
         if ($this->role === 'realtor') {
             $employees = $employeeModel->getAll($this->userId);
             $properties = [];
+            $listingModel = new RealtorListing();
+            $listings = $listingModel->getAll($this->userId);
         } else {
             $userModel = new User();
             $userModel->find($this->userId);
             $employees = $employeeModel->getAll($this->userId);
             $properties = $userModel->getAccessibleProperties();
+            $listings = [];
         }
         require 'views/employees/index.php';
     }
@@ -56,6 +60,15 @@ class EmployeesController
                 if ($this->role !== 'realtor') {
                     $propertyId = !empty($_POST['property_id']) ? (int)$_POST['property_id'] : null;
                 }
+
+                $realtorListingId = null;
+                if ($this->role === 'realtor' && !empty($_POST['realtor_listing_id'])) {
+                    $listingModel = new RealtorListing();
+                    $l = $listingModel->getByIdWithAccess((int)$_POST['realtor_listing_id'], $this->userId);
+                    if ($l) {
+                        $realtorListingId = (int)$l['id'];
+                    }
+                }
                 $data = [
                     'user_id' => $this->userId,
                     'name' => trim($_POST['name'] ?? ''),
@@ -63,6 +76,7 @@ class EmployeesController
                     'phone' => $_POST['phone'] ?? null,
                     'salary' => (float)($_POST['salary'] ?? 0),
                     'property_id' => $propertyId,
+                    'realtor_listing_id' => $realtorListingId,
                     'status' => $_POST['status'] ?? 'active',
                     'role' => $_POST['role'] ?? 'general'
                 ];
@@ -176,12 +190,22 @@ class EmployeesController
                 if ($this->role !== 'realtor') {
                     $propertyId = !empty($_POST['property_id']) ? (int)$_POST['property_id'] : null;
                 }
+
+                $realtorListingId = null;
+                if ($this->role === 'realtor' && !empty($_POST['realtor_listing_id'])) {
+                    $listingModel = new RealtorListing();
+                    $l = $listingModel->getByIdWithAccess((int)$_POST['realtor_listing_id'], $this->userId);
+                    if ($l) {
+                        $realtorListingId = (int)$l['id'];
+                    }
+                }
                 $data = [
                     'name' => trim($_POST['name'] ?? $employee['name']),
                     'email' => $_POST['email'] ?? $employee['email'],
                     'phone' => $_POST['phone'] ?? $employee['phone'],
                     'salary' => (float)($_POST['salary'] ?? $employee['salary']),
                     'property_id' => $propertyId,
+                    'realtor_listing_id' => $realtorListingId,
                     'status' => $_POST['status'] ?? $employee['status']
                 ];
                 $success = $employeeModel->updateById($id, $data);

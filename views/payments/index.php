@@ -437,10 +437,6 @@ $isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
                             </div>
                         </div>
                         <div class="mb-3">
-                            <label class="form-label">Payment Date</label>
-                            <input type="date" class="form-control" name="payment_date" value="<?= date('Y-m-d') ?>" required>
-                        </div>
-                        <div class="mb-3">
                             <label class="form-label">Payment Type</label>
                             <input type="hidden" name="payment_type" id="realtor_payment_type" value="mortgage">
                             <input type="text" class="form-control" id="realtor_payment_type_label" value="One Time" readonly>
@@ -573,28 +569,23 @@ $isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
                         </div>
                     <?php endif; ?>
 
-                    <?php if ($isRealtor): ?>
-                        <input type="hidden" name="payment_method" value="cash">
-                        <input type="hidden" name="reference_number" value="">
-                    <?php else: ?>
-                        <div class="mb-3">
-                            <label for="payment_method" class="form-label">Payment Method</label>
-                            <select class="form-select" id="payment_method" name="payment_method" required onchange="togglePaymentMethodFields()">
-                                <option value="">Select Payment Method</option>
-                                <option value="cash">Cash</option>
-                                <option value="check">Check</option>
-                                <option value="bank_transfer">Bank Transfer</option>
-                                <option value="card">Credit/Debit Card</option>
-                                <option value="mpesa_manual">M-Pesa (Manual)</option>
-                                <option value="mpesa_stk">M-Pesa (STK Push)</option>
-                            </select>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="reference_number" class="form-label">Reference Number</label>
-                            <input type="text" class="form-control" id="reference_number" name="reference_number" placeholder="Optional reference number">
-                        </div>
-                    <?php endif; ?>
+                    <div class="mb-3">
+                        <label for="payment_method" class="form-label">Payment Method</label>
+                        <select class="form-select" id="payment_method" name="payment_method" required onchange="togglePaymentMethodFields()">
+                            <option value="">Select Payment Method</option>
+                            <option value="cash">Cash</option>
+                            <option value="check">Check</option>
+                            <option value="bank_transfer">Bank Transfer</option>
+                            <option value="card">Credit/Debit Card</option>
+                            <option value="mpesa_manual">M-Pesa (Manual)</option>
+                            <option value="mpesa_stk">M-Pesa (STK Push)</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="reference_number" class="form-label"><?= $isRealtor ? 'M-Pesa Reference' : 'Reference Number' ?></label>
+                        <input type="text" class="form-control" id="reference_number" name="reference_number" placeholder="<?= $isRealtor ? 'e.g., QWN213948J' : 'Optional reference number' ?>">
+                    </div>
                     
                     <div class="mb-3">
                         <label for="status" class="form-label">Payment Status</label>
@@ -606,17 +597,17 @@ $isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
                         </select>
                     </div>
                     
-                    <?php if (!$isRealtor): ?>
-                        <!-- M-Pesa Manual Fields -->
-                        <div id="mpesa_manual_fields" style="display: none;">
-                            <div class="mb-3">
-                                <label for="mpesa_phone" class="form-label">Phone Number</label>
-                                <input type="tel" id="mpesa_phone" name="mpesa_phone" class="form-control" placeholder="07XXXXXXXX">
-                            </div>
-                            <div class="mb-3">
-                                <label for="mpesa_transaction_code" class="form-label">Transaction Code</label>
-                                <input type="text" id="mpesa_transaction_code" name="mpesa_transaction_code" class="form-control" placeholder="e.g., QWN213948J">
-                            </div>
+                    <!-- M-Pesa Manual Fields -->
+                    <div id="mpesa_manual_fields" style="display: none;">
+                        <div class="mb-3">
+                            <label for="mpesa_phone" class="form-label">Phone Number</label>
+                            <input type="tel" id="mpesa_phone" name="mpesa_phone" class="form-control" placeholder="07XXXXXXXX">
+                        </div>
+                        <div class="mb-3">
+                            <label for="mpesa_transaction_code" class="form-label">Transaction Code</label>
+                            <input type="text" id="mpesa_transaction_code" name="mpesa_transaction_code" class="form-control" placeholder="e.g., QWN213948J">
+                        </div>
+                        <?php if (!$isRealtor): ?>
                             <div class="mb-3">
                                 <label for="mpesa_verification_status" class="form-label">Verification Status</label>
                                 <select id="mpesa_verification_status" name="mpesa_verification_status" class="form-select">
@@ -625,8 +616,8 @@ $isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
                                     <option value="rejected">Rejected</option>
                                 </select>
                             </div>
-                        </div>
-                    <?php endif; ?>
+                        <?php endif; ?>
+                    </div>
 
                     <div class="mb-3">
                         <label for="notes" class="form-label">Notes</label>
