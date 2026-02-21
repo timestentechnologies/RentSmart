@@ -11,6 +11,62 @@ ob_start();
         </div>
     </div>
 
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-muted">Total Clients</div>
+                    <div class="h4 mb-0"><?= (int)(($stats['total_clients'] ?? 0)) ?></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-muted">Total Properties</div>
+                    <div class="h4 mb-0"><?= (int)(($stats['total_properties'] ?? 0)) ?></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card">
+                <div class="card-body">
+                    <div class="text-muted">Total Contract Value</div>
+                    <div class="h4 mb-0"><?= number_format((float)(($stats['total_contract_value'] ?? 0)), 2) ?></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label">Search</label>
+                    <input type="text" class="form-control" id="contracts_search" placeholder="Search by client, property, status">
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Property</label>
+                    <select class="form-select" id="contracts_filter_property">
+                        <option value="">All properties</option>
+                        <?php foreach (($properties ?? []) as $p): ?>
+                            <option value="<?= (int)($p['id'] ?? 0) ?>"><?= htmlspecialchars((string)($p['name'] ?? '')) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">Status</label>
+                    <select class="form-select" id="contracts_filter_status">
+                        <option value="">All statuses</option>
+                        <option value="active">Active</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="card">
         <div class="card-body">
             <div class="table-responsive">
@@ -30,7 +86,7 @@ ob_start();
                     <tbody>
                         <?php foreach (($contracts ?? []) as $c): ?>
                             <tr>
-                                <td><?= htmlspecialchars((string)($c['property_name'] ?? '')) ?></td>
+                                <td data-property-id="<?= (int)($c['property_id'] ?? 0) ?>"><?= htmlspecialchars((string)($c['property_name'] ?? '')) ?></td>
                                 <td><?= htmlspecialchars((string)($c['client_name'] ?? '')) ?></td>
                                 <td><?= htmlspecialchars((string)($c['terms_type'] ?? '')) ?></td>
                                 <td><?= number_format((float)($c['total_amount'] ?? 0), 2) ?></td>
@@ -101,8 +157,17 @@ ob_start();
                             </select>
                         </div>
                         <div class="col-md-4">
+                            <label class="form-label">Commission %</label>
+                            <input class="form-control" name="commission_percent" id="edit_commission_percent" type="number" step="0.01" min="0" required>
+                        </div>
+                        <div class="col-md-4">
                             <label class="form-label">Total Amount</label>
-                            <input class="form-control" name="total_amount" id="edit_total_amount" type="number" step="0.01" min="0" required>
+                            <input class="form-control" name="total_amount" id="edit_total_amount" type="number" step="0.01" min="0" readonly required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Units</label>
+                            <div class="border rounded p-2" style="max-height:220px; overflow:auto;" id="edit_units_list"></div>
+                            <div class="form-text" id="edit_units_hint">Select a property to load units.</div>
                         </div>
                         <div class="col-md-4" id="edit_duration_wrap" style="display:none;">
                             <label class="form-label">Duration (months)</label>
@@ -149,7 +214,7 @@ ob_start();
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label">Property</label>
-                            <select class="form-select" name="property_id" required>
+                            <select class="form-select" name="property_id" id="add_contract_property" required>
                                 <option value="">Select property</option>
                                 <?php foreach (($properties ?? []) as $p): ?>
                                     <option value="<?= (int)($p['id'] ?? 0) ?>"><?= htmlspecialchars((string)($p['name'] ?? '')) ?></option>
@@ -158,7 +223,7 @@ ob_start();
                         </div>
                         <div class="col-md-6">
                             <label class="form-label">Client</label>
-                            <select class="form-select" name="agent_client_id" required>
+                            <select class="form-select" name="agent_client_id" id="add_contract_client" required>
                                 <option value="">Select client</option>
                                 <?php foreach (($clients ?? []) as $cl): ?>
                                     <?php foreach (($cl['property_pairs'] ?? []) as $pp): ?>
@@ -178,8 +243,17 @@ ob_start();
                             </select>
                         </div>
                         <div class="col-md-4">
+                            <label class="form-label">Commission %</label>
+                            <input class="form-control" name="commission_percent" id="add_commission_percent" type="number" step="0.01" min="0" required>
+                        </div>
+                        <div class="col-md-4">
                             <label class="form-label">Total Amount</label>
-                            <input class="form-control" name="total_amount" type="number" step="0.01" min="0" required>
+                            <input class="form-control" name="total_amount" id="add_total_amount" type="number" step="0.01" min="0" readonly required>
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Units</label>
+                            <div class="border rounded p-2" style="max-height:220px; overflow:auto;" id="add_units_list"></div>
+                            <div class="form-text" id="add_units_hint">Select a property to load units.</div>
                         </div>
                         <div class="col-md-4" id="duration_wrap" style="display:none;">
                             <label class="form-label">Duration (months)</label>
@@ -261,6 +335,92 @@ ob_start();
     propSel.addEventListener('change', filterClients);
   }
 
+  const addPropSel = document.getElementById('add_contract_property');
+  const addClientSel = document.getElementById('add_contract_client');
+  function filterAddClients(){
+    if(!addPropSel || !addClientSel) return;
+    const pid = String(addPropSel.value || '');
+    Array.from(addClientSel.options).forEach(opt=>{
+      if(!opt.value) return;
+      const optPid = opt.getAttribute('data-property-id') || '';
+      const ok = !pid || optPid === pid;
+      opt.hidden = !ok;
+    });
+    const sel = addClientSel.selectedOptions && addClientSel.selectedOptions.length ? addClientSel.selectedOptions[0] : null;
+    if(sel && sel.hidden){
+      addClientSel.value = '';
+    }
+  }
+  if(addPropSel){
+    addPropSel.addEventListener('change', filterAddClients);
+  }
+
+  function loadUnits(propertyId, targetListEl, targetHintEl, selectedUnitIds){
+    if(!targetListEl) return;
+    targetListEl.innerHTML = '';
+    if(!propertyId){
+      if(targetHintEl) targetHintEl.textContent = 'Select a property to load units.';
+      return;
+    }
+    if(targetHintEl) targetHintEl.textContent = 'Loading units...';
+    fetch('<?= BASE_URL ?>' + '/properties/' + propertyId + '/units')
+      .then(r=>r.json())
+      .then(resp=>{
+        const units = (resp && resp.success && Array.isArray(resp.units)) ? resp.units : [];
+        if(targetHintEl) targetHintEl.textContent = units.length ? 'Select one or more units.' : 'No units found for this property.';
+        units.forEach(u=>{
+          const id = String(u.id || '');
+          if(!id) return;
+          const rent = Number(u.rent_amount || 0);
+          const wrap = document.createElement('div');
+          wrap.className = 'form-check';
+          const input = document.createElement('input');
+          input.className = 'form-check-input';
+          input.type = 'checkbox';
+          input.name = 'unit_ids[]';
+          input.value = id;
+          input.setAttribute('data-rent', String(rent));
+          input.id = (targetListEl.id || 'units') + '_' + id;
+          if(Array.isArray(selectedUnitIds) && selectedUnitIds.includes(id)){
+            input.checked = true;
+          }
+          const label = document.createElement('label');
+          label.className = 'form-check-label';
+          label.setAttribute('for', input.id);
+          const unitNo = (u.unit_number !== undefined && u.unit_number !== null) ? String(u.unit_number) : id;
+          label.textContent = unitNo + ' - ' + rent.toFixed(2);
+          wrap.appendChild(input);
+          wrap.appendChild(label);
+          targetListEl.appendChild(wrap);
+        });
+      })
+      .catch(()=>{
+        if(targetHintEl) targetHintEl.textContent = 'Failed to load units.';
+      });
+  }
+
+  function calcTotal(listEl, percentEl, totalEl){
+    if(!listEl || !percentEl || !totalEl) return;
+    const pct = Number(percentEl.value || 0);
+    const units = Array.from(listEl.querySelectorAll('input[type="checkbox"]:checked'));
+    let rentTotal = 0;
+    units.forEach(i=>{ rentTotal += Number(i.getAttribute('data-rent') || 0); });
+    const amount = rentTotal > 0 && pct > 0 ? ((rentTotal * pct) / 100) : 0;
+    totalEl.value = amount.toFixed(2);
+  }
+
+  const addUnitsList = document.getElementById('add_units_list');
+  const addUnitsHint = document.getElementById('add_units_hint');
+  const addPct = document.getElementById('add_commission_percent');
+  const addTotal = document.getElementById('add_total_amount');
+  addPropSel?.addEventListener('change', ()=>{
+    loadUnits(addPropSel.value, addUnitsList, addUnitsHint, []);
+    filterAddClients();
+    setTimeout(()=>calcTotal(addUnitsList, addPct, addTotal), 0);
+  });
+  addUnitsList?.addEventListener('change', ()=>calcTotal(addUnitsList, addPct, addTotal));
+  addPct?.addEventListener('input', ()=>calcTotal(addUnitsList, addPct, addTotal));
+
   const editModalEl = document.getElementById('editContractModal');
   function getEditModal(){
     if(!editModalEl) return null;
@@ -278,7 +438,7 @@ ob_start();
         filterClients();
         document.getElementById('edit_contract_client').value = (c.agent_client_id !== undefined && c.agent_client_id !== null) ? String(c.agent_client_id) : '';
         document.getElementById('edit_terms_type').value = c.terms_type || 'one_time';
-        document.getElementById('edit_total_amount').value = (c.total_amount !== undefined && c.total_amount !== null) ? String(c.total_amount) : '0';
+        document.getElementById('edit_commission_percent').value = (c.commission_percent !== undefined && c.commission_percent !== null) ? String(c.commission_percent) : '0';
         document.getElementById('edit_duration_months').value = (c.duration_months !== undefined && c.duration_months !== null) ? String(c.duration_months) : '';
         if (c.start_month) {
           document.getElementById('edit_start_month').value = String(c.start_month).slice(0, 7);
@@ -287,6 +447,16 @@ ob_start();
         }
         document.getElementById('edit_status').value = c.status || 'active';
         document.getElementById('edit_instructions').value = c.instructions || '';
+
+        const editUnitsList = document.getElementById('edit_units_list');
+        const editUnitsHint = document.getElementById('edit_units_hint');
+        const editPct = document.getElementById('edit_commission_percent');
+        const editTotal = document.getElementById('edit_total_amount');
+        const unitIdsCsv = String(c.unit_ids || '');
+        const selectedUnitIds = unitIdsCsv ? unitIdsCsv.split(',').map(s=>s.trim()).filter(Boolean) : [];
+        loadUnits(String(c.property_id || ''), editUnitsList, editUnitsHint, selectedUnitIds);
+        setTimeout(()=>calcTotal(editUnitsList, editPct, editTotal), 200);
+
         editSync();
         const editModal = getEditModal();
         if(!editModal){
@@ -297,6 +467,18 @@ ob_start();
       })
       .catch(()=>alert('Failed to load contract'));
   }
+
+  const editUnitsList = document.getElementById('edit_units_list');
+  const editUnitsHint = document.getElementById('edit_units_hint');
+  const editPct = document.getElementById('edit_commission_percent');
+  const editTotal = document.getElementById('edit_total_amount');
+  propSel?.addEventListener('change', ()=>{
+    loadUnits(propSel.value, editUnitsList, editUnitsHint, []);
+    filterClients();
+    setTimeout(()=>calcTotal(editUnitsList, editPct, editTotal), 0);
+  });
+  editUnitsList?.addEventListener('change', ()=>calcTotal(editUnitsList, editPct, editTotal));
+  editPct?.addEventListener('input', ()=>calcTotal(editUnitsList, editPct, editTotal));
 
   document.getElementById('editContractForm')?.addEventListener('submit', async (e)=>{
     e.preventDefault();
@@ -313,6 +495,32 @@ ob_start();
       alert('Failed to update');
     }
   });
+
+  const searchEl = document.getElementById('contracts_search');
+  const filterPropEl = document.getElementById('contracts_filter_property');
+  const filterStatusEl = document.getElementById('contracts_filter_status');
+  function filterTable(){
+    const q = String(searchEl?.value || '').toLowerCase().trim();
+    const pid = String(filterPropEl?.value || '');
+    const st = String(filterStatusEl?.value || '').toLowerCase();
+    document.querySelectorAll('table.table tbody tr').forEach(tr=>{
+      const tds = tr.querySelectorAll('td');
+      if(!tds || tds.length < 6) return;
+      const propTd = tds[0];
+      const propId = propTd?.getAttribute('data-property-id') || '';
+      const propName = (tds[0]?.textContent || '').toLowerCase();
+      const clientName = (tds[1]?.textContent || '').toLowerCase();
+      const status = (tds[5]?.textContent || '').toLowerCase();
+      const hay = (propName + ' ' + clientName + ' ' + status);
+      const okQ = !q || hay.includes(q);
+      const okP = !pid || propId === pid;
+      const okS = !st || status === st;
+      tr.style.display = (okQ && okP && okS) ? '' : 'none';
+    });
+  }
+  searchEl?.addEventListener('input', filterTable);
+  filterPropEl?.addEventListener('change', filterTable);
+  filterStatusEl?.addEventListener('change', filterTable);
 })();
 </script>
 

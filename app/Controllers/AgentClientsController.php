@@ -5,6 +5,7 @@ namespace App\Controllers;
 use App\Models\AgentClient;
 use App\Models\AgentContract;
 use App\Models\Property;
+use App\Models\Unit;
 
 class AgentClientsController
 {
@@ -106,6 +107,50 @@ class AgentClientsController
                 ]);
 
                 $clientModel->syncClientProperties((int)$clientId, (int)$this->userId, $propertyIds);
+
+                $contractModel = new AgentContract();
+                $unitModel = new Unit();
+                foreach ($propertyIds as $pid) {
+                    $existingId = $contractModel->getIdByClientProperty((int)$this->userId, (int)$clientId, (int)$pid);
+                    if ($existingId) {
+                        continue;
+                    }
+
+                    $units = $unitModel->query("SELECT id, rent_amount FROM units WHERE property_id = ? ORDER BY id", [(int)$pid]);
+                    $unitIds = [];
+                    $rentTotal = 0.0;
+                    foreach (($units ?? []) as $u) {
+                        $uid = (int)($u['id'] ?? 0);
+                        if ($uid <= 0) continue;
+                        $unitIds[] = $uid;
+                        $rentTotal += (float)($u['rent_amount'] ?? 0);
+                    }
+                    if (empty($unitIds) || $rentTotal <= 0) {
+                        continue;
+                    }
+
+                    $commissionPercent = 10.0;
+                    $totalAmount = round(($rentTotal * $commissionPercent) / 100, 2);
+                    if ($totalAmount <= 0) {
+                        continue;
+                    }
+
+                    $newContractId = $contractModel->insert([
+                        'user_id' => (int)$this->userId,
+                        'property_id' => (int)$pid,
+                        'agent_client_id' => (int)$clientId,
+                        'terms_type' => 'one_time',
+                        'total_amount' => (float)$totalAmount,
+                        'monthly_amount' => null,
+                        'duration_months' => null,
+                        'start_month' => null,
+                        'instructions' => null,
+                        'commission_percent' => (float)$commissionPercent,
+                        'rent_total' => (float)$rentTotal,
+                        'status' => 'active',
+                    ]);
+                    $contractModel->syncContractUnits((int)$newContractId, (int)$this->userId, $unitIds);
+                }
                 $clientModel->commit();
             } catch (\Exception $e) {
                 $clientModel->rollback();
@@ -165,6 +210,8 @@ class AgentClientsController
                 exit;
             }
 
+            $previousPropertyIds = $clientModel->getClientPropertyIds((int)$id, (int)$this->userId);
+
             $propertyIdsRaw = $_POST['property_ids'] ?? ($row['property_ids'] ?? []);
             if (!is_array($propertyIdsRaw)) {
                 $propertyIdsRaw = [$propertyIdsRaw];
@@ -206,6 +253,53 @@ class AgentClientsController
                     'notes' => $notes,
                 ]);
                 $clientModel->syncClientProperties((int)$id, (int)$this->userId, $propertyIds);
+
+                $addedPropertyIds = array_values(array_diff($propertyIds, $previousPropertyIds));
+                if (!empty($addedPropertyIds)) {
+                    $contractModel = new AgentContract();
+                    $unitModel = new Unit();
+                    foreach ($addedPropertyIds as $pid) {
+                        $existingId = $contractModel->getIdByClientProperty((int)$this->userId, (int)$id, (int)$pid);
+                        if ($existingId) {
+                            continue;
+                        }
+
+                        $units = $unitModel->query("SELECT id, rent_amount FROM units WHERE property_id = ? ORDER BY id", [(int)$pid]);
+                        $unitIds = [];
+                        $rentTotal = 0.0;
+                        foreach (($units ?? []) as $u) {
+                            $uid = (int)($u['id'] ?? 0);
+                            if ($uid <= 0) continue;
+                            $unitIds[] = $uid;
+                            $rentTotal += (float)($u['rent_amount'] ?? 0);
+                        }
+                        if (empty($unitIds) || $rentTotal <= 0) {
+                            continue;
+                        }
+
+                        $commissionPercent = 10.0;
+                        $totalAmount = round(($rentTotal * $commissionPercent) / 100, 2);
+                        if ($totalAmount <= 0) {
+                            continue;
+                        }
+
+                        $newContractId = $contractModel->insert([
+                            'user_id' => (int)$this->userId,
+                            'property_id' => (int)$pid,
+                            'agent_client_id' => (int)$id,
+                            'terms_type' => 'one_time',
+                            'total_amount' => (float)$totalAmount,
+                            'monthly_amount' => null,
+                            'duration_months' => null,
+                            'start_month' => null,
+                            'instructions' => null,
+                            'commission_percent' => (float)$commissionPercent,
+                            'rent_total' => (float)$rentTotal,
+                            'status' => 'active',
+                        ]);
+                        $contractModel->syncContractUnits((int)$newContractId, (int)$this->userId, $unitIds);
+                    }
+                }
                 $clientModel->commit();
             } catch (\Exception $e) {
                 $clientModel->rollback();
