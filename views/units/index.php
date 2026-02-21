@@ -605,29 +605,6 @@ $(document).ready(function() {
         });
     });
 
-    const assignEl = document.getElementById('assignTenantRequiredModal');
-    const editEl = document.getElementById('editUnitModal');
-    if (assignEl && editEl) {
-        // Safety: never keep edit modal blurred unless assign modal is open
-        editEl.addEventListener('show.bs.modal', function() {
-            const content = editEl.querySelector('.modal-content');
-            if (content) content.classList.remove('blurred-by-assign-tenant');
-        });
-        editEl.addEventListener('hidden.bs.modal', function() {
-            const content = editEl.querySelector('.modal-content');
-            if (content) content.classList.remove('blurred-by-assign-tenant');
-        });
-
-        assignEl.addEventListener('show.bs.modal', function() {
-            const content = editEl.querySelector('.modal-content');
-            if (content) content.classList.add('blurred-by-assign-tenant');
-        });
-        assignEl.addEventListener('hidden.bs.modal', function() {
-            const content = editEl.querySelector('.modal-content');
-            if (content) content.classList.remove('blurred-by-assign-tenant');
-        });
-    }
-
     // Property filter
     $('#propertyFilter').on('change', function() {
         const value = $(this).val();
@@ -1318,23 +1295,9 @@ function openImageModal(imageUrl, imageName) {
     const imageModal = new bootstrap.Modal(modal);
     imageModal.show();
 }
-
 </script>
 
 <style>
-.blurred-by-assign-tenant {
-    filter: blur(3px);
-    pointer-events: none;
-    user-select: none;
-}
-
-/* Ensure the nested assign modal stays above the edit modal */
-#assignTenantRequiredModal {
-    z-index: 1060;
-}
-.modal-backdrop.show {
-    z-index: 1055;
-}
 /* Custom Styles */
 .page-header {
     background: #fff;

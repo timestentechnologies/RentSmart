@@ -57,16 +57,12 @@ class UnitsController
             $properties = $this->property->getAll($_SESSION['user_id']);
             $tenantModel = new Tenant();
             $tenants = $tenantModel->getAll($_SESSION['user_id']);
-            $unassignedTenants = array_values(array_filter($tenants, function ($t) {
-                $unitNo = isset($t['unit_number']) ? trim((string)$t['unit_number']) : '';
-                return ($unitNo === '' || $unitNo === '-');
-            }));
             
             echo view('units/index', [
                 'title' => 'Units',
                 'units' => $units,
                 'properties' => $properties,
-                'tenants' => $unassignedTenants
+                'tenants' => $tenants
             ]);
         } catch (Exception $e) {
             error_log("Error in UnitsController::index: " . $e->getMessage());
