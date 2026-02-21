@@ -158,15 +158,15 @@ ob_start();
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">Commission %</label>
-                            <input class="form-control" name="commission_percent" id="edit_commission_percent" type="number" step="0.01" min="0" required>
+                            <input class="form-control" name="commission_percent" id="edit_commission_percent" type="number" step="0.01" min="0">
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">Total Amount</label>
-                            <input class="form-control" name="total_amount" id="edit_total_amount" type="number" step="0.01" min="0" readonly required>
+                            <input class="form-control" name="total_amount" id="edit_total_amount" type="number" step="0.01" min="0" required>
                         </div>
                         <div class="col-12">
                             <label class="form-label">Units</label>
-                            <div class="border rounded p-2" style="max-height:220px; overflow:auto;" id="edit_units_list"></div>
+                            <div class="border rounded p-2" style="max-height:220px; overflow:auto; display:none;" id="edit_units_list"></div>
                             <div class="form-text" id="edit_units_hint">Select a property to load units.</div>
                         </div>
                         <div class="col-md-4" id="edit_duration_wrap" style="display:none;">
@@ -244,15 +244,15 @@ ob_start();
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">Commission %</label>
-                            <input class="form-control" name="commission_percent" id="add_commission_percent" type="number" step="0.01" min="0" required>
+                            <input class="form-control" name="commission_percent" id="add_commission_percent" type="number" step="0.01" min="0">
                         </div>
                         <div class="col-md-4">
                             <label class="form-label">Total Amount</label>
-                            <input class="form-control" name="total_amount" id="add_total_amount" type="number" step="0.01" min="0" readonly required>
+                            <input class="form-control" name="total_amount" id="add_total_amount" type="number" step="0.01" min="0" required>
                         </div>
                         <div class="col-12">
                             <label class="form-label">Units</label>
-                            <div class="border rounded p-2" style="max-height:220px; overflow:auto;" id="add_units_list"></div>
+                            <div class="border rounded p-2" style="max-height:220px; overflow:auto; display:none;" id="add_units_list"></div>
                             <div class="form-text" id="add_units_hint">Select a property to load units.</div>
                         </div>
                         <div class="col-md-4" id="duration_wrap" style="display:none;">
@@ -355,19 +355,64 @@ ob_start();
     addPropSel.addEventListener('change', filterAddClients);
   }
 
+  function renderSelectAll(listEl){
+    if(!listEl) return;
+    const existing = listEl.querySelector('[data-select-all="1"]');
+    if(existing) return;
+    const wrap = document.createElement('div');
+    wrap.className = 'form-check border-bottom pb-2 mb-2';
+    wrap.setAttribute('data-select-all', '1');
+    const input = document.createElement('input');
+    input.className = 'form-check-input';
+    input.type = 'checkbox';
+    input.id = (listEl.id || 'units') + '_select_all';
+    const label = document.createElement('label');
+    label.className = 'form-check-label';
+    label.setAttribute('for', input.id);
+    label.textContent = 'Select all units';
+    wrap.appendChild(input);
+    wrap.appendChild(label);
+    listEl.appendChild(wrap);
+
+    input.addEventListener('change', ()=>{
+      const checked = !!input.checked;
+      Array.from(listEl.querySelectorAll('input[type="checkbox"][name="unit_ids[]"]')).forEach(cb=>{
+        cb.checked = checked;
+      });
+      listEl.dispatchEvent(new Event('change'));
+    });
+  }
+
+  function updateSelectAllState(listEl){
+    if(!listEl) return;
+    const selAll = listEl.querySelector('input[type="checkbox"]#' + (listEl.id || 'units') + '_select_all');
+    if(!selAll) return;
+    const boxes = Array.from(listEl.querySelectorAll('input[type="checkbox"][name="unit_ids[]"]'));
+    if(!boxes.length){
+      selAll.checked = false;
+      return;
+    }
+    const checkedCount = boxes.filter(b=>b.checked).length;
+    selAll.checked = checkedCount === boxes.length;
+  }
+
   function loadUnits(propertyId, targetListEl, targetHintEl, selectedUnitIds){
-    if(!targetListEl) return;
+    if(!targetListEl) return Promise.resolve();
     targetListEl.innerHTML = '';
     if(!propertyId){
       if(targetHintEl) targetHintEl.textContent = 'Select a property to load units.';
-      return;
+      return Promise.resolve();
     }
     if(targetHintEl) targetHintEl.textContent = 'Loading units...';
-    fetch('<?= BASE_URL ?>' + '/properties/' + propertyId + '/units')
+    return fetch('<?= BASE_URL ?>' + '/properties/' + propertyId + '/units')
       .then(r=>r.json())
       .then(resp=>{
         const units = (resp && resp.success && Array.isArray(resp.units)) ? resp.units : [];
-        if(targetHintEl) targetHintEl.textContent = units.length ? 'Select one or more units.' : 'No units found for this property.';
+        if(targetHintEl) targetHintEl.textContent = units.length ? 'Units loaded (all units included by default).' : 'No units found for this property.';
+        // Keep unit selection hidden; units are included by default.
+        targetListEl.style.display = 'none';
+
+        const selectAllByDefault = !Array.isArray(selectedUnitIds);
         units.forEach(u=>{
           const id = String(u.id || '');
           if(!id) return;
@@ -381,7 +426,9 @@ ob_start();
           input.value = id;
           input.setAttribute('data-rent', String(rent));
           input.id = (targetListEl.id || 'units') + '_' + id;
-          if(Array.isArray(selectedUnitIds) && selectedUnitIds.includes(id)){
+          if (selectAllByDefault) {
+            input.checked = true;
+          } else if (selectedUnitIds.includes(id)) {
             input.checked = true;
           }
           const label = document.createElement('label');
@@ -406,7 +453,24 @@ ob_start();
     let rentTotal = 0;
     units.forEach(i=>{ rentTotal += Number(i.getAttribute('data-rent') || 0); });
     const amount = rentTotal > 0 && pct > 0 ? ((rentTotal * pct) / 100) : 0;
-    totalEl.value = amount.toFixed(2);
+    // Only auto-write total when commission % is provided; otherwise keep manual value.
+    if (String(percentEl.value || '').trim() !== '' && pct > 0) {
+      totalEl.value = amount.toFixed(2);
+    }
+    updateSelectAllState(listEl);
+  }
+
+  function toggleAutoMode(listEl, percentEl, totalEl){
+    if(!percentEl || !totalEl) return;
+    const hasPct = String(percentEl.value || '').trim() !== '' && Number(percentEl.value || 0) > 0;
+    totalEl.readOnly = hasPct;
+    if(listEl){
+      // Do not show unit list; always treat all loaded units as included
+      listEl.style.display = 'none';
+    }
+    if(hasPct){
+      calcTotal(listEl, percentEl, totalEl);
+    }
   }
 
   const addUnitsList = document.getElementById('add_units_list');
@@ -414,12 +478,13 @@ ob_start();
   const addPct = document.getElementById('add_commission_percent');
   const addTotal = document.getElementById('add_total_amount');
   addPropSel?.addEventListener('change', ()=>{
-    loadUnits(addPropSel.value, addUnitsList, addUnitsHint, []);
+    loadUnits(addPropSel.value, addUnitsList, addUnitsHint, null).then(()=>{
+      toggleAutoMode(addUnitsList, addPct, addTotal);
+    });
     filterAddClients();
-    setTimeout(()=>calcTotal(addUnitsList, addPct, addTotal), 0);
   });
   addUnitsList?.addEventListener('change', ()=>calcTotal(addUnitsList, addPct, addTotal));
-  addPct?.addEventListener('input', ()=>calcTotal(addUnitsList, addPct, addTotal));
+  addPct?.addEventListener('input', ()=>toggleAutoMode(addUnitsList, addPct, addTotal));
 
   const editModalEl = document.getElementById('editContractModal');
   function getEditModal(){
@@ -439,6 +504,8 @@ ob_start();
         document.getElementById('edit_contract_client').value = (c.agent_client_id !== undefined && c.agent_client_id !== null) ? String(c.agent_client_id) : '';
         document.getElementById('edit_terms_type').value = c.terms_type || 'one_time';
         document.getElementById('edit_commission_percent').value = (c.commission_percent !== undefined && c.commission_percent !== null) ? String(c.commission_percent) : '0';
+        // Show last saved total immediately (will be recalculated once units load)
+        document.getElementById('edit_total_amount').value = (c.total_amount !== undefined && c.total_amount !== null) ? String(c.total_amount) : '0.00';
         document.getElementById('edit_duration_months').value = (c.duration_months !== undefined && c.duration_months !== null) ? String(c.duration_months) : '';
         if (c.start_month) {
           document.getElementById('edit_start_month').value = String(c.start_month).slice(0, 7);
@@ -453,9 +520,10 @@ ob_start();
         const editPct = document.getElementById('edit_commission_percent');
         const editTotal = document.getElementById('edit_total_amount');
         const unitIdsCsv = String(c.unit_ids || '');
-        const selectedUnitIds = unitIdsCsv ? unitIdsCsv.split(',').map(s=>s.trim()).filter(Boolean) : [];
-        loadUnits(String(c.property_id || ''), editUnitsList, editUnitsHint, selectedUnitIds);
-        setTimeout(()=>calcTotal(editUnitsList, editPct, editTotal), 200);
+        const selectedUnitIds = unitIdsCsv ? unitIdsCsv.split(',').map(s=>s.trim()).filter(Boolean) : null;
+        loadUnits(String(c.property_id || ''), editUnitsList, editUnitsHint, selectedUnitIds).then(()=>{
+          toggleAutoMode(editUnitsList, editPct, editTotal);
+        });
 
         editSync();
         const editModal = getEditModal();
@@ -473,12 +541,13 @@ ob_start();
   const editPct = document.getElementById('edit_commission_percent');
   const editTotal = document.getElementById('edit_total_amount');
   propSel?.addEventListener('change', ()=>{
-    loadUnits(propSel.value, editUnitsList, editUnitsHint, []);
+    loadUnits(propSel.value, editUnitsList, editUnitsHint, null).then(()=>{
+      toggleAutoMode(editUnitsList, editPct, editTotal);
+    });
     filterClients();
-    setTimeout(()=>calcTotal(editUnitsList, editPct, editTotal), 0);
   });
   editUnitsList?.addEventListener('change', ()=>calcTotal(editUnitsList, editPct, editTotal));
-  editPct?.addEventListener('input', ()=>calcTotal(editUnitsList, editPct, editTotal));
+  editPct?.addEventListener('input', ()=>toggleAutoMode(editUnitsList, editPct, editTotal));
 
   document.getElementById('editContractForm')?.addEventListener('submit', async (e)=>{
     e.preventDefault();

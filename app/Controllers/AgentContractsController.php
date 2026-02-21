@@ -74,7 +74,7 @@ class AgentContractsController
         $propertyId = (int)($_POST['property_id'] ?? 0);
         $clientId = (int)($_POST['agent_client_id'] ?? 0);
         $termsType = trim((string)($_POST['terms_type'] ?? 'one_time'));
-        $commissionPercent = (float)($_POST['commission_percent'] ?? 0);
+        $commissionPercent = ($_POST['commission_percent'] ?? '') !== '' ? (float)$_POST['commission_percent'] : null;
         $unitIdsRaw = $_POST['unit_ids'] ?? [];
         if (!is_array($unitIdsRaw)) {
             $unitIdsRaw = [$unitIdsRaw];
@@ -83,6 +83,7 @@ class AgentContractsController
         $durationMonths = (int)($_POST['duration_months'] ?? 0);
         $startMonth = trim((string)($_POST['start_month'] ?? ''));
         $instructions = trim((string)($_POST['instructions'] ?? ''));
+        $manualTotalAmount = (float)($_POST['total_amount'] ?? 0);
 
         if ($propertyId <= 0 || $clientId <= 0) {
             $_SESSION['flash_message'] = 'Property and client are required';
@@ -95,18 +96,52 @@ class AgentContractsController
             $termsType = 'one_time';
         }
 
-        if ($commissionPercent <= 0) {
-            $_SESSION['flash_message'] = 'Commission percentage must be greater than 0';
-            $_SESSION['flash_type'] = 'danger';
-            header('Location: ' . BASE_URL . '/agent/contracts');
-            exit;
-        }
+        $totalAmount = $manualTotalAmount;
+        $rentTotal = null;
+        $commissionToSave = null;
 
-        if (empty($unitIds)) {
-            $_SESSION['flash_message'] = 'Please select at least one unit';
-            $_SESSION['flash_type'] = 'danger';
-            header('Location: ' . BASE_URL . '/agent/contracts');
-            exit;
+        if ($commissionPercent !== null && $commissionPercent > 0) {
+            $unitModel = new Unit();
+            $rentTotalCalc = 0.0;
+
+            if (empty($unitIds)) {
+                $units = $unitModel->query("SELECT id, rent_amount, property_id FROM units WHERE property_id = ? ORDER BY id", [(int)$propertyId]);
+                foreach (($units ?? []) as $u) {
+                    $uid = (int)($u['id'] ?? 0);
+                    if ($uid <= 0) continue;
+                    $unitIds[] = $uid;
+                    $rentTotalCalc += (float)($u['rent_amount'] ?? 0);
+                }
+            } else {
+                foreach ($unitIds as $uid) {
+                    $u = $unitModel->find((int)$uid);
+                    if (empty($u) || (int)($u['property_id'] ?? 0) !== (int)$propertyId) {
+                        $_SESSION['flash_message'] = 'Invalid unit selection';
+                        $_SESSION['flash_type'] = 'danger';
+                        header('Location: ' . BASE_URL . '/agent/contracts');
+                        exit;
+                    }
+                    $rentTotalCalc += (float)($u['rent_amount'] ?? 0);
+                }
+            }
+
+            $totalAmount = round(($rentTotalCalc * $commissionPercent) / 100, 2);
+            $rentTotal = (float)$rentTotalCalc;
+            $commissionToSave = (float)$commissionPercent;
+        } else {
+            // If units were provided without commission, still validate unit-property relationship.
+            if (!empty($unitIds)) {
+                $unitModel = new Unit();
+                foreach ($unitIds as $uid) {
+                    $u = $unitModel->find((int)$uid);
+                    if (empty($u) || (int)($u['property_id'] ?? 0) !== (int)$propertyId) {
+                        $_SESSION['flash_message'] = 'Invalid unit selection';
+                        $_SESSION['flash_type'] = 'danger';
+                        header('Location: ' . BASE_URL . '/agent/contracts');
+                        exit;
+                    }
+                }
+            }
         }
 
         if ($termsType === 'monthly') {
@@ -149,26 +184,7 @@ class AgentContractsController
             exit;
         }
 
-        $unitModel = new Unit();
-        $rentTotal = 0.0;
-        foreach ($unitIds as $uid) {
-            $u = $unitModel->find((int)$uid);
-            if (empty($u) || (int)($u['property_id'] ?? 0) !== (int)$propertyId) {
-                $_SESSION['flash_message'] = 'Invalid unit selection';
-                $_SESSION['flash_type'] = 'danger';
-                header('Location: ' . BASE_URL . '/agent/contracts');
-                exit;
-            }
-            $rentTotal += (float)($u['rent_amount'] ?? 0);
-        }
-
-        $totalAmount = round(($rentTotal * $commissionPercent) / 100, 2);
-        if ($totalAmount <= 0) {
-            $_SESSION['flash_message'] = 'Calculated amount must be greater than 0';
-            $_SESSION['flash_type'] = 'danger';
-            header('Location: ' . BASE_URL . '/agent/contracts');
-            exit;
-        }
+        // totalAmount can be manual (including 0) or auto-calculated above.
 
         $monthlyAmount = null;
         $startMonthDate = null;
@@ -194,8 +210,8 @@ class AgentContractsController
                     'duration_months' => $durationToSave,
                     'start_month' => $startMonthDate,
                     'instructions' => $instructions,
-                    'commission_percent' => (float)$commissionPercent,
-                    'rent_total' => (float)$rentTotal,
+                    'commission_percent' => $commissionToSave,
+                    'rent_total' => $rentTotal,
                     'status' => 'active',
                 ]);
                 $contractModel->syncContractUnits((int)$contractId, (int)$this->userId, $unitIds);
@@ -266,14 +282,15 @@ class AgentContractsController
                 : (int)($row['agent_client_id'] ?? 0);
             $termsType = trim((string)($_POST['terms_type'] ?? ($row['terms_type'] ?? 'one_time')));
             $commissionPercent = array_key_exists('commission_percent', $_POST)
-                ? (float)$_POST['commission_percent']
-                : (float)($row['commission_percent'] ?? 0);
+                ? (($_POST['commission_percent'] !== '' && $_POST['commission_percent'] !== null) ? (float)$_POST['commission_percent'] : null)
+                : (($row['commission_percent'] ?? null) !== null ? (float)$row['commission_percent'] : null);
             $unitIdsRaw = $_POST['unit_ids'] ?? ($row['unit_ids'] ?? []);
             if (!is_array($unitIdsRaw)) {
                 $unitIdsRaw = [$unitIdsRaw];
             }
             $unitIds = array_values(array_unique(array_filter(array_map('intval', $unitIdsRaw), fn($v) => $v > 0)));
-            $totalAmount = 0.0;
+            $manualTotalAmount = array_key_exists('total_amount', $_POST) ? (float)$_POST['total_amount'] : (float)($row['total_amount'] ?? 0);
+            $totalAmount = $manualTotalAmount;
             $durationMonths = (int)($_POST['duration_months'] ?? ($row['duration_months'] ?? 0));
             $startMonth = trim((string)($_POST['start_month'] ?? ''));
             $instructions = trim((string)($_POST['instructions'] ?? ($row['instructions'] ?? '')));
@@ -308,30 +325,47 @@ class AgentContractsController
                 exit;
             }
 
-            if ($commissionPercent <= 0) {
-                echo json_encode(['success' => false, 'message' => 'Commission percentage must be greater than 0']);
-                exit;
-            }
-            if (empty($unitIds)) {
-                echo json_encode(['success' => false, 'message' => 'Please select at least one unit']);
-                exit;
-            }
+            $rentTotal = null;
+            $commissionToSave = null;
 
-            $unitModel = new Unit();
-            $rentTotal = 0.0;
-            foreach ($unitIds as $uid) {
-                $u = $unitModel->find((int)$uid);
-                if (empty($u) || (int)($u['property_id'] ?? 0) !== (int)$propertyId) {
-                    echo json_encode(['success' => false, 'message' => 'Invalid unit selection']);
-                    exit;
+            if ($commissionPercent !== null && $commissionPercent > 0) {
+                $unitModel = new Unit();
+                $rentTotalCalc = 0.0;
+
+                if (empty($unitIds)) {
+                    $units = $unitModel->query("SELECT id, rent_amount, property_id FROM units WHERE property_id = ? ORDER BY id", [(int)$propertyId]);
+                    foreach (($units ?? []) as $u) {
+                        $uid = (int)($u['id'] ?? 0);
+                        if ($uid <= 0) continue;
+                        $unitIds[] = $uid;
+                        $rentTotalCalc += (float)($u['rent_amount'] ?? 0);
+                    }
+                } else {
+                    foreach ($unitIds as $uid) {
+                        $u = $unitModel->find((int)$uid);
+                        if (empty($u) || (int)($u['property_id'] ?? 0) !== (int)$propertyId) {
+                            echo json_encode(['success' => false, 'message' => 'Invalid unit selection']);
+                            exit;
+                        }
+                        $rentTotalCalc += (float)($u['rent_amount'] ?? 0);
+                    }
                 }
-                $rentTotal += (float)($u['rent_amount'] ?? 0);
-            }
 
-            $totalAmount = round(($rentTotal * $commissionPercent) / 100, 2);
-            if ($totalAmount <= 0) {
-                echo json_encode(['success' => false, 'message' => 'Calculated amount must be greater than 0']);
-                exit;
+                $totalAmount = round(($rentTotalCalc * $commissionPercent) / 100, 2);
+                $rentTotal = (float)$rentTotalCalc;
+                $commissionToSave = (float)$commissionPercent;
+            } else {
+                // Units can be saved without commission; validate if provided.
+                if (!empty($unitIds)) {
+                    $unitModel = new Unit();
+                    foreach ($unitIds as $uid) {
+                        $u = $unitModel->find((int)$uid);
+                        if (empty($u) || (int)($u['property_id'] ?? 0) !== (int)$propertyId) {
+                            echo json_encode(['success' => false, 'message' => 'Invalid unit selection']);
+                            exit;
+                        }
+                    }
+                }
             }
 
             $monthlyAmount = null;
@@ -362,8 +396,8 @@ class AgentContractsController
                     'duration_months' => $durationToSave,
                     'start_month' => $startMonthDate,
                     'instructions' => $instructions,
-                    'commission_percent' => (float)$commissionPercent,
-                    'rent_total' => (float)$rentTotal,
+                    'commission_percent' => $commissionToSave,
+                    'rent_total' => $rentTotal,
                     'status' => $status,
                 ]);
                 $contractModel->syncContractUnits((int)$id, (int)$this->userId, $unitIds);
