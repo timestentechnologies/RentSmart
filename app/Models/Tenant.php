@@ -537,4 +537,82 @@ class Tenant extends Model
         
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
-} 
+
+    public function getAccessibleTenantIds($userId = null): array
+    {
+        $rows = $this->getAll($userId);
+        $ids = [];
+        foreach ($rows as $r) {
+            $tid = (int)($r['id'] ?? 0);
+            if ($tid > 0) {
+                $ids[] = $tid;
+            }
+        }
+        return array_values(array_unique($ids));
+    }
+
+    public function getTenantIdsWithRentBalanceCurrentMonth($userId = null): array
+    {
+        $rows = $this->getDelinquentTenants($userId);
+        $ids = [];
+        foreach ($rows as $r) {
+            $tid = (int)($r['id'] ?? 0);
+            if ($tid > 0) {
+                $ids[] = $tid;
+            }
+        }
+        return array_values(array_unique($ids));
+    }
+
+    public function getTenantIdsWithRentBalanceIncludingPreviousMonths($userId = null): array
+    {
+        $user = new User();
+        $userData = $user->find($userId);
+        if (!$userData) {
+            return [];
+        }
+
+        if (($userData['role'] ?? '') === 'admin') {
+            $sql = "SELECT t.id
+                    FROM tenants t
+                    INNER JOIN leases l ON t.id = l.tenant_id AND l.status = 'active'
+                    INNER JOIN units u ON l.unit_id = u.id
+                    INNER JOIN properties p ON u.property_id = p.id
+                    LEFT JOIN payments pay ON l.id = pay.lease_id
+                        AND pay.status IN ('completed','verified')
+                        AND pay.payment_type = 'rent'
+                        AND pay.amount > 0
+                    GROUP BY t.id, l.rent_amount, l.start_date
+                    HAVING (l.rent_amount * (TIMESTAMPDIFF(MONTH, DATE_FORMAT(l.start_date, '%Y-%m-01'), DATE_FORMAT(CURRENT_DATE(), '%Y-%m-01')) + 1) - COALESCE(SUM(pay.amount), 0)) > 0
+                    ORDER BY t.id ASC";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute();
+        } else {
+            $sql = "SELECT t.id
+                    FROM tenants t
+                    INNER JOIN leases l ON t.id = l.tenant_id AND l.status = 'active'
+                    INNER JOIN units u ON l.unit_id = u.id
+                    INNER JOIN properties p ON u.property_id = p.id
+                    LEFT JOIN payments pay ON l.id = pay.lease_id
+                        AND pay.status IN ('completed','verified')
+                        AND pay.payment_type = 'rent'
+                        AND pay.amount > 0
+                    WHERE (p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ?)
+                    GROUP BY t.id, l.rent_amount, l.start_date
+                    HAVING (l.rent_amount * (TIMESTAMPDIFF(MONTH, DATE_FORMAT(l.start_date, '%Y-%m-01'), DATE_FORMAT(CURRENT_DATE(), '%Y-%m-01')) + 1) - COALESCE(SUM(pay.amount), 0)) > 0
+                    ORDER BY t.id ASC";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([(int)$userId, (int)$userId, (int)$userId, (int)$userId]);
+        }
+
+        $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+        $ids = [];
+        foreach ($rows as $r) {
+            $tid = (int)($r['id'] ?? 0);
+            if ($tid > 0) {
+                $ids[] = $tid;
+            }
+        }
+        return array_values(array_unique($ids));
+    }
+}

@@ -16,6 +16,23 @@ ob_start();
                 </div>
                 <div class="card-body p-0">
                     <div class="list-group list-group-flush" id="recipientList">
+                        <div class="list-group-item bg-light small text-muted">Broadcast</div>
+                        <a href="#" class="list-group-item list-group-item-action recipient-item" data-type="broadcast" data-id="all">
+                            <i class="bi bi-megaphone me-2"></i>
+                            All Tenants
+                            <div class="small text-muted">Send one message to every accessible tenant</div>
+                        </a>
+                        <a href="#" class="list-group-item list-group-item-action recipient-item" data-type="broadcast" data-id="due_current_month">
+                            <i class="bi bi-exclamation-circle me-2"></i>
+                            Tenants with Balance (Current Month)
+                            <div class="small text-muted">Only tenants owing rent for this month</div>
+                        </a>
+                        <a href="#" class="list-group-item list-group-item-action recipient-item" data-type="broadcast" data-id="due_previous_months">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            Tenants with Balance (Previous Months)
+                            <div class="small text-muted">Tenants owing rent including previous months</div>
+                        </a>
+
                         <?php if (!empty($recipients['tenants'])): ?>
                             <div class="list-group-item bg-light small text-muted">Tenants</div>
                             <?php foreach ($recipients['tenants'] as $t): ?>
@@ -128,6 +145,13 @@ ob_start();
     }catch(e){ chat.innerHTML = '<div class="text-center text-danger mt-5">Failed to load</div>'; }
   }
 
+  function selectBroadcast(id, label){
+    title.textContent = label || 'Broadcast';
+    rType.value = 'broadcast';
+    rId.value = id;
+    chat.innerHTML = '<div class="text-center text-muted mt-5">Broadcast selected. Type your message below and click send.</div>';
+  }
+
   list && list.addEventListener('click', function(e){
     const a = e.target.closest('.recipient-item');
     if (!a) return;
@@ -135,6 +159,10 @@ ob_start();
     const type = a.getAttribute('data-type');
     const id = a.getAttribute('data-id');
     const label = a.textContent.trim();
+    if (type === 'broadcast') {
+      selectBroadcast(id, label);
+      return;
+    }
     loadThread(type, id, label);
   });
 
@@ -146,7 +174,15 @@ ob_start();
     try{
       const res = await fetch('<?= BASE_URL ?>/messaging/send', { method:'POST', body: payload, headers: { 'X-CSRF-TOKEN': '<?= csrf_token() ?>' } });
       const data = await res.json();
-      if (data && data.success){ input.value=''; loadThread(type, id, title.textContent); }
+      if (data && data.success){
+        input.value='';
+        if (type === 'broadcast') {
+          const sent = (data && typeof data.sent !== 'undefined') ? data.sent : null;
+          chat.innerHTML = '<div class="text-center text-success mt-5">Message sent' + (sent !== null ? (' to ' + sent + ' tenants') : '') + '.</div>';
+        } else {
+          loadThread(type, id, title.textContent);
+        }
+      }
     }catch(e){}
   });
 })();
