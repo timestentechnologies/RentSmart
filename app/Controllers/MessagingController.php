@@ -129,6 +129,72 @@ class MessagingController
         exit;
     }
 
+    public function broadcastMeta()
+    {
+        header('Content-Type: application/json');
+        try {
+            if (!$this->userId) {
+                throw new \Exception('Unauthorized');
+            }
+
+            $key = strtolower(trim((string)($_GET['key'] ?? '')));
+            if ($key === '') {
+                throw new \Exception('Invalid broadcast recipient');
+            }
+
+            $tenantModel = new Tenant();
+            $ids = [];
+            if ($key === 'all') {
+                $ids = $tenantModel->getAccessibleTenantIds((int)$this->userId);
+            } else if ($key === 'due_current_month') {
+                $ids = $tenantModel->getTenantIdsWithRentBalanceCurrentMonth((int)$this->userId);
+            } else if ($key === 'due_previous_months') {
+                $ids = $tenantModel->getTenantIdsWithRentBalanceIncludingPreviousMonths((int)$this->userId);
+            } else {
+                throw new \Exception('Invalid broadcast recipient');
+            }
+
+            $count = count($ids);
+            $recipients = [];
+            if ($count > 0) {
+                $set = [];
+                foreach ($ids as $tid) {
+                    $tid = (int)$tid;
+                    if ($tid > 0) {
+                        $set[$tid] = true;
+                    }
+                }
+
+                $all = $tenantModel->getAll($this->userId);
+                foreach ($all as $t) {
+                    $tid = (int)($t['id'] ?? 0);
+                    if ($tid <= 0 || !isset($set[$tid])) {
+                        continue;
+                    }
+                    $recipients[] = [
+                        'id' => $tid,
+                        'name' => (string)($t['name'] ?? ('Tenant #' . $tid)),
+                        'property' => (string)($t['property_name'] ?? ''),
+                        'unit' => (string)($t['unit_number'] ?? ''),
+                    ];
+                    if (count($recipients) >= 50) {
+                        break;
+                    }
+                }
+            }
+
+            echo json_encode([
+                'success' => true,
+                'count' => $count,
+                'recipients' => $recipients,
+            ]);
+        } catch (\Exception $e) {
+            http_response_code(400);
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+        }
+        exit;
+    }
+
     public function send()
     {
         header('Content-Type: application/json');

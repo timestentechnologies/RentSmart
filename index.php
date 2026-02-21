@@ -336,6 +336,7 @@ $routes = [
     'messaging' => ['controller' => 'MessagingController', 'action' => 'index'],
     'messaging/thread' => ['controller' => 'MessagingController', 'action' => 'thread'],
     'messaging/send' => ['controller' => 'MessagingController', 'action' => 'send'],
+    'messaging/broadcast-meta' => ['controller' => 'MessagingController', 'action' => 'broadcastMeta'],
     // Notifications
     'notifications/feed' => ['controller' => 'NotificationsController', 'action' => 'feed'],
     'notifications/unread-count' => ['controller' => 'NotificationsController', 'action' => 'unreadCount'],
