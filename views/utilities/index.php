@@ -457,6 +457,11 @@ ob_start();
 // Helper function to show alerts - defined at the top level
 function showAlert(type, message) {
     console.log('Showing alert:', { type, message });
+
+    const $ = window.jQuery;
+    if (!$) {
+        return;
+    }
     
     // Remove any existing alerts
     $('.alert').remove();
@@ -472,7 +477,13 @@ function showAlert(type, message) {
     $('body').append(alertHtml);
 }
 
-$(document).ready(function() {
+document.addEventListener('DOMContentLoaded', function() {
+    const $ = window.jQuery;
+    if (!$) {
+        console.error('jQuery is not loaded - Utilities page scripts skipped');
+        return;
+    }
+
     const baseUrl = (window.BASE_URL || (typeof BASE_URL !== 'undefined' ? BASE_URL : '')).toString();
 
     $('#utilitiesTable').DataTable({
