@@ -730,18 +730,63 @@ class TenantsController
     {
         $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
         try {
-            // Get the tenant's unit_id before deleting
-            $tenant = $this->tenant->getById($id);
-            $unitId = $tenant['unit_id'] ?? null;
-            // Delete the tenant
-            $this->tenant->delete($id);
-            // Set the unit to vacant and remove tenant_id if applicable
-            if ($unitId) {
-                $this->unit->update($unitId, [
-                    'status' => 'vacant',
-                    'tenant_id' => null
-                ]);
+            $tenantId = (int)$id;
+            if ($tenantId <= 0) {
+                throw new \Exception('Invalid tenant');
             }
+
+            $this->db->beginTransaction();
+
+            // Find units occupied by this tenant via active lease(s)
+            $unitIds = [];
+            try {
+                $stmt = $this->db->prepare("SELECT DISTINCT unit_id FROM leases WHERE tenant_id = ? AND status = 'active' AND unit_id IS NOT NULL");
+                $stmt->execute([(int)$tenantId]);
+                $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+                foreach ($rows as $r) {
+                    $uId = (int)($r['unit_id'] ?? 0);
+                    if ($uId > 0) $unitIds[$uId] = true;
+                }
+            } catch (\Throwable $e) {
+                // ignore
+            }
+
+            // Also check units table in case it is used as authoritative assignment
+            try {
+                $stmt = $this->db->prepare("SELECT id FROM units WHERE tenant_id = ?");
+                $stmt->execute([(int)$tenantId]);
+                $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+                foreach ($rows as $r) {
+                    $uId = (int)($r['id'] ?? 0);
+                    if ($uId > 0) $unitIds[$uId] = true;
+                }
+            } catch (\Throwable $e) {
+                // ignore
+            }
+
+            // Terminate any active leases for this tenant
+            try {
+                $this->db->prepare("UPDATE leases SET status = 'terminated', updated_at = NOW() WHERE tenant_id = ? AND status = 'active'")
+                    ->execute([(int)$tenantId]);
+            } catch (\Throwable $e) {
+                // ignore
+            }
+
+            // Vacate any occupied units
+            if (!empty($unitIds)) {
+                $ids = array_keys($unitIds);
+                foreach ($ids as $uId) {
+                    $this->unit->update((int)$uId, [
+                        'status' => 'vacant',
+                        'tenant_id' => null
+                    ]);
+                }
+            }
+
+            // Delete the tenant
+            $this->tenant->delete($tenantId);
+
+            $this->db->commit();
             if ($isAjax) {
                 header('Content-Type: application/json');
                 echo json_encode(['success' => true, 'message' => 'Tenant deleted successfully']);
@@ -750,6 +795,12 @@ class TenantsController
             $_SESSION['flash_message'] = 'Tenant deleted successfully';
             $_SESSION['flash_type'] = 'success';
         } catch (\Exception $e) {
+            try {
+                if ($this->db && $this->db->inTransaction()) {
+                    $this->db->rollBack();
+                }
+            } catch (\Throwable $t) {
+            }
             if ($isAjax) {
                 header('Content-Type: application/json');
                 echo json_encode(['success' => false, 'message' => 'Error deleting tenant']);
