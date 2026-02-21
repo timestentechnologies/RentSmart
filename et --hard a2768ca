@@ -1,0 +1,208 @@
+[33mea73569[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m Remove exposed token file
+[33m9a00c1d[m Sartaday Canges
+[33m3af666e[m Sartaday Canges
+[33ma2768ca[m[33m ([m[1;31morigin/main[m[33m)[m Sartaday Canges
+[33ma915d0c[m Sartaday Canges
+[33m44c00b1[m Sartaday Canges
+[33m08aa8b9[m Sartaday Canges
+[33m8f8b689[m Sartaday Canges
+[33m278abe5[m Sartaday Canges
+[33m293fbe2[m Sartaday Canges
+[33m4f33acf[m Sartaday Canges
+[33m49d8d5d[m Sartaday Canges
+[33mf520239[m Sartaday Canges
+[33m3dc84f1[m Sartaday Canges
+[33mbdcc852[m Sartaday Canges
+[33mccd9960[m Sartaday Canges
+[33mb29e092[m Sartaday Canges
+[33m1276e42[m Sartaday Canges
+[33m9133746[m Sartaday Canges
+[33me151ed0[m Sartaday Canges
+[33maad7328[m Sartaday Canges
+[33mb257ac5[m agent CRM leads: replace contact with address
+[33mf3842f5[m agent CRM leads: replace contact with address
+[33mc516fc8[m agent CRM leads: replace contact with address
+[33m0d5890c[m agent CRM leads: replace contact with address
+[33m42f8ff7[m agent CRM leads: replace contact with address
+[33mc0baf27[m agent CRM leads: replace contact with address
+[33m338b397[m agent CRM leads: replace contact with address
+[33m6920a6e[m agent CRM leads: replace contact with address
+[33m214c15d[m agent CRM leads: replace contact with address
+[33mc52ff60[m agent CRM leads: replace contact with address
+[33mdfa87bf[m agent CRM leads: replace contact with address
+[33mbb44fe6[m agent CRM leads: replace contact with address
+[33m0abf3ec[m agent CRM leads: replace contact with address
+[33m3962555[m agent CRM leads: replace contact with address
+[33m218dced[m agent CRM leads: replace contact with address
+[33m55dd066[m agent CRM leads: replace contact with address
+[33m5cdb10b[m agent CRM leads: replace contact with address
+[33m405a630[m agent CRM leads: replace contact with address
+[33mf034cae[m agent CRM leads: replace contact with address
+[33m60b3cc2[m agent CRM leads: replace contact with address
+[33m53723b5[m agent CRM leads: replace contact with address
+[33m044993b[m agent CRM leads: replace contact with address
+[33m6142cea[m agent CRM leads: replace contact with address
+[33m5c1badf[m agent CRM leads: replace contact with address
+[33mafbac3a[m agent CRM leads: replace contact with address
+[33m8a857a6[m agent CRM leads: replace contact with address
+[33m1238321[m agent CRM leads: replace contact with address
+[33m342fe72[m agent CRM leads: replace contact with address
+[33m2b77a34[m agent CRM leads: replace contact with address
+[33m5f97ba6[m agent CRM leads: replace contact with address
+[33m0856311[m agent CRM leads: replace contact with address
+[33m8530c2d[m agent CRM leads: replace contact with address
+[33m06cf898[m agent CRM leads: replace contact with address
+[33mb3a423a[m agent CRM leads: replace contact with address
+[33mbb92bb0[m agent CRM leads: replace contact with address
+[33mfaf4674[m agent CRM leads: replace contact with address
+[33m4ad5245[m agent CRM leads: replace contact with address
+[33me781c3c[m agent CRM leads: replace contact with address
+[33ma75bf09[m agent CRM leads: replace contact with address
+[33m6ea2ea5[m decouple CRM leads from properties and add won options modal
+[33m755636b[m seed home_split_image default and keep new.png
+[33m14cdf0e[m show default split image preview when none set
+[33m6aa96cb[m show default split image preview when none set
+[33m2f2f131[m show split section image preview in settings
+[33m6c225e7[m cascade delete realtor data on user delete
+[33m2157700[m cascade delete realtor data on user delete
+[33mb5829c7[m fix realtor reports revenue calculation
+[33m9f0c09e[m show client listing from latest contract
+[33mcab90bd[m realtor contract edit: change client and edit client
+[33mcd8448b[m add realtor contract edit button
+[33m8023788[m delete realtor client listing on client delete
+[33m34734a9[m fix realtor leads corrupted modal markup
+[33m2590417[m fix realtor leads add listing modal switch
+[33mee56e70[m realtor leads add listing inline
+[33mfdc7062[m fix dashboard 500 division by zero
+[33m01daa16[m fix leads add property js binding
+[33m0f0cdef[m debug crm lead add property
+[33m99d8eb1[m fix crm add property and repopulate lead form
+[33mc6e4caa[m fix crm add property and repopulate lead form
+[33mbd3e225[m property delete confirmation modal
+[33m67b313c[m reset agent lead to new when deleting client
+[33ma94fa77[m client delete confirmation modal
+[33md87e93b[m agent delete client and contracts
+[33m56a44af[m crm amounts
+[33mb9518ef[m crm amounts
+[33m3d5859a[m crm amounts
+[33mdd517cb[m crm amounts
+[33m23ec4f0[m crm amounts
+[33m44a10e8[m crm amounts
+[33m979fa99[m crm amounts
+[33m92ae542[m crm amounts
+[33m44473fb[m crm amounts
+[33m5244811[m listings
+[33mcf9f29c[m Add diag probe mode
+[33mcc64e07[m Improve diag output for fatal errors
+[33m476e262[m listings
+[33m8f3402e[m Authorize diag.php via DEBUG_KEY
+[33mffd41e4[m Add diag endpoint for 500 debugging
+[33m544cd35[m Fix RealtorLead parse error
+[33m4d4ec8e[m listings
+[33mb093359[m listings
+[33m36c9c78[m listings
+[33me62a252[m listings
+[33meca9484[m listings
+[33m172818a[m listings
+[33macd6753[m listings
+[33m79f4017[m listings
+[33m2bae761[m realator
+[33m27890ba[m realator
+[33m0094bd4[m realator
+[33m12b8a7a[m realator
+[33m5f3658b[m realator
+[33m176d37e[m realator
+[33m0c0d35e[m realator
+[33mfea7c63[m realator
+[33m17f8c2c[m realator
+[33md3dd44d[m realator
+[33m819eb25[m realator
+[33m3e2b37a[m realator
+[33mc7eb303[m realator
+[33m4ababef[m realator
+[33m781e79c[m realator
+[33mafc3e85[m realator
+[33m28a6ce5[m realator
+[33m5cda377[m realator
+[33mb5f16ce[m realator
+[33m169feb4[m realator
+[33m1236e15[m realator
+[33ma29a465[m realator
+[33mb5da860[m realator
+[33m0701e5c[m realator
+[33me3264ea[m realator
+[33mfc9d7e4[m realator
+[33ma56546d[m realator
+[33m3c9e324[m realator
+[33m81ee745[m realator
+[33m3eea04b[m realator
+[33mf6553d4[m realator
+[33m687528a[m realator
+[33md9fb7cc[m realator
+[33m268af03[m realator
+[33m75868ae[m realator
+[33m246f5ea[m realator
+[33m0482a1f[m realator
+[33m5a2bd80[m realator
+[33mf327b69[m realator
+[33m4a3ee00[m realator
+[33mda2647d[m realator
+[33m625e721[m realator
+[33m330e233[m realator
+[33mf2d6e9d[m realator
+[33mb18b3ba[m realator
+[33ma289622[m realator
+[33m2578c31[m realator
+[33mec534ae[m realator
+[33m818d115[m realator
+[33m823fc18[m realator
+[33mfe04020[m realator
+[33mec43c29[m realator
+[33m90e2987[m dashboard
+[33m6bb5046[m dashboard
+[33m8c4ce12[m dashboard
+[33m4a6b5b0[m dashboard
+[33m77b5dab[m dashboard
+[33m0020794[m dashboard
+[33meeae4d4[m dashboard
+[33m8d89ec5[m dashboard
+[33m3aff03d[m dashboard
+[33m0dd6842[m dashboard
+[33m56816a7[m tenants documentations
+[33m38b4543[m tenants documentations
+[33m89b1ac8[m tenants documentations
+[33mc65e18e[m tenants documentations
+[33mf02fc57[m tenants documentations
+[33md6f6c8b[m tenants documentations
+[33ma46168a[m tenants documentations
+[33m11595dc[m tenants documentations
+[33m1834fd2[m tenants documentations
+[33m409c56c[m tenants documentations
+[33mb3abf6e[m tenants documentations
+[33m3b185df[m documentation
+[33mbff8ec0[m documentation
+[33mc3c0e76[m documentation
+[33m5509b26[m documentation
+[33md38681f[m documentation
+[33m372b822[m documentation
+[33m20b8f26[m documentation
+[33m90a1883[m documentation
+[33m4c56872[m documentation
+[33m68a855e[m documentation
+[33m6e05eb4[m documentation
+[33me8f3c40[m documentation
+[33mde7a6e6[m documentation
+[33mba8a822[m messaging
+[33m6b076ac[m messaging
+[33m2eb0b8b[m messaging
+[33mda248be[m messaging
+[33m91c0551[m messaging
+[33m92be187[m messaging
+[33m6c17c36[m messaging
+[33m6807d02[m messaging
+[33mdeafc4b[m messaging
+[33mee94658[m Include php_errors.log tail in emergency debug output
+[33md603199[m Add bootstrap diagnostic script
+[33m0a5ba75[m Write last error to logs and temp; enhance emergency debug script
+[33me8788af[m Add emergency last error debug script
+[33m1
