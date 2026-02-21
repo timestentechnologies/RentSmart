@@ -924,6 +924,8 @@ class PaymentsController
             echo json_encode(['success' => false, 'message' => 'Payment not found']);
             exit;
         }
+
+        $isRealtorPayment = empty($payment['lease_id']);
         $data = [
             'amount' => $_POST['amount'],
             'payment_date' => $_POST['payment_date'],
@@ -932,7 +934,66 @@ class PaymentsController
             'status' => $_POST['status'] ?? 'completed',
             'notes' => $_POST['notes'] ?? null
         ];
-        $success = $paymentModel->updatePayment($id, $data);
+
+        if ($isRealtorPayment) {
+            $contractId = (int)($_POST['realtor_contract_id'] ?? 0);
+            if ($contractId <= 0) {
+                echo json_encode(['success' => false, 'message' => 'Contract is required']);
+                exit;
+            }
+
+            $contractModel = new RealtorContract();
+            $contract = $contractModel->getByIdWithAccess($contractId, $this->userId);
+            if (!$contract) {
+                echo json_encode(['success' => false, 'message' => 'Invalid contract selected']);
+                exit;
+            }
+
+            $data['realtor_contract_id'] = (int)$contractId;
+            $data['realtor_client_id'] = (int)($contract['realtor_client_id'] ?? 0);
+            $data['realtor_listing_id'] = (int)($contract['realtor_listing_id'] ?? 0);
+
+            $success = $paymentModel->updateRealtorPayment($id, $data);
+        } else {
+            $success = $paymentModel->updatePayment($id, $data);
+        }
+
+        // If M-Pesa manual details were provided, upsert them into manual_mpesa_payments
+        if ($success && ($data['payment_method'] === 'mpesa_manual' || $data['payment_method'] === 'mpesa_stk')) {
+            $mpesaPhone = trim((string)($_POST['mpesa_phone'] ?? ''));
+            $mpesaTx = trim((string)($_POST['mpesa_transaction_code'] ?? ''));
+            if ($mpesaPhone !== '' || $mpesaTx !== '') {
+                try {
+                    $sql = "SELECT id FROM manual_mpesa_payments WHERE payment_id = ? LIMIT 1";
+                    $stmt = $paymentModel->getDb()->prepare($sql);
+                    $stmt->execute([(int)$id]);
+                    $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+                    if (!empty($row['id'])) {
+                        $upd = $paymentModel->getDb()->prepare("UPDATE manual_mpesa_payments SET phone_number = ?, transaction_code = ?, amount = ?, verification_status = ?, verification_notes = ?, created_at = created_at WHERE payment_id = ?");
+                        $upd->execute([
+                            $mpesaPhone !== '' ? $mpesaPhone : null,
+                            $mpesaTx !== '' ? $mpesaTx : null,
+                            (float)$data['amount'],
+                            $_POST['mpesa_verification_status'] ?? 'pending',
+                            $_POST['notes'] ?? '',
+                            (int)$id
+                        ]);
+                    } else {
+                        $ins = $paymentModel->getDb()->prepare("INSERT INTO manual_mpesa_payments (payment_id, phone_number, transaction_code, amount, verification_status, verification_notes, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())");
+                        $ins->execute([
+                            (int)$id,
+                            $mpesaPhone !== '' ? $mpesaPhone : null,
+                            $mpesaTx !== '' ? $mpesaTx : null,
+                            (float)$data['amount'],
+                            $_POST['mpesa_verification_status'] ?? 'pending',
+                            $_POST['notes'] ?? ''
+                        ]);
+                    }
+                } catch (\Exception $e) {
+                    error_log('manual_mpesa_payments upsert failed: ' . $e->getMessage());
+                }
+            }
+        }
         
         // Handle file uploads
         $uploadErrors = [];

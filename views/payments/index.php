@@ -671,16 +671,29 @@ $isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
                     <input type="hidden" id="edit_payment_id" name="payment_id">
                     <?php if ($isRealtor): ?>
                         <div class="mb-3">
+                            <label for="edit_realtor_contract_id" class="form-label">Contract</label>
+                            <select class="form-select" name="realtor_contract_id" id="edit_realtor_contract_id" required>
+                                <option value="">Select Contract</option>
+                                <?php foreach (($contracts ?? []) as $ct): ?>
+                                    <?php
+                                        $ctId = (int)($ct['id'] ?? 0);
+                                        $ctTerms = (string)($ct['terms_type'] ?? 'one_time');
+                                        $ctClient = (string)($ct['client_name'] ?? '');
+                                        $ctListing = (string)($ct['listing_title'] ?? '');
+                                    ?>
+                                    <option value="<?= $ctId ?>" data-client-name="<?= htmlspecialchars($ctClient, ENT_QUOTES) ?>" data-listing-title="<?= htmlspecialchars($ctListing, ENT_QUOTES) ?>">
+                                        #<?= $ctId ?> - <?= htmlspecialchars($ctClient) ?> / <?= htmlspecialchars($ctListing) ?> (<?= htmlspecialchars($ctTerms) ?>)
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="mb-3">
                             <label for="edit_realtor_listing" class="form-label">Listing</label>
                             <input type="text" class="form-control" id="edit_realtor_listing" value="" readonly>
                         </div>
                         <div class="mb-3">
                             <label for="edit_realtor_client" class="form-label">Client</label>
                             <input type="text" class="form-control" id="edit_realtor_client" value="" readonly>
-                        </div>
-                        <div class="mb-3">
-                            <label for="edit_realtor_contract" class="form-label">Contract</label>
-                            <input type="text" class="form-control" id="edit_realtor_contract" value="" readonly>
                         </div>
                     <?php endif; ?>
                     <div class="mb-3">
@@ -1022,9 +1035,11 @@ async function viewPayment(paymentId) {
                 if (mpesaRow) mpesaRow.style.display = '';
                 if (mpesaTxRow) mpesaTxRow.style.display = '';
                 const phoneEl = document.getElementById('view_mpesa_phone');
-                if (phoneEl) phoneEl.textContent = payment.phone_number || 'N/A';
+                const phoneVal = payment.phone_number || payment.mpesa_phone || payment.manual_phone_number || payment.stk_phone_number || '';
+                if (phoneEl) phoneEl.textContent = phoneVal || 'N/A';
                 const txEl = document.getElementById('view_mpesa_transaction_code');
-                if (txEl) txEl.textContent = payment.transaction_code || 'N/A';
+                const txVal = payment.transaction_code || payment.mpesa_receipt_number || payment.manual_transaction_code || '';
+                if (txEl) txEl.textContent = txVal || 'N/A';
             } else {
                 if (mpesaRow) mpesaRow.style.display = 'none';
                 if (mpesaTxRow) mpesaTxRow.style.display = 'none';
@@ -1188,12 +1203,31 @@ function editPayment(paymentId) {
             if (data && data.success && data.id) {
                 document.getElementById('edit_payment_id').value = data.id;
                 <?php if (!empty($isRealtor)): ?>
+                    const contractSel = document.getElementById('edit_realtor_contract_id');
+                    if (contractSel) {
+                        contractSel.value = data.realtor_contract_id ? String(data.realtor_contract_id) : '';
+                        const opt = contractSel.options[contractSel.selectedIndex];
+                        const listingEl = document.getElementById('edit_realtor_listing');
+                        const clientEl = document.getElementById('edit_realtor_client');
+                        if (opt && listingEl) listingEl.value = opt.getAttribute('data-listing-title') || data.listing_title || '';
+                        if (opt && clientEl) clientEl.value = opt.getAttribute('data-client-name') || data.client_name || '';
+                    }
                     const listingEl = document.getElementById('edit_realtor_listing');
-                    if (listingEl) listingEl.value = data.listing_title || '';
+                    if (listingEl && !listingEl.value) listingEl.value = data.listing_title || '';
                     const clientEl = document.getElementById('edit_realtor_client');
-                    if (clientEl) clientEl.value = data.client_name || '';
-                    const contractEl = document.getElementById('edit_realtor_contract');
-                    if (contractEl) contractEl.value = data.realtor_contract_id ? ('Contract #' + data.realtor_contract_id) : '';
+                    if (clientEl && !clientEl.value) clientEl.value = data.client_name || '';
+
+                    // Bind once: changing contract updates client/listing display immediately
+                    if (contractSel && !contractSel.dataset.bound) {
+                        contractSel.dataset.bound = '1';
+                        contractSel.addEventListener('change', function() {
+                            const opt = this.options[this.selectedIndex];
+                            const listingEl2 = document.getElementById('edit_realtor_listing');
+                            const clientEl2 = document.getElementById('edit_realtor_client');
+                            if (opt && listingEl2) listingEl2.value = opt.getAttribute('data-listing-title') || '';
+                            if (opt && clientEl2) clientEl2.value = opt.getAttribute('data-client-name') || '';
+                        });
+                    }
                 <?php endif; ?>
                 // Ensure the value is a number and input is editable
                 var amountInput = document.getElementById('edit_amount');
@@ -1218,9 +1252,8 @@ function editPayment(paymentId) {
                 // Handle M-Pesa fields
                 if (data.payment_method === 'mpesa_manual' || data.payment_method === 'mpesa_stk') {
                     document.getElementById('edit_mpesa_manual_fields').style.display = 'block';
-                    if (data.phone_number !== undefined) {
-                        document.getElementById('edit_mpesa_phone').value = data.phone_number || '';
-                    }
+                    const phoneVal = data.phone_number || data.mpesa_phone || data.manual_phone_number || data.stk_phone_number || '';
+                    document.getElementById('edit_mpesa_phone').value = phoneVal || '';
                     if (data.transaction_code !== undefined) {
                         document.getElementById('edit_mpesa_transaction_code').value = data.transaction_code || '';
                     }
@@ -1242,9 +1275,7 @@ function editPayment(paymentId) {
                                 document.getElementById('edit_mpesa_verification_status').value = mpesaData.verification_status || 'pending';
                             }
                         })
-                        .catch(() => {
-                            // M-Pesa data not found, leave fields empty
-                        });
+                        .catch(err => console.warn('mpesa fetch failed:', err));
                 } else {
                     document.getElementById('edit_mpesa_manual_fields').style.display = 'none';
                 }
@@ -1270,7 +1301,11 @@ document.getElementById('editPaymentForm').addEventListener('submit', function(e
     const formData = new FormData(this);
     fetch(`<?= BASE_URL ?>/payments/update/${paymentId}`, {
         method: 'POST',
-        body: formData
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRF-TOKEN': '<?= csrf_token() ?>'
+        }
     })
     .then(response => response.json())
     .then(data => {
