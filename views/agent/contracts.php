@@ -89,7 +89,7 @@ ob_start();
                                 <td data-property-id="<?= (int)($c['property_id'] ?? 0) ?>"><?= htmlspecialchars((string)($c['property_name'] ?? '')) ?></td>
                                 <td><?= htmlspecialchars((string)($c['client_name'] ?? '')) ?></td>
                                 <td><?= htmlspecialchars((string)($c['terms_type'] ?? '')) ?></td>
-                                <td><?= number_format((float)($c['total_amount'] ?? 0), 2) ?></td>
+                                <td><?= number_format((float)($c['display_total_amount'] ?? ($c['total_amount'] ?? 0)), 2) ?></td>
                                 <td><?= ($c['terms_type'] ?? '') === 'monthly' ? number_format((float)($c['monthly_amount'] ?? 0), 2) : '-' ?></td>
                                 <td><?= htmlspecialchars((string)($c['status'] ?? '')) ?></td>
                                 <td><?= htmlspecialchars((string)($c['created_at'] ?? '')) ?></td>
@@ -172,6 +172,7 @@ ob_start();
                         <div class="col-md-4" id="edit_duration_wrap" style="display:none;">
                             <label class="form-label">Duration (months)</label>
                             <input class="form-control" name="duration_months" id="edit_duration_months" type="number" min="1">
+                            <div class="form-text">Leave blank to run forever.</div>
                         </div>
                         <div class="col-md-6" id="edit_start_wrap" style="display:none;">
                             <label class="form-label">Start Month</label>
@@ -258,6 +259,7 @@ ob_start();
                         <div class="col-md-4" id="duration_wrap" style="display:none;">
                             <label class="form-label">Duration (months)</label>
                             <input class="form-control" name="duration_months" type="number" min="1">
+                            <div class="form-text">Leave blank to run forever.</div>
                         </div>
                         <div class="col-md-6" id="start_wrap" style="display:none;">
                             <label class="form-label">Start Month</label>
@@ -292,6 +294,8 @@ ob_start();
     const isMonthly = (terms && terms.value === 'monthly');
     if(durationWrap) durationWrap.style.display = isMonthly ? '' : 'none';
     if(startWrap) startWrap.style.display = isMonthly ? '' : 'none';
+    const startInput = startWrap ? startWrap.querySelector('input[name="start_month"]') : null;
+    if(startInput) startInput.required = !!isMonthly;
   }
   if(terms){
     terms.addEventListener('change', sync);
@@ -309,6 +313,8 @@ ob_start();
     const isMonthly = (editTerms && editTerms.value === 'monthly');
     if(editDurationWrap) editDurationWrap.style.display = isMonthly ? '' : 'none';
     if(editStartWrap) editStartWrap.style.display = isMonthly ? '' : 'none';
+    const startInput = document.getElementById('edit_start_month');
+    if(startInput) startInput.required = !!isMonthly;
   }
   if(editTerms){
     editTerms.addEventListener('change', editSync);
