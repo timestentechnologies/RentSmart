@@ -1268,6 +1268,7 @@
                         <li class="mb-2"><i class="bi bi-geo-alt me-2"></i>Nairobi, Kenya</li>
                     </ul>
                     <div class="mt-3">
+                        <a href="<?= BASE_URL ?>/docs" class="text-white-50 d-block mb-2">Documentation</a>
                         <a href="<?= BASE_URL ?>/privacy-policy" class="text-white-50 d-block mb-2">Privacy Policy</a>
                         <a href="<?= BASE_URL ?>/terms" class="text-white-50 d-block mb-2">Terms of Service</a>
     

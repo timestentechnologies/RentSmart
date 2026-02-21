@@ -5,6 +5,7 @@ namespace App\Controllers;
 use App\Models\Unit;
 use App\Models\Property;
 use App\Models\User;
+use App\Models\Tenant;
 use App\Models\Subscription;
 use App\Database\Connection;
 use App\Helpers\FileUploadHelper;
@@ -54,11 +55,14 @@ class UnitsController
         try {
             $units = $this->unit->getAll($_SESSION['user_id']);
             $properties = $this->property->getAll($_SESSION['user_id']);
+            $tenantModel = new Tenant();
+            $tenants = $tenantModel->getAll($_SESSION['user_id']);
             
             echo view('units/index', [
                 'title' => 'Units',
                 'units' => $units,
-                'properties' => $properties
+                'properties' => $properties,
+                'tenants' => $tenants
             ]);
         } catch (Exception $e) {
             error_log("Error in UnitsController::index: " . $e->getMessage());
@@ -154,6 +158,11 @@ class UnitsController
             ];
 
             error_log("Sanitized data: " . print_r($data, true));
+
+            // Do not allow creating an occupied unit without attaching a tenant (tenant is attached via leases)
+            if (isset($data['status']) && strtolower((string)$data['status']) === 'occupied') {
+                throw new Exception('You cannot mark a unit as occupied without attaching a tenant. Create a lease/assign a tenant first.');
+            }
 
             // Validate required fields
             if (!$data['property_id'] || !$data['unit_number'] || !$data['rent_amount']) {
@@ -347,6 +356,24 @@ class UnitsController
                 $data['status'] = $unit['status'];
             } elseif (!in_array($data['status'], $validStatuses)) {
                 throw new Exception('Invalid unit status');
+            }
+
+            // Prevent marking occupied unless a tenant is attached to the unit (via tenant_id or active lease)
+            if (strtolower((string)($data['status'] ?? '')) === 'occupied') {
+                $tenantId = (int)($unit['tenant_id'] ?? 0);
+                $hasActiveLease = false;
+                try {
+                    $stmt = $this->db->prepare("SELECT id FROM leases WHERE unit_id = ? AND status = 'active' ORDER BY id DESC LIMIT 1");
+                    $stmt->execute([(int)$id]);
+                    $leaseRow = $stmt->fetch(\PDO::FETCH_ASSOC);
+                    $hasActiveLease = !empty($leaseRow['id']);
+                } catch (\Exception $e) {
+                    $hasActiveLease = false;
+                }
+
+                if ($tenantId <= 0 && !$hasActiveLease) {
+                    throw new Exception('You cannot mark a unit as occupied without attaching a tenant. Create a lease/assign a tenant first.');
+                }
             }
 
             // Check if unit number already exists for this property (excluding current unit)

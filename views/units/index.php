@@ -309,6 +309,36 @@ ini_set('display_errors', 1);
     </div>
 </div>
 
+<!-- Assign Tenant Required Modal -->
+<div class="modal fade" id="assignTenantRequiredModal" tabindex="-1" aria-labelledby="assignTenantRequiredModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="assignTenantRequiredModalLabel">Assign Tenant Required</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-3">You cannot mark a unit as occupied until a tenant is attached. Select a tenant below to assign this unit.</p>
+                <input type="hidden" id="assign_tenant_unit_id" value="">
+                <div class="mb-3">
+                    <label for="assign_tenant_id" class="form-label">Tenant</label>
+                    <select id="assign_tenant_id" class="form-select" required>
+                        <option value="">Select Tenant</option>
+                        <?php foreach (($tenants ?? []) as $t): ?>
+                            <option value="<?= (int)($t['id'] ?? 0) ?>"><?= htmlspecialchars($t['name'] ?? '') ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div id="assignTenantError" class="text-danger small" style="display:none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="assignTenantConfirmBtn" onclick="assignTenantToUnit()">Assign Tenant</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Delete Unit Confirmation Modal -->
 <div class="modal fade" id="deleteUnitModal" tabindex="-1">
     <div class="modal-dialog">
@@ -468,6 +498,101 @@ $(document).ready(function() {
             searchPlaceholder: "Search units..."
         }
     });
+
+    window.assignTenantToUnit = async function() {
+        const tenantSelect = document.getElementById('assign_tenant_id');
+        const unitIdEl = document.getElementById('assign_tenant_unit_id');
+        const errEl = document.getElementById('assignTenantError');
+        const btn = document.getElementById('assignTenantConfirmBtn');
+
+        if (errEl) {
+            errEl.style.display = 'none';
+            errEl.textContent = '';
+        }
+
+        const tenantId = tenantSelect ? (tenantSelect.value || '') : '';
+        const unitId = unitIdEl ? (unitIdEl.value || '') : '';
+        if (!tenantId || !unitId) {
+            if (errEl) {
+                errEl.textContent = 'Please select a tenant.';
+                errEl.style.display = '';
+            }
+            return;
+        }
+
+        const originalText = btn ? btn.innerHTML : '';
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Assigning...';
+        }
+
+        try {
+            const unitRes = await fetch(`${BASE_URL}/units/get/${encodeURIComponent(unitId)}`, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                }
+            });
+            const unitJson = await unitRes.json();
+            if (!unitRes.ok || !unitJson || !unitJson.success || !unitJson.unit) {
+                throw new Error((unitJson && unitJson.message) ? unitJson.message : 'Failed to load unit details');
+            }
+
+            const tRes = await fetch(`${BASE_URL}/tenants/get/${encodeURIComponent(tenantId)}`, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                }
+            });
+            const tJson = await tRes.json();
+            if (!tRes.ok || !tJson || !tJson.success || !tJson.tenant) {
+                throw new Error((tJson && tJson.message) ? tJson.message : 'Failed to load tenant details');
+            }
+
+            const tenant = tJson.tenant;
+            const unit = unitJson.unit;
+
+            const fd = new FormData();
+            fd.append('name', tenant.name || '');
+            fd.append('email', tenant.email || '');
+            fd.append('phone', tenant.phone || '');
+            fd.append('property_id', unit.property_id || tenant.property_id || '');
+            fd.append('unit_id', unit.id || unitId);
+
+            const upRes = await fetch(`${BASE_URL}/tenants/update/${encodeURIComponent(tenantId)}`, {
+                method: 'POST',
+                body: fd,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-TOKEN': '<?= csrf_token() ?>'
+                }
+            });
+            const upJson = await upRes.json();
+            if (!upRes.ok || !upJson || !upJson.success) {
+                throw new Error((upJson && upJson.message) ? upJson.message : 'Failed to assign tenant');
+            }
+
+            const modal = bootstrap.Modal.getInstance(document.getElementById('assignTenantRequiredModal'));
+            if (modal) modal.hide();
+            const editModal = bootstrap.Modal.getInstance(document.getElementById('editUnitModal'));
+            if (editModal) editModal.hide();
+            showAlert('success', 'Tenant assigned and unit marked as occupied');
+            window.location.reload();
+        } catch (e) {
+            console.error('assignTenantToUnit error:', e);
+            if (errEl) {
+                errEl.textContent = (e && e.message) ? e.message : 'Failed to assign tenant.';
+                errEl.style.display = '';
+            } else {
+                showAlert('danger', (e && e.message) ? e.message : 'Failed to assign tenant.');
+            }
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = originalText;
+            }
+        }
+    };
 
     document.querySelectorAll('form.import-form').forEach((form) => {
         form.addEventListener('submit', () => {
@@ -796,7 +921,18 @@ function handleUnitEdit(event) {
     })
     .catch(error => {
         console.error('Update error:', error);
-        showAlert('danger', error.message || 'Error updating unit');
+        const msg = (error && error.message) ? String(error.message) : '';
+        if (msg.toLowerCase().includes('cannot mark a unit as occupied')) {
+            const unitHidden = document.getElementById('assign_tenant_unit_id');
+            if (unitHidden) unitHidden.value = unitId;
+            const mEl = document.getElementById('assignTenantRequiredModal');
+            if (mEl) {
+                const m = new bootstrap.Modal(mEl);
+                m.show();
+                return;
+            }
+        }
+        showAlert('danger', msg || 'Error updating unit');
     })
     .finally(() => {
         // Re-enable submit button and restore original text
