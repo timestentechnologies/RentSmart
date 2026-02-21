@@ -115,6 +115,24 @@ ob_start();
     </div>
 </div>
 
+<div class="modal fade" id="deleteContractModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Delete Contract</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to delete this contract?
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDeleteContractBtn">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <div class="modal fade" id="editContractModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
@@ -576,18 +594,43 @@ ob_start();
 
   window.deleteAgentContract = async function(id){
     if(!id) return;
-    if(!confirm('Delete this contract?')) return;
+    const modalEl = document.getElementById('deleteContractModal');
+    if(!modalEl || !(window.bootstrap && window.bootstrap.Modal)){
+      // Fallback
+      if(!confirm('Delete this contract?')) return;
+      try{
+        const fd = new FormData();
+        fd.set('csrf_token', csrfToken());
+        const res = await fetch('<?= BASE_URL ?>' + '/agent/contracts/delete/' + id, { method:'POST', body: fd });
+        const data = await res.json();
+        if(!data.success){ alert(data.message || 'Failed to delete contract'); return; }
+        location.reload();
+      }catch(err){
+        alert('Failed to delete contract');
+      }
+      return;
+    }
+    modalEl.setAttribute('data-contract-id', String(id));
+    window.bootstrap.Modal.getOrCreateInstance(modalEl).show();
+  }
+
+  document.getElementById('confirmDeleteContractBtn')?.addEventListener('click', async ()=>{
+    const modalEl = document.getElementById('deleteContractModal');
+    const id = modalEl ? (modalEl.getAttribute('data-contract-id') || '') : '';
+    if(!id) return;
     try{
       const fd = new FormData();
       fd.set('csrf_token', csrfToken());
       const res = await fetch('<?= BASE_URL ?>' + '/agent/contracts/delete/' + id, { method:'POST', body: fd });
       const data = await res.json();
       if(!data.success){ alert(data.message || 'Failed to delete contract'); return; }
+      const m = modalEl && window.bootstrap && window.bootstrap.Modal ? window.bootstrap.Modal.getOrCreateInstance(modalEl) : null;
+      if(m) m.hide();
       location.reload();
     }catch(err){
       alert('Failed to delete contract');
     }
-  }
+  });
 
   const searchEl = document.getElementById('contracts_search');
   const filterPropEl = document.getElementById('contracts_filter_property');
