@@ -11,8 +11,13 @@ ob_start();
                 </h1>
                 <div class="d-flex flex-wrap gap-2 align-items-center">
                     <span class="badge bg-warning fs-6">
-                        <i class="bi bi-clock me-1"></i><?= count($pendingPayments) ?> Pending
+                        <i class="bi bi-clock me-1"></i><?= count(($groupedPayments ?? [])) ?> Pending
                     </span>
+                    <?php if (!empty($groupedPayments ?? [])): ?>
+                        <button type="button" class="btn btn-success btn-sm" onclick="verifyAll('verified')">
+                            <i class="bi bi-check2-circle me-1"></i> Verify All
+                        </button>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>
@@ -40,7 +45,7 @@ ob_start();
                     </tr>
                 </thead>
                 <tbody>
-                    <?php if (empty($pendingPayments)): ?>
+                    <?php if (empty($groupedPayments ?? [])): ?>
                         <tr>
                             <td colspan="8" class="text-center py-5">
                                 <i class="bi bi-check-circle display-4 text-success mb-3 d-block"></i>
@@ -49,50 +54,60 @@ ob_start();
                             </td>
                         </tr>
                     <?php else: ?>
-                        <?php foreach ($pendingPayments as $payment): ?>
+                        <?php foreach (($groupedPayments ?? []) as $g): ?>
                             <tr>
                                 <td>
                                     <div>
-                                        <strong><?= htmlspecialchars($payment['tenant_name']) ?></strong>
+                                        <strong><?= htmlspecialchars($g['tenant_name'] ?? '') ?></strong>
                                         <br>
-                                        <small class="text-muted"><?= htmlspecialchars($payment['tenant_email']) ?></small>
+                                        <small class="text-muted"><?= htmlspecialchars($g['tenant_email'] ?? '') ?></small>
                                     </div>
                                 </td>
                                 <td>
                                     <div>
-                                        <strong><?= htmlspecialchars($payment['property_name'] ?? 'N/A') ?></strong>
+                                        <strong><?= htmlspecialchars($g['property_name'] ?? 'N/A') ?></strong>
                                         <br>
-                                        <small class="text-muted">Unit: <?= htmlspecialchars($payment['unit_number'] ?? 'N/A') ?></small>
+                                        <small class="text-muted">Unit: <?= htmlspecialchars($g['unit_number'] ?? 'N/A') ?></small>
                                     </div>
                                 </td>
                                 <td>
-                                    <strong class="text-success">Ksh <?= number_format($payment['amount'], 2) ?></strong>
+                                    <strong class="text-success">Ksh <?= number_format((float)($g['total_amount'] ?? 0), 2) ?></strong>
                                     <br>
-                                    <small class="text-muted"><?= ucfirst($payment['payment_type']) ?></small>
+                                    <?php
+                                        $types = $g['payment_types'] ?? [];
+                                        $typesLabel = !empty($types) ? implode(', ', array_map('ucfirst', $types)) : 'Payment';
+                                        $itemsCount = is_array($g['items'] ?? null) ? count($g['items']) : 0;
+                                    ?>
+                                    <small class="text-muted">
+                                        <?= htmlspecialchars($typesLabel) ?>
+                                        <?php if ($itemsCount > 1): ?>
+                                            <span class="text-muted">(<?= (int)$itemsCount ?> items)</span>
+                                        <?php endif; ?>
+                                    </small>
                                 </td>
                                 <td>
-                                    <span class="badge bg-light text-dark"><?= htmlspecialchars($payment['phone_number']) ?></span>
+                                    <span class="badge bg-light text-dark"><?= htmlspecialchars((string)($g['phone_number'] ?? '')) ?></span>
                                 </td>
                                 <td>
-                                    <code class="bg-light px-2 py-1 rounded"><?= htmlspecialchars($payment['transaction_code']) ?></code>
+                                    <code class="bg-light px-2 py-1 rounded"><?= htmlspecialchars((string)($g['transaction_code'] ?? '')) ?></code>
                                 </td>
                                 <td>
-                                    <?= date('M j, Y', strtotime($payment['payment_date'])) ?>
+                                    <?= !empty($g['payment_date']) ? date('M j, Y', strtotime((string)$g['payment_date'])) : '' ?>
                                     <br>
-                                    <small class="text-muted"><?= date('g:i A', strtotime($payment['created_at'])) ?></small>
+                                    <small class="text-muted"><?= !empty($g['created_at']) ? date('g:i A', strtotime((string)$g['created_at'])) : '' ?></small>
                                 </td>
                                 <td>
                                     <span class="badge bg-warning">Pending Verification</span>
                                 </td>
                                 <td>
                                     <div class="btn-group">
-                                        <button type="button" class="btn btn-sm btn-success" onclick="verifyPayment(<?= $payment['id'] ?>, 'verified')" title="Verify">
+                                        <button type="button" class="btn btn-sm btn-success" onclick="verifyPaymentGroup('<?= htmlspecialchars((string)($g['transaction_code'] ?? ''), ENT_QUOTES) ?>', 'verified')" title="Verify">
                                             <i class="bi bi-check-circle"></i> Verify
                                         </button>
-                                        <button type="button" class="btn btn-sm btn-danger" onclick="verifyPayment(<?= $payment['id'] ?>, 'rejected')" title="Reject">
+                                        <button type="button" class="btn btn-sm btn-danger" onclick="verifyPaymentGroup('<?= htmlspecialchars((string)($g['transaction_code'] ?? ''), ENT_QUOTES) ?>', 'rejected')" title="Reject">
                                             <i class="bi bi-x-circle"></i> Reject
                                         </button>
-                                        <button type="button" class="btn btn-sm btn-info" onclick="viewPaymentDetails(<?= $payment['id'] ?>)" title="View Details">
+                                        <button type="button" class="btn btn-sm btn-info" onclick="viewPaymentDetailsByCode('<?= htmlspecialchars((string)($g['transaction_code'] ?? ''), ENT_QUOTES) ?>')" title="View Details">
                                             <i class="bi bi-eye"></i>
                                         </button>
                                     </div>
@@ -159,9 +174,46 @@ ob_start();
 </div>
 
 <script>
+function verifyAll(status) {
+    document.getElementById('payment_id').value = 'ALL';
+    document.getElementById('verification_status').value = status;
+    document.getElementById('verificationForm').dataset.mode = 'all';
+
+    const actionDiv = document.getElementById('verification_action');
+    if (status === 'verified') {
+        actionDiv.innerHTML = '<i class="bi bi-check2-circle text-success me-2"></i><strong>Verify ALL pending payments</strong> - This will mark all pending M-Pesa codes as completed.';
+        actionDiv.className = 'alert alert-success';
+    } else {
+        actionDiv.innerHTML = '<i class="bi bi-x-circle text-danger me-2"></i><strong>Reject ALL pending payments</strong> - This will mark all pending M-Pesa codes as failed.';
+        actionDiv.className = 'alert alert-danger';
+    }
+
+    const modal = new bootstrap.Modal(document.getElementById('verificationModal'));
+    modal.show();
+}
+
+function verifyPaymentGroup(transactionCode, status) {
+    document.getElementById('payment_id').value = transactionCode;
+    document.getElementById('verification_status').value = status;
+    document.getElementById('verificationForm').dataset.mode = 'group';
+
+    const actionDiv = document.getElementById('verification_action');
+    if (status === 'verified') {
+        actionDiv.innerHTML = '<i class="bi bi-check-circle text-success me-2"></i><strong>Verify this payment</strong> - This will mark ALL items under this M-Pesa code as completed.';
+        actionDiv.className = 'alert alert-success';
+    } else {
+        actionDiv.innerHTML = '<i class="bi bi-x-circle text-danger me-2"></i><strong>Reject this payment</strong> - This will mark ALL items under this M-Pesa code as failed.';
+        actionDiv.className = 'alert alert-danger';
+    }
+
+    const modal = new bootstrap.Modal(document.getElementById('verificationModal'));
+    modal.show();
+}
+
 function verifyPayment(paymentId, status) {
     document.getElementById('payment_id').value = paymentId;
     document.getElementById('verification_status').value = status;
+    document.getElementById('verificationForm').dataset.mode = 'single';
     
     const actionDiv = document.getElementById('verification_action');
     if (status === 'verified') {
@@ -185,7 +237,15 @@ function submitVerification() {
     submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing...';
     submitBtn.disabled = true;
     
-    fetch('<?= BASE_URL ?>/mpesa-verification/verify/' + formData.get('payment_id'), {
+    const mode = form.dataset.mode || 'single';
+    const idOrCode = formData.get('payment_id');
+    const url = (mode === 'all')
+        ? ('<?= BASE_URL ?>/mpesa-verification/verify-all')
+        : ((mode === 'group')
+            ? ('<?= BASE_URL ?>/mpesa-verification/verify-group/' + encodeURIComponent(idOrCode))
+            : ('<?= BASE_URL ?>/mpesa-verification/verify/' + idOrCode));
+
+    fetch(url, {
         method: 'POST',
         body: formData,
         headers: {
@@ -211,17 +271,15 @@ function submitVerification() {
     });
 }
 
-function viewPaymentDetails(paymentId) {
-    // This would typically fetch payment details via AJAX
-    // For now, we'll show a simple message
+function viewPaymentDetailsByCode(transactionCode) {
+    const code = String(transactionCode || '');
     document.getElementById('paymentDetailsContent').innerHTML = `
-        <div class="text-center">
-            <i class="bi bi-info-circle display-4 text-info mb-3"></i>
-            <p>Payment details for ID: ${paymentId}</p>
-            <p class="text-muted">This feature can be expanded to show detailed payment information.</p>
+        <div>
+            <div class="mb-2"><strong>M-Pesa Code:</strong> <code>${code}</code></div>
+            <div class="text-muted small">Approval is done as one transaction. Payments page will still show separate rent/utility/maintenance rows.</div>
         </div>
     `;
-    
+
     const modal = new bootstrap.Modal(document.getElementById('paymentDetailsModal'));
     modal.show();
 }
