@@ -419,6 +419,11 @@ class PaymentsController
                             'notes' => (string)$notes,
                         ]);
 
+                        // Save M-Pesa transaction details if applicable
+                        if ($paymentMethod === 'mpesa_manual' && !empty($_POST['mpesa_phone']) && !empty($_POST['mpesa_transaction_code'])) {
+                            $this->saveMpesaTransaction($paymentId, $_POST);
+                        }
+
                         if (!empty($_FILES['payment_attachments']['name'][0])) {
                             $this->handlePaymentAttachments($paymentId);
                         }

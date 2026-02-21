@@ -81,6 +81,7 @@ $isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
                             <th>Name</th>
                             <th>Role</th>
                             <?php if (!$isRealtor): ?><th>Property</th><?php endif; ?>
+                            <?php if ($isRealtor): ?><th>Listing</th><?php endif; ?>
                             <th>Salary</th>
                             <th>Status</th>
                             <th>Actions</th>
@@ -92,6 +93,7 @@ $isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
                             <td class="emp-name"><?= htmlspecialchars($emp['name']) ?></td>
                             <td class="emp-role" data-role="<?= htmlspecialchars(strtolower($emp['role'] ?? 'general')) ?>"><?= htmlspecialchars(ucwords(str_replace('_',' ', $emp['role'] ?? 'general'))) ?></td>
                             <?php if (!$isRealtor): ?><td class="emp-property"><?= htmlspecialchars($emp['property_name'] ?? '-') ?></td><?php endif; ?>
+                            <?php if ($isRealtor): ?><td class="emp-listing" data-listing-id="<?= (int)($emp['realtor_listing_id'] ?? 0) ?>"><?= htmlspecialchars($emp['realtor_listing_title'] ?? '-') ?></td><?php endif; ?>
                             <td class="emp-salary">Ksh<?= number_format($emp['salary'] ?? 0, 2) ?></td>
                             <td class="emp-status" data-status="<?= htmlspecialchars(strtolower($emp['status'] ?? 'active')) ?>"><span class="badge <?= ($emp['status'] ?? 'active') === 'active' ? 'bg-success' : 'bg-secondary' ?>"><?= ucwords($emp['status'] ?? 'active') ?></span></td>
                             <td>
@@ -172,6 +174,16 @@ $isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
                     <option value="">None</option>
                     <?php foreach (($properties ?? []) as $p): ?>
                         <option value="<?= $p['id'] ?>"><?= htmlspecialchars($p['name']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+              </div>
+          <?php else: ?>
+              <div class="mb-3">
+                <label class="form-label">Listing (optional)</label>
+                <select name="realtor_listing_id" class="form-select">
+                    <option value="">None</option>
+                    <?php foreach (($listings ?? []) as $l): ?>
+                        <option value="<?= (int)($l['id'] ?? 0) ?>"><?= htmlspecialchars($l['title'] ?? '') ?></option>
                     <?php endforeach; ?>
                 </select>
               </div>
@@ -324,6 +336,16 @@ $isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
                     <?php endforeach; ?>
                 </select>
               </div>
+          <?php else: ?>
+              <div class="mb-3">
+                <label class="form-label">Listing (optional)</label>
+                <select id="edit_realtor_listing_id" name="realtor_listing_id" class="form-select">
+                    <option value="">None</option>
+                    <?php foreach (($listings ?? []) as $l): ?>
+                        <option value="<?= (int)($l['id'] ?? 0) ?>"><?= htmlspecialchars($l['title'] ?? '') ?></option>
+                    <?php endforeach; ?>
+                </select>
+              </div>
           <?php endif; ?>
           <div class="mb-3">
             <label class="form-label">Salary (Monthly)</label>
@@ -419,6 +441,8 @@ function editEmployee(id) {
     document.getElementById('edit_role').value = (e.role || 'general').toLowerCase();
     const propEl = document.getElementById('edit_property_id');
     if (propEl) propEl.value = e.property_id || '';
+    const listingEl = document.getElementById('edit_realtor_listing_id');
+    if (listingEl) listingEl.value = e.realtor_listing_id || '';
     document.getElementById('edit_salary').value = e.salary || '';
     document.getElementById('edit_status').value = (e.status || 'active').toLowerCase();
     const modal = new bootstrap.Modal(document.getElementById('editEmployeeModal'));

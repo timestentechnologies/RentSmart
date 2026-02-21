@@ -175,11 +175,14 @@ class Payment extends Model
                        c.total_amount AS contract_total_amount,
                        c.monthly_amount AS contract_monthly_amount,
                        c.duration_months AS contract_duration_months,
-                       c.start_month AS contract_start_month
+                       c.start_month AS contract_start_month,
+                       mmp.phone_number,
+                       mmp.transaction_code
                 FROM payments p
                 LEFT JOIN realtor_clients rc ON rc.id = p.realtor_client_id
                 LEFT JOIN realtor_listings rl ON rl.id = p.realtor_listing_id
                 LEFT JOIN realtor_contracts c ON c.id = p.realtor_contract_id
+                LEFT JOIN manual_mpesa_payments mmp ON mmp.payment_id = p.id
                 WHERE p.realtor_user_id = ?
                 ORDER BY p.payment_date DESC, p.id DESC";
         $stmt = $this->db->prepare($sql);

@@ -22,12 +22,23 @@ class Employee extends Model
             phone VARCHAR(50) NULL,
             salary DECIMAL(10,2) DEFAULT 0,
             property_id INT NULL,
+            realtor_listing_id INT NULL,
             role VARCHAR(50) NOT NULL DEFAULT 'general',
             status ENUM('active','inactive') NOT NULL DEFAULT 'active',
             created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;";
         $this->db->exec($sql);
+
+        // Ensure realtor_listing_id exists for linking employees to realtor listings
+        try {
+            $stmt = $this->db->query("SHOW COLUMNS FROM employees LIKE 'realtor_listing_id'");
+            if ($stmt && $stmt->rowCount() === 0) {
+                $this->db->exec("ALTER TABLE employees ADD COLUMN realtor_listing_id INT NULL AFTER property_id");
+            }
+        } catch (\Exception $e) {
+            // ignore
+        }
 
         // Ensure role column supports arbitrary property-related roles
         try {
@@ -59,9 +70,10 @@ class Employee extends Model
     {
         $user = new User();
         $user->find($userId);
-        $sql = "SELECT e.*, p.name AS property_name
+        $sql = "SELECT e.*, p.name AS property_name, rl.title AS realtor_listing_title
                 FROM employees e
-                LEFT JOIN properties p ON e.property_id = p.id";
+                LEFT JOIN properties p ON e.property_id = p.id
+                LEFT JOIN realtor_listings rl ON e.realtor_listing_id = rl.id";
         $params = [];
         if ($userId && !$user->isAdmin()) {
             $propertyIds = $user->getAccessiblePropertyIds();
@@ -83,9 +95,10 @@ class Employee extends Model
     {
         $user = new User();
         $user->find($userId);
-        $sql = "SELECT e.*, p.name AS property_name
+        $sql = "SELECT e.*, p.name AS property_name, rl.title AS realtor_listing_title
                 FROM employees e
                 LEFT JOIN properties p ON e.property_id = p.id
+                LEFT JOIN realtor_listings rl ON e.realtor_listing_id = rl.id
                 WHERE e.id = ?";
         $params = [$id];
         if ($userId && !$user->isAdmin()) {
