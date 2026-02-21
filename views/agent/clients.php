@@ -73,7 +73,7 @@ ob_start();
                         <div class="col-md-6">
                             <label class="form-label">Property</label>
                             <div class="dropdown w-100">
-                                <button class="btn btn-outline-secondary dropdown-toggle w-100 text-start" type="button" id="edit_client_property_btn" data-bs-toggle="dropdown" aria-expanded="false">
+                                <button class="btn btn-outline-secondary dropdown-toggle w-100 text-start" type="button" id="edit_client_property_btn" data-bs-toggle="dropdown" aria-expanded="false" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
                                     Select properties
                                 </button>
                                 <div class="dropdown-menu w-100 p-2" aria-labelledby="edit_client_property_btn" style="max-height:240px; overflow:auto;">
@@ -150,7 +150,7 @@ ob_start();
                             <label class="form-label">Property</label>
                             <div class="d-flex gap-2">
                                 <div class="dropdown w-100">
-                                    <button class="btn btn-outline-secondary dropdown-toggle w-100 text-start" type="button" id="agent_client_property_btn" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <button class="btn btn-outline-secondary dropdown-toggle w-100 text-start" type="button" id="agent_client_property_btn" data-bs-toggle="dropdown" aria-expanded="false" style="white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
                                         Select properties
                                     </button>
                                     <div class="dropdown-menu w-100 p-2" aria-labelledby="agent_client_property_btn" style="max-height:240px; overflow:auto;">
