@@ -1722,6 +1722,8 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
 <?php endif; ?>
+
+});
 </script>
 <script>
 // Realtor Contracts -> Payments linkage
