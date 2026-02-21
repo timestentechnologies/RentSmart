@@ -31,10 +31,9 @@ class AgentClientsController
     public function index()
     {
         $clientModel = new AgentClient();
-        $propertyModel = new Property();
 
         $clients = $clientModel->getAllForUser($this->userId);
-        $properties = $propertyModel->getAll($this->userId);
+        $properties = $clientModel->getAvailablePropertiesForUser($this->userId);
 
         echo view('agent/clients', [
             'title' => 'Clients',
@@ -58,13 +57,17 @@ class AgentClientsController
                 exit;
             }
 
-            $propertyId = (int)($_POST['property_id'] ?? 0);
+            $propertyIdsRaw = $_POST['property_ids'] ?? [];
+            if (!is_array($propertyIdsRaw)) {
+                $propertyIdsRaw = [$propertyIdsRaw];
+            }
+            $propertyIds = array_values(array_unique(array_filter(array_map('intval', $propertyIdsRaw), fn($v) => $v > 0)));
             $name = trim((string)($_POST['name'] ?? ''));
             $phone = trim((string)($_POST['phone'] ?? ''));
             $email = trim((string)($_POST['email'] ?? ''));
             $notes = trim((string)($_POST['notes'] ?? ''));
 
-            if ($propertyId <= 0 || $name === '' || $phone === '') {
+            if (empty($propertyIds) || $name === '' || $phone === '') {
                 $_SESSION['flash_message'] = 'Property, name and phone are required';
                 $_SESSION['flash_type'] = 'danger';
                 header('Location: ' . BASE_URL . '/agent/clients');
@@ -72,23 +75,42 @@ class AgentClientsController
             }
 
             $propertyModel = new Property();
-            $property = $propertyModel->getById($propertyId, $this->userId);
-            if (!$property) {
-                $_SESSION['flash_message'] = 'Invalid property selected';
-                $_SESSION['flash_type'] = 'danger';
-                header('Location: ' . BASE_URL . '/agent/clients');
-                exit;
+            foreach ($propertyIds as $pid) {
+                $property = $propertyModel->getById((int)$pid, $this->userId);
+                if (!$property) {
+                    $_SESSION['flash_message'] = 'Invalid property selected';
+                    $_SESSION['flash_type'] = 'danger';
+                    header('Location: ' . BASE_URL . '/agent/clients');
+                    exit;
+                }
             }
 
             $clientModel = new AgentClient();
-            $clientModel->insert([
-                'user_id' => (int)$this->userId,
-                'property_id' => (int)$propertyId,
-                'name' => $name,
-                'phone' => $phone,
-                'email' => $email,
-                'notes' => $notes,
-            ]);
+            foreach ($propertyIds as $pid) {
+                if (!$clientModel->isPropertyAvailableForClient((int)$pid, (int)$this->userId, null)) {
+                    $_SESSION['flash_message'] = 'One or more selected properties are already linked to another client';
+                    $_SESSION['flash_type'] = 'danger';
+                    header('Location: ' . BASE_URL . '/agent/clients');
+                    exit;
+                }
+            }
+            $clientModel->beginTransaction();
+            try {
+                $clientId = $clientModel->insert([
+                    'user_id' => (int)$this->userId,
+                    'property_id' => null,
+                    'name' => $name,
+                    'phone' => $phone,
+                    'email' => $email,
+                    'notes' => $notes,
+                ]);
+
+                $clientModel->syncClientProperties((int)$clientId, (int)$this->userId, $propertyIds);
+                $clientModel->commit();
+            } catch (\Exception $e) {
+                $clientModel->rollback();
+                throw $e;
+            }
 
             $_SESSION['flash_message'] = 'Client added successfully';
             $_SESSION['flash_type'] = 'success';
@@ -113,6 +135,8 @@ class AgentClientsController
                 echo json_encode(['success' => false, 'message' => 'Client not found']);
                 exit;
             }
+            $availableProperties = $clientModel->getAvailablePropertiesForUser($this->userId, (int)$id);
+            $row['available_properties'] = $availableProperties;
             echo json_encode(['success' => true, 'data' => $row]);
         } catch (\Exception $e) {
             http_response_code(500);
@@ -141,33 +165,52 @@ class AgentClientsController
                 exit;
             }
 
-            $propertyId = array_key_exists('property_id', $_POST)
-                ? (($_POST['property_id'] !== '' && $_POST['property_id'] !== null) ? (int)$_POST['property_id'] : null)
-                : (int)($row['property_id'] ?? 0);
+            $propertyIdsRaw = $_POST['property_ids'] ?? ($row['property_ids'] ?? []);
+            if (!is_array($propertyIdsRaw)) {
+                $propertyIdsRaw = [$propertyIdsRaw];
+            }
+            $propertyIds = array_values(array_unique(array_filter(array_map('intval', $propertyIdsRaw), fn($v) => $v > 0)));
             $name = trim((string)($_POST['name'] ?? ($row['name'] ?? '')));
             $phone = trim((string)($_POST['phone'] ?? ($row['phone'] ?? '')));
             $email = trim((string)($_POST['email'] ?? ($row['email'] ?? '')));
             $notes = trim((string)($_POST['notes'] ?? ($row['notes'] ?? '')));
 
-            if (!$propertyId || $name === '' || $phone === '') {
+            if (empty($propertyIds) || $name === '' || $phone === '') {
                 echo json_encode(['success' => false, 'message' => 'Property, name and phone are required']);
                 exit;
             }
 
             $propertyModel = new Property();
-            $prop = $propertyModel->getById((int)$propertyId, $this->userId);
-            if (!$prop) {
-                echo json_encode(['success' => false, 'message' => 'Invalid property selected']);
-                exit;
+            foreach ($propertyIds as $pid) {
+                $prop = $propertyModel->getById((int)$pid, $this->userId);
+                if (!$prop) {
+                    echo json_encode(['success' => false, 'message' => 'Invalid property selected']);
+                    exit;
+                }
             }
 
-            $ok = $clientModel->updateById((int)$id, [
-                'property_id' => (int)$propertyId,
-                'name' => $name,
-                'phone' => $phone,
-                'email' => $email,
-                'notes' => $notes,
-            ]);
+            foreach ($propertyIds as $pid) {
+                if (!$clientModel->isPropertyAvailableForClient((int)$pid, (int)$this->userId, (int)$id)) {
+                    echo json_encode(['success' => false, 'message' => 'One or more selected properties are already linked to another client']);
+                    exit;
+                }
+            }
+
+            $clientModel->beginTransaction();
+            try {
+                $ok = $clientModel->updateById((int)$id, [
+                    'property_id' => null,
+                    'name' => $name,
+                    'phone' => $phone,
+                    'email' => $email,
+                    'notes' => $notes,
+                ]);
+                $clientModel->syncClientProperties((int)$id, (int)$this->userId, $propertyIds);
+                $clientModel->commit();
+            } catch (\Exception $e) {
+                $clientModel->rollback();
+                throw $e;
+            }
 
             echo json_encode(['success' => (bool)$ok]);
         } catch (\Exception $e) {
@@ -219,8 +262,8 @@ class AgentClientsController
 
                 $clientPhone = trim((string)($row['phone'] ?? ''));
                 $clientEmail = trim((string)($row['email'] ?? ''));
-                $propertyId = (int)($row['property_id'] ?? 0);
-                if ($propertyId > 0 && ($clientPhone !== '' || $clientEmail !== '')) {
+                $propertyIds = $clientModel->getClientPropertyIds((int)$id, (int)$this->userId);
+                if (!empty($propertyIds) && ($clientPhone !== '' || $clientEmail !== '')) {
                     $stmt = $clientModel->getDb()->prepare(
                         "UPDATE inquiries i\n"
                         . "LEFT JOIN properties p ON p.id = i.property_id\n"
@@ -230,22 +273,26 @@ class AgentClientsController
                         . "  AND (i.contact = ? OR i.contact = ?)\n"
                         . "  AND (p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ?)"
                     );
-                    $stmt->execute([
-                        (int)$propertyId,
-                        (string)$wonStageKey,
-                        (string)$clientPhone,
-                        (string)($clientEmail !== '' ? $clientEmail : $clientPhone),
-                        (int)$this->userId,
-                        (int)$this->userId,
-                        (int)$this->userId,
-                        (int)$this->userId,
-                    ]);
+                    foreach ($propertyIds as $propertyId) {
+                        $stmt->execute([
+                            (int)$propertyId,
+                            (string)$wonStageKey,
+                            (string)$clientPhone,
+                            (string)($clientEmail !== '' ? $clientEmail : $clientPhone),
+                            (int)$this->userId,
+                            (int)$this->userId,
+                            (int)$this->userId,
+                            (int)$this->userId,
+                        ]);
+                    }
                 }
 
                 $stmt = $contractModel->getDb()->prepare(
                     "DELETE FROM agent_contracts WHERE agent_client_id = ? AND user_id = ?"
                 );
                 $stmt->execute([(int)$id, (int)$this->userId]);
+
+                $clientModel->syncClientProperties((int)$id, (int)$this->userId, []);
 
                 $clientModel->deleteById((int)$id);
 
