@@ -1304,7 +1304,7 @@ ob_clean();
             <ul class="nav flex-column">
                 <?php $isRealtor = isset($_SESSION['user_role']) && strtolower((string)$_SESSION['user_role']) === 'realtor'; ?>
                 <?php $userRole = strtolower((string)($_SESSION['user_role'] ?? '')); ?>
-                <?php $isAgentSide = !$isRealtor && in_array($userRole, ['agent', 'manager', 'landlord', 'caretaker'], true); ?>
+                <?php $isAgentSide = !$isRealtor && in_array($userRole, ['agent'], true); ?>
                 <!-- Dashboard -->
                 <li class="nav-item">
                     <a class="nav-link <?= ($current_uri === 'dashboard' || strpos($current_uri, 'realtor/dashboard') === 0) ? 'active' : '' ?>" href="<?= BASE_URL . ($isRealtor ? '/realtor/dashboard' : '/dashboard') ?>">

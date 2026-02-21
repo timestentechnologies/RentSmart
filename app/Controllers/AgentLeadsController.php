@@ -18,15 +18,15 @@ class AgentLeadsController
     public function __construct()
     {
         $this->userId = $_SESSION['user_id'] ?? null;
-        $this->role = strtolower((string)($_SESSION['user_role'] ?? 'guest'));
-
+        $this->role = strtolower((string)($_SESSION['user_role'] ?? ''));
         if (!isset($_SESSION['user_id'])) {
             $_SESSION['flash_message'] = 'Please login to continue';
             $_SESSION['flash_type'] = 'warning';
             header('Location: ' . BASE_URL . '/');
             exit;
         }
-        if ($this->role === 'realtor') {
+
+        if ($this->role === 'landlord' || $this->role === 'manager' || $this->role === 'realtor') {
             $_SESSION['flash_message'] = 'Access denied';
             $_SESSION['flash_type'] = 'danger';
             header('Location: ' . BASE_URL . '/dashboard');

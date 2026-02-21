@@ -19,7 +19,8 @@ class AgentContractsController
             header('Location: ' . BASE_URL . '/');
             exit;
         }
-        if (strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor') {
+        $role = strtolower((string)($_SESSION['user_role'] ?? ''));
+        if ($role === 'realtor' || $role === 'landlord' || $role === 'manager') {
             $_SESSION['flash_message'] = 'Access denied';
             $_SESSION['flash_type'] = 'danger';
             header('Location: ' . BASE_URL . '/dashboard');
