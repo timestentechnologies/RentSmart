@@ -72,11 +72,21 @@ ob_start();
                     <div class="row g-3">
                         <div class="col-md-6">
                             <label class="form-label">Property</label>
-                            <select class="form-select" name="property_ids[]" id="edit_client_property" multiple required>
-                                <?php foreach (($properties ?? []) as $p): ?>
-                                    <option value="<?= (int)($p['id'] ?? 0) ?>"><?= htmlspecialchars((string)($p['name'] ?? '')) ?></option>
-                                <?php endforeach; ?>
-                            </select>
+                            <div class="dropdown w-100">
+                                <button class="btn btn-outline-secondary dropdown-toggle w-100 text-start" type="button" id="edit_client_property_btn" data-bs-toggle="dropdown" aria-expanded="false">
+                                    Select properties
+                                </button>
+                                <div class="dropdown-menu w-100 p-2" aria-labelledby="edit_client_property_btn" style="max-height:240px; overflow:auto;">
+                                    <div id="edit_client_property_list">
+                                        <?php foreach (($properties ?? []) as $p): ?>
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="property_ids[]" value="<?= (int)($p['id'] ?? 0) ?>" id="edit_prop_<?= (int)($p['id'] ?? 0) ?>">
+                                                <label class="form-check-label" for="edit_prop_<?= (int)($p['id'] ?? 0) ?>"><?= htmlspecialchars((string)($p['name'] ?? '')) ?></label>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                </div>
+                            </div>
                             <div class="form-text">Select one or more properties.</div>
                         </div>
                         <div class="col-md-6">
@@ -139,11 +149,21 @@ ob_start();
                         <div class="col-md-6">
                             <label class="form-label">Property</label>
                             <div class="d-flex gap-2">
-                                <select class="form-select" name="property_ids[]" id="agent_client_property" multiple required>
-                                    <?php foreach (($properties ?? []) as $p): ?>
-                                        <option value="<?= (int)($p['id'] ?? 0) ?>"><?= htmlspecialchars((string)($p['name'] ?? '')) ?></option>
-                                    <?php endforeach; ?>
-                                </select>
+                                <div class="dropdown w-100">
+                                    <button class="btn btn-outline-secondary dropdown-toggle w-100 text-start" type="button" id="agent_client_property_btn" data-bs-toggle="dropdown" aria-expanded="false">
+                                        Select properties
+                                    </button>
+                                    <div class="dropdown-menu w-100 p-2" aria-labelledby="agent_client_property_btn" style="max-height:240px; overflow:auto;">
+                                        <div id="agent_client_property_list">
+                                            <?php foreach (($properties ?? []) as $p): ?>
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="property_ids[]" value="<?= (int)($p['id'] ?? 0) ?>" id="add_prop_<?= (int)($p['id'] ?? 0) ?>">
+                                                    <label class="form-check-label" for="add_prop_<?= (int)($p['id'] ?? 0) ?>"><?= htmlspecialchars((string)($p['name'] ?? '')) ?></label>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    </div>
+                                </div>
                                 <button type="button" class="btn btn-outline-primary" id="agentClientAddPropertyBtn" title="Add Property" data-bs-toggle="modal" data-bs-target="#agentClientAddPropertyModal">
                                     <i class="bi bi-plus-circle"></i>
                                 </button>
@@ -250,6 +270,28 @@ ob_start();
     return window.bootstrap.Modal.getOrCreateInstance(editModalEl);
   }
 
+  function setDropdownLabel(btnEl, checkedNames){
+    if(!btnEl) return;
+    if(!checkedNames.length){
+      btnEl.textContent = 'Select properties';
+      return;
+    }
+    const label = checkedNames.join(', ');
+    btnEl.textContent = label.length > 60 ? (label.slice(0, 60) + '…') : label;
+  }
+
+  function syncClientPropertyDropdown(prefix){
+    const btn = document.getElementById(prefix + '_btn');
+    const list = document.getElementById(prefix + '_list');
+    if(!btn || !list) return;
+    const checked = Array.from(list.querySelectorAll('input[type="checkbox"]:checked'));
+    const names = checked.map(i => (i.closest('.form-check')?.querySelector('label')?.textContent || '').trim()).filter(Boolean);
+    setDropdownLabel(btn, names);
+  }
+
+  document.getElementById('agent_client_property_list')?.addEventListener('change', ()=>syncClientPropertyDropdown('agent_client_property'));
+  document.getElementById('edit_client_property_list')?.addEventListener('change', ()=>syncClientPropertyDropdown('edit_client_property'));
+
   window.editAgentClient = function(id){
     fetch('<?= BASE_URL ?>' + '/agent/clients/get/' + id)
       .then(r=>r.json()).then(resp=>{
@@ -257,32 +299,55 @@ ob_start();
         const c = resp.data || {};
         document.getElementById('edit_client_id').value = String(c.id || id);
 
-        const editPropSel = document.getElementById('edit_client_property');
-        if (editPropSel) {
-          // Replace options with the backend filtered list (unlinked + this client's linked)
+        const editList = document.getElementById('edit_client_property_list');
+        if(editList){
           const avail = Array.isArray(c.available_properties) ? c.available_properties : [];
-          editPropSel.innerHTML = '';
+          editList.innerHTML = '';
           avail.forEach(p => {
-            const opt = document.createElement('option');
-            opt.value = String(p.id || '');
-            opt.textContent = String(p.name || '');
-            editPropSel.appendChild(opt);
+            const pid = String(p.id || '');
+            if(!pid) return;
+            const wrap = document.createElement('div');
+            wrap.className = 'form-check';
+            const input = document.createElement('input');
+            input.className = 'form-check-input';
+            input.type = 'checkbox';
+            input.name = 'property_ids[]';
+            input.value = pid;
+            input.id = 'edit_prop_' + pid;
+            const label = document.createElement('label');
+            label.className = 'form-check-label';
+            label.setAttribute('for', input.id);
+            label.textContent = String(p.name || pid);
+            wrap.appendChild(input);
+            wrap.appendChild(label);
+            editList.appendChild(wrap);
           });
 
           const selectedIds = Array.isArray(c.property_ids) ? c.property_ids.map(v => String(v)) : [];
-          // Safety: ensure selected ids exist as options even if not in avail array
           selectedIds.forEach(pid => {
-            const exists = Array.from(editPropSel.options).some(o => o.value === pid);
-            if (!exists) {
-              const opt = document.createElement('option');
-              opt.value = pid;
-              opt.textContent = pid;
-              editPropSel.appendChild(opt);
+            const existing = editList.querySelector('input[type="checkbox"][value="' + pid.replace(/"/g,'') + '"]');
+            if(existing){
+              existing.checked = true;
+            } else {
+              const wrap = document.createElement('div');
+              wrap.className = 'form-check';
+              const input = document.createElement('input');
+              input.className = 'form-check-input';
+              input.type = 'checkbox';
+              input.name = 'property_ids[]';
+              input.value = pid;
+              input.id = 'edit_prop_' + pid;
+              input.checked = true;
+              const label = document.createElement('label');
+              label.className = 'form-check-label';
+              label.setAttribute('for', input.id);
+              label.textContent = pid;
+              wrap.appendChild(input);
+              wrap.appendChild(label);
+              editList.appendChild(wrap);
             }
           });
-          Array.from(editPropSel.options).forEach(opt => {
-            opt.selected = selectedIds.includes(opt.value);
-          });
+          syncClientPropertyDropdown('edit_client_property');
         }
         document.getElementById('edit_client_name').value = c.name || '';
         document.getElementById('edit_client_phone').value = c.phone || '';
@@ -352,8 +417,8 @@ ob_start();
     }
   });
 
-  const propertySel = document.getElementById('agent_client_property');
-  const editPropertySel = document.getElementById('edit_client_property');
+  const propertyList = document.getElementById('agent_client_property_list');
+  const editPropertyList = document.getElementById('edit_client_property_list');
   const addPropBtn = document.getElementById('agentClientAddPropertyBtn');
   const addPropModalEl = document.getElementById('agentClientAddPropertyModal');
   const addPropForm = document.getElementById('agentClientAddPropertyForm');
@@ -365,18 +430,30 @@ ob_start();
     return window.bootstrap.Modal.getOrCreateInstance(addPropModalEl);
   }
 
-  function upsertPropertyOption(selectEl, id, label){
-    if(!selectEl) return;
+  function upsertPropertyCheckbox(listEl, id, label, prefix){
+    if(!listEl) return;
     const val = String(id);
-    const existing = Array.from(selectEl.options).find(o => o.value === val);
+    const existing = listEl.querySelector('input[type="checkbox"][value="' + val.replace(/"/g,'') + '"]');
     if(existing){
-      existing.textContent = label;
-    } else {
-      const opt = document.createElement('option');
-      opt.value = val;
-      opt.textContent = label;
-      selectEl.appendChild(opt);
+      const lbl = existing.closest('.form-check')?.querySelector('label');
+      if(lbl) lbl.textContent = label;
+      return;
     }
+    const wrap = document.createElement('div');
+    wrap.className = 'form-check';
+    const input = document.createElement('input');
+    input.className = 'form-check-input';
+    input.type = 'checkbox';
+    input.name = 'property_ids[]';
+    input.value = val;
+    input.id = prefix + '_' + val;
+    const lbl = document.createElement('label');
+    lbl.className = 'form-check-label';
+    lbl.setAttribute('for', input.id);
+    lbl.textContent = label;
+    wrap.appendChild(input);
+    wrap.appendChild(lbl);
+    listEl.appendChild(wrap);
   }
 
   if(addPropBtn){
@@ -388,7 +465,7 @@ ob_start();
 
   addPropForm?.addEventListener('submit', async (e)=>{
     e.preventDefault();
-    if(!propertySel) return;
+    if(!propertyList) return;
     if(addPropErr){ addPropErr.classList.add('d-none'); addPropErr.textContent = ''; }
     if(addPropSubmit) addPropSubmit.disabled = true;
     try {
@@ -404,23 +481,12 @@ ob_start();
         throw new Error((data && data.message) ? data.message : 'Failed to create property');
       }
       const label = String(fd.get('name') || 'New Property');
-      upsertPropertyOption(propertySel, data.property_id, label);
-      upsertPropertyOption(editPropertySel, data.property_id, label);
-      if(propertySel){
-        const newVal = String(data.property_id);
-        Array.from(propertySel.options).forEach(opt => {
-          if(opt.value === newVal) opt.selected = true;
-        });
-      }
-      if(editPropertySel){
-        const newVal = String(data.property_id);
-        Array.from(editPropertySel.options).forEach(opt => {
-          if(opt.value === newVal) opt.selected = true;
-        });
-      }
-      if(editPropertySel && editPropertySel.value === '') {
-        // don't force-change edit modal selection unless empty
-      }
+      upsertPropertyCheckbox(propertyList, data.property_id, label, 'add_prop');
+      upsertPropertyCheckbox(editPropertyList, data.property_id, label, 'edit_prop');
+      const newVal = String(data.property_id);
+      propertyList.querySelector('input[type="checkbox"][value="' + newVal.replace(/"/g,'') + '"]')?.click();
+      syncClientPropertyDropdown('agent_client_property');
+      syncClientPropertyDropdown('edit_client_property');
       const addPropModal = getAddPropModal();
       if (addPropModal) addPropModal.hide();
     } catch (err){

@@ -83,9 +83,11 @@ ob_start();
                             <select class="form-select" name="agent_client_id" id="edit_contract_client" required>
                                 <option value="">Select client</option>
                                 <?php foreach (($clients ?? []) as $cl): ?>
-                                    <option value="<?= (int)($cl['id'] ?? 0) ?>">
-                                        <?= htmlspecialchars((string)($cl['name'] ?? '')) ?> (<?= htmlspecialchars((string)($cl['property_names'] ?? '')) ?>)
-                                    </option>
+                                    <?php foreach (($cl['property_pairs'] ?? []) as $pp): ?>
+                                        <option value="<?= (int)($cl['id'] ?? 0) ?>" data-property-id="<?= (int)($pp['id'] ?? 0) ?>">
+                                            <?= htmlspecialchars((string)($cl['name'] ?? '')) ?> (<?= htmlspecialchars((string)($pp['name'] ?? '')) ?>)
+                                        </option>
+                                    <?php endforeach; ?>
                                 <?php endforeach; ?>
                             </select>
                             <div class="form-text">Client list should match the selected property.</div>
@@ -159,9 +161,11 @@ ob_start();
                             <select class="form-select" name="agent_client_id" required>
                                 <option value="">Select client</option>
                                 <?php foreach (($clients ?? []) as $cl): ?>
-                                    <option value="<?= (int)($cl['id'] ?? 0) ?>">
-                                        <?= htmlspecialchars((string)($cl['name'] ?? '')) ?> (<?= htmlspecialchars((string)($cl['property_names'] ?? '')) ?>)
-                                    </option>
+                                    <?php foreach (($cl['property_pairs'] ?? []) as $pp): ?>
+                                        <option value="<?= (int)($cl['id'] ?? 0) ?>" data-property-id="<?= (int)($pp['id'] ?? 0) ?>">
+                                            <?= htmlspecialchars((string)($cl['name'] ?? '')) ?> (<?= htmlspecialchars((string)($pp['name'] ?? '')) ?>)
+                                        </option>
+                                    <?php endforeach; ?>
                                 <?php endforeach; ?>
                             </select>
                         </div>
@@ -238,9 +242,20 @@ ob_start();
   }
 
   const propSel = document.getElementById('edit_contract_property');
+  const clientSel = document.getElementById('edit_contract_client');
   function filterClients(){
-    // Multi-property clients: keep full list; backend will validate property-client pairing.
-    return;
+    if(!propSel || !clientSel) return;
+    const pid = String(propSel.value || '');
+    Array.from(clientSel.options).forEach(opt=>{
+      if(!opt.value) return;
+      const optPid = opt.getAttribute('data-property-id') || '';
+      const ok = !pid || optPid === pid;
+      opt.hidden = !ok;
+    });
+    const sel = clientSel.selectedOptions && clientSel.selectedOptions.length ? clientSel.selectedOptions[0] : null;
+    if(sel && sel.hidden){
+      clientSel.value = '';
+    }
   }
   if(propSel){
     propSel.addEventListener('change', filterClients);
