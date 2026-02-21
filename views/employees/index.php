@@ -1,5 +1,6 @@
 <?php
 ob_start();
+$isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
 ?>
 <div class="container-fluid pt-4">
     <div class="card page-header mb-4">
@@ -22,7 +23,7 @@ ob_start();
                 <div class="row g-2 align-items-end">
                     <div class="col-md-4">
                         <label class="form-label mb-1">Search</label>
-                        <input type="text" id="empSearch" class="form-control" placeholder="Search by name, role, property...">
+                        <input type="text" id="empSearch" class="form-control" placeholder="Search by name, role<?= $isRealtor ? '' : ', property' ?>...">
                     </div>
                     <div class="col-md-3">
                         <label class="form-label mb-1">Role</label>
@@ -52,15 +53,17 @@ ob_start();
                             <option value="general">General</option>
                         </select>
                     </div>
-                    <div class="col-md-3">
-                        <label class="form-label mb-1">Property</label>
-                        <select id="empPropertyFilter" class="form-select">
-                            <option value="">All</option>
-                            <?php foreach (($properties ?? []) as $p): ?>
-                                <option value="<?= htmlspecialchars($p['name']) ?>"><?= htmlspecialchars($p['name']) ?></option>
-                            <?php endforeach; ?>
-                        </select>
-                    </div>
+                    <?php if (!$isRealtor): ?>
+                        <div class="col-md-3">
+                            <label class="form-label mb-1">Property</label>
+                            <select id="empPropertyFilter" class="form-select">
+                                <option value="">All</option>
+                                <?php foreach (($properties ?? []) as $p): ?>
+                                    <option value="<?= htmlspecialchars($p['name']) ?>"><?= htmlspecialchars($p['name']) ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    <?php endif; ?>
                     <div class="col-md-2">
                         <label class="form-label mb-1">Status</label>
                         <select id="empStatusFilter" class="form-select">
@@ -77,7 +80,7 @@ ob_start();
                         <tr>
                             <th>Name</th>
                             <th>Role</th>
-                            <th>Property</th>
+                            <?php if (!$isRealtor): ?><th>Property</th><?php endif; ?>
                             <th>Salary</th>
                             <th>Status</th>
                             <th>Actions</th>
@@ -88,7 +91,7 @@ ob_start();
                         <tr>
                             <td class="emp-name"><?= htmlspecialchars($emp['name']) ?></td>
                             <td class="emp-role" data-role="<?= htmlspecialchars(strtolower($emp['role'] ?? 'general')) ?>"><?= htmlspecialchars(ucwords(str_replace('_',' ', $emp['role'] ?? 'general'))) ?></td>
-                            <td class="emp-property"><?= htmlspecialchars($emp['property_name'] ?? '-') ?></td>
+                            <?php if (!$isRealtor): ?><td class="emp-property"><?= htmlspecialchars($emp['property_name'] ?? '-') ?></td><?php endif; ?>
                             <td class="emp-salary">Ksh<?= number_format($emp['salary'] ?? 0, 2) ?></td>
                             <td class="emp-status" data-status="<?= htmlspecialchars(strtolower($emp['status'] ?? 'active')) ?>"><span class="badge <?= ($emp['status'] ?? 'active') === 'active' ? 'bg-success' : 'bg-secondary' ?>"><?= ucwords($emp['status'] ?? 'active') ?></span></td>
                             <td>
@@ -162,15 +165,17 @@ ob_start();
                 <option value="general">General</option>
             </select>
           </div>
-          <div class="mb-3">
-            <label class="form-label">Property (optional)</label>
-            <select name="property_id" class="form-select">
-                <option value="">None</option>
-                <?php foreach (($properties ?? []) as $p): ?>
-                    <option value="<?= $p['id'] ?>"><?= htmlspecialchars($p['name']) ?></option>
-                <?php endforeach; ?>
-            </select>
-          </div>
+          <?php if (!$isRealtor): ?>
+              <div class="mb-3">
+                <label class="form-label">Property (optional)</label>
+                <select name="property_id" class="form-select">
+                    <option value="">None</option>
+                    <?php foreach (($properties ?? []) as $p): ?>
+                        <option value="<?= $p['id'] ?>"><?= htmlspecialchars($p['name']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+              </div>
+          <?php endif; ?>
           <div class="mb-3">
             <label class="form-label">Salary (Monthly)</label>
             <div class="input-group">
@@ -309,15 +314,17 @@ ob_start();
                 <option value="general">General</option>
             </select>
           </div>
-          <div class="mb-3">
-            <label class="form-label">Property (optional)</label>
-            <select id="edit_property_id" name="property_id" class="form-select">
-                <option value="">None</option>
-                <?php foreach (($properties ?? []) as $p): ?>
-                    <option value="<?= $p['id'] ?>"><?= htmlspecialchars($p['name']) ?></option>
-                <?php endforeach; ?>
-            </select>
-          </div>
+          <?php if (!$isRealtor): ?>
+              <div class="mb-3">
+                <label class="form-label">Property (optional)</label>
+                <select id="edit_property_id" name="property_id" class="form-select">
+                    <option value="">None</option>
+                    <?php foreach (($properties ?? []) as $p): ?>
+                        <option value="<?= $p['id'] ?>"><?= htmlspecialchars($p['name']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+              </div>
+          <?php endif; ?>
           <div class="mb-3">
             <label class="form-label">Salary (Monthly)</label>
             <div class="input-group">
@@ -410,7 +417,8 @@ function editEmployee(id) {
     document.getElementById('edit_email').value = e.email || '';
     document.getElementById('edit_phone').value = e.phone || '';
     document.getElementById('edit_role').value = (e.role || 'general').toLowerCase();
-    document.getElementById('edit_property_id').value = e.property_id || '';
+    const propEl = document.getElementById('edit_property_id');
+    if (propEl) propEl.value = e.property_id || '';
     document.getElementById('edit_salary').value = e.salary || '';
     document.getElementById('edit_status').value = (e.status || 'active').toLowerCase();
     const modal = new bootstrap.Modal(document.getElementById('editEmployeeModal'));

@@ -88,15 +88,21 @@ $faviconUrl = $faviconUrl ?? site_setting_image_url('site_favicon', BASE_URL . '
           if (href.indexOf('#loginModal') !== -1) {
             ev.preventDefault();
             if (history && history.pushState) history.pushState(null, '', '#loginModal');
-            openModalById('loginModal');
+            if (!openModalById('loginModal')) {
+              window.location.href = "<?= addslashes((string)BASE_URL) ?>/#loginModal";
+            }
           } else if (href.indexOf('#registerModal') !== -1) {
             ev.preventDefault();
             if (history && history.pushState) history.pushState(null, '', '#registerModal');
-            openModalById('registerModal');
+            if (!openModalById('registerModal')) {
+              window.location.href = "<?= addslashes((string)BASE_URL) ?>/#registerModal";
+            }
           } else if (href.indexOf('#tenantLoginModal') !== -1) {
             ev.preventDefault();
             if (history && history.pushState) history.pushState(null, '', '#tenantLoginModal');
-            openModalById('tenantLoginModal');
+            if (!openModalById('tenantLoginModal')) {
+              window.location.href = "<?= addslashes((string)BASE_URL) ?>/#tenantLoginModal";
+            }
           }
         } catch (e) {}
       }, true);
