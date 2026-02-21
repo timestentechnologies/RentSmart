@@ -918,12 +918,12 @@ class Payment extends Model
         $user = new User();
         $user->find($userId);
         
-        $sql = "SELECT p.*,\n                t.name as tenant_name,\n                t.email as tenant_email,\n                t.phone as tenant_phone,\n                u.unit_number,\n                pr.id as property_id,\n                pr.name as property_name,\n                pr.address as property_address,\n                pr.city as property_city,\n                pr.state as property_state,\n                pr.zip_code as property_zip,\n                pr.owner_id as property_owner_id,\n                pr.manager_id as property_manager_id,\n                pr.agent_id as property_agent_id,\n                ut.utility_type,\n                mmp.phone_number, mmp.transaction_code, mmp.verification_status\n                FROM payments p\n                JOIN leases l ON p.lease_id = l.id\n                JOIN tenants t ON l.tenant_id = t.id\n                JOIN units u ON l.unit_id = u.id\n                JOIN properties pr ON u.property_id = pr.id\n                LEFT JOIN utilities ut ON p.utility_id = ut.id\n                LEFT JOIN manual_mpesa_payments mmp ON p.id = mmp.payment_id\n                WHERE p.id = ?";
+        $sql = "SELECT p.*,\n                t.name as tenant_name,\n                t.email as tenant_email,\n                t.phone as tenant_phone,\n                u.unit_number,\n                pr.id as property_id,\n                pr.name as property_name,\n                pr.address as property_address,\n                pr.city as property_city,\n                pr.state as property_state,\n                pr.zip_code as property_zip,\n                pr.owner_id as property_owner_id,\n                pr.manager_id as property_manager_id,\n                pr.agent_id as property_agent_id,\n                ut.utility_type,\n                mmp.phone_number, mmp.transaction_code, mmp.verification_status,\n                rc.name as client_name,\n                rl.title as listing_title\n                FROM payments p\n                LEFT JOIN leases l ON p.lease_id = l.id\n                LEFT JOIN tenants t ON l.tenant_id = t.id\n                LEFT JOIN units u ON l.unit_id = u.id\n                LEFT JOIN properties pr ON u.property_id = pr.id\n                LEFT JOIN utilities ut ON p.utility_id = ut.id\n                LEFT JOIN manual_mpesa_payments mmp ON p.id = mmp.payment_id\n                LEFT JOIN realtor_clients rc ON rc.id = p.realtor_client_id\n                LEFT JOIN realtor_listings rl ON rl.id = p.realtor_listing_id\n                WHERE p.id = ?";
         $params = [$id];
         
         // Add role-based conditions
         if (!$user->isAdmin()) {
-            $sql .= " AND (1=0";
+            $sql .= " AND (\n                        (p.lease_id IS NOT NULL AND (1=0";
             if ($user->isLandlord()) {
                 $sql .= " OR pr.owner_id = ?";
                 $params[] = $userId;
@@ -939,7 +939,8 @@ class Payment extends Model
             // Caretaker assigned to property
             $sql .= " OR pr.caretaker_user_id = ?";
             $params[] = $userId;
-            $sql .= ")";
+            $sql .= "))\n                        OR (p.lease_id IS NULL AND p.realtor_user_id = ?)\n                    )";
+            $params[] = $userId;
         }
         
         $stmt = $this->db->prepare($sql);
