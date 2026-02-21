@@ -112,6 +112,7 @@ ob_start();
   const rType = document.getElementById('receiver_type');
   const rId = document.getElementById('receiver_id');
   const title = document.getElementById('chatTitle');
+  const sendBtn = form ? form.querySelector('button[type="submit"]') : null;
 
   function scrollBottom(){ chat.scrollTop = chat.scrollHeight; }
 
@@ -136,6 +137,7 @@ ob_start();
   async function loadThread(type, id, label){
     title.textContent = label || 'Conversation';
     rType.value = type; rId.value = id;
+    if (sendBtn) sendBtn.disabled = false;
     chat.innerHTML = '<div class="text-center text-muted mt-5">Loading...</div>';
     try{
       const res = await fetch(`<?= BASE_URL ?>/messaging/thread?type=${encodeURIComponent(type)}&id=${encodeURIComponent(id)}`);
@@ -145,11 +147,64 @@ ob_start();
     }catch(e){ chat.innerHTML = '<div class="text-center text-danger mt-5">Failed to load</div>'; }
   }
 
-  function selectBroadcast(id, label){
-    title.textContent = label || 'Broadcast';
+  async function selectBroadcast(id, label){
     rType.value = 'broadcast';
     rId.value = id;
-    chat.innerHTML = '<div class="text-center text-muted mt-5">Broadcast selected. Type your message below and click send.</div>';
+    title.textContent = (label || 'Broadcast') + ' (loading...)';
+    chat.innerHTML = '<div class="text-center text-muted mt-5">Loading recipients...</div>';
+    if (sendBtn) sendBtn.disabled = true;
+
+    try {
+      const res = await fetch(`<?= BASE_URL ?>/messaging/broadcast-meta?key=${encodeURIComponent(id)}`);
+      const data = await res.json();
+      if (!data || !data.success) {
+        title.textContent = (label || 'Broadcast');
+        chat.innerHTML = '<div class="text-center text-danger mt-5">Failed to load recipients.</div>';
+        if (sendBtn) sendBtn.disabled = false;
+        return;
+      }
+
+      const count = parseInt(data.count || 0);
+      const recipients = Array.isArray(data.recipients) ? data.recipients : [];
+
+      if (count <= 0) {
+        title.textContent = (label || 'Broadcast') + ' - No tenants';
+        chat.innerHTML = '<div class="text-center text-warning mt-5">No tenants in this broadcast group.</div>';
+        if (sendBtn) sendBtn.disabled = true;
+        return;
+      }
+
+      const previewCount = recipients.length;
+      title.textContent = (label || 'Broadcast') + ' - ' + count + ' tenants';
+
+      let html = '';
+      html += '<div class="mb-3">';
+      html += '<div class="small text-muted">This message will be sent to ' + count + ' tenants.</div>';
+      html += '</div>';
+
+      html += '<div class="border rounded p-2" style="max-height:320px; overflow:auto;">';
+      html += '<div class="small text-muted mb-2">Recipients preview' + (previewCount < count ? (' (showing ' + previewCount + ' of ' + count + ')') : '') + ':</div>';
+      html += '<div class="list-group list-group-flush">';
+      recipients.forEach(function(r){
+        const name = (r && r.name) ? String(r.name) : 'Tenant';
+        const property = (r && r.property) ? String(r.property) : '-';
+        const unit = (r && r.unit) ? String(r.unit) : '-';
+        html += '<div class="list-group-item px-0">';
+        html += '<div class="fw-semibold">' + name.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>';
+        html += '<div class="small text-muted">' + property.replace(/</g,'&lt;').replace(/>/g,'&gt;') + ' • ' + unit.replace(/</g,'&lt;').replace(/>/g,'&gt;') + '</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+      html += '</div>';
+
+      html += '<div class="text-center text-muted mt-3">Broadcast selected. Type your message below and click send.</div>';
+      chat.innerHTML = html;
+      if (sendBtn) sendBtn.disabled = false;
+    } catch (e) {
+      title.textContent = (label || 'Broadcast');
+      chat.innerHTML = '<div class="text-center text-danger mt-5">Failed to load recipients.</div>';
+      if (sendBtn) sendBtn.disabled = false;
+    }
   }
 
   list && list.addEventListener('click', function(e){
