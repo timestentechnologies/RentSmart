@@ -748,15 +748,21 @@ $(document).ready(function() {
     // Utility Type edit button handler
     $(document).on('click', '.edit-utility-type-btn', function() {
         const ds = this.dataset || {};
-        if (typeof editId !== 'undefined' && editId) editId.value = ds.id || '';
-        if (typeof editType !== 'undefined' && editType) editType.value = ds.type || '';
-        if (typeof editBilling !== 'undefined' && editBilling) editBilling.value = ds.billingMethod || '';
-        if (typeof editRate !== 'undefined' && editRate) editRate.value = ds.rate || '';
-        if (typeof editFrom !== 'undefined' && editFrom) editFrom.value = ds.effectiveFrom || '';
-        if (typeof editTo !== 'undefined' && editTo) editTo.value = ds.effectiveTo || '';
-        if (typeof editPropertyId !== 'undefined' && editPropertyId) {
-            editPropertyId.value = ds.propertyId || '';
-        }
+        const editIdEl = document.getElementById('edit_id');
+        const editTypeEl = document.getElementById('edit_utility_type');
+        const editBillingEl = document.getElementById('edit_billing_method');
+        const editRateEl = document.getElementById('edit_rate_per_unit');
+        const editFromEl = document.getElementById('edit_effective_from');
+        const editToEl = document.getElementById('edit_effective_to');
+        const editPropertyIdEl = document.getElementById('edit_property_id');
+
+        if (editIdEl) editIdEl.value = ds.id || '';
+        if (editTypeEl) editTypeEl.value = ds.type || '';
+        if (editBillingEl) editBillingEl.value = ds.billingMethod || '';
+        if (editRateEl) editRateEl.value = ds.rate || '';
+        if (editFromEl) editFromEl.value = ds.effectiveFrom || '';
+        if (editToEl) editToEl.value = ds.effectiveTo || '';
+        if (editPropertyIdEl) editPropertyIdEl.value = ds.propertyId || '';
     });
 });
 
@@ -767,13 +773,6 @@ const utilityRates = {};
 <?php endforeach; ?>
 
 // Edit Utility Type Modal logic
-const editId = document.getElementById('edit_id');
-const editType = document.getElementById('edit_utility_type');
-const editBilling = document.getElementById('edit_billing_method');
-const editRate = document.getElementById('edit_rate_per_unit');
-const editFrom = document.getElementById('edit_effective_from');
-const editTo = document.getElementById('edit_effective_to');
-const editPropertyId = document.getElementById('edit_property_id');
 </script>
 
 <?php if (isset($_SESSION['edit_utility_id'])): ?>
