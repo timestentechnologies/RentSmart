@@ -497,6 +497,11 @@ function handleUnitEdit(event) {
             const mEl = document.getElementById('assignTenantRequiredModal');
             if (mEl && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
                 try {
+                    const editEl = document.getElementById('editUnitModal');
+                    if (editEl) {
+                        const editM = bootstrap.Modal.getInstance(editEl);
+                        if (editM) editM.hide();
+                    }
                     const m = new bootstrap.Modal(mEl);
                     m.show();
                     return;

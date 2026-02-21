@@ -57,6 +57,14 @@ class UnitsController
             $properties = $this->property->getAll($_SESSION['user_id']);
             $tenantModel = new Tenant();
             $tenants = $tenantModel->getAll($_SESSION['user_id']);
+            // Only show tenants who are not assigned to a unit (no unit_id and no active lease/unit_number)
+            $tenants = array_values(array_filter($tenants, function ($t) {
+                $unitId = (int)($t['unit_id'] ?? 0);
+                $unitNumber = (string)($t['unit_number'] ?? '');
+                $unitNumber = trim($unitNumber);
+                $hasUnitNumber = ($unitNumber !== '' && $unitNumber !== '-');
+                return ($unitId <= 0 && !$hasUnitNumber);
+            }));
             
             echo view('units/index', [
                 'title' => 'Units',
