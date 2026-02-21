@@ -336,11 +336,16 @@ $isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
                                         </td>
                                     <?php endif; ?>
                                     <td>
-                                        <?php if (!empty($payment['receipt_path'] ?? null)): ?>
-                                            <a href="<?= BASE_URL ?>/public/<?= (string)($payment['receipt_path'] ?? '') ?>" target="_blank" class="btn btn-sm btn-outline-secondary">
-                                                <i class="bi bi-file-earmark"></i>
+                                        <div class="d-flex gap-1">
+                                            <a href="<?= BASE_URL ?>/payments/receipt/<?= (int)($payment['id'] ?? 0) ?>" target="_blank" class="btn btn-sm btn-outline-secondary" title="Download Receipt PDF">
+                                                <i class="bi bi-download"></i>
                                             </a>
-                                        <?php endif; ?>
+                                            <?php if (!empty($payment['receipt_path'] ?? null)): ?>
+                                                <a href="<?= BASE_URL ?>/public/<?= (string)($payment['receipt_path'] ?? '') ?>" target="_blank" class="btn btn-sm btn-outline-secondary" title="View Uploaded Receipt">
+                                                    <i class="bi bi-file-earmark"></i>
+                                                </a>
+                                            <?php endif; ?>
+                                        </div>
                                     </td>
                                     <td>
                                         <div class="btn-group">
@@ -586,6 +591,14 @@ $isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
                         <label for="reference_number" class="form-label"><?= $isRealtor ? 'M-Pesa Reference' : 'Reference Number' ?></label>
                         <input type="text" class="form-control" id="reference_number" name="reference_number" placeholder="<?= $isRealtor ? 'e.g., QWN213948J' : 'Optional reference number' ?>">
                     </div>
+
+                    <?php if ($isRealtor): ?>
+                        <div class="mb-3">
+                            <label for="mpesa_phone" class="form-label">Phone Number</label>
+                            <input type="tel" id="mpesa_phone" name="mpesa_phone" class="form-control" placeholder="07XXXXXXXX">
+                            <div class="form-text">Fill this when the payment is via M-Pesa.</div>
+                        </div>
+                    <?php endif; ?>
                     
                     <div class="mb-3">
                         <label for="status" class="form-label">Payment Status</label>
@@ -599,10 +612,12 @@ $isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
                     
                     <!-- M-Pesa Manual Fields -->
                     <div id="mpesa_manual_fields" style="display: none;">
-                        <div class="mb-3">
-                            <label for="mpesa_phone" class="form-label">Phone Number</label>
-                            <input type="tel" id="mpesa_phone" name="mpesa_phone" class="form-control" placeholder="07XXXXXXXX">
-                        </div>
+                        <?php if (!$isRealtor): ?>
+                            <div class="mb-3">
+                                <label for="mpesa_phone" class="form-label">Phone Number</label>
+                                <input type="tel" id="mpesa_phone" name="mpesa_phone" class="form-control" placeholder="07XXXXXXXX">
+                            </div>
+                        <?php endif; ?>
                         <div class="mb-3">
                             <label for="mpesa_transaction_code" class="form-label">Transaction Code</label>
                             <input type="text" id="mpesa_transaction_code" name="mpesa_transaction_code" class="form-control" placeholder="e.g., QWN213948J">
