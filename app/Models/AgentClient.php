@@ -64,6 +64,7 @@ class AgentClient extends Model
             "SELECT c.*,\n"
             . "       GROUP_CONCAT(DISTINCT p.name ORDER BY p.name SEPARATOR ', ') AS property_names,\n"
             . "       GROUP_CONCAT(DISTINCT acp.property_id ORDER BY acp.property_id SEPARATOR ',') AS property_ids\n"
+            . "     , GROUP_CONCAT(DISTINCT CONCAT(acp.property_id, ':', REPLACE(p.name, ':', ' ')) ORDER BY p.name SEPARATOR '||') AS property_pairs\n"
             . "FROM {$this->table} c\n"
             . "LEFT JOIN {$this->linkTable} acp ON acp.agent_client_id = c.id\n"
             . "LEFT JOIN properties p ON p.id = acp.property_id\n"
@@ -75,6 +76,7 @@ class AgentClient extends Model
         $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
         foreach ($rows as &$r) {
             $r['property_ids'] = $this->csvToIntArray($r['property_ids'] ?? '');
+            $r['property_pairs'] = $this->pairsToArray($r['property_pairs'] ?? '');
         }
         unset($r);
         return $rows;
@@ -86,6 +88,7 @@ class AgentClient extends Model
             "SELECT c.*,\n"
             . "       GROUP_CONCAT(DISTINCT p.name ORDER BY p.name SEPARATOR ', ') AS property_names,\n"
             . "       GROUP_CONCAT(DISTINCT acp.property_id ORDER BY acp.property_id SEPARATOR ',') AS property_ids\n"
+            . "     , GROUP_CONCAT(DISTINCT CONCAT(acp.property_id, ':', REPLACE(p.name, ':', ' ')) ORDER BY p.name SEPARATOR '||') AS property_pairs\n"
             . "FROM {$this->table} c\n"
             . "LEFT JOIN {$this->linkTable} acp ON acp.agent_client_id = c.id\n"
             . "LEFT JOIN properties p ON p.id = acp.property_id\n"
@@ -99,6 +102,7 @@ class AgentClient extends Model
             return $row;
         }
         $row['property_ids'] = $this->csvToIntArray($row['property_ids'] ?? '');
+        $row['property_pairs'] = $this->pairsToArray($row['property_pairs'] ?? '');
         return $row;
     }
 
@@ -186,5 +190,25 @@ class AgentClient extends Model
             if ($v > 0) $ids[] = $v;
         }
         return array_values(array_unique($ids));
+    }
+
+    private function pairsToArray($pairs): array
+    {
+        $pairs = trim((string)$pairs);
+        if ($pairs === '') return [];
+        $items = explode('||', $pairs);
+        $out = [];
+        foreach ($items as $it) {
+            $it = trim($it);
+            if ($it === '') continue;
+            $pos = strpos($it, ':');
+            if ($pos === false) continue;
+            $id = (int)substr($it, 0, $pos);
+            $name = trim((string)substr($it, $pos + 1));
+            if ($id > 0) {
+                $out[] = ['id' => $id, 'name' => $name];
+            }
+        }
+        return $out;
     }
 }
