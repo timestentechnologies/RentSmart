@@ -232,26 +232,37 @@ $isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
                                     </td>
                                     <td>
                                         <?php
-                                        $rawType = strtolower((string)($payment['payment_type'] ?? 'rent'));
-                                        $notes = (string)($payment['notes'] ?? '');
-                                        $amount = (float)($payment['amount'] ?? 0);
-                                        $hasUtility = !empty($payment['utility_id']) || !empty($payment['utility_type']);
-                                        $isMaint = ($notes !== '' && (
-                                            $rawType === 'other'
-                                            || stripos($notes, 'maintenance payment:') !== false
-                                            || preg_match('/MAINT-\d+/i', $notes)
-                                        ));
-                                        $isUtilByNotes = ($notes !== '' && preg_match('/\b(util|utility|water|electricity|gas|internet)\b/i', $notes));
-
-                                        if ($isMaint) {
-                                            $typeClass = 'bg-warning text-dark';
-                                            $typeText = 'Maintenance';
-                                        } elseif ($rawType === 'utility' || $hasUtility || $isUtilByNotes) {
-                                            $typeClass = 'bg-info';
-                                            $typeText = !empty($payment['utility_type']) ? ucfirst((string)$payment['utility_type']) : 'Utility';
+                                        if ($isRealtor) {
+                                            $terms = strtolower((string)($payment['contract_terms_type'] ?? ''));
+                                            if ($terms === 'monthly') {
+                                                $typeClass = 'bg-info';
+                                                $typeText = 'Monthly Contract';
+                                            } else {
+                                                $typeClass = 'bg-primary';
+                                                $typeText = 'One-time Contract';
+                                            }
                                         } else {
-                                            $typeClass = 'bg-success';
-                                            $typeText = 'Rent';
+                                            $rawType = strtolower((string)($payment['payment_type'] ?? 'rent'));
+                                            $notes = (string)($payment['notes'] ?? '');
+                                            $amount = (float)($payment['amount'] ?? 0);
+                                            $hasUtility = !empty($payment['utility_id']) || !empty($payment['utility_type']);
+                                            $isMaint = ($notes !== '' && (
+                                                $rawType === 'other'
+                                                || stripos($notes, 'maintenance payment:') !== false
+                                                || preg_match('/MAINT-\d+/i', $notes)
+                                            ));
+                                            $isUtilByNotes = ($notes !== '' && preg_match('/\b(util|utility|water|electricity|gas|internet)\b/i', $notes));
+
+                                            if ($isMaint) {
+                                                $typeClass = 'bg-warning text-dark';
+                                                $typeText = 'Maintenance';
+                                            } elseif ($rawType === 'utility' || $hasUtility || $isUtilByNotes) {
+                                                $typeClass = 'bg-info';
+                                                $typeText = !empty($payment['utility_type']) ? ucfirst((string)$payment['utility_type']) : 'Utility';
+                                            } else {
+                                                $typeClass = 'bg-success';
+                                                $typeText = 'Rent';
+                                            }
                                         }
                                         ?>
                                         <span class="badge <?= $typeClass ?>">
@@ -887,6 +898,20 @@ $isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
 
 .payment-pending::before {
     background: linear-gradient(45deg, var(--warning-color), #e6a800);
+}
+
+/* Ensure actions are clickable even if other positioned elements overlap */
+#paymentsTable td:last-child,
+#paymentsTable th:last-child {
+    position: relative;
+    z-index: 3;
+}
+
+#paymentsTable .btn-group,
+#paymentsTable .btn-group .btn {
+    position: relative;
+    z-index: 4;
+    pointer-events: auto;
 }
 </style>
 
