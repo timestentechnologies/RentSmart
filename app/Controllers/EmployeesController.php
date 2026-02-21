@@ -27,6 +27,93 @@ class EmployeesController
         }
     }
 
+    public function whatsappCredentials($id)
+    {
+        $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+
+        try {
+            if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') {
+                throw new \Exception('Invalid request method');
+            }
+            if (empty($_SESSION['user_id'])) {
+                throw new \Exception('Unauthorized');
+            }
+            if (!function_exists('verify_csrf_token') || !verify_csrf_token()) {
+                throw new \Exception('Invalid CSRF token');
+            }
+
+            $employeeId = (int)$id;
+            if ($employeeId <= 0) {
+                throw new \Exception('Invalid employee');
+            }
+
+            $employeeModel = new Employee();
+            $emp = $employeeModel->getByIdWithAccess($employeeId, $this->userId);
+            if (!$emp) {
+                throw new \Exception('Employee not found');
+            }
+            if (strtolower((string)($emp['role'] ?? '')) !== 'caretaker') {
+                throw new \Exception('WhatsApp credentials are only available for caretakers');
+            }
+
+            $userModel = new User();
+            $db = $userModel->getDb();
+
+            // Find caretaker user by email or phone
+            $caretakerUser = null;
+            $email = trim((string)($emp['email'] ?? ''));
+            $phone = trim((string)($emp['phone'] ?? ''));
+            if ($email !== '') {
+                $caretakerUser = $userModel->findByEmail($email);
+            }
+            if (!$caretakerUser && $phone !== '') {
+                $stmt = $db->prepare("SELECT * FROM users WHERE phone = ? LIMIT 1");
+                $stmt->execute([$phone]);
+                $caretakerUser = $stmt->fetch(\PDO::FETCH_ASSOC);
+            }
+            if (!$caretakerUser) {
+                throw new \Exception('Caretaker login account not found');
+            }
+
+            // Reset password
+            $plainPassword = bin2hex(random_bytes(4));
+            $ok = $userModel->updatePassword((int)$caretakerUser['id'], $plainPassword);
+            if (!$ok) {
+                throw new \Exception('Failed to reset caretaker password');
+            }
+
+            $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+            $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+            $portalUrl = $scheme . '://' . $host . BASE_URL . '/';
+            $username = ($email !== '' ? $email : $phone);
+
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => true,
+                'credentials' => [
+                    'name' => (string)($caretakerUser['name'] ?? $emp['name'] ?? ''),
+                    'email' => (string)($caretakerUser['email'] ?? $email),
+                    'phone' => (string)($caretakerUser['phone'] ?? $phone),
+                    'username' => (string)$username,
+                    'password' => (string)$plainPassword,
+                    'portal_url' => (string)$portalUrl,
+                ]
+            ]);
+            exit;
+        } catch (\Exception $e) {
+            if (!$isAjax) {
+                $_SESSION['flash_message'] = $e->getMessage();
+                $_SESSION['flash_type'] = 'danger';
+                header('Location: ' . BASE_URL . '/employees');
+                exit;
+            }
+
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => $e->getMessage()]);
+            exit;
+        }
+    }
+
     public function index()
     {
         $employeeModel = new Employee();
@@ -126,6 +213,21 @@ class EmployeesController
                         ]);
                     } else {
                         $caretakerUserId = $existing['id'];
+                    }
+
+                    // Email caretaker login details (non-blocking) if email provided
+                    try {
+                        $caretakerEmail = (string)($data['email'] ?? '');
+                        if ($caretakerEmail !== '' && function_exists('send_email') && function_exists('get_setting')) {
+                            $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+                            $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+                            $loginUrl = $scheme . '://' . $host . BASE_URL . '/';
+                            $subject = 'Your caretaker account login details';
+                            $body = "Hello {$data['name']},\n\nYour caretaker account has been created.\n\nLogin URL: {$loginUrl}\nUsername: " . ($data['email'] ?: $data['phone']) . "\nTemporary Password: {$plainPassword}\n\nPlease change your password after first login.";
+                            send_email($caretakerEmail, $subject, $body);
+                        }
+                    } catch (\Throwable $e) {
+                        error_log('Caretaker email credentials error: ' . $e->getMessage());
                     }
 
                     // Assign to property if provided
