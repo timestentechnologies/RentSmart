@@ -17,6 +17,8 @@ class Tenant extends Model
                 l.rent_amount,
                 l.start_date,
                 l.end_date,
+                (SELECT l2.status FROM leases l2 WHERE l2.tenant_id = t.id ORDER BY l2.id DESC LIMIT 1) as latest_lease_status,
+                (SELECT l2.end_date FROM leases l2 WHERE l2.tenant_id = t.id ORDER BY l2.id DESC LIMIT 1) as latest_lease_end_date,
                 (SELECT COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END),0) FROM payments WHERE lease_id = l.id AND payment_type = 'rent' AND status IN ('completed','verified')) as total_payments,
                 (SELECT COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END),0) FROM payments 
                  WHERE lease_id = l.id 

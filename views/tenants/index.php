@@ -258,7 +258,27 @@ ob_start();
                                     <?php 
                                         $hasProperty = isset($tenant['property_name']) && $tenant['property_name'] !== '-';
                                         $hasUnit = isset($tenant['unit_number']) && $tenant['unit_number'] !== '-';
-                                        if ($hasProperty && $hasUnit) {
+                                        $latestLeaseStatus = strtolower(trim((string)($tenant['latest_lease_status'] ?? '')));
+                                        $latestLeaseEnd = trim((string)($tenant['latest_lease_end_date'] ?? ''));
+                                        $isExpiredLease = false;
+                                        if ($latestLeaseStatus === 'expired') {
+                                            $isExpiredLease = true;
+                                        } elseif (!empty($latestLeaseEnd) && $latestLeaseEnd !== '0000-00-00' && $latestLeaseEnd !== '0000-00-00 00:00:00') {
+                                            try {
+                                                $endDt = new DateTime($latestLeaseEnd);
+                                                $today = new DateTime(date('Y-m-d'));
+                                                if ($endDt < $today) {
+                                                    $isExpiredLease = true;
+                                                }
+                                            } catch (Exception $e) {
+                                                $isExpiredLease = false;
+                                            }
+                                        }
+
+                                        if ($hasProperty && $hasUnit && $isExpiredLease) {
+                                            $statusClass = 'bg-danger';
+                                            $statusText = 'Lease Expired';
+                                        } elseif ($hasProperty && $hasUnit) {
                                             $statusClass = 'bg-success';
                                             $statusText = 'Active';
                                         } elseif ($hasProperty && !$hasUnit) {
