@@ -11,6 +11,26 @@ class AgentContractsController
 {
     private $userId;
 
+    private function monthsElapsedFromStart(?string $startMonthDate): int
+    {
+        if (!$startMonthDate) {
+            return 0;
+        }
+        try {
+            $start = new \DateTime(substr((string)$startMonthDate, 0, 10));
+            $now = new \DateTime('first day of this month');
+            $start->modify('first day of this month');
+            if ($start > $now) {
+                return 0;
+            }
+            $diff = $start->diff($now);
+            $months = ((int)$diff->y * 12) + (int)$diff->m;
+            return max(0, $months + 1);
+        } catch (\Exception $e) {
+            return 0;
+        }
+    }
+
     public function __construct()
     {
         $this->userId = $_SESSION['user_id'] ?? null;
@@ -40,9 +60,20 @@ class AgentContractsController
         $properties = $propertyModel->getAll($this->userId);
 
         $totalContractValue = 0.0;
-        foreach (($contracts ?? []) as $c) {
-            $totalContractValue += (float)($c['total_amount'] ?? 0);
+        foreach (($contracts ?? []) as &$c) {
+            $displayTotal = (float)($c['total_amount'] ?? 0);
+            if (($c['terms_type'] ?? '') === 'monthly') {
+                $monthsElapsed = $this->monthsElapsedFromStart($c['start_month'] ?? null);
+                $duration = ($c['duration_months'] ?? null) !== null ? (int)$c['duration_months'] : null;
+                if ($duration !== null && $duration > 0) {
+                    $monthsElapsed = min($monthsElapsed, $duration);
+                }
+                $displayTotal = round(((float)($c['monthly_amount'] ?? 0)) * (float)$monthsElapsed, 2);
+            }
+            $c['display_total_amount'] = $displayTotal;
+            $totalContractValue += $displayTotal;
         }
+        unset($c);
 
         echo view('agent/contracts', [
             'title' => 'Contracts',
@@ -145,12 +176,6 @@ class AgentContractsController
         }
 
         if ($termsType === 'monthly') {
-            if ($durationMonths <= 0) {
-                $_SESSION['flash_message'] = 'Duration (months) is required for monthly contracts';
-                $_SESSION['flash_type'] = 'danger';
-                header('Location: ' . BASE_URL . '/agent/contracts');
-                exit;
-            }
             if ($startMonth === '') {
                 $_SESSION['flash_message'] = 'Start month is required for monthly contracts';
                 $_SESSION['flash_type'] = 'danger';
@@ -191,9 +216,9 @@ class AgentContractsController
         $durationToSave = null;
 
         if ($termsType === 'monthly') {
-            $monthlyAmount = round($totalAmount / max(1, $durationMonths), 2);
+            $monthlyAmount = (float)$totalAmount;
             $startMonthDate = $startMonth . '-01';
-            $durationToSave = (int)$durationMonths;
+            $durationToSave = $durationMonths > 0 ? (int)$durationMonths : null;
         }
 
         try {
@@ -372,17 +397,13 @@ class AgentContractsController
             $startMonthDate = null;
             $durationToSave = null;
             if ($termsType === 'monthly') {
-                if ($durationMonths <= 0) {
-                    echo json_encode(['success' => false, 'message' => 'Duration (months) is required for monthly contracts']);
-                    exit;
-                }
                 if ($startMonth === '') {
                     echo json_encode(['success' => false, 'message' => 'Start month is required for monthly contracts']);
                     exit;
                 }
-                $monthlyAmount = round($totalAmount / max(1, $durationMonths), 2);
+                $monthlyAmount = (float)$totalAmount;
                 $startMonthDate = $startMonth . '-01';
-                $durationToSave = (int)$durationMonths;
+                $durationToSave = $durationMonths > 0 ? (int)$durationMonths : null;
             }
 
             $contractModel->beginTransaction();
