@@ -311,7 +311,7 @@ ini_set('display_errors', 1);
 
 <!-- Assign Tenant Required Modal -->
 <div class="modal fade" id="assignTenantRequiredModal" tabindex="-1" aria-labelledby="assignTenantRequiredModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="assignTenantRequiredModalLabel">Assign Tenant Required</h5>
