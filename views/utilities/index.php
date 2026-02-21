@@ -473,6 +473,8 @@ function showAlert(type, message) {
 }
 
 $(document).ready(function() {
+    const baseUrl = (window.BASE_URL || (typeof BASE_URL !== 'undefined' ? BASE_URL : '')).toString();
+
     $('#utilitiesTable').DataTable({
         responsive: true,
         order: [[0, 'asc'], [1, 'asc']],
@@ -580,7 +582,7 @@ $(document).ready(function() {
         btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm"></span> Deleting...');
 
         $.ajax({
-            url: `${window.BASE_URL}/utilities/delete/${utilityToDelete}`,
+            url: `${baseUrl}/utilities/delete/${utilityToDelete}`,
             method: 'POST',
             dataType: 'json',
             data: {
@@ -631,7 +633,7 @@ $(document).ready(function() {
     });
 
     // Utility edit button click handler
-    $('.edit-utility-btn').on('click', function() {
+    $(document).on('click', '.edit-utility-btn', function() {
         const data = $(this).data();
         console.log('Edit button clicked, data:', data);
 
@@ -661,7 +663,7 @@ $(document).ready(function() {
           }
 
           if (propId) {
-            fetch(`${BASE_URL}/utilities/types-by-property/${propId}`, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+            fetch(`${baseUrl}/utilities/types-by-property/${propId}`, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
               .then(r => r.json())
               .then(payload => {
                 const types = (payload && payload.success && Array.isArray(payload.types)) ? payload.types : [];
@@ -689,7 +691,7 @@ $(document).ready(function() {
         }
 
         // Set form action
-        const formAction = `${BASE_URL}/utilities/update/${data.id}`;
+        const formAction = `${baseUrl}/utilities/update/${data.id}`;
         $('#editUtilityForm').attr('action', formAction);
         console.log('Form action set to:', formAction);
     });
@@ -742,6 +744,20 @@ $(document).ready(function() {
             $('#edit_cost').val(cost.toFixed(2));
         }
     });
+
+    // Utility Type edit button handler
+    $(document).on('click', '.edit-utility-type-btn', function() {
+        const ds = this.dataset || {};
+        if (typeof editId !== 'undefined' && editId) editId.value = ds.id || '';
+        if (typeof editType !== 'undefined' && editType) editType.value = ds.type || '';
+        if (typeof editBilling !== 'undefined' && editBilling) editBilling.value = ds.billingMethod || '';
+        if (typeof editRate !== 'undefined' && editRate) editRate.value = ds.rate || '';
+        if (typeof editFrom !== 'undefined' && editFrom) editFrom.value = ds.effectiveFrom || '';
+        if (typeof editTo !== 'undefined' && editTo) editTo.value = ds.effectiveTo || '';
+        if (typeof editPropertyId !== 'undefined' && editPropertyId) {
+            editPropertyId.value = ds.propertyId || '';
+        }
+    });
 });
 
 // Expose PHP utility_rates to JS
@@ -751,7 +767,6 @@ const utilityRates = {};
 <?php endforeach; ?>
 
 // Edit Utility Type Modal logic
-const editBtns = document.querySelectorAll('.edit-utility-type-btn');
 const editId = document.getElementById('edit_id');
 const editType = document.getElementById('edit_utility_type');
 const editBilling = document.getElementById('edit_billing_method');
@@ -759,20 +774,6 @@ const editRate = document.getElementById('edit_rate_per_unit');
 const editFrom = document.getElementById('edit_effective_from');
 const editTo = document.getElementById('edit_effective_to');
 const editPropertyId = document.getElementById('edit_property_id');
-
-editBtns.forEach(btn => {
-    btn.addEventListener('click', function() {
-        editId.value = this.dataset.id;
-        editType.value = this.dataset.type;
-        editBilling.value = this.dataset['billingMethod'];
-        editRate.value = this.dataset.rate;
-        editFrom.value = this.dataset.effectiveFrom;
-        editTo.value = this.dataset.effectiveTo;
-        if (editPropertyId) {
-            editPropertyId.value = this.dataset.propertyId || '';
-        }
-    });
-});
 </script>
 
 <?php if (isset($_SESSION['edit_utility_id'])): ?>
