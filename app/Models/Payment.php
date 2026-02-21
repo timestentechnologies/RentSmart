@@ -1968,6 +1968,34 @@ class Payment extends Model
         ]);
     }
 
+    public function updateRealtorPayment($id, $data)
+    {
+        $sql = "UPDATE payments SET
+                    realtor_client_id = :realtor_client_id,
+                    realtor_listing_id = :realtor_listing_id,
+                    realtor_contract_id = :realtor_contract_id,
+                    amount = :amount,
+                    payment_date = :payment_date,
+                    payment_method = :payment_method,
+                    reference_number = :reference_number,
+                    status = :status,
+                    notes = :notes
+                WHERE id = :id";
+        $stmt = $this->db->prepare($sql);
+        return $stmt->execute([
+            'realtor_client_id' => !empty($data['realtor_client_id']) ? (int)$data['realtor_client_id'] : null,
+            'realtor_listing_id' => !empty($data['realtor_listing_id']) ? (int)$data['realtor_listing_id'] : null,
+            'realtor_contract_id' => !empty($data['realtor_contract_id']) ? (int)$data['realtor_contract_id'] : null,
+            'amount' => $data['amount'],
+            'payment_date' => $data['payment_date'],
+            'payment_method' => $data['payment_method'],
+            'reference_number' => $data['reference_number'],
+            'status' => $data['status'],
+            'notes' => $data['notes'],
+            'id' => $id
+        ]);
+    }
+
     public function getTenantRentPayments($tenantId)
     {
         $sql = "SELECT p.*, 
