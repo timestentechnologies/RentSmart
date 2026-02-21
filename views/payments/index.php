@@ -1078,6 +1078,30 @@ if (typeof window.displayPaymentAttachments !== 'function') {
     };
 }
 
+if (typeof window.loadPaymentAttachmentsForEdit !== 'function') {
+    window.loadPaymentAttachmentsForEdit = async function(paymentId) {
+        try {
+            const response = await fetch(`<?= BASE_URL ?>/payments/${paymentId}/files`, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to load payment attachments');
+            }
+
+            const data = await response.json();
+            if (data && data.success) {
+                displayPaymentAttachments(data.attachments || [], 'edit-existing-attachments', true);
+            }
+        } catch (error) {
+            console.error('Error loading payment attachments for edit:', error);
+        }
+    };
+}
+
 async function loadPaymentAttachmentsForView(paymentId) {
     try {
         const response = await fetch(`<?= BASE_URL ?>/payments/${paymentId}/files`, {
