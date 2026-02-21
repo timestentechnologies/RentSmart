@@ -140,10 +140,149 @@ class MessagingController
                 throw new \Exception('Invalid CSRF token');
             }
             if (!$this->userId) { throw new \Exception('Unauthorized'); }
-            $receiverType = ($_POST['receiver_type'] ?? 'tenant') === 'user' ? 'user' : 'tenant';
-            $receiverId = (int)($_POST['receiver_id'] ?? 0);
+
+            $rawReceiverType = (string)($_POST['receiver_type'] ?? 'tenant');
+            $receiverType = 'tenant';
+            if ($rawReceiverType === 'user') {
+                $receiverType = 'user';
+            } else if ($rawReceiverType === 'broadcast') {
+                $receiverType = 'broadcast';
+            }
+
+            $receiverIdRaw = (string)($_POST['receiver_id'] ?? '0');
+            $receiverId = (int)$receiverIdRaw;
             $body = trim($_POST['body'] ?? '');
-            if ($receiverId <= 0 || $body === '') throw new \Exception('Message and recipient are required');
+
+            if ($body === '') {
+                throw new \Exception('Message and recipient are required');
+            }
+
+            if ($receiverType !== 'broadcast' && $receiverId <= 0) {
+                throw new \Exception('Message and recipient are required');
+            }
+
+            if ($receiverType === 'broadcast') {
+                $broadcastKey = strtolower(trim($receiverIdRaw));
+                if ($broadcastKey === '') {
+                    throw new \Exception('Invalid broadcast recipient');
+                }
+
+                $tenantModel = new Tenant();
+                $targetTenantIds = [];
+                if ($broadcastKey === 'all') {
+                    $targetTenantIds = $tenantModel->getAccessibleTenantIds((int)$this->userId);
+                } else if ($broadcastKey === 'due_current_month') {
+                    $targetTenantIds = $tenantModel->getTenantIdsWithRentBalanceCurrentMonth((int)$this->userId);
+                } else if ($broadcastKey === 'due_previous_months') {
+                    $targetTenantIds = $tenantModel->getTenantIdsWithRentBalanceIncludingPreviousMonths((int)$this->userId);
+                } else {
+                    throw new \Exception('Invalid broadcast recipient');
+                }
+
+                if (empty($targetTenantIds)) {
+                    echo json_encode(['success' => true, 'sent' => 0]);
+                    exit;
+                }
+
+                $msg = new Message();
+                $sent = 0;
+                foreach ($targetTenantIds as $tid) {
+                    $tid = (int)$tid;
+                    if ($tid <= 0) {
+                        continue;
+                    }
+
+                    if (!$this->canContact('tenant', $tid)) {
+                        continue;
+                    }
+
+                    $id = $msg->insertMessage([
+                        'sender_type' => 'user',
+                        'sender_id' => (int)$this->userId,
+                        'receiver_type' => 'tenant',
+                        'receiver_id' => (int)$tid,
+                        'body' => $body
+                    ]);
+                    $sent++;
+
+                    // In-app notification to recipient
+                    try {
+                        $userModel = new User();
+                        $sender = $userModel->find((int)$this->userId);
+                        $senderName = (string)($sender['name'] ?? 'Staff');
+                        $preview = mb_strimwidth((string)$body, 0, 160, '…');
+
+                        $n = new Notification();
+                        $n->createNotification([
+                            'recipient_type' => 'tenant',
+                            'recipient_id' => (int)$tid,
+                            'actor_type' => 'user',
+                            'actor_id' => (int)$this->userId,
+                            'title' => 'New Message',
+                            'body' => $senderName . ': ' . $preview,
+                            'link' => BASE_URL . '/tenant/messaging',
+                            'entity_type' => 'message',
+                            'entity_id' => (int)$id,
+                            'payload' => [
+                                'user_id' => (int)$this->userId,
+                                'tenant_id' => (int)$tid,
+                            ],
+                        ]);
+                    } catch (\Throwable $notifyErr) {
+                        error_log('MessagingController::send (broadcast) notify failed: ' . $notifyErr->getMessage());
+                    }
+
+                    // Optional email notification to recipient
+                    try {
+                        $userModel = new User();
+                        $sender = $userModel->find((int)$this->userId);
+                        $t = $tenantModel->getById((int)$tid, (int)$this->userId);
+                        $recipientEmail = (!empty($t) && !empty($t['email'])) ? (string)$t['email'] : '';
+                        $recipientName = (!empty($t) && !empty($t['name'])) ? (string)$t['name'] : 'Tenant';
+
+                        if ($recipientEmail !== '') {
+                            $settingModel = new Setting();
+                            $settings = $settingModel->getAllAsAssoc();
+                            $siteUrl = rtrim($settings['site_url'] ?? 'https://rentsmart.co.ke', '/');
+                            $logoUrl = isset($settings['site_logo']) && $settings['site_logo'] ? ($siteUrl . '/public/assets/images/' . $settings['site_logo']) : '';
+                            $footer = '<div style="margin-top:30px;font-size:12px;color:#888;text-align:center;">Powered by <a href="https://timestentechnologies.co.ke" target="_blank" style="color:#888;text-decoration:none;">Timesten Technologies</a></div>';
+
+                            $mail = new \PHPMailer\PHPMailer\PHPMailer(true);
+                            $mail->isSMTP();
+                            $mail->Host = $settings['smtp_host'] ?? '';
+                            $mail->Port = (int)($settings['smtp_port'] ?? 587);
+                            $mail->SMTPAuth = true;
+                            $mail->Username = $settings['smtp_user'] ?? '';
+                            $mail->Password = $settings['smtp_pass'] ?? '';
+                            $mail->SMTPSecure = \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
+                            $mail->setFrom($settings['smtp_user'] ?? '', $settings['site_name'] ?? 'RentSmart');
+                            $mail->isHTML(true);
+
+                            $bodyHtml =
+                                '<div style="max-width:520px;margin:auto;border:1px solid #eee;padding:24px;font-family:sans-serif;">'
+                                . ($logoUrl ? '<div style="text-align:center;margin-bottom:24px;"><img src="' . $logoUrl . '" alt="Logo" style="max-width:180px;max-height:80px;"></div>' : '') .
+                                '<p style="font-size:16px;">Dear ' . htmlspecialchars($recipientName) . ',</p>' .
+                                '<p>You have a new message from <strong>' . htmlspecialchars((string)($sender['name'] ?? 'User')) . '</strong> on RentSmart.</p>' .
+                                '<blockquote style="margin:16px 0;padding:12px 16px;background:#f9f9f9;border-left:3px solid #ccc;white-space:pre-wrap;">' . nl2br(htmlspecialchars($body)) . '</blockquote>' .
+                                '<p><a href="' . $siteUrl . '/tenant/messaging" style="background:#0061f2;color:#fff;padding:10px 16px;border-radius:6px;text-decoration:none;display:inline-block;">View and reply</a></p>' .
+                                '<p>Thank you,<br>RentSmart Team</p>' .
+                                $footer .
+                                '</div>';
+
+                            $mail->clearAddresses();
+                            $mail->addAddress($recipientEmail, $recipientName);
+                            $mail->Subject = 'New message from ' . ((string)($sender['name'] ?? 'RentSmart User'));
+                            $mail->Body = $bodyHtml;
+                            try { $mail->send(); } catch (\PHPMailer\PHPMailer\Exception $e) { error_log('Messaging mail send error: ' . $e->getMessage()); }
+                        }
+                    } catch (\Exception $e) {
+                        error_log('Messaging mail error: ' . $e->getMessage());
+                    }
+                }
+
+                echo json_encode(['success' => true, 'sent' => $sent]);
+                exit;
+            }
 
             // Authorization
             if (!$this->canContact($receiverType, $receiverId)) {
