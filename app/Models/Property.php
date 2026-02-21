@@ -688,6 +688,42 @@ class Property extends Model
                 $stmt->execute($units);
             }
             
+            // Agent CRM: delete contracts + client links for this property
+            try {
+                // Delete contract-unit links first
+                $stmt = $this->db->prepare("SELECT id FROM agent_contracts WHERE property_id = ?");
+                $stmt->execute([(int)$id]);
+                $contractIds = array_values(array_filter(array_map('intval', $stmt->fetchAll(\PDO::FETCH_COLUMN) ?: [])));
+                if (!empty($contractIds)) {
+                    $cph = implode(',', array_fill(0, count($contractIds), '?'));
+                    $stmt = $this->db->prepare("DELETE FROM agent_contract_units WHERE agent_contract_id IN ($cph)");
+                    $stmt->execute($contractIds);
+                    $stmt = $this->db->prepare("DELETE FROM agent_contracts WHERE id IN ($cph)");
+                    $stmt->execute($contractIds);
+                }
+
+                // Unlink property from agent clients
+                $stmt = $this->db->prepare("SELECT DISTINCT agent_client_id FROM agent_client_properties WHERE property_id = ?");
+                $stmt->execute([(int)$id]);
+                $clientIds = array_values(array_filter(array_map('intval', $stmt->fetchAll(\PDO::FETCH_COLUMN) ?: [])));
+                $stmt = $this->db->prepare("DELETE FROM agent_client_properties WHERE property_id = ?");
+                $stmt->execute([(int)$id]);
+
+                // Delete agent clients that have no properties left
+                if (!empty($clientIds)) {
+                    $iph = implode(',', array_fill(0, count($clientIds), '?'));
+                    $sql = "DELETE FROM agent_clients 
+                            WHERE id IN ($iph)
+                              AND NOT EXISTS (
+                                  SELECT 1 FROM agent_client_properties ap WHERE ap.agent_client_id = agent_clients.id
+                              )";
+                    $stmt = $this->db->prepare($sql);
+                    $stmt->execute($clientIds);
+                }
+            } catch (\Exception $e) {
+                // Do not block property deletion if agent CRM tables are missing
+            }
+            
             // Finally delete the property
             $sql = "DELETE FROM properties WHERE id = ?";
             $stmt = $this->db->prepare($sql);
