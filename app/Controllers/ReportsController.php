@@ -13,6 +13,8 @@ use App\Models\Lease;
 use App\Models\User;
 use App\Models\MaintenanceRequest;
 use App\Models\Setting;
+use App\Models\RealtorListing;
+use App\Models\RealtorLead;
 
 class ReportsController
 {
@@ -89,6 +91,47 @@ class ReportsController
         try {
             $userId = $_SESSION['user_id'];
             $isAdmin = $this->user->isAdmin();
+            $role = strtolower((string)($this->currentUser['role'] ?? ($_SESSION['user_role'] ?? '')));
+            $isRealtor = ($role === 'realtor');
+
+            if ($isRealtor) {
+                $start = date('Y-m-01');
+                $end = date('Y-m-t');
+
+                $currentMonthRevenue = $this->payment->getRevenueForPeriod($start, $end, $userId);
+                $recentPayments = $this->payment->getRealtorPaymentsByDateRange($start, $end, $userId);
+                $recentPayments = array_slice($recentPayments ?: [], 0, 5);
+
+                $listingModel = new RealtorListing();
+                $leadModel = new RealtorLead();
+
+                $totalListings = $listingModel->countAll($userId);
+                $soldListings = $listingModel->countByStatus($userId, 'sold');
+                $notSoldListings = max(0, $totalListings - $soldListings);
+
+                $wonLeads = method_exists($leadModel, 'countWon')
+                    ? $leadModel->countWon($userId)
+                    : $leadModel->countByStatus($userId, 'won');
+
+                $stats = [
+                    'total_revenue' => $currentMonthRevenue,
+                    'recent_payments' => $recentPayments,
+                    'listings_total' => $totalListings,
+                    'listings_sold' => $soldListings,
+                    'listings_not_sold' => $notSoldListings,
+                    'leads_won' => $wonLeads,
+                ];
+
+                echo view('reports/index', [
+                    'title' => 'Reports',
+                    'stats' => $stats,
+                    'propertyRevenue' => [],
+                    'users' => null,
+                    'isAdmin' => false,
+                    'isRealtor' => true,
+                ]);
+                return;
+            }
             
             // Get current month's revenue
             $currentMonthRevenue = $this->payment->getRevenueForPeriod(
@@ -125,7 +168,8 @@ class ReportsController
                 'stats' => $stats,
                 'propertyRevenue' => $propertyRevenue,
                 'users' => $users,
-                'isAdmin' => $isAdmin
+                'isAdmin' => $isAdmin,
+                'isRealtor' => false
             ]);
         } catch (Exception $e) {
             error_log("Error in ReportsController::index: " . $e->getMessage());
@@ -257,6 +301,9 @@ class ReportsController
                 case 'financial':
                     $data = $this->getFinancialReport($startDate, $endDate, $userId);
                     break;
+                case 'realtor_financial':
+                    $data = $this->getRealtorFinancialReport($startDate, $endDate, $userId);
+                    break;
                 case 'occupancy':
                     $data = $this->getOccupancyReport($userId);
                     break;
@@ -271,6 +318,12 @@ class ReportsController
                     break;
                 case 'delinquency':
                     $data = $this->getDelinquencyReport($userId);
+                    break;
+                case 'realtor_listings':
+                    $data = $this->getRealtorListingsReport($startDate, $endDate, $userId);
+                    break;
+                case 'realtor_won_leads':
+                    $data = $this->getRealtorWonLeadsReport($startDate, $endDate, $userId);
                     break;
                 default:
                     $_SESSION['flash_message'] = 'Invalid report type';
@@ -338,6 +391,78 @@ class ReportsController
             'recentPayments' => $this->payment->getRecentPayments($userId),
             'startDate' => $startDate,
             'endDate' => $endDate
+        ];
+    }
+
+    private function ensureRealtorAccess(): void
+    {
+        $role = strtolower((string)($this->currentUser['role'] ?? ($_SESSION['user_role'] ?? '')));
+        if ($role !== 'realtor') {
+            throw new \Exception('Access denied');
+        }
+    }
+
+    private function getRealtorFinancialReport($startDate, $endDate, $userId)
+    {
+        $this->ensureRealtorAccess();
+        $payments = $this->payment->getRealtorPaymentsByDateRange($startDate, $endDate, $userId);
+        $received = 0.0;
+        foreach (($payments ?: []) as $p) {
+            $st = strtolower((string)($p['status'] ?? ''));
+            if (in_array($st, ['completed', 'verified'], true)) {
+                $received += (float)($p['amount'] ?? 0);
+            }
+        }
+        return [
+            'startDate' => $startDate,
+            'endDate' => $endDate,
+            'received' => $received,
+            'payments' => $payments,
+        ];
+    }
+
+    private function getRealtorListingsReport($startDate, $endDate, $userId)
+    {
+        $this->ensureRealtorAccess();
+        $listingModel = new RealtorListing();
+        $all = $listingModel->getAll($userId);
+        $sold = [];
+        $notSold = [];
+        foreach (($all ?: []) as $l) {
+            $status = strtolower((string)($l['status'] ?? ''));
+            if ($status === 'sold') {
+                $sold[] = $l;
+            } else {
+                $notSold[] = $l;
+            }
+        }
+        return [
+            'startDate' => $startDate,
+            'endDate' => $endDate,
+            'total' => count($all ?: []),
+            'sold' => $sold,
+            'notSold' => $notSold,
+        ];
+    }
+
+    private function getRealtorWonLeadsReport($startDate, $endDate, $userId)
+    {
+        $this->ensureRealtorAccess();
+        $leadModel = new RealtorLead();
+        $leads = $leadModel->getAll($userId);
+        $won = [];
+        foreach (($leads ?: []) as $l) {
+            $status = strtolower((string)($l['status'] ?? ''));
+            $isWon = ($status === 'won') || (!empty($l['converted_client_id']));
+            if ($isWon) {
+                $won[] = $l;
+            }
+        }
+        return [
+            'startDate' => $startDate,
+            'endDate' => $endDate,
+            'total_won' => count($won),
+            'won' => $won,
         ];
     }
 

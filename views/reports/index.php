@@ -3,6 +3,7 @@ ob_start();
 $stats = $stats ?? [];
 $occupancy = $stats['occupancy'] ?? ['occupancy_rate' => 0, 'occupied_units' => 0, 'total_units' => 0];
 $isAdmin = $isAdmin ?? false;
+$isRealtor = $isRealtor ?? false;
 $users = $users ?? [];
 ?>
 
@@ -14,7 +15,7 @@ $users = $users ?? [];
                     <h1 class="h3 mb-0">
                         <i class="bi bi-graph-up text-primary me-2"></i>Reports & Analytics
                     </h1>
-                    <p class="text-muted mb-0 mt-1">Generate and export detailed property management reports</p>
+                    <p class="text-muted mb-0 mt-1"><?= $isRealtor ? 'Generate and export your realtor performance reports' : 'Generate and export detailed property management reports' ?></p>
                 </div>
                 
             </div>
@@ -37,6 +38,36 @@ $users = $users ?? [];
                 </div>
             </div>
         </div>
+        <?php if ($isRealtor): ?>
+        <div class="col-12 col-md-4">
+            <div class="stat-card outstanding">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="card-title">Listings Sold</h6>
+                        <h2 class="mt-3 mb-2"><?= (int)($stats['listings_sold'] ?? 0) ?></h2>
+                        <p class="mb-0 text-muted">Total listings marked sold</p>
+                    </div>
+                    <div class="stats-icon">
+                        <i class="bi bi-check2-circle fs-1 text-success opacity-25"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="stat-card occupancy">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="card-title">Won Leads</h6>
+                        <h2 class="mt-3 mb-2"><?= (int)($stats['leads_won'] ?? 0) ?></h2>
+                        <p class="mb-0 text-muted">Converted / won</p>
+                    </div>
+                    <div class="stats-icon">
+                        <i class="bi bi-trophy fs-1 text-primary opacity-25"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php else: ?>
         <div class="col-12 col-md-4">
             <div class="stat-card outstanding">
                 <div class="d-flex justify-content-between align-items-start">
@@ -65,6 +96,7 @@ $users = $users ?? [];
                 </div>
             </div>
         </div>
+        <?php endif; ?>
     </div>
 
     <!-- Report Generator -->
@@ -89,12 +121,18 @@ $users = $users ?? [];
                     <label for="reportType" class="form-label">Report Type</label>
                     <select class="form-select" id="reportType" name="type" required>
                         <option value="">Select Report Type</option>
-                        <option value="financial">Financial Report</option>
-                        <option value="occupancy">Occupancy Report</option>
-                        <option value="tenant">Tenant Report</option>
-                        <option value="lease">Lease Report</option>
-                        <option value="maintenance">Maintenance Report</option>
-                        <option value="delinquency">Delinquency Report</option>
+                        <?php if ($isRealtor): ?>
+                            <option value="realtor_financial">Financial Report</option>
+                            <option value="realtor_listings">Listings Sold / Not Sold</option>
+                            <option value="realtor_won_leads">Won Leads Report</option>
+                        <?php else: ?>
+                            <option value="financial">Financial Report</option>
+                            <option value="occupancy">Occupancy Report</option>
+                            <option value="tenant">Tenant Report</option>
+                            <option value="lease">Lease Report</option>
+                            <option value="maintenance">Maintenance Report</option>
+                            <option value="delinquency">Delinquency Report</option>
+                        <?php endif; ?>
                     </select>
                 </div>
                 <div class="col-md-2">
@@ -136,8 +174,8 @@ $users = $users ?? [];
                             <i class="bi bi-three-dots-vertical"></i>
                         </button>
                         <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="<?= BASE_URL ?>/reports/generate?type=financial&format=pdf">Export as PDF</a></li>
-                            <li><a class="dropdown-item" href="<?= BASE_URL ?>/reports/generate?type=financial&format=csv">Export as CSV</a></li>
+                            <li><a class="dropdown-item" href="<?= BASE_URL ?>/reports/generate?type=<?= $isRealtor ? 'realtor_financial' : 'financial' ?>&format=pdf">Export as PDF</a></li>
+                            <li><a class="dropdown-item" href="<?= BASE_URL ?>/reports/generate?type=<?= $isRealtor ? 'realtor_financial' : 'financial' ?>&format=csv">Export as CSV</a></li>
                         </ul>
                     </div>
                 </div>
@@ -146,7 +184,7 @@ $users = $users ?? [];
                         <table class="table table-hover">
                             <thead>
                                 <tr>
-                                    <th>Tenant</th>
+                                    <th><?= $isRealtor ? 'Client' : 'Tenant' ?></th>
                                     <th>Amount</th>
                                     <th>Date</th>
                                     <th>Status</th>
@@ -160,7 +198,7 @@ $users = $users ?? [];
                                 <?php else: ?>
                                     <?php foreach ($stats['recent_payments'] as $payment): ?>
                                         <tr>
-                                            <td><?= htmlspecialchars($payment['tenant_name'] ?? 'N/A') ?></td>
+                                            <td><?= htmlspecialchars($isRealtor ? ($payment['client_name'] ?? 'N/A') : ($payment['tenant_name'] ?? 'N/A')) ?></td>
                                             <td>Ksh<?= number_format($payment['amount'], 2) ?></td>
                                             <td><?= date('M j, Y', strtotime($payment['payment_date'])) ?></td>
                                             <td><span class="badge bg-success">Completed</span></td>
@@ -174,6 +212,7 @@ $users = $users ?? [];
             </div>
         </div>
 
+        <?php if (!$isRealtor): ?>
         <!-- Occupancy Overview -->
         <div class="col-md-6">
             <div class="card h-100">
@@ -220,6 +259,43 @@ $users = $users ?? [];
                 </div>
             </div>
         </div>
+        <?php else: ?>
+        <div class="col-md-6">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Listings Overview</h5>
+                    <div class="dropdown">
+                        <button class="btn btn-link dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                            <i class="bi bi-three-dots-vertical"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="<?= BASE_URL ?>/reports/generate?type=realtor_listings&format=pdf">Export as PDF</a></li>
+                            <li><a class="dropdown-item" href="<?= BASE_URL ?>/reports/generate?type=realtor_listings&format=csv">Export as CSV</a></li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="row text-center">
+                        <div class="col">
+                            <h3 class="fw-bold text-info"><?= (int)($stats['listings_total'] ?? 0) ?></h3>
+                            <p class="text-muted mb-0">Total Listings</p>
+                        </div>
+                        <div class="col">
+                            <h3 class="fw-bold text-success"><?= (int)($stats['listings_sold'] ?? 0) ?></h3>
+                            <p class="text-muted mb-0">Sold</p>
+                        </div>
+                        <div class="col">
+                            <h3 class="fw-bold text-warning"><?= (int)($stats['listings_not_sold'] ?? 0) ?></h3>
+                            <p class="text-muted mb-0">Not Sold</p>
+                        </div>
+                    </div>
+                    <div class="mt-3 text-center">
+                        <a class="btn btn-sm btn-outline-primary" href="<?= BASE_URL ?>/reports/generate?type=realtor_won_leads&format=html">View Won Leads</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
     </div>
 </div>
 
