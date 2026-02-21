@@ -779,15 +779,15 @@ $isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
                             <div class="card-body">
                                 <table class="table table-borderless">
                                     <tr>
-                                        <td><strong>Property:</strong></td>
+                                        <td><strong><?= $isRealtor ? 'Listing:' : 'Property:' ?></strong></td>
                                         <td id="view_payment_property"></td>
                                     </tr>
                                     <tr>
-                                        <td><strong>Unit:</strong></td>
+                                        <td><strong><?= $isRealtor ? 'Client:' : 'Unit:' ?></strong></td>
                                         <td id="view_payment_unit"></td>
                                     </tr>
                                     <tr>
-                                        <td><strong>Tenant:</strong></td>
+                                        <td><strong><?= $isRealtor ? 'Contract:' : 'Tenant:' ?></strong></td>
                                         <td id="view_payment_tenant"></td>
                                     </tr>
                                     <tr>
@@ -1020,6 +1020,64 @@ function getPaymentStatusBadgeClass(status) {
     }
 }
 
+if (typeof window.formatFileSize !== 'function') {
+    window.formatFileSize = function(bytes) {
+        if (bytes === 0) return '0 Bytes';
+        const k = 1024;
+        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    };
+}
+
+if (typeof window.displayPaymentAttachments !== 'function') {
+    window.displayPaymentAttachments = function(attachments, containerId, allowDelete = false) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+        container.innerHTML = '';
+
+        if (!attachments || attachments.length === 0) {
+            container.innerHTML = '<p class="text-muted">No attachments uploaded</p>';
+            return;
+        }
+
+        attachments.forEach((attachment) => {
+            const fileItem = document.createElement('div');
+            fileItem.className = 'border rounded p-2 mb-2 d-flex justify-content-between align-items-center';
+
+            let icon = 'bi-file-earmark';
+            if (attachment.mime_type && attachment.mime_type.startsWith('image/')) {
+                icon = 'bi-file-earmark-image';
+            } else if (attachment.mime_type && attachment.mime_type.includes('pdf')) {
+                icon = 'bi-file-earmark-pdf';
+            } else if (attachment.mime_type && (attachment.mime_type.includes('word') || attachment.mime_type.includes('document'))) {
+                icon = 'bi-file-earmark-word';
+            } else if (attachment.mime_type && (attachment.mime_type.includes('excel') || attachment.mime_type.includes('spreadsheet'))) {
+                icon = 'bi-file-earmark-excel';
+            }
+
+            fileItem.innerHTML = `
+                <div class="d-flex align-items-center">
+                    <i class="bi ${icon} me-2 text-primary"></i>
+                    <div>
+                        <div class="fw-medium">
+                            <a href="${attachment.url}" target="_blank" class="text-decoration-none">${attachment.original_name}</a>
+                        </div>
+                        <small class="text-muted">${formatFileSize(attachment.file_size)}</small>
+                    </div>
+                </div>
+                ${allowDelete ? `
+                    <button type="button" class="btn btn-outline-danger btn-sm" 
+                            onclick="deletePaymentFile(${attachment.id})">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                ` : ''}
+            `;
+            container.appendChild(fileItem);
+        });
+    };
+}
+
 async function loadPaymentAttachmentsForView(paymentId) {
     try {
         const response = await fetch(`<?= BASE_URL ?>/payments/${paymentId}/files`, {
@@ -1082,13 +1140,27 @@ function editPayment(paymentId) {
                 // Handle M-Pesa fields
                 if (data.payment_method === 'mpesa_manual' || data.payment_method === 'mpesa_stk') {
                     document.getElementById('edit_mpesa_manual_fields').style.display = 'block';
+                    if (data.phone_number !== undefined) {
+                        document.getElementById('edit_mpesa_phone').value = data.phone_number || '';
+                    }
+                    if (data.transaction_code !== undefined) {
+                        document.getElementById('edit_mpesa_transaction_code').value = data.transaction_code || '';
+                    }
+                    if (data.verification_status !== undefined) {
+                        document.getElementById('edit_mpesa_verification_status').value = data.verification_status || 'pending';
+                    }
                     // Fetch M-Pesa transaction details if available
                     fetch(`<?= BASE_URL ?>/payments/mpesa/${data.id}`)
                         .then(response => response.json())
                         .then(mpesaData => {
-                            if (mpesaData && mpesaData.phone_number) {
-                                document.getElementById('edit_mpesa_phone').value = mpesaData.phone_number || '';
+                            const phone = mpesaData ? (mpesaData.phone_number || mpesaData.mpesa_phone) : '';
+                            if (phone !== undefined) {
+                                document.getElementById('edit_mpesa_phone').value = phone || '';
+                            }
+                            if (mpesaData && mpesaData.transaction_code !== undefined) {
                                 document.getElementById('edit_mpesa_transaction_code').value = mpesaData.transaction_code || '';
+                            }
+                            if (mpesaData && mpesaData.verification_status !== undefined) {
                                 document.getElementById('edit_mpesa_verification_status').value = mpesaData.verification_status || 'pending';
                             }
                         })
@@ -1110,7 +1182,7 @@ function editPayment(paymentId) {
         })
         .catch((err) => {
             console.error('Error fetching payment data:', err);
-            alert('Error fetching payment data.');
+            alert('Error fetching payment data: ' + (err && err.message ? err.message : ''));
         });
 }
 
