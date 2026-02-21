@@ -1345,7 +1345,7 @@ ob_clean();
                 <?php else: ?>
                     <!-- PROPERTY MANAGEMENT Section -->
                     <li class="nav-item mt-3">
-                        <small class="nav-header text-uppercase px-3">PROPERTY MANAGEMENT</small>
+                        <small class="nav-header text-uppercase px-3">CLIENT MANAGEMENT</small>
                     </li>
                     <?php if ($isAgentSide): ?>
                         <li class="nav-item">
@@ -1363,6 +1363,9 @@ ob_clean();
                                 <i class="bi bi-file-text me-2"></i> Contracts
                             </a>
                         </li>
+                    <li class="nav-item mt-3">
+                        <small class="nav-header text-uppercase px-3">PROPERTY MANAGEMENT</small>
+                    </li>
                     <?php endif; ?>
                     <li class="nav-item">
                         <a class="nav-link <?= (strpos($current_uri, 'properties') === 0) ? 'active' : '' ?>" href="<?= BASE_URL ?>/properties">
