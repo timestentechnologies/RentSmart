@@ -40,11 +40,16 @@
                 <?php endif; ?>
             </div>
             <div style="text-align:right;font-size:14px;">
-                <strong><?= htmlspecialchars($payment['property_name']) ?></strong><br>
-                <?= htmlspecialchars($payment['property_address']) ?>,<br>
-                <?= htmlspecialchars($payment['property_city']) ?>,
-                <?= htmlspecialchars($payment['property_state']) ?>,
-                <?= htmlspecialchars($payment['property_zip']) ?>
+                <?php if (!empty($payment['lease_id'])): ?>
+                    <strong><?= htmlspecialchars($payment['property_name']) ?></strong><br>
+                    <?= htmlspecialchars($payment['property_address']) ?>,<br>
+                    <?= htmlspecialchars($payment['property_city']) ?>,
+                    <?= htmlspecialchars($payment['property_state']) ?>,
+                    <?= htmlspecialchars($payment['property_zip']) ?>
+                <?php else: ?>
+                    <strong><?= htmlspecialchars($siteName ?? 'RentSmart') ?></strong><br>
+                    <?= htmlspecialchars($payment['listing_title'] ?? '-') ?>
+                <?php endif; ?>
             </div>
         </div>
         <div class="receipt-title">Payment Receipt</div>
@@ -52,31 +57,39 @@
     <div class="section">
         <div class="section-title">Invoiced To</div>
         <table class="details-table">
-            <tr><th>Name</th><td><?= htmlspecialchars($payment['tenant_name']) ?></td></tr>
-            <tr><th>Email</th><td><?= htmlspecialchars($payment['tenant_email'] ?? '-') ?></td></tr>
-            <tr><th>Phone</th><td><?= htmlspecialchars($payment['tenant_phone'] ?? '-') ?></td></tr>
+            <?php if (!empty($payment['lease_id'])): ?>
+                <tr><th>Name</th><td><?= htmlspecialchars($payment['tenant_name']) ?></td></tr>
+                <tr><th>Email</th><td><?= htmlspecialchars($payment['tenant_email'] ?? '-') ?></td></tr>
+                <tr><th>Phone</th><td><?= htmlspecialchars($payment['tenant_phone'] ?? '-') ?></td></tr>
+            <?php else: ?>
+                <tr><th>Client</th><td><?= htmlspecialchars($payment['client_name'] ?? '-') ?></td></tr>
+                <tr><th>Listing</th><td><?= htmlspecialchars($payment['listing_title'] ?? '-') ?></td></tr>
+                <tr><th>Contract #</th><td><?= htmlspecialchars($payment['realtor_contract_id'] ?? '-') ?></td></tr>
+            <?php endif; ?>
         </table>
     </div>
     <!-- Side-by-side Property & Unit and Tenant Details using a table for dompdf compatibility -->
-    <table class="details-table" style="width:100%; margin-bottom:20px;">
-        <tr>
-            <td style="vertical-align:top; width:50%;">
-                <div class="section-title">Property & Unit</div>
-                <table class="details-table" style="margin-bottom:0;">
-                    <tr><th>Property Name</th><td><?= htmlspecialchars($payment['property_name']) ?></td></tr>
-                    <tr><th>Unit Number</th><td><?= htmlspecialchars($payment['unit_number']) ?></td></tr>
-                </table>
-            </td>
-            <td style="vertical-align:top; width:50%;">
-                <div class="section-title">Tenant Details</div>
-                <table class="details-table" style="margin-bottom:0;">
-                    <tr><th>Name</th><td><?= htmlspecialchars($payment['tenant_name']) ?></td></tr>
-                    <tr><th>Email</th><td><?= htmlspecialchars($payment['tenant_email'] ?? '-') ?></td></tr>
-                    <tr><th>Phone</th><td><?= htmlspecialchars($payment['tenant_phone'] ?? '-') ?></td></tr>
-                </table>
-            </td>
-        </tr>
-    </table>
+    <?php if (!empty($payment['lease_id'])): ?>
+        <table class="details-table" style="width:100%; margin-bottom:20px;">
+            <tr>
+                <td style="vertical-align:top; width:50%;">
+                    <div class="section-title">Property & Unit</div>
+                    <table class="details-table" style="margin-bottom:0;">
+                        <tr><th>Property Name</th><td><?= htmlspecialchars($payment['property_name']) ?></td></tr>
+                        <tr><th>Unit Number</th><td><?= htmlspecialchars($payment['unit_number']) ?></td></tr>
+                    </table>
+                </td>
+                <td style="vertical-align:top; width:50%;">
+                    <div class="section-title">Tenant Details</div>
+                    <table class="details-table" style="margin-bottom:0;">
+                        <tr><th>Name</th><td><?= htmlspecialchars($payment['tenant_name']) ?></td></tr>
+                        <tr><th>Email</th><td><?= htmlspecialchars($payment['tenant_email'] ?? '-') ?></td></tr>
+                        <tr><th>Phone</th><td><?= htmlspecialchars($payment['tenant_phone'] ?? '-') ?></td></tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    <?php endif; ?>
     <div class="section">
         <div class="section-title">Payment Information</div>
         <table class="details-table">
@@ -99,8 +112,8 @@
             <tr>
                 <td>
                     <?php
-                        $authName = $payment['property_manager_name'] ?? $payment['property_owner_name'] ?? 'Manager/Landlord/Agent';
-                        $role = $payment['property_manager_name'] ? 'Manager' : ($payment['property_owner_name'] ? 'Landlord' : 'Agent');
+                        $authName = $payment['property_manager_name'] ?? $payment['property_owner_name'] ?? $payment['property_agent_name'] ?? ($siteName ?? 'RentSmart');
+                        $role = $payment['property_manager_name'] ? 'Manager' : ($payment['property_owner_name'] ? 'Landlord' : ($payment['property_agent_name'] ? 'Agent' : 'Realtor'));
                     ?>
                     <span style="font-weight:bold;"><?= htmlspecialchars($authName) ?></span><br>
                     <span style="font-size:12px;">(<?= $role ?>)</span>
