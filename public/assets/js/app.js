@@ -490,7 +490,22 @@ function handleUnitEdit(event) {
     })
     .catch(error => {
         console.error('Error:', error);
-        showAlert('error', error.message || 'An error occurred while updating the unit');
+        const msg = (error && error.message) ? String(error.message) : '';
+        if (msg.toLowerCase().includes('cannot mark a unit as occupied')) {
+            const unitHidden = document.getElementById('assign_tenant_unit_id');
+            if (unitHidden) unitHidden.value = unitId;
+            const mEl = document.getElementById('assignTenantRequiredModal');
+            if (mEl && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                try {
+                    const m = new bootstrap.Modal(mEl);
+                    m.show();
+                    return;
+                } catch (e) {
+                    // fall through
+                }
+            }
+        }
+        showAlert('error', msg || 'An error occurred while updating the unit');
     })
     .finally(() => {
         // Re-enable submit button and restore original text
