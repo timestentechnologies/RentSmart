@@ -969,11 +969,17 @@ async function viewPayment(paymentId) {
             const payment = data;
             
             // Populate payment information
-            document.getElementById('view_payment_property').textContent = payment.property_name || 'N/A';
-            document.getElementById('view_payment_unit').textContent = payment.unit_number || 'N/A';
-            document.getElementById('view_payment_tenant').textContent = payment.tenant_name || 'N/A';
+            <?php if (!empty($isRealtor)): ?>
+                document.getElementById('view_payment_property').textContent = payment.listing_title || 'N/A';
+                document.getElementById('view_payment_unit').textContent = payment.client_name || 'N/A';
+                document.getElementById('view_payment_tenant').textContent = payment.realtor_contract_id ? ('Contract #' + payment.realtor_contract_id) : 'N/A';
+            <?php else: ?>
+                document.getElementById('view_payment_property').textContent = payment.property_name || 'N/A';
+                document.getElementById('view_payment_unit').textContent = payment.unit_number || 'N/A';
+                document.getElementById('view_payment_tenant').textContent = payment.tenant_name || 'N/A';
+            <?php endif; ?>
             document.getElementById('view_payment_type').textContent = payment.payment_type || 'N/A';
-            document.getElementById('view_payment_amount').textContent = '$' + parseFloat(payment.amount || 0).toFixed(2);
+            document.getElementById('view_payment_amount').textContent = 'Ksh' + parseFloat(payment.amount || 0).toFixed(2);
             document.getElementById('view_payment_date').textContent = payment.payment_date || 'N/A';
             document.getElementById('view_payment_method').textContent = payment.payment_method || 'N/A';
             document.getElementById('view_payment_reference').textContent = payment.reference_number || 'N/A';
@@ -1041,10 +1047,17 @@ async function loadPaymentAttachmentsForView(paymentId) {
 function editPayment(paymentId) {
     // Fetch payment data via AJAX and populate modal
     fetch(`<?= BASE_URL ?>/payments/get/${paymentId}?t=${Date.now()}`)
-        .then(response => response.json())
+        .then(async (response) => {
+            if (!response.ok) {
+                let errText = '';
+                try { errText = await response.text(); } catch (e) { errText = ''; }
+                throw new Error(errText || `HTTP ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
             console.log('Payment data received:', data); // Debug log
-            if (data && data.id) {
+            if (data && data.success && data.id) {
                 document.getElementById('edit_payment_id').value = data.id;
                 // Ensure the value is a number and input is editable
                 var amountInput = document.getElementById('edit_amount');
@@ -1095,7 +1108,10 @@ function editPayment(paymentId) {
                 alert('Could not load payment data.');
             }
         })
-        .catch(() => alert('Error fetching payment data.'));
+        .catch((err) => {
+            console.error('Error fetching payment data:', err);
+            alert('Error fetching payment data.');
+        });
 }
 
 document.getElementById('editPaymentForm').addEventListener('submit', function(e) {
