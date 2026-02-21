@@ -254,6 +254,7 @@ $routes = [
     'employees/get/(\d+)' => ['controller' => 'EmployeesController', 'action' => 'get'],
     'employees/update/(\d+)' => ['controller' => 'EmployeesController', 'action' => 'update'],
     'employees/delete/(\d+)' => ['controller' => 'EmployeesController', 'action' => 'delete'],
+    'employees/whatsapp-credentials/(\d+)' => ['controller' => 'EmployeesController', 'action' => 'whatsappCredentials'],
     'employees/pay/(\d+)' => ['controller' => 'EmployeesController', 'action' => 'pay'],
     'reports' => ['controller' => 'ReportsController', 'action' => 'index'],
     'reports/tenant-balances' => ['controller' => 'ReportsController', 'action' => 'tenantBalances'],

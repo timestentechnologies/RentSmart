@@ -100,6 +100,11 @@ $isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
                                 <button class="btn btn-sm btn-outline-success me-1" data-bs-toggle="modal" data-bs-target="#payEmployeeModal" data-id="<?= $emp['id'] ?>" data-name="<?= htmlspecialchars($emp['name']) ?>" data-salary="<?= $emp['salary'] ?>">
                                     <i class="bi bi-cash-coin"></i> Pay
                                 </button>
+                                <?php if (strtolower((string)($emp['role'] ?? '')) === 'caretaker'): ?>
+                                    <button type="button" class="btn btn-sm btn-outline-success me-1 btn-wa-employee" data-id="<?= (int)$emp['id'] ?>" title="Send login details via WhatsApp">
+                                        <i class="bi bi-whatsapp"></i>
+                                    </button>
+                                <?php endif; ?>
                                 <button class="btn btn-sm btn-outline-primary me-1" onclick="editEmployee(<?= $emp['id'] ?>)" title="Edit">
                                     <i class="bi bi-pencil"></i>
                                 </button>
@@ -401,6 +406,70 @@ payModal && payModal.addEventListener('show.bs.modal', e => {
   document.getElementById('payEmployeeForm').setAttribute('action', `${BASE_URL}/employees/pay/${btn.getAttribute('data-id')}`);
 });
 
+function normalizePhone(p) {
+  const digits = String(p || '').replace(/[^0-9]/g, '');
+  if (!digits) return '';
+  if (digits.startsWith('254')) return digits;
+  if (digits.startsWith('0') && digits.length === 10) return '254' + digits.slice(1);
+  if (digits.length === 12 && digits.startsWith('254')) return digits;
+  return digits;
+}
+
+function attachEmployeeWhatsAppHandlers() {
+  document.querySelectorAll('.btn-wa-employee').forEach(btn => {
+    if (btn.dataset.bound === '1') return;
+    btn.dataset.bound = '1';
+    btn.addEventListener('click', function() {
+      const employeeId = this.getAttribute('data-id');
+      if (!employeeId) return;
+
+      Swal.fire({
+        icon: 'warning',
+        title: 'Send WhatsApp Login Details',
+        text: 'This will reset the caretaker password and generate new login credentials. Continue?',
+        showCancelButton: true,
+        confirmButtonText: 'Continue',
+        cancelButtonText: 'Cancel'
+      }).then((res) => {
+        if (!res.isConfirmed) return;
+        return fetch(`${BASE_URL}/employees/whatsapp-credentials/${employeeId}`, {
+          method: 'POST',
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'X-CSRF-TOKEN': '<?= csrf_token() ?>'
+          }
+        })
+        .then(r => r.json())
+        .then(data => {
+          if (!data || !data.success || !data.credentials) {
+            throw new Error((data && data.message) ? data.message : 'Failed to generate credentials');
+          }
+          const creds = data.credentials;
+          const phone = normalizePhone(creds.phone);
+          const msg = `Hello ${creds.name || ''},\n\nYour caretaker portal login credentials have been generated.\n\nLogin URL: ${creds.portal_url || ''}\nUsername: ${creds.username || creds.email || ''}\nPassword: ${creds.password}\n\nPlease change your password after first login.`;
+          const waUrl = phone ? (`https://wa.me/${phone}?text=${encodeURIComponent(msg)}`) : '';
+          if (!waUrl) {
+            Swal.fire({
+              icon: 'warning',
+              title: 'Missing phone number',
+              text: 'Caretaker phone number is missing or invalid for WhatsApp link.'
+            });
+            return;
+          }
+          window.open(waUrl, '_blank');
+        })
+        .catch(err => {
+          Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: err && err.message ? err.message : 'Failed to generate WhatsApp credentials.'
+          });
+        });
+      });
+    });
+  });
+}
+
 // Dynamic search and filters
 const empSearch = document.getElementById('empSearch');
 const empRoleFilter = document.getElementById('empRoleFilter');
@@ -428,6 +497,8 @@ empSearch && empSearch.addEventListener('input', filterEmployees);
 empRoleFilter && empRoleFilter.addEventListener('change', filterEmployees);
 empPropertyFilter && empPropertyFilter.addEventListener('change', filterEmployees);
 empStatusFilter && empStatusFilter.addEventListener('change', filterEmployees);
+
+attachEmployeeWhatsAppHandlers();
 
 // Edit employee
 function editEmployee(id) {
