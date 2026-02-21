@@ -171,12 +171,17 @@ class EmployeesController
                     echo json_encode(['success' => false, 'message' => 'Employee not found']);
                     exit;
                 }
+
+                $propertyId = null;
+                if ($this->role !== 'realtor') {
+                    $propertyId = !empty($_POST['property_id']) ? (int)$_POST['property_id'] : null;
+                }
                 $data = [
                     'name' => trim($_POST['name'] ?? $employee['name']),
                     'email' => $_POST['email'] ?? $employee['email'],
                     'phone' => $_POST['phone'] ?? $employee['phone'],
                     'salary' => (float)($_POST['salary'] ?? $employee['salary']),
-                    'property_id' => $_POST['property_id'] ? (int)$_POST['property_id'] : null,
+                    'property_id' => $propertyId,
                     'status' => $_POST['status'] ?? $employee['status']
                 ];
                 $success = $employeeModel->updateById($id, $data);
