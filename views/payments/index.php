@@ -593,7 +593,7 @@ $isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
                     </div>
 
                     <?php if ($isRealtor): ?>
-                        <div class="mb-3">
+                        <div class="mb-3" id="realtor_mpesa_phone_wrap" style="display:none;">
                             <label for="mpesa_phone" class="form-label">Phone Number</label>
                             <input type="tel" id="mpesa_phone" name="mpesa_phone" class="form-control" placeholder="07XXXXXXXX">
                             <div class="form-text">Fill this when the payment is via M-Pesa.</div>
@@ -669,6 +669,20 @@ $isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
                 </div>
                 <div class="modal-body">
                     <input type="hidden" id="edit_payment_id" name="payment_id">
+                    <?php if ($isRealtor): ?>
+                        <div class="mb-3">
+                            <label for="edit_realtor_listing" class="form-label">Listing</label>
+                            <input type="text" class="form-control" id="edit_realtor_listing" value="" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_realtor_client" class="form-label">Client</label>
+                            <input type="text" class="form-control" id="edit_realtor_client" value="" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_realtor_contract" class="form-label">Contract</label>
+                            <input type="text" class="form-control" id="edit_realtor_contract" value="" readonly>
+                        </div>
+                    <?php endif; ?>
                     <div class="mb-3">
                         <label for="edit_amount" class="form-label">Amount</label>
                         <div class="input-group">
@@ -810,6 +824,14 @@ $isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
                                         <td><strong>Reference Number:</strong></td>
                                         <td id="view_payment_reference"></td>
                                     </tr>
+                                    <tr id="view_mpesa_phone_row" style="display:none;">
+                                        <td><strong>Phone Number:</strong></td>
+                                        <td id="view_mpesa_phone"></td>
+                                    </tr>
+                                    <tr id="view_mpesa_tx_row" style="display:none;">
+                                        <td><strong>Transaction Code:</strong></td>
+                                        <td id="view_mpesa_transaction_code"></td>
+                                    </tr>
                                     <tr>
                                         <td><strong>Status:</strong></td>
                                         <td><span id="view_payment_status" class="badge"></span></td>
@@ -926,11 +948,20 @@ $isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
 function togglePaymentMethodFields() {
     const paymentMethod = document.getElementById('payment_method').value;
     const mpesaFields = document.getElementById('mpesa_manual_fields');
+    const realtorPhoneWrap = document.getElementById('realtor_mpesa_phone_wrap');
     
     if (paymentMethod === 'mpesa_manual' || paymentMethod === 'mpesa_stk') {
         mpesaFields.style.display = 'block';
+        if (realtorPhoneWrap) realtorPhoneWrap.style.display = 'block';
     } else {
         mpesaFields.style.display = 'none';
+        if (realtorPhoneWrap) {
+            realtorPhoneWrap.style.display = 'none';
+            const phoneInput = document.getElementById('mpesa_phone');
+            if (phoneInput) phoneInput.value = '';
+        }
+        const txInput = document.getElementById('mpesa_transaction_code');
+        if (txInput) txInput.value = '';
     }
 }
 
@@ -983,6 +1014,21 @@ async function viewPayment(paymentId) {
             document.getElementById('view_payment_date').textContent = payment.payment_date || 'N/A';
             document.getElementById('view_payment_method').textContent = payment.payment_method || 'N/A';
             document.getElementById('view_payment_reference').textContent = payment.reference_number || 'N/A';
+
+            // M-Pesa display
+            const mpesaRow = document.getElementById('view_mpesa_phone_row');
+            const mpesaTxRow = document.getElementById('view_mpesa_tx_row');
+            if (payment.payment_method === 'mpesa_manual' || payment.payment_method === 'mpesa_stk') {
+                if (mpesaRow) mpesaRow.style.display = '';
+                if (mpesaTxRow) mpesaTxRow.style.display = '';
+                const phoneEl = document.getElementById('view_mpesa_phone');
+                if (phoneEl) phoneEl.textContent = payment.phone_number || 'N/A';
+                const txEl = document.getElementById('view_mpesa_transaction_code');
+                if (txEl) txEl.textContent = payment.transaction_code || 'N/A';
+            } else {
+                if (mpesaRow) mpesaRow.style.display = 'none';
+                if (mpesaTxRow) mpesaTxRow.style.display = 'none';
+            }
             
             // Set status badge
             const statusBadge = document.getElementById('view_payment_status');
@@ -1141,6 +1187,14 @@ function editPayment(paymentId) {
             console.log('Payment data received:', data); // Debug log
             if (data && data.success && data.id) {
                 document.getElementById('edit_payment_id').value = data.id;
+                <?php if (!empty($isRealtor)): ?>
+                    const listingEl = document.getElementById('edit_realtor_listing');
+                    if (listingEl) listingEl.value = data.listing_title || '';
+                    const clientEl = document.getElementById('edit_realtor_client');
+                    if (clientEl) clientEl.value = data.client_name || '';
+                    const contractEl = document.getElementById('edit_realtor_contract');
+                    if (contractEl) contractEl.value = data.realtor_contract_id ? ('Contract #' + data.realtor_contract_id) : '';
+                <?php endif; ?>
                 // Ensure the value is a number and input is editable
                 var amountInput = document.getElementById('edit_amount');
                 amountInput.removeAttribute('readonly');
