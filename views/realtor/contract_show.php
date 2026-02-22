@@ -253,6 +253,18 @@ function monthAddPhp(string $ym, int $n): string {
     terms.addEventListener('change', apply);
     apply();
 })();
+
+(function(){
+    try {
+        const url = new URL(window.location.href);
+        const edit = (url.searchParams.get('edit') || '').toLowerCase().trim();
+        if (!edit || edit === '0' || edit === 'false' || edit === 'no') return;
+        const modalEl = document.getElementById('editContractTermsModal');
+        if (!modalEl || !(window.bootstrap && window.bootstrap.Modal)) return;
+        const m = window.bootstrap.Modal.getOrCreateInstance(modalEl);
+        m.show();
+    } catch (e) {}
+})();
 </script>
 
 <?php

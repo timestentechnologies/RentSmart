@@ -147,7 +147,9 @@ ob_start();
                                 </td>
                                 <td>
                                     <div class="listing-actions">
-                                      <button type="button" class="btn btn-sm btn-outline-success me-1" onclick="openSellListingModal(<?= (int)$x['id'] ?>, '<?= htmlspecialchars((string)($x['title'] ?? ''), ENT_QUOTES) ?>')"><i class="bi bi-cash-coin"></i></button>
+                                      <?php if ($rowStatus === 'active'): ?>
+                                        <button type="button" class="btn btn-sm btn-outline-success me-1" onclick="openSellListingModal(<?= (int)$x['id'] ?>, '<?= htmlspecialchars((string)($x['title'] ?? ''), ENT_QUOTES) ?>')"><i class="bi bi-cash-coin"></i></button>
+                                      <?php endif; ?>
                                       <button type="button" class="btn btn-sm btn-outline-primary me-1" onclick="editRealtorListing(<?= (int)$x['id'] ?>)"><i class="bi bi-pencil"></i></button>
                                       <button type="button" class="btn btn-sm btn-outline-danger" onclick="confirmDeleteRealtorListing(<?= (int)$x['id'] ?>)"><i class="bi bi-trash"></i></button>
                                     </div>
