@@ -180,7 +180,7 @@ ob_start();
                         if ($t === 'mpesa_stk') {
                             $subMpesaStkMethods[] = $m;
                         }
-                        if (in_array($t, ['cash', 'cheque', 'bank_transfer'], true)) {
+                        if (in_array($t, ['cash', 'cheque', 'bank_transfer', 'card'], true)) {
                             $subOtherMethods[$t][] = $m;
                         }
                     }
@@ -192,6 +192,10 @@ ob_start();
                     if ($subMpesaManual && !empty($subMpesaManual['details'])) {
                         $subManualDetails = json_decode((string)$subMpesaManual['details'], true) ?: [];
                     }
+
+                    $hasMpesa = !empty($subMpesaManual) || !empty($subMpesaStk);
+                    $hasCard = !empty($subOtherMethods['card']);
+                    $defaultPayMethod = $hasMpesa ? 'mpesa' : ($hasCard ? 'card' : (!empty($subOtherMethods['cash']) ? 'cash' : (!empty($subOtherMethods['cheque']) ? 'cheque' : (!empty($subOtherMethods['bank_transfer']) ? 'bank_transfer' : ''))));
                 ?>
                 <div class="mb-4">
                     <h6>Selected Plan: <span id="selectedPlanName"></span></h6>
@@ -201,18 +205,23 @@ ob_start();
                 <!-- Payment Method Selection -->
                 <div class="mb-4">
                     <h6>Select Payment Method</h6>
-                    <div class="form-check mb-2">
-                        <input class="form-check-input" type="radio" name="paymentMethodRadio" id="mpesaRadio" value="mpesa" checked>
-                        <label class="form-check-label" for="mpesaRadio">
-                            M-Pesa
-                        </label>
-                    </div>
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="paymentMethodRadio" id="cardRadio" value="card">
-                        <label class="form-check-label" for="cardRadio">
-                            Credit/Debit Card
-                        </label>
-                    </div>
+                    <?php if ($hasMpesa): ?>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="paymentMethodRadio" id="mpesaRadio" value="mpesa" <?= $defaultPayMethod === 'mpesa' ? 'checked' : '' ?>>
+                            <label class="form-check-label" for="mpesaRadio">
+                                M-Pesa
+                            </label>
+                        </div>
+                    <?php endif; ?>
+
+                    <?php if ($hasCard): ?>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="paymentMethodRadio" id="cardRadio" value="card" <?= $defaultPayMethod === 'card' ? 'checked' : '' ?>>
+                            <label class="form-check-label" for="cardRadio">
+                                Credit/Debit Card
+                            </label>
+                        </div>
+                    <?php endif; ?>
 
                     <?php if (!empty($subOtherMethods['cash'])): ?>
                         <div class="form-check mt-2">
