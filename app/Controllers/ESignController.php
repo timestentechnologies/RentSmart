@@ -6,6 +6,7 @@ use App\Models\ESignRequest;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Models\Setting;
+use App\Models\RealtorClient;
 
 class ESignController
 {
@@ -20,6 +21,12 @@ class ESignController
                 $t = (new Tenant())->find($id);
                 $name = (string)($t['name'] ?? ($t['first_name'] ?? 'Tenant'));
                 $email = (string)($t['email'] ?? '');
+                return ['name' => $name, 'email' => $email];
+            }
+            if ($type === 'realtor_client') {
+                $c = (new RealtorClient())->find($id);
+                $name = (string)($c['name'] ?? 'Client');
+                $email = (string)($c['email'] ?? '');
                 return ['name' => $name, 'email' => $email];
             }
             $u = (new User())->find($id);
@@ -114,8 +121,15 @@ class ESignController
             redirect('/');
             return;
         }
+        $role = strtolower((string)($_SESSION['user_role'] ?? ''));
         $tenantModel = new Tenant();
         $tenants = $tenantModel->getAll($this->userId);
+
+        $realtorClients = [];
+        if ($role === 'realtor') {
+            $clientModel = new RealtorClient();
+            $realtorClients = $clientModel->getAll((int)$this->userId);
+        }
         // Users by selected roles
         $userModel = new User();
         $db = $userModel->getDb();
@@ -161,7 +175,15 @@ class ESignController
             if (!function_exists('verify_csrf_token') || !verify_csrf_token()) throw new \Exception('Invalid CSRF token');
             $title = trim($_POST['title'] ?? '');
             $message = trim($_POST['message'] ?? '');
-            $recipient_type = ($_POST['recipient_type'] ?? '') === 'tenant' ? 'tenant' : 'user';
+            $role = strtolower((string)($_SESSION['user_role'] ?? ''));
+            $rt = (string)($_POST['recipient_type'] ?? '');
+            $recipient_type = ($rt === 'tenant') ? 'tenant' : (($rt === 'realtor_client') ? 'realtor_client' : 'user');
+            if ($role === 'realtor') {
+                // Realtors should send signature requests to clients (not platform users/tenants) from this screen
+                if ($recipient_type !== 'realtor_client') {
+                    $recipient_type = 'realtor_client';
+                }
+            }
             $recipient_id = (int)($_POST['recipient_id'] ?? 0);
             $entity_type = $_POST['entity_type'] ?? null;
             $entity_id = !empty($_POST['entity_id']) ? (int)$_POST['entity_id'] : null;

@@ -273,7 +273,9 @@ class InvoicesController
                 $invoice = $invModel->getWithItems($invoiceId);
                 $accModel = new Account();
                 $ar = $accModel->findByCode('1100');
-                $rev = $accModel->findByCode('4000');
+                $rev = ($role === 'realtor')
+                    ? $accModel->ensureByCode('4010', 'Realtor Income', 'revenue')
+                    : $accModel->findByCode('4000');
                 if (!$ar || !$rev) throw new \Exception('Missing default accounts (1100 AR, 4000 Revenue)');
                 $ledger = new LedgerEntry();
                 $desc = 'Invoice ' . ($invoice['number'] ?? ('#' . $invoiceId));
@@ -295,11 +297,12 @@ class InvoicesController
 
     public function show($id)
     {
+        $role = strtolower((string)($_SESSION['user_role'] ?? ''));
         $invModel = new Invoice();
         $invoice = $invModel->getWithItems((int)$id);
         if (!$invoice) { http_response_code(404); echo 'Invoice not found'; exit; }
         // Refresh status based on payments for the issue month
-        if (!empty($invoice['tenant_id']) && !empty($invoice['issue_date'])) {
+        if ($role !== 'realtor' && !empty($invoice['tenant_id']) && !empty($invoice['issue_date'])) {
             try { $invModel->updateStatusForTenantMonth((int)$invoice['tenant_id'], $invoice['issue_date']); } catch (\Exception $e) { error_log('Invoice status refresh (show) failed: ' . $e->getMessage()); }
             $invoice = $invModel->getWithItems((int)$id);
         }
@@ -326,7 +329,7 @@ class InvoicesController
         // Compute payment status summary for the invoice's month (rent/utilities)
         $paymentStatus = null;
         $maintenancePayments = [];
-        if (!empty($invoice['tenant_id']) && !empty($invoice['issue_date'])) {
+        if ($role !== 'realtor' && !empty($invoice['tenant_id']) && !empty($invoice['issue_date'])) {
             $leaseModel = new Lease();
             $lease = $leaseModel->getActiveLeaseByTenant((int)$invoice['tenant_id']);
             if ($lease) {
@@ -434,6 +437,109 @@ class InvoicesController
                 ];
             }
         }
+
+        $realtorContext = null;
+        $displayNotes = $invoice['notes'] ?? null;
+        $hidePostToLedger = !empty($invoice['posted_at']);
+        if ($role === 'realtor' && empty($invoice['tenant_id'])) {
+            $notes = (string)($invoice['notes'] ?? '');
+            $db = $invModel->getDb();
+            $clientName = '';
+            $clientEmail = '';
+            $listingTitle = '';
+            $listingLocation = '';
+            $paymentId = 0;
+            $manualClientId = 0;
+            $manualListingId = 0;
+            if (preg_match('/REALTOR_PAYMENT#(\d+)/', $notes, $m)) {
+                $paymentId = (int)$m[1];
+                if ($paymentId > 0) {
+                    try {
+                        $stmt = $db->prepare(
+                            "SELECT rc.name AS client_name, rc.email AS client_email, rl.title AS listing_title, rl.location AS listing_location\n"
+                            . "FROM payments p\n"
+                            . "LEFT JOIN realtor_clients rc ON rc.id = p.realtor_client_id\n"
+                            . "LEFT JOIN realtor_listings rl ON rl.id = p.realtor_listing_id\n"
+                            . "WHERE p.id = ? AND p.realtor_user_id = ? LIMIT 1"
+                        );
+                        $stmt->execute([(int)$paymentId, (int)$this->userId]);
+                        $rr = $stmt->fetch(\PDO::FETCH_ASSOC) ?: [];
+                        $clientName = (string)($rr['client_name'] ?? '');
+                        $clientEmail = (string)($rr['client_email'] ?? '');
+                        $listingTitle = (string)($rr['listing_title'] ?? '');
+                        $listingLocation = (string)($rr['listing_location'] ?? '');
+                    } catch (\Throwable $e) {
+                    }
+                }
+            } elseif (preg_match('/REALTOR_MANUAL\s+client_id=(\d+)\s+listing_id=(\d+)/', $notes, $m)) {
+                $manualClientId = (int)$m[1];
+                $manualListingId = (int)$m[2];
+                try {
+                    if ($manualClientId > 0) {
+                        $stmt = $db->prepare("SELECT name, email FROM realtor_clients WHERE user_id = ? AND id = ? LIMIT 1");
+                        $stmt->execute([(int)$this->userId, (int)$manualClientId]);
+                        $rr = $stmt->fetch(\PDO::FETCH_ASSOC) ?: [];
+                        $clientName = (string)($rr['name'] ?? '');
+                        $clientEmail = (string)($rr['email'] ?? '');
+                    }
+                } catch (\Throwable $e) {
+                }
+                try {
+                    if ($manualListingId > 0) {
+                        $stmt = $db->prepare("SELECT title, location FROM realtor_listings WHERE user_id = ? AND id = ? LIMIT 1");
+                        $stmt->execute([(int)$this->userId, (int)$manualListingId]);
+                        $rr = $stmt->fetch(\PDO::FETCH_ASSOC) ?: [];
+                        $listingTitle = (string)($rr['title'] ?? '');
+                        $listingLocation = (string)($rr['location'] ?? '');
+                    }
+                } catch (\Throwable $e) {
+                }
+            }
+
+            $realtorContext = [
+                'client_name' => $clientName,
+                'client_email' => $clientEmail,
+                'listing_title' => $listingTitle,
+                'listing_location' => $listingLocation,
+            ];
+
+            if ($paymentId > 0) {
+                $displayNotes = 'Auto-created from payment #' . (int)$paymentId;
+                $suffix = [];
+                if ($clientName !== '') $suffix[] = $clientName;
+                if ($listingTitle !== '') $suffix[] = $listingTitle;
+                if (!empty($suffix)) {
+                    $displayNotes .= ' (' . implode(' / ', $suffix) . ')';
+                }
+            } elseif ($manualClientId > 0) {
+                $displayNotes = 'Manual invoice';
+                $suffix = [];
+                if ($clientName !== '') $suffix[] = $clientName;
+                if ($listingTitle !== '') $suffix[] = $listingTitle;
+                if (!empty($suffix)) {
+                    $displayNotes .= ' (' . implode(' / ', $suffix) . ')';
+                }
+            }
+        }
+
+        // Hide Post-to-ledger button if the ledger already has this invoice posted (or if it came from an already-posted payment)
+        try {
+            $ledger = new LedgerEntry();
+            if ($ledger->referenceExists('invoice', (int)$invoice['id'])) {
+                $hidePostToLedger = true;
+            }
+            if (!$hidePostToLedger) {
+                $notesRaw = (string)($invoice['notes'] ?? '');
+                if (preg_match('/REALTOR_PAYMENT#(\d+)/', $notesRaw, $m)) {
+                    $pid = (int)$m[1];
+                    if ($pid > 0 && $ledger->referenceExists('payment', $pid)) {
+                        $hidePostToLedger = true;
+                    }
+                }
+            }
+        } catch (\Throwable $e) {
+        }
+
         // Make available to the view
         $paymentStatus = $paymentStatus;
         $maintenancePayments = $maintenancePayments;

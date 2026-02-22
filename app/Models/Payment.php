@@ -598,7 +598,9 @@ class Payment extends Model
 
             $accModel = new Account();
             $cash = $accModel->findByCode('1000');
-            $rev = $accModel->findByCode('4000');
+            $rev = $isRealtorPayment
+                ? $accModel->ensureByCode('4010', 'Realtor Income', 'revenue')
+                : $accModel->findByCode('4000');
             if (!$cash || !$rev) return;
 
             $userId = $data['user_id'] ?? null;

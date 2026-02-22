@@ -19,7 +19,7 @@ class ESignRequest extends Model
             title VARCHAR(255) NOT NULL,
             message TEXT NULL,
             requester_user_id INT NOT NULL,
-            recipient_type ENUM('user','tenant') NOT NULL,
+            recipient_type ENUM('user','tenant','realtor_client') NOT NULL,
             recipient_id INT NOT NULL,
             entity_type VARCHAR(50) NULL,
             entity_id INT NULL,
@@ -44,6 +44,11 @@ class ESignRequest extends Model
             INDEX idx_status (status)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;";
         $this->db->exec($sql);
+
+        try {
+            $this->db->exec("ALTER TABLE {$this->table} MODIFY recipient_type ENUM('user','tenant','realtor_client') NOT NULL");
+        } catch (\Exception $e) {
+        }
     }
 
     public function createRequest(array $data)
@@ -81,12 +86,17 @@ class ESignRequest extends Model
     public function listForUser($userId)
     {
         $sql = "SELECT er.*,
-                       CASE WHEN er.recipient_type='tenant' THEN t.name ELSE u2.name END recipient_name,
+                       CASE
+                           WHEN er.recipient_type='tenant' THEN t.name
+                           WHEN er.recipient_type='realtor_client' THEN rc.name
+                           ELSE u2.name
+                       END recipient_name,
                        u.name AS requester_name
                 FROM {$this->table} er
                 LEFT JOIN users u ON er.requester_user_id = u.id
                 LEFT JOIN users u2 ON (er.recipient_type='user' AND er.recipient_id = u2.id)
                 LEFT JOIN tenants t ON (er.recipient_type='tenant' AND er.recipient_id = t.id)
+                LEFT JOIN realtor_clients rc ON (er.recipient_type='realtor_client' AND er.recipient_id = rc.id)
                 WHERE er.requester_user_id = ? OR (er.recipient_type='user' AND er.recipient_id = ?)";
         $stmt = $this->db->prepare($sql);
         $stmt->execute([(int)$userId, (int)$userId]);
