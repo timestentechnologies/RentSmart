@@ -465,6 +465,104 @@ function applyLeadSearch(){
 document.getElementById('leadSearch')?.addEventListener('input', applyLeadSearch);
 document.getElementById('leadStageFilter')?.addEventListener('change', applyLeadSearch);
 
+(function(){
+  function onReady(fn){
+    if(document.readyState === 'loading'){
+      document.addEventListener('DOMContentLoaded', fn);
+    } else {
+      fn();
+    }
+  }
+
+  onReady(function(){
+    const listingSel = document.getElementById('realtor_lead_listing_id');
+    const hiddenListingName = document.getElementById('realtor_lead_listing_name_hidden');
+    const addressEl = document.getElementById('realtor_lead_address');
+    const amountEl = document.querySelector('#addLeadModal input[name="amount"]');
+    const addListingBtn = document.getElementById('realtorLeadAddListingBtn');
+    const addListingModalEl = document.getElementById('realtorLeadAddListingModal');
+    const addListingForm = document.getElementById('realtorLeadAddListingForm');
+    const addListingErr = document.getElementById('realtorLeadAddListingError');
+    const addListingSubmit = document.getElementById('realtorLeadAddListingSubmit');
+
+    function getModal(el){
+      if(!el) return null;
+      if(!(window.bootstrap && window.bootstrap.Modal)) return null;
+      return window.bootstrap.Modal.getOrCreateInstance(el);
+    }
+
+    function syncHiddenFieldsFromListing(){
+      if(!listingSel) return;
+      const opt = listingSel.options[listingSel.selectedIndex];
+      const lid = (listingSel.value || '').trim();
+      if(!lid){
+        if(hiddenListingName) hiddenListingName.value = '';
+        return;
+      }
+      const title = opt?.getAttribute('data-title') || opt?.textContent || '';
+      const location = opt?.getAttribute('data-location') || '';
+      const price = opt?.getAttribute('data-price') || '';
+      if(hiddenListingName) hiddenListingName.value = String(title).trim();
+      if(addressEl && (!addressEl.value || addressEl.value.trim() === '')) {
+        addressEl.value = String(location).trim();
+      }
+      if(amountEl && (amountEl.value === '' || amountEl.value === null)) {
+        if(String(price).trim() !== '') amountEl.value = String(price).trim();
+      }
+    }
+
+    listingSel?.addEventListener('change', syncHiddenFieldsFromListing);
+    document.getElementById('addLeadModal')?.addEventListener('shown.bs.modal', syncHiddenFieldsFromListing);
+
+    addListingBtn?.addEventListener('click', function(){
+      const m = getModal(addListingModalEl);
+      if(m) m.show();
+    });
+
+    addListingForm?.addEventListener('submit', async function(e){
+      e.preventDefault();
+      if(addListingErr){ addListingErr.classList.add('d-none'); addListingErr.textContent = ''; }
+      if(addListingSubmit) addListingSubmit.disabled = true;
+
+      try{
+        const fd = new FormData(addListingForm);
+        const res = await fetch(addListingForm.getAttribute('action'), {
+          method: 'POST',
+          headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+          body: fd
+        });
+        const data = await res.json();
+        if(!data || !data.success || !data.listing_id){
+          throw new Error((data && data.message) ? data.message : 'Failed to add listing');
+        }
+
+        if(listingSel){
+          const opt = document.createElement('option');
+          opt.value = String(data.listing_id);
+          const title = String(data.title || ('Listing #' + data.listing_id));
+          opt.textContent = title;
+          opt.setAttribute('data-title', title);
+          opt.setAttribute('data-location', String(data.location || ''));
+          opt.setAttribute('data-price', '');
+          listingSel.appendChild(opt);
+          listingSel.value = String(data.listing_id);
+          syncHiddenFieldsFromListing();
+        }
+
+        const m = getModal(addListingModalEl);
+        if(m) m.hide();
+      } catch(err){
+        if(addListingErr){
+          addListingErr.textContent = String(err && err.message ? err.message : err);
+          addListingErr.classList.remove('d-none');
+        }
+      } finally {
+        if(addListingSubmit) addListingSubmit.disabled = false;
+      }
+    });
+  });
+})();
+
 let draggedLeadId = null;
 let pendingWinCard = null;
 let pendingWinFromZone = null;
