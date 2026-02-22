@@ -12,6 +12,95 @@ ob_start();
                 ['stage_key'=>'lost','label'=>'Lost','color_class'=>'danger','is_won'=>0,'is_lost'=>1],
             ];
         }
+
+(function(){
+  const listingSel = document.getElementById('realtor_lead_listing_id');
+  const hiddenListingName = document.getElementById('realtor_lead_listing_name_hidden');
+  const addressEl = document.getElementById('realtor_lead_address');
+  const amountEl = document.querySelector('#addLeadModal input[name="amount"]');
+  const addListingBtn = document.getElementById('realtorLeadAddListingBtn');
+  const addListingModalEl = document.getElementById('realtorLeadAddListingModal');
+  const addListingForm = document.getElementById('realtorLeadAddListingForm');
+  const addListingErr = document.getElementById('realtorLeadAddListingError');
+  const addListingSubmit = document.getElementById('realtorLeadAddListingSubmit');
+
+  function getModal(el){
+    if(!el) return null;
+    if(!(window.bootstrap && window.bootstrap.Modal)) return null;
+    return window.bootstrap.Modal.getOrCreateInstance(el);
+  }
+
+  function syncHiddenFieldsFromListing(){
+    if(!listingSel) return;
+    const opt = listingSel.options[listingSel.selectedIndex];
+    const lid = (listingSel.value || '').trim();
+    if(!lid){
+      if(hiddenListingName) hiddenListingName.value = '';
+      return;
+    }
+    const title = opt?.getAttribute('data-title') || opt?.textContent || '';
+    const location = opt?.getAttribute('data-location') || '';
+    const price = opt?.getAttribute('data-price') || '';
+    if(hiddenListingName) hiddenListingName.value = String(title).trim();
+    if(addressEl && (!addressEl.value || addressEl.value.trim() === '')) {
+      addressEl.value = String(location).trim();
+    }
+    if(amountEl && (amountEl.value === '' || amountEl.value === null)) {
+      if(String(price).trim() !== '') amountEl.value = String(price).trim();
+    }
+  }
+
+  listingSel?.addEventListener('change', syncHiddenFieldsFromListing);
+  document.getElementById('addLeadModal')?.addEventListener('shown.bs.modal', syncHiddenFieldsFromListing);
+
+  addListingBtn?.addEventListener('click', function(){
+    if(!addListingModalEl) return;
+    const m = getModal(addListingModalEl);
+    if(m) m.show();
+  });
+
+  addListingForm?.addEventListener('submit', async function(e){
+    e.preventDefault();
+    if(addListingErr){ addListingErr.classList.add('d-none'); addListingErr.textContent = ''; }
+    if(addListingSubmit) addListingSubmit.disabled = true;
+
+    try{
+      const fd = new FormData(addListingForm);
+      const res = await fetch(addListingForm.getAttribute('action'), {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+        body: fd
+      });
+      const data = await res.json();
+      if(!data || !data.success || !data.listing_id){
+        throw new Error((data && data.message) ? data.message : 'Failed to add listing');
+      }
+
+      if(listingSel){
+        const opt = document.createElement('option');
+        opt.value = String(data.listing_id);
+        const title = String(data.title || ('Listing #' + data.listing_id));
+        opt.textContent = title;
+        opt.setAttribute('data-title', title);
+        opt.setAttribute('data-location', String(data.location || ''));
+        opt.setAttribute('data-price', '');
+        listingSel.appendChild(opt);
+        listingSel.value = String(data.listing_id);
+        syncHiddenFieldsFromListing();
+      }
+
+      const m = getModal(addListingModalEl);
+      if(m) m.hide();
+    } catch(err){
+      if(addListingErr){
+        addListingErr.textContent = String(err && err.message ? err.message : err);
+        addListingErr.classList.remove('d-none');
+      }
+    } finally {
+      if(addListingSubmit) addListingSubmit.disabled = false;
+    }
+  });
+})();
     ?>
     <div class="card page-header mb-4">
         <div class="card-body d-flex justify-content-between align-items-center">
@@ -297,9 +386,22 @@ ob_start();
             </div>
             <div class="mb-3">
                 <label class="form-label">Listing</label>
-                <input type="text" name="listing_name" class="form-control" placeholder="e.g. 2BR Apartment - Westlands">
+                <div class="d-flex gap-2">
+                    <select name="realtor_listing_id" id="realtor_lead_listing_id" class="form-select">
+                        <option value="">-- Select Listing (optional) --</option>
+                        <?php foreach (($listings ?? []) as $ls): ?>
+                            <?php $lid = (int)($ls['id'] ?? 0); if ($lid <= 0) continue; ?>
+                            <option value="<?= (int)$lid ?>" data-title="<?= htmlspecialchars((string)($ls['title'] ?? ''), ENT_QUOTES) ?>" data-location="<?= htmlspecialchars((string)($ls['location'] ?? ''), ENT_QUOTES) ?>" data-price="<?= htmlspecialchars((string)($ls['price'] ?? ''), ENT_QUOTES) ?>">
+                                <?= htmlspecialchars((string)($ls['title'] ?? ('Listing #' . $lid))) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <button type="button" class="btn btn-outline-primary" id="realtorLeadAddListingBtn" style="white-space:nowrap;">+ New</button>
+                </div>
+                <div class="form-text">Select a listing or create a new one.</div>
             </div>
-            <div class="mb-3"><label class="form-label">Address</label><input type="text" name="address" class="form-control" placeholder="e.g. Westlands, Nairobi"></div>
+            <input type="hidden" name="listing_name" id="realtor_lead_listing_name_hidden">
+            <div class="mb-3"><label class="form-label">Address</label><input type="text" name="address" id="realtor_lead_address" class="form-control" placeholder="e.g. Westlands, Nairobi"></div>
             <div class="mb-3">
                 <label class="form-label">Status</label>
                 <select name="status" class="form-select" required>
@@ -314,6 +416,38 @@ ob_start();
         <div class="modal-footer">
           <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
           <button type="submit" class="btn btn-primary">Save</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="realtorLeadAddListingModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <form id="realtorLeadAddListingForm" method="POST" action="<?= BASE_URL ?>/realtor/listings/store">
+        <?= csrf_field() ?>
+        <div class="modal-header">
+          <h5 class="modal-title">Add Listing</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div class="alert alert-danger d-none" id="realtorLeadAddListingError"></div>
+          <div class="mb-3"><label class="form-label">Title</label><input type="text" name="title" class="form-control" required></div>
+          <div class="mb-3"><label class="form-label">Location</label><input type="text" name="location" class="form-control" required></div>
+          <div class="mb-3">
+            <label class="form-label">Price</label>
+            <div class="input-group">
+              <span class="input-group-text">Ksh</span>
+              <input type="number" step="0.01" min="0" name="price" class="form-control" placeholder="0.00">
+            </div>
+          </div>
+          <input type="hidden" name="listing_type" value="plot">
+          <input type="hidden" name="status" value="active">
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="realtorLeadAddListingSubmit">Save Listing</button>
         </div>
       </form>
     </div>

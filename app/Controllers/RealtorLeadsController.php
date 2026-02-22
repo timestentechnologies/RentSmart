@@ -292,10 +292,27 @@ class RealtorLeadsController
                 exit;
             }
 
+            $payloadListingId = isset($_POST['realtor_listing_id']) ? (int)$_POST['realtor_listing_id'] : 0;
+            $listingId = $payloadListingId > 0 ? $payloadListingId : null;
+            $listingName = trim((string)($_POST['listing_name'] ?? ''));
+            if ($listingId !== null) {
+                try {
+                    $listingModel = new RealtorListing();
+                    $ls = $listingModel->getByIdWithAccess((int)$listingId, (int)$this->userId);
+                    if ($ls) {
+                        $listingName = trim((string)($ls['title'] ?? $listingName));
+                    } else {
+                        $listingId = null;
+                    }
+                } catch (\Exception $e) {
+                    $listingId = null;
+                }
+            }
+
             $data = [
                 'user_id' => $this->userId,
-                'realtor_listing_id' => null,
-                'listing_name' => trim((string)($_POST['listing_name'] ?? '')),
+                'realtor_listing_id' => $listingId,
+                'listing_name' => $listingName,
                 'address' => trim((string)($_POST['address'] ?? '')),
                 'amount' => array_key_exists('amount', $_POST) && $_POST['amount'] !== '' ? (float)$_POST['amount'] : null,
                 'name' => trim((string)($_POST['name'] ?? '')),
@@ -360,9 +377,26 @@ class RealtorLeadsController
                 exit;
             }
 
+            $payloadListingId = array_key_exists('realtor_listing_id', $_POST) ? (int)$_POST['realtor_listing_id'] : 0;
+            $listingId = $payloadListingId > 0 ? $payloadListingId : null;
+            $listingName = trim((string)($_POST['listing_name'] ?? ($row['listing_name'] ?? '')));
+            if ($listingId !== null) {
+                try {
+                    $listingModel = new RealtorListing();
+                    $ls = $listingModel->getByIdWithAccess((int)$listingId, (int)$this->userId);
+                    if ($ls) {
+                        $listingName = trim((string)($ls['title'] ?? $listingName));
+                    } else {
+                        $listingId = null;
+                    }
+                } catch (\Exception $e) {
+                    $listingId = null;
+                }
+            }
+
             $data = [
-                'realtor_listing_id' => null,
-                'listing_name' => trim((string)($_POST['listing_name'] ?? ($row['listing_name'] ?? ''))),
+                'realtor_listing_id' => $listingId,
+                'listing_name' => $listingName,
                 'address' => trim((string)($_POST['address'] ?? ($row['address'] ?? ''))),
                 'amount' => array_key_exists('amount', $_POST) ? (($_POST['amount'] !== '' && $_POST['amount'] !== null) ? (float)$_POST['amount'] : null) : ($row['amount'] ?? null),
                 'name' => trim((string)($_POST['name'] ?? ($row['name'] ?? ''))),
