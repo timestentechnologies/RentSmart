@@ -37,6 +37,8 @@ class FacebookMarketplaceController
                 $userId = (int)($_SESSION['user_id'] ?? 0);
                 $listingModel = new RealtorListing();
                 $rows = $listingModel->getAllNotSold($userId);
+                $isRealtorListings = true;
+                $listings = $rows;
                 $vacantUnits = [];
                 foreach (($rows ?? []) as $r) {
                     $vacantUnits[] = [
@@ -73,6 +75,9 @@ class FacebookMarketplaceController
             } else {
                 $units = $unitModel->getVacantUnits($userId);
             }
+
+            $isRealtorListings = false;
+            $listings = [];
 
             // Get Facebook posting status for each unit
             $vacantUnits = [];

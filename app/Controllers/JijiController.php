@@ -27,6 +27,8 @@ class JijiController
                 $userId = (int)($_SESSION['user_id'] ?? 0);
                 $listingModel = new RealtorListing();
                 $rows = $listingModel->getAllNotSold($userId);
+                $isRealtorListings = true;
+                $listings = $rows;
                 $vacantUnits = [];
                 foreach (($rows ?? []) as $r) {
                     $vacantUnits[] = [
@@ -62,6 +64,9 @@ class JijiController
                 // Get vacant units in user's accessible scope (manager/agent/caretaker/landlord)
                 $units = $unitModel->getVacantUnits($userId);
             }
+
+            $isRealtorListings = false;
+            $listings = [];
 
             // Enhance units with image count
             $vacantUnits = [];

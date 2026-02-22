@@ -1,5 +1,6 @@
 <?php
-$title = 'Jiji Integration - Post Vacant Units';
+$isRealtorListings = !empty($isRealtorListings ?? false);
+$title = $isRealtorListings ? 'Jiji Integration - Post Listings' : 'Jiji Integration - Post Vacant Units';
 ob_start();
 ?>
 
@@ -12,7 +13,7 @@ ob_start();
                         <i class="bi bi-megaphone-fill text-success me-2"></i>
                         Jiji Integration
                     </h1>
-                    <p class="text-muted">Post your vacant units to Jiji.co.ke marketplace</p>
+                    <p class="text-muted"><?= $isRealtorListings ? 'Post your listings to Jiji.co.ke marketplace' : 'Post your vacant units to Jiji.co.ke marketplace' ?></p>
                 </div>
                 <div class="btn-group">
                     <a href="<?= BASE_URL ?>/jiji/export" class="btn btn-success">
@@ -40,7 +41,7 @@ ob_start();
                             <h6 class="mt-3">Method 1: CSV Export (Bulk Upload)</h6>
                             <ol>
                                 <li>Click "Export to Jiji CSV" button above</li>
-                                <li>Download the CSV file with all your vacant units</li>
+                                <li>Download the CSV file with all your <?= $isRealtorListings ? 'listings' : 'vacant units' ?></li>
                                 <li>Go to <a href="https://jiji.co.ke" target="_blank">Jiji.co.ke</a> and login</li>
                                 <li>Use Jiji's bulk upload feature to post all units at once</li>
                             </ol>
@@ -71,25 +72,25 @@ ob_start();
                 <div class="card-header bg-white">
                     <h5 class="mb-0">
                         <i class="bi bi-door-open me-2"></i>
-                        Vacant Units Ready to Post
+                        <?= $isRealtorListings ? 'Listings Ready to Post' : 'Vacant Units Ready to Post' ?>
                     </h5>
                 </div>
                 <div class="card-body">
                     <?php if (empty($vacantUnits)): ?>
                         <div class="alert alert-info">
                             <i class="bi bi-info-circle me-2"></i>
-                            No vacant units available. All your units are currently occupied.
+                            <?= $isRealtorListings ? 'No listings available to post.' : 'No vacant units available. All your units are currently occupied.' ?>
                         </div>
                     <?php else: ?>
                         <div class="table-responsive">
                             <table class="table table-hover">
                                 <thead>
                                     <tr>
-                                        <th>Property</th>
-                                        <th>Unit</th>
+                                        <th><?= $isRealtorListings ? 'Listing' : 'Property' ?></th>
+                                        <th><?= $isRealtorListings ? 'Ref' : 'Unit' ?></th>
                                         <th>Type</th>
-                                        <th>Rent (KSh)</th>
-                                        <th>Location</th>
+                                        <th><?= $isRealtorListings ? 'Price (KSh)' : 'Rent (KSh)' ?></th>
+                                        <th><?= $isRealtorListings ? 'Location' : 'Location' ?></th>
                                         <th>Images</th>
                                         <th>Actions</th>
                                     </tr>
@@ -144,7 +145,7 @@ ob_start();
                         <div class="mt-3">
                             <p class="text-muted mb-0">
                                 <i class="bi bi-info-circle me-2"></i>
-                                Total vacant units: <strong><?= count($vacantUnits) ?></strong>
+                                Total <?= $isRealtorListings ? 'listings' : 'vacant units' ?>: <strong><?= count($vacantUnits) ?></strong>
                             </p>
                         </div>
                     <?php endif; ?>
@@ -197,8 +198,8 @@ async function bulkPostToJiji() {
         } else {
             Swal.fire({
                 icon: 'warning',
-                title: 'No Units Available',
-                text: data.message || 'No vacant units to post',
+                title: 'Nothing Available',
+                text: data.message || 'No <?= $isRealtorListings ? 'listings' : 'vacant units' ?> to post',
                 confirmButtonText: 'OK'
             });
         }
