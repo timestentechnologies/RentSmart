@@ -22,9 +22,9 @@
     .layout td { vertical-align: top; padding: 0; }
     .layout tr { page-break-inside: avoid; }
 
-    .head-left { width: 34%; background: #f9fafb; padding: 18px 28px; }
-    .head-right { width: 66%; background: #f9fafb; padding: 18px 28px; }
-    .content { background: #f9fafb; padding: 18px 28px 10px 28px; }
+    .head-left { width: 34%; background: #f9fafb; padding: 16px 18px; }
+    .head-right { width: 66%; background: #f9fafb; padding: 16px 18px; }
+    .content { background: #f9fafb; padding: 16px 18px 10px 18px; }
 
     .logo { max-height: 64px; margin: 0; }
     .head-brand { font-size: 14px; font-weight: 800; margin-top: 8px; color: #111827; }
@@ -33,12 +33,12 @@
       background: #111827;
       color: #e5e7eb;
       border-radius: 22px;
-      padding: 18px 18px;
-      margin: 12px 28px 0 28px;
+      padding: 16px 16px;
+      margin: 12px 18px 0 18px;
       page-break-inside: avoid;
     }
     .dark-block.top { border-top-left-radius: 28px; border-top-right-radius: 28px; }
-    .dark-block.bottom { border-bottom-left-radius: 40px; border-bottom-right-radius: 70px; margin-top: 14px; margin-bottom: 14px; }
+    .dark-block.bottom { border-bottom-left-radius: 32px; border-bottom-right-radius: 62px; margin-top: 14px; margin-bottom: 16px; }
 
     .dark-title { font-size: 11px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #f59e0b; margin: 0 0 10px; }
     .dark-card { width: 100%; border: 1px solid rgba(255,255,255,0.14); padding: 12px 12px; background: rgba(255,255,255,0.035); border-radius: 12px; }
@@ -134,9 +134,9 @@
       <tr>
         <td colspan="2">
           <div class="dark-block top">
-            <table style="width:100%;border-collapse:collapse;">
+            <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
               <tr>
-                <td style="width:50%;padding-right:12px;vertical-align:top;">
+                <td style="width:50%;padding-right:10px;vertical-align:top;">
                   <div class="dark-title">From</div>
                   <div class="dark-card">
                     <div class="dark-row">
@@ -158,7 +158,7 @@
                   </div>
                 </td>
 
-                <td style="width:50%;padding-left:12px;vertical-align:top;">
+                <td style="width:50%;padding-left:10px;vertical-align:top;">
                   <div class="dark-title">Bill To</div>
                   <div class="dark-card">
                     <div class="dark-row">
