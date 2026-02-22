@@ -5,36 +5,43 @@
   <meta charset="utf-8">
   <title>Invoice <?= htmlspecialchars($invoice['number'] ?? ('#'.$invoice['id'])) ?></title>
   <style>
-    @page { margin: 18px; }
-    body { font-family: DejaVu Sans, Arial, Helvetica, sans-serif; font-size: 12.5px; color: #111827; margin: 0; padding: 0; background: #e5e7eb; }
-    .wrap { width: 100%; background: #e5e7eb; }
+    @page { margin: 10px; }
+    html, body { height: 100%; }
+    body { font-family: DejaVu Sans, Arial, Helvetica, sans-serif; font-size: 12.5px; line-height: 1.35; color: #111827; margin: 0; padding: 0; background: #e5e7eb; }
+    .wrap {
+      width: 100%;
+      background: #f9fafb;
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid #d1d5db;
+    }
 
-    .layout { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    .layout { width: 100%; border-collapse: collapse; table-layout: fixed; height: 100%; }
     .layout td { vertical-align: top; padding: 0; }
 
     .left {
       width: 34%;
       background: #111827;
       color: #e5e7eb;
-      padding: 22px 18px;
+      padding: 24px 18px 18px 18px;
     }
     .right {
       width: 66%;
       background: #f9fafb;
-      padding: 22px 20px;
+      padding: 24px 20px 18px 20px;
     }
 
-    .logo { max-height: 64px; margin: 0 0 10px; }
-    .brand { font-size: 14px; font-weight: 700; margin-top: 10px; }
+    .logo { max-height: 64px; margin: 0 0 12px; }
+    .brand { font-size: 16px; font-weight: 800; margin-top: 6px; color: #fff; }
 
-    .left-title { font-size: 12px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; color: #f59e0b; margin: 18px 0 8px; }
-    .left-box { border: 1px solid rgba(255,255,255,0.14); padding: 10px; background: rgba(255,255,255,0.03); }
+    .left-title { font-size: 11px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #f59e0b; margin: 18px 0 10px; }
+    .left-box { border: 1px solid rgba(255,255,255,0.14); padding: 12px 10px; background: rgba(255,255,255,0.035); border-radius: 10px; }
     .left-row { margin: 0 0 8px 0; }
     .left-label { font-size: 10px; letter-spacing: .8px; text-transform: uppercase; color: rgba(229,231,235,0.75); }
     .left-value { font-size: 12.5px; font-weight: 600; color: #fff; }
     .left-small { font-size: 12px; color: rgba(229,231,235,0.88); }
 
-    .inv-title { font-size: 34px; font-weight: 800; letter-spacing: 1.6px; margin: 0; }
+    .inv-title { font-size: 34px; font-weight: 900; letter-spacing: 1.8px; margin: 0; }
     .meta { margin-top: 6px; font-size: 12px; color: #6b7280; }
     .accent-bar { height: 10px; background: #f59e0b; margin: 12px 0 16px; }
 
@@ -46,7 +53,7 @@
     .badge-secondary { background: #6b7280; color: #fff; }
     .badge-dark { background: #111827; color: #fff; }
 
-    .total-due { margin-top: 10px; border: 1px solid #e5e7eb; background: #fff; padding: 10px 12px; }
+    .total-due { margin-top: 10px; border: 1px solid #e5e7eb; background: #fff; padding: 12px 12px; border-radius: 10px; }
     .total-due .lbl { font-size: 11px; text-transform: uppercase; letter-spacing: .6px; color: #6b7280; }
     .total-due .amt { font-size: 18px; font-weight: 800; color: #111827; margin-top: 2px; }
 
@@ -67,15 +74,15 @@
     .totals .grand .label, .totals .grand .value { color: #fff; }
 
     .signature { margin-top: 18px; }
-    .sig-line { border-top: 1px solid #9ca3af; height: 1px; margin-top: 40px; }
+    .sig-line { border-top: 1px solid #9ca3af; height: 1px; margin-top: 46px; }
     .sig-note { margin-top: 6px; font-size: 11px; color: #6b7280; }
 
     .notes { margin-top: 16px; font-size: 12px; color: #374151; }
     .footer { margin-top: 18px; text-align: center; font-size: 11px; color: #9ca3af; }
 
     .watermark {
-      position: fixed; top: 45%; left: 6%; right: 6%; text-align: center;
-      font-size: 70px; color: rgba(17,24,39,0.06); transform: rotate(-18deg);
+      position: fixed; top: 45%; left: 4%; right: 4%; text-align: center;
+      font-size: 72px; color: rgba(17,24,39,0.05); transform: rotate(-18deg);
       z-index: 0;
     }
   </style>
