@@ -13,8 +13,8 @@
     .frame { width: 100%; border-collapse: collapse; table-layout: fixed; border: 1px solid #e5e7eb; }
     .frame td { vertical-align: top; }
 
-    .side { width: 66mm; background: #1f2937; color: #e5e7eb; padding: 10mm 6mm; }
-    .main { background: #ffffff; padding: 10mm 10mm; }
+    .side { width: 56mm; background: #1f2937; color: #e5e7eb; padding: 10mm 6mm; }
+    .main { background: #ffffff; padding: 10mm 9mm; }
 
     .brand-logo { max-height: 24mm; width: auto; display: block; margin-bottom: 4mm; }
     .brand-name { font-size: 12px; font-weight: 900; color: #fff; }
@@ -44,9 +44,11 @@
     .section-title { font-size: 11px; font-weight: 900; margin: 0 0 3mm 0; }
 
     table.items { width: 100%; border-collapse: collapse; table-layout: fixed; }
-    table.items th, table.items td { border: 1px solid #e5e7eb; padding: 8px 7px; }
+    table.items th, table.items td { border: 1px solid #e5e7eb; padding: 7px 6px; }
     table.items th { background: #f59e0b; color: #fff; font-size: 10px; text-transform: uppercase; letter-spacing: .6px; }
     .right { text-align: right; }
+    .num { white-space: nowrap; font-size: 9.5px; }
+    .desc { word-break: break-word; overflow-wrap: anywhere; }
 
     table.summary { width: 100%; border-collapse: collapse; margin-top: 4mm; }
     table.summary td { padding: 6px 6px; }
@@ -134,19 +136,19 @@
           <table class="items">
             <thead>
               <tr>
-                <th style="width:58%">Description</th>
-                <th style="width:12%" class="right">Qty</th>
-                <th style="width:15%" class="right">Unit Price</th>
-                <th style="width:15%" class="right">Amount</th>
+                <th style="width:55%">Description</th>
+                <th style="width:10%" class="right">Qty</th>
+                <th style="width:17%" class="right">Unit Price</th>
+                <th style="width:18%" class="right">Amount</th>
               </tr>
             </thead>
             <tbody>
               <?php foreach (($invoice['items'] ?? []) as $it): ?>
                 <tr>
-                  <td><?= htmlspecialchars((string)($it['description'] ?? '')) ?></td>
-                  <td class="right"><?= number_format((float)($it['quantity'] ?? 0), 2) ?></td>
-                  <td class="right"><?= number_format((float)($it['unit_price'] ?? 0), 2) ?></td>
-                  <td class="right"><?= number_format((float)($it['line_total'] ?? 0), 2) ?></td>
+                  <td class="desc"><?= htmlspecialchars((string)($it['description'] ?? '')) ?></td>
+                  <td class="right num"><?= number_format((float)($it['quantity'] ?? 0), 2) ?></td>
+                  <td class="right num"><?= number_format((float)($it['unit_price'] ?? 0), 2) ?></td>
+                  <td class="right num"><?= number_format((float)($it['line_total'] ?? 0), 2) ?></td>
                 </tr>
               <?php endforeach; ?>
             </tbody>
