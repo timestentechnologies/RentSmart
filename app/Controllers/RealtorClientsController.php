@@ -3,6 +3,8 @@
 namespace App\Controllers;
 
 use App\Models\RealtorClient;
+use App\Models\RealtorContract;
+use App\Models\RealtorLead;
 use App\Models\RealtorListing;
 use App\Database\Connection;
 
@@ -33,7 +35,7 @@ class RealtorClientsController
         $clients = $model->getAll($this->userId);
 
         $listingModel = new RealtorListing();
-        $listings = $listingModel->getAll($this->userId);
+        $listings = $listingModel->getAllActive($this->userId);
         echo view('realtor/clients', [
             'title' => 'Clients',
             'clients' => $clients,
@@ -55,6 +57,12 @@ class RealtorClientsController
                 exit;
             }
 
+            $listingId = (int)($_POST['realtor_listing_id'] ?? 0);
+            $termsType = trim((string)($_POST['terms_type'] ?? 'one_time'));
+            $totalAmount = (float)($_POST['total_amount'] ?? 0);
+            $durationMonths = (int)($_POST['duration_months'] ?? 0);
+            $startMonth = trim((string)($_POST['start_month'] ?? ''));
+
             $data = [
                 'user_id' => $this->userId,
                 'name' => trim((string)($_POST['name'] ?? '')),
@@ -70,11 +78,145 @@ class RealtorClientsController
                 exit;
             }
 
-            $model = new RealtorClient();
-            $model->insert($data);
+            if ($listingId <= 0) {
+                $_SESSION['flash_message'] = 'Listing is required';
+                $_SESSION['flash_type'] = 'danger';
+                header('Location: ' . BASE_URL . '/realtor/clients');
+                exit;
+            }
 
-            $_SESSION['flash_message'] = 'Client added successfully';
-            $_SESSION['flash_type'] = 'success';
+            if (!in_array($termsType, ['one_time', 'monthly'], true)) {
+                $termsType = 'one_time';
+            }
+
+            if ($totalAmount <= 0) {
+                $_SESSION['flash_message'] = 'Total amount must be greater than 0';
+                $_SESSION['flash_type'] = 'danger';
+                header('Location: ' . BASE_URL . '/realtor/clients');
+                exit;
+            }
+
+            if ($termsType === 'monthly') {
+                if ($durationMonths <= 0) {
+                    $_SESSION['flash_message'] = 'Duration (months) is required for monthly contracts';
+                    $_SESSION['flash_type'] = 'danger';
+                    header('Location: ' . BASE_URL . '/realtor/clients');
+                    exit;
+                }
+                if ($startMonth === '') {
+                    $_SESSION['flash_message'] = 'Start month is required for monthly contracts';
+                    $_SESSION['flash_type'] = 'danger';
+                    header('Location: ' . BASE_URL . '/realtor/clients');
+                    exit;
+                }
+            }
+
+            $listingModel = new RealtorListing();
+            $listing = $listingModel->getByIdWithAccess((int)$listingId, (int)$this->userId);
+            if (!$listing) {
+                $_SESSION['flash_message'] = 'Invalid listing';
+                $_SESSION['flash_type'] = 'danger';
+                header('Location: ' . BASE_URL . '/realtor/clients');
+                exit;
+            }
+
+            $model = new RealtorClient();
+            $db = Connection::getInstance()->getConnection();
+            $db->beginTransaction();
+
+            try {
+                $clientId = (int)$model->insert($data);
+
+                if ($clientId <= 0) {
+                    throw new \Exception('Failed to create client');
+                }
+
+                // Link client to listing for convenience
+                try {
+                    $model->updateById((int)$clientId, ['realtor_listing_id' => (int)$listingId]);
+                } catch (\Throwable $e) {
+                }
+
+                $contractId = null;
+                $contractModel = new RealtorContract();
+                try {
+                    $existing = $contractModel->query(
+                        "SELECT id FROM realtor_contracts WHERE user_id = ? AND realtor_client_id = ? AND realtor_listing_id = ? ORDER BY id DESC LIMIT 1",
+                        [(int)$this->userId, (int)$clientId, (int)$listingId]
+                    );
+                    if (!empty($existing)) {
+                        $contractId = (int)($existing[0]['id'] ?? 0);
+                    }
+                } catch (\Throwable $e) {
+                }
+
+                if (!$contractId) {
+                    $monthlyAmount = null;
+                    $startMonthDate = null;
+                    $durationToSave = null;
+                    if ($termsType === 'monthly') {
+                        $monthlyAmount = round($totalAmount / max(1, $durationMonths), 2);
+                        $startMonthDate = $startMonth . '-01';
+                        $durationToSave = (int)$durationMonths;
+                    }
+
+                    $contractId = (int)$contractModel->insert([
+                        'user_id' => (int)$this->userId,
+                        'realtor_client_id' => (int)$clientId,
+                        'realtor_listing_id' => (int)$listingId,
+                        'terms_type' => (string)$termsType,
+                        'total_amount' => (float)$totalAmount,
+                        'monthly_amount' => $monthlyAmount,
+                        'duration_months' => $durationToSave,
+                        'start_month' => $startMonthDate,
+                        'status' => 'active',
+                    ]);
+                }
+
+                // Mark listing as sold since it is linked to a contract.
+                try {
+                    $listingModel->updateById((int)$listingId, ['status' => 'sold']);
+                } catch (\Throwable $e) {
+                }
+
+                // Create a Won lead and link it to this client.
+                try {
+                    $leadModel = new RealtorLead();
+                    $leadId = (int)$leadModel->insert([
+                        'user_id' => (int)$this->userId,
+                        'realtor_listing_id' => (int)$listingId,
+                        'listing_name' => (string)($listing['title'] ?? ''),
+                        'address' => (string)($listing['location'] ?? ''),
+                        'amount' => (float)$totalAmount,
+                        'name' => (string)$data['name'],
+                        'phone' => (string)$data['phone'],
+                        'email' => (string)$data['email'],
+                        'source' => 'manual_client',
+                        'status' => 'won',
+                        'notes' => (string)$data['notes'],
+                        'converted_client_id' => (int)$clientId,
+                    ]);
+                    if ($leadId > 0) {
+                        // no-op
+                    }
+                } catch (\Throwable $e) {
+                }
+
+                $db->commit();
+
+                $_SESSION['flash_message'] = 'Client and contract created successfully';
+                $_SESSION['flash_type'] = 'success';
+
+                if ($contractId > 0) {
+                    header('Location: ' . BASE_URL . '/realtor/contracts/show/' . (int)$contractId . '?edit=1');
+                    exit;
+                }
+            } catch (\Throwable $e) {
+                if ($db->inTransaction()) {
+                    $db->rollBack();
+                }
+                throw $e;
+            }
         } catch (\Exception $e) {
             error_log('RealtorClients store failed: ' . $e->getMessage());
             $_SESSION['flash_message'] = 'Failed to add client';
