@@ -156,6 +156,117 @@ class Invoice extends Model
         }
     }
 
+    public function ensureRealtorContractInvoice(int $userId, int $contractId, int $clientId, int $listingId, float $totalAmount, ?string $issueDate = null): int
+    {
+        if ($userId <= 0 || $contractId <= 0 || $totalAmount <= 0) return 0;
+        $tag = 'REALTOR_CONTRACT#' . (int)$contractId;
+        try {
+            $chk = $this->db->prepare("SELECT id FROM {$this->table} WHERE user_id = ? AND notes LIKE ? ORDER BY id DESC LIMIT 1");
+            $chk->execute([(int)$userId, '%' . $tag . '%']);
+            $row = $chk->fetch(\PDO::FETCH_ASSOC);
+            if (!empty($row['id'])) {
+                return (int)$row['id'];
+            }
+        } catch (\Exception $e) {
+        }
+
+        $clientName = '';
+        $listingTitle = '';
+        try {
+            if ($clientId > 0) {
+                $s = $this->db->prepare("SELECT name FROM realtor_clients WHERE id = ? LIMIT 1");
+                $s->execute([(int)$clientId]);
+                $clientName = (string)($s->fetch(\PDO::FETCH_ASSOC)['name'] ?? '');
+            }
+        } catch (\Exception $e) {
+        }
+        try {
+            if ($listingId > 0) {
+                $s = $this->db->prepare("SELECT title FROM realtor_listings WHERE id = ? LIMIT 1");
+                $s->execute([(int)$listingId]);
+                $listingTitle = (string)($s->fetch(\PDO::FETCH_ASSOC)['title'] ?? '');
+            }
+        } catch (\Exception $e) {
+        }
+
+        $desc = 'Contract Invoice';
+        $suffixParts = [];
+        $suffixParts[] = 'Contract #' . (int)$contractId;
+        if ($clientName !== '') $suffixParts[] = $clientName;
+        if ($listingTitle !== '') $suffixParts[] = $listingTitle;
+        if (!empty($suffixParts)) {
+            $desc .= ' - ' . implode(' / ', $suffixParts);
+        }
+
+        $issue = $issueDate ? (string)$issueDate : date('Y-m-d');
+        try {
+            return (int)$this->createInvoice([
+                'tenant_id' => null,
+                'issue_date' => $issue,
+                'due_date' => null,
+                'status' => 'sent',
+                'notes' => trim($tag . ' client_id=' . (int)$clientId . ' listing_id=' . (int)$listingId),
+                'user_id' => (int)$userId,
+            ], [[
+                'description' => $desc,
+                'quantity' => 1,
+                'unit_price' => (float)$totalAmount,
+            ]]);
+        } catch (\Exception $e) {
+            return 0;
+        }
+    }
+
+    public function updateStatusForRealtorContract(int $userId, int $contractId): ?string
+    {
+        if ($userId <= 0 || $contractId <= 0) return null;
+        $tag = 'REALTOR_CONTRACT#' . (int)$contractId;
+
+        $inv = null;
+        try {
+            $stmt = $this->db->prepare("SELECT * FROM {$this->table} WHERE user_id = ? AND notes LIKE ? ORDER BY id DESC LIMIT 1");
+            $stmt->execute([(int)$userId, '%' . $tag . '%']);
+            $inv = $stmt->fetch(\PDO::FETCH_ASSOC);
+        } catch (\Exception $e) {
+            $inv = null;
+        }
+        if (!$inv || empty($inv['id'])) return null;
+
+        $total = (float)($inv['total'] ?? 0);
+        if ($total <= 0) return null;
+
+        $paid = 0.0;
+        try {
+            $pStmt = $this->db->prepare(
+                "SELECT COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END),0) AS s\n"
+                . "FROM payments\n"
+                . "WHERE realtor_user_id = ? AND realtor_contract_id = ? AND status IN ('completed','verified')"
+            );
+            $pStmt->execute([(int)$userId, (int)$contractId]);
+            $paid = (float)(($pStmt->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0));
+        } catch (\Exception $e) {
+            $paid = 0.0;
+        }
+
+        $newStatus = null;
+        if ($paid + 0.00001 >= $total) {
+            $newStatus = 'paid';
+        } elseif ($paid > 0.01) {
+            $newStatus = 'partial';
+        } else {
+            $newStatus = ($inv['status'] === 'draft') ? 'draft' : 'sent';
+        }
+
+        if ((string)($inv['status'] ?? '') !== $newStatus) {
+            try {
+                $upd = $this->db->prepare("UPDATE {$this->table} SET status = ?, updated_at = NOW() WHERE id = ?");
+                $upd->execute([(string)$newStatus, (int)$inv['id']]);
+            } catch (\Exception $e) {
+            }
+        }
+        return $newStatus;
+    }
+
     public function recalculateTotals(int $invoiceId): void
     {
         $stmt = $this->db->prepare("SELECT COALESCE(SUM(line_total),0) AS s FROM invoice_items WHERE invoice_id = ?");

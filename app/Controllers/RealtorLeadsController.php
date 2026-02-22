@@ -2,11 +2,12 @@
 
 namespace App\Controllers;
 
-use App\Models\RealtorLead;
 use App\Models\RealtorClient;
+use App\Models\RealtorContract;
+use App\Models\RealtorLead;
 use App\Models\RealtorLeadStage;
 use App\Models\RealtorListing;
-use App\Models\RealtorContract;
+use App\Models\Invoice;
 use App\Models\Subscription;
 
 class RealtorLeadsController
@@ -255,6 +256,7 @@ class RealtorLeadsController
 
         if (!empty($lead['converted_client_id'])) {
             $contractId = null;
+            $totalForInvoice = null;
             try {
                 $contractModel = new RealtorContract();
                 $existing = $contractModel->query(
@@ -271,7 +273,37 @@ class RealtorLeadsController
                 try {
                     $listingModel = new RealtorListing();
                     $listingModel->updateById((int)$lead['realtor_listing_id'], ['status' => 'sold']);
+
+                    try {
+                        $listing = $listingModel->getByIdWithAccess((int)$lead['realtor_listing_id'], (int)$this->userId);
+                        $totalForInvoice = (float)($listing['price'] ?? 0);
+                        if ($totalForInvoice <= 0) {
+                            $totalForInvoice = null;
+                        }
+                    } catch (\Throwable $e) {
+                        $totalForInvoice = null;
+                    }
                 } catch (\Exception $e) {
+                }
+            }
+
+            if ($contractId > 0) {
+                if ($totalForInvoice === null) {
+                    $totalForInvoice = (float)($lead['amount'] ?? 0);
+                }
+                if ($totalForInvoice > 0) {
+                    try {
+                        $invModel = new Invoice();
+                        $invModel->ensureRealtorContractInvoice(
+                            (int)$this->userId,
+                            (int)$contractId,
+                            (int)$lead['converted_client_id'],
+                            (int)($lead['realtor_listing_id'] ?? 0),
+                            (float)$totalForInvoice,
+                            date('Y-m-d')
+                        );
+                    } catch (\Throwable $e) {
+                    }
                 }
             }
             return ['converted' => false, 'client_id' => (int)$lead['converted_client_id'], 'contract_id' => $contractId];
@@ -323,6 +355,21 @@ class RealtorLeadsController
                 ]);
             } else {
                 $contractId = (int)($existing[0]['id'] ?? 0);
+            }
+
+            if (!empty($contractId) && (float)$total > 0) {
+                try {
+                    $invModel = new Invoice();
+                    $invModel->ensureRealtorContractInvoice(
+                        (int)$this->userId,
+                        (int)$contractId,
+                        (int)$clientId,
+                        (int)($listingId ?? 0),
+                        (float)$total,
+                        date('Y-m-d')
+                    );
+                } catch (\Throwable $e) {
+                }
             }
 
             if (!empty($listingId)) {
@@ -516,6 +563,7 @@ class RealtorLeadsController
                 $leadModel->updateById((int)$id, ['status' => 'won']);
 
                 $contractId = null;
+                $totalForInvoice = null;
                 if (!empty($lead['realtor_listing_id'])) {
                     try {
                         $contractModel = new RealtorContract();
@@ -527,6 +575,37 @@ class RealtorLeadsController
                             $contractId = (int)($existing[0]['id'] ?? 0);
                         }
                     } catch (\Exception $e) {
+                    }
+
+                    try {
+                        $listingModel = new RealtorListing();
+                        $listing = $listingModel->getByIdWithAccess((int)$lead['realtor_listing_id'], (int)$this->userId);
+                        $totalForInvoice = (float)($listing['price'] ?? 0);
+                        if ($totalForInvoice <= 0) {
+                            $totalForInvoice = null;
+                        }
+                    } catch (\Throwable $e) {
+                        $totalForInvoice = null;
+                    }
+                }
+
+                if ($contractId > 0) {
+                    if ($totalForInvoice === null) {
+                        $totalForInvoice = (float)($lead['amount'] ?? 0);
+                    }
+                    if ($totalForInvoice > 0) {
+                        try {
+                            $invModel = new Invoice();
+                            $invModel->ensureRealtorContractInvoice(
+                                (int)$this->userId,
+                                (int)$contractId,
+                                (int)$lead['converted_client_id'],
+                                (int)($lead['realtor_listing_id'] ?? 0),
+                                (float)$totalForInvoice,
+                                date('Y-m-d')
+                            );
+                        } catch (\Throwable $e) {
+                        }
                     }
                 }
 
@@ -581,6 +660,21 @@ class RealtorLeadsController
                             'start_month' => null,
                             'status' => 'active',
                         ]);
+                    }
+
+                    if (!empty($contractId) && (float)$total > 0) {
+                        try {
+                            $invModel = new Invoice();
+                            $invModel->ensureRealtorContractInvoice(
+                                (int)$this->userId,
+                                (int)$contractId,
+                                (int)$clientId,
+                                (int)$lead['realtor_listing_id'],
+                                (float)$total,
+                                date('Y-m-d')
+                            );
+                        } catch (\Throwable $e) {
+                        }
                     }
                 } catch (\Exception $e) {
                 }

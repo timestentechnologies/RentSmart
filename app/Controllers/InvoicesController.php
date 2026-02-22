@@ -123,6 +123,7 @@ class InvoicesController
             $db = $inv->getDb();
             $paymentIds = [];
             $manualPairs = [];
+            $contractIds = [];
             foreach ($invoices as $idx => $r) {
                 $notes = (string)($r['notes'] ?? '');
                 if (preg_match('/REALTOR_PAYMENT#(\d+)/', $notes, $m)) {
@@ -135,6 +136,12 @@ class InvoicesController
                     $manualPairs[] = ['client_id' => $cid, 'listing_id' => $lid, 'idx' => $idx];
                     $invoices[$idx]['realtor_manual_client_id'] = $cid;
                     $invoices[$idx]['realtor_manual_listing_id'] = $lid;
+                } elseif (preg_match('/REALTOR_CONTRACT#(\d+)/', $notes, $m)) {
+                    $cid = (int)$m[1];
+                    if ($cid > 0) {
+                        $contractIds[] = $cid;
+                        $invoices[$idx]['realtor_contract_id'] = $cid;
+                    }
                 }
             }
 
@@ -164,6 +171,41 @@ class InvoicesController
                 if ($pid > 0 && isset($map[$pid])) {
                     $invoices[$idx]['realtor_client_name'] = $map[$pid]['client_name'];
                     $invoices[$idx]['realtor_listing_title'] = $map[$pid]['listing_title'];
+                }
+            }
+
+            $contractIds = array_values(array_unique(array_filter($contractIds, fn($v) => $v > 0)));
+            if (!empty($contractIds)) {
+                try {
+                    $ph = implode(',', array_fill(0, count($contractIds), '?'));
+                    $stmt = $db->prepare(
+                        "SELECT c.id AS contract_id, rc.name AS client_name, rl.title AS listing_title\n"
+                        . "FROM realtor_contracts c\n"
+                        . "LEFT JOIN realtor_clients rc ON rc.id = c.realtor_client_id\n"
+                        . "LEFT JOIN realtor_listings rl ON rl.id = c.realtor_listing_id\n"
+                        . "WHERE c.user_id = ? AND c.id IN ($ph)"
+                    );
+                    $stmt->execute(array_merge([(int)$this->userId], $contractIds));
+                    $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+                    $cMap = [];
+                    foreach ($rows as $rr) {
+                        $cMap[(int)($rr['contract_id'] ?? 0)] = [
+                            'client_name' => (string)($rr['client_name'] ?? ''),
+                            'listing_title' => (string)($rr['listing_title'] ?? ''),
+                        ];
+                    }
+                    foreach ($invoices as $idx => $r) {
+                        $cid = (int)($r['realtor_contract_id'] ?? 0);
+                        if ($cid > 0 && isset($cMap[$cid])) {
+                            if (!isset($invoices[$idx]['realtor_client_name']) || $invoices[$idx]['realtor_client_name'] === '') {
+                                $invoices[$idx]['realtor_client_name'] = $cMap[$cid]['client_name'];
+                            }
+                            if (!isset($invoices[$idx]['realtor_listing_title']) || $invoices[$idx]['realtor_listing_title'] === '') {
+                                $invoices[$idx]['realtor_listing_title'] = $cMap[$cid]['listing_title'];
+                            }
+                        }
+                    }
+                } catch (\Throwable $e) {
                 }
             }
 

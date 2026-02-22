@@ -6,6 +6,7 @@ use App\Models\RealtorClient;
 use App\Models\RealtorContract;
 use App\Models\RealtorLead;
 use App\Models\RealtorListing;
+use App\Models\Invoice;
 use App\Database\Connection;
 
 class RealtorClientsController
@@ -171,6 +172,21 @@ class RealtorClientsController
                         'start_month' => $startMonthDate,
                         'status' => 'active',
                     ]);
+                }
+
+                if ($contractId > 0) {
+                    try {
+                        $invModel = new Invoice();
+                        $invModel->ensureRealtorContractInvoice(
+                            (int)$this->userId,
+                            (int)$contractId,
+                            (int)$clientId,
+                            (int)$listingId,
+                            (float)$totalAmount,
+                            date('Y-m-d')
+                        );
+                    } catch (\Throwable $e) {
+                    }
                 }
 
                 // Mark listing as sold since it is linked to a contract.

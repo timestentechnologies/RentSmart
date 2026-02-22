@@ -114,8 +114,56 @@ class Payment extends Model
         $id = (int)$this->db->lastInsertId();
         // Auto-post to ledger + create an invoice (Realtor payments are contract-based).
         $this->postPaymentToLedgerIfNeeded($id, $data);
-        $this->createInvoiceForRealtorPaymentIfNeeded($id, $data);
+        if (empty($data['realtor_contract_id'])) {
+            $this->createInvoiceForRealtorPaymentIfNeeded($id, $data);
+        }
+        $this->ensureAndUpdateInvoiceForRealtorContractIfNeeded($data);
         return $id;
+    }
+
+    private function ensureAndUpdateInvoiceForRealtorContractIfNeeded(array $data): void
+    {
+        try {
+            $status = (string)($data['status'] ?? 'completed');
+            if (!$this->shouldPostToLedger($status)) return;
+
+            $userId = (int)($data['realtor_user_id'] ?? 0);
+            $contractId = (int)($data['realtor_contract_id'] ?? 0);
+            if ($userId <= 0 || $contractId <= 0) return;
+
+            $row = null;
+            try {
+                $stmt = $this->db->prepare(
+                    "SELECT realtor_client_id, realtor_listing_id, total_amount\n"
+                    . "FROM realtor_contracts\n"
+                    . "WHERE user_id = ? AND id = ?\n"
+                    . "LIMIT 1"
+                );
+                $stmt->execute([(int)$userId, (int)$contractId]);
+                $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+            } catch (\Exception $e) {
+                $row = null;
+            }
+            if (!$row) return;
+
+            $clientId = (int)($row['realtor_client_id'] ?? 0);
+            $listingId = (int)($row['realtor_listing_id'] ?? 0);
+            $total = (float)($row['total_amount'] ?? 0);
+            if ($total <= 0) return;
+
+            $inv = new Invoice();
+            $inv->ensureRealtorContractInvoice(
+                (int)$userId,
+                (int)$contractId,
+                (int)$clientId,
+                (int)$listingId,
+                (float)$total,
+                (string)($data['payment_date'] ?? date('Y-m-d'))
+            );
+            $inv->updateStatusForRealtorContract((int)$userId, (int)$contractId);
+        } catch (\Exception $e) {
+            error_log('Realtor contract invoice update failed: ' . $e->getMessage());
+        }
     }
 
     private function createInvoiceForRealtorPaymentIfNeeded(int $paymentId, array $data): void
