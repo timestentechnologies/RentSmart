@@ -62,11 +62,23 @@
         <div class="section-title">Bill To</div>
         <table class="no-border">
           <tr>
-            <td><strong><?= htmlspecialchars($invoice['tenant_name'] ?? '-') ?></strong></td>
+            <td>
+              <strong>
+                <?= htmlspecialchars(!empty($realtorContext) ? (($realtorContext['client_name'] ?? '-') ?: '-') : ($invoice['tenant_name'] ?? '-')) ?>
+              </strong>
+            </td>
           </tr>
           <tr>
-            <td><?= htmlspecialchars($invoice['tenant_email'] ?? '-') ?></td>
+            <td><?= htmlspecialchars(!empty($realtorContext) ? (($realtorContext['client_email'] ?? '-') ?: '-') : ($invoice['tenant_email'] ?? '-')) ?></td>
           </tr>
+          <?php if (!empty($realtorContext) && (!empty($realtorContext['listing_title']) || !empty($realtorContext['listing_location']))): ?>
+          <tr>
+            <td>
+              <?= htmlspecialchars((string)($realtorContext['listing_title'] ?? '')) ?>
+              <?= !empty($realtorContext['listing_location']) ? (' • ' . htmlspecialchars((string)$realtorContext['listing_location'])) : '' ?>
+            </td>
+          </tr>
+          <?php endif; ?>
           <tr>
             <td>Due Date: <?= htmlspecialchars($invoice['due_date'] ?? '-') ?></td>
           </tr>
@@ -115,7 +127,7 @@
     </table>
   </div>
 
-  <?php if (!empty($paymentStatus)): ?>
+  <?php if (empty($realtorContext) && !empty($paymentStatus)): ?>
   <div class="section">
     <div class="section-title">Payment Status for <?= htmlspecialchars($paymentStatus['month_label']) ?></div>
     <table class="no-border">
@@ -135,7 +147,7 @@
   </div>
   <?php endif; ?>
 
-  <?php if (!empty($maintenancePayments)): ?>
+  <?php if (empty($realtorContext) && !empty($maintenancePayments)): ?>
   <div class="section">
     <div class="section-title">Maintenance Payments</div>
     <table>

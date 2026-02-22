@@ -4,6 +4,7 @@ namespace App\Controllers;
 
 use App\Models\RealtorListing;
 use App\Models\RealtorClient;
+use App\Database\Connection;
 use App\Models\Subscription;
 use App\Helpers\FileUploadHelper;
 
@@ -290,8 +291,101 @@ class RealtorListingsController
                 echo json_encode(['success' => false, 'message' => 'Listing not found']);
                 exit;
             }
-            $ok = $model->deleteById((int)$id);
-            echo json_encode(['success' => (bool)$ok, 'message' => $ok ? 'Deleted' : 'Failed to delete']);
+
+            $db = Connection::getInstance()->getConnection();
+            $db->beginTransaction();
+
+            try {
+                $listingId = (int)$id;
+
+                // Collect related clients
+                $clientIds = [];
+                try {
+                    $stmt = $db->prepare("SELECT id FROM realtor_clients WHERE user_id = ? AND realtor_listing_id = ?");
+                    $stmt->execute([(int)$this->userId, (int)$listingId]);
+                    $clientIds = array_values(array_filter(array_map('intval', $stmt->fetchAll(\PDO::FETCH_COLUMN) ?: [])));
+                } catch (\Throwable $e) {
+                    $clientIds = [];
+                }
+
+                // Delete payments by listing
+                try {
+                    $stmtPay = $db->prepare("DELETE FROM payments WHERE realtor_user_id = ? AND realtor_listing_id = ?");
+                    $stmtPay->execute([(int)$this->userId, (int)$listingId]);
+                } catch (\Throwable $e) {
+                }
+
+                // Delete payments tied to contracts of clients in this listing
+                if (!empty($clientIds)) {
+                    try {
+                        $ph = implode(',', array_fill(0, count($clientIds), '?'));
+                        $stmtPay2 = $db->prepare(
+                            "DELETE p FROM payments p\n"
+                            . "JOIN realtor_contracts c ON c.id = p.realtor_contract_id\n"
+                            . "WHERE c.user_id = ? AND c.realtor_client_id IN ($ph)"
+                        );
+                        $stmtPay2->execute(array_merge([(int)$this->userId], $clientIds));
+                    } catch (\Throwable $e) {
+                    }
+                }
+
+                // Delete contracts by listing
+                try {
+                    $stmtC = $db->prepare("DELETE FROM realtor_contracts WHERE user_id = ? AND realtor_listing_id = ?");
+                    $stmtC->execute([(int)$this->userId, (int)$listingId]);
+                } catch (\Throwable $e) {
+                }
+
+                // Delete contracts for clients in this listing (covers any NULL listing_id contracts)
+                if (!empty($clientIds)) {
+                    try {
+                        $ph = implode(',', array_fill(0, count($clientIds), '?'));
+                        $stmtC2 = $db->prepare("DELETE FROM realtor_contracts WHERE user_id = ? AND realtor_client_id IN ($ph)");
+                        $stmtC2->execute(array_merge([(int)$this->userId], $clientIds));
+                    } catch (\Throwable $e) {
+                    }
+                }
+
+                // Mark related leads as lost + unconvert
+                try {
+                    $stmtLost = $db->prepare(
+                        "UPDATE realtor_leads\n"
+                        . "SET status = 'lost', converted_client_id = NULL\n"
+                        . "WHERE user_id = ? AND (realtor_listing_id = ? OR converted_client_id IN (SELECT id FROM realtor_clients WHERE user_id = ? AND realtor_listing_id = ?))"
+                    );
+                    $stmtLost->execute([(int)$this->userId, (int)$listingId, (int)$this->userId, (int)$listingId]);
+                } catch (\Throwable $e) {
+                }
+
+                // Detach listing_id from leads (since listing is being deleted)
+                try {
+                    $stmtDetach = $db->prepare("UPDATE realtor_leads SET realtor_listing_id = NULL WHERE user_id = ? AND realtor_listing_id = ?");
+                    $stmtDetach->execute([(int)$this->userId, (int)$listingId]);
+                } catch (\Throwable $e) {
+                }
+
+                // Delete clients linked to this listing
+                if (!empty($clientIds)) {
+                    try {
+                        $ph = implode(',', array_fill(0, count($clientIds), '?'));
+                        $stmtDelClients = $db->prepare("DELETE FROM realtor_clients WHERE user_id = ? AND id IN ($ph)");
+                        $stmtDelClients->execute(array_merge([(int)$this->userId], $clientIds));
+                    } catch (\Throwable $e) {
+                    }
+                }
+
+                // Finally delete listing
+                $stmtDel = $db->prepare("DELETE FROM realtor_listings WHERE user_id = ? AND id = ?");
+                $stmtDel->execute([(int)$this->userId, (int)$listingId]);
+
+                $db->commit();
+                echo json_encode(['success' => true, 'message' => 'Deleted']);
+            } catch (\Throwable $e) {
+                if ($db->inTransaction()) {
+                    $db->rollBack();
+                }
+                echo json_encode(['success' => false, 'message' => 'Failed to delete']);
+            }
         } catch (\Exception $e) {
             http_response_code(500);
             echo json_encode(['success' => false, 'message' => 'Internal server error']);

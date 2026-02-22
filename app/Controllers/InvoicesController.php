@@ -9,6 +9,8 @@ use App\Models\Lease;
 use App\Models\Setting;
 use App\Models\Payment;
 use App\Models\User;
+use App\Models\RealtorClient;
+use App\Models\RealtorListing;
 
 class InvoicesController
 {
@@ -43,57 +45,60 @@ class InvoicesController
 
     public function index()
     {
+        $role = strtolower((string)($_SESSION['user_role'] ?? ''));
         $inv = new Invoice();
         $userModel = new User();
         $userModel->find($this->userId);
         $isAdmin = $userModel->isAdmin();
         $scopeUserId = $isAdmin ? null : $this->userId;
-        // Idempotently ensure rent invoices exist for each active lease from start month through current month
-        try {
-            $leaseModel = new Lease();
-            $leases = $leaseModel->getActiveLeases($scopeUserId);
-            $today = date('Y-m-d');
-            foreach ($leases as $L) {
-                $tenantId = (int)($L['tenant_id'] ?? 0);
-                $rent = (float)($L['rent_amount'] ?? 0);
-                $startDate = $L['start_date'] ?? null;
-                if ($tenantId > 0 && $rent > 0 && !empty($startDate)) {
-                    // Also ensure invoices for future months when rent is paid in advance.
-                    // This is important for historical payments that already exist in DB.
-                    $endDate = $today;
-                    try {
-                        $leaseId = (int)($L['id'] ?? 0);
-                        if ($leaseId > 0) {
-                            $payModel = new Payment();
-                            $rows = $payModel->query(
-                                "SELECT COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END),0) AS s\n"
-                                . "FROM payments\n"
-                                . "WHERE lease_id = ? AND payment_type = 'rent' AND status IN ('completed','verified')",
-                                [$leaseId]
-                            );
-                            $paidTotal = (float)($rows[0]['s'] ?? 0);
-                            $monthsPaid = (int)floor(($paidTotal / $rent) + 1e-6);
-                            if ($monthsPaid > 0) {
-                                $leaseStart = new \DateTime(date('Y-m-01', strtotime((string)$startDate)));
-                                $coveredEnd = clone $leaseStart;
-                                $coveredEnd->modify('+' . max(0, $monthsPaid - 1) . ' month');
-                                $todayMonth = new \DateTime(date('Y-m-01', strtotime((string)$today)));
-                                if ($coveredEnd > $todayMonth) {
-                                    $endDate = $coveredEnd->format('Y-m-d');
+        if ($role !== 'realtor') {
+            // Idempotently ensure rent invoices exist for each active lease from start month through current month
+            try {
+                $leaseModel = new Lease();
+                $leases = $leaseModel->getActiveLeases($scopeUserId);
+                $today = date('Y-m-d');
+                foreach ($leases as $L) {
+                    $tenantId = (int)($L['tenant_id'] ?? 0);
+                    $rent = (float)($L['rent_amount'] ?? 0);
+                    $startDate = $L['start_date'] ?? null;
+                    if ($tenantId > 0 && $rent > 0 && !empty($startDate)) {
+                        // Also ensure invoices for future months when rent is paid in advance.
+                        // This is important for historical payments that already exist in DB.
+                        $endDate = $today;
+                        try {
+                            $leaseId = (int)($L['id'] ?? 0);
+                            if ($leaseId > 0) {
+                                $payModel = new Payment();
+                                $rows = $payModel->query(
+                                    "SELECT COALESCE(SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END),0) AS s\n"
+                                    . "FROM payments\n"
+                                    . "WHERE lease_id = ? AND payment_type = 'rent' AND status IN ('completed','verified')",
+                                    [$leaseId]
+                                );
+                                $paidTotal = (float)($rows[0]['s'] ?? 0);
+                                $monthsPaid = (int)floor(($paidTotal / $rent) + 1e-6);
+                                if ($monthsPaid > 0) {
+                                    $leaseStart = new \DateTime(date('Y-m-01', strtotime((string)$startDate)));
+                                    $coveredEnd = clone $leaseStart;
+                                    $coveredEnd->modify('+' . max(0, $monthsPaid - 1) . ' month');
+                                    $todayMonth = new \DateTime(date('Y-m-01', strtotime((string)$today)));
+                                    if ($coveredEnd > $todayMonth) {
+                                        $endDate = $coveredEnd->format('Y-m-d');
+                                    }
                                 }
                             }
+                        } catch (\Exception $e) {
+                            error_log('Advance invoice ensure (index) failed: ' . $e->getMessage());
                         }
-                    } catch (\Exception $e) {
-                        error_log('Advance invoice ensure (index) failed: ' . $e->getMessage());
+                        $inv->ensureInvoicesForLeaseMonths($tenantId, $rent, (string)$startDate, $endDate, $this->userId, 'AUTO');
+                    } elseif ($tenantId > 0 && $rent > 0) {
+                        $inv->ensureMonthlyRentInvoice($tenantId, $today, $rent, $this->userId, 'AUTO');
                     }
-                    $inv->ensureInvoicesForLeaseMonths($tenantId, $rent, (string)$startDate, $endDate, $this->userId, 'AUTO');
-                } elseif ($tenantId > 0 && $rent > 0) {
-                    $inv->ensureMonthlyRentInvoice($tenantId, $today, $rent, $this->userId, 'AUTO');
                 }
-            }
-            // Update statuses for current month
-            $inv->updateStatusesForMonth($today);
-        } catch (\Exception $e) { error_log('Auto-invoice index ensure failed: ' . $e->getMessage()); }
+                // Update statuses for current month
+                $inv->updateStatusesForMonth($today);
+            } catch (\Exception $e) { error_log('Auto-invoice index ensure failed: ' . $e->getMessage()); }
+        }
         $filters = [
             'q' => isset($_GET['q']) ? trim((string)$_GET['q']) : null,
             'status' => isset($_GET['status']) ? trim((string)$_GET['status']) : 'all',
@@ -102,16 +107,115 @@ class InvoicesController
             'date_from' => isset($_GET['date_from']) ? trim((string)$_GET['date_from']) : null,
             'date_to' => isset($_GET['date_to']) ? trim((string)$_GET['date_to']) : null,
         ];
+        if ($role === 'realtor') {
+            $filters['tenant_id'] = null;
+        }
         $invoices = $inv->search($filters, $scopeUserId);
-        $tenantModel = new Tenant();
-        $tenants = $tenantModel->getAll($this->userId);
+
+        $tenants = [];
+        if ($role !== 'realtor') {
+            $tenantModel = new Tenant();
+            $tenants = $tenantModel->getAll($this->userId);
+        }
+
+        // Enrich realtor invoices with client + listing label (from linked payment or manual tag)
+        if ($role === 'realtor') {
+            $db = $inv->getDb();
+            $paymentIds = [];
+            $manualPairs = [];
+            foreach ($invoices as $idx => $r) {
+                $notes = (string)($r['notes'] ?? '');
+                if (preg_match('/REALTOR_PAYMENT#(\d+)/', $notes, $m)) {
+                    $pid = (int)$m[1];
+                    if ($pid > 0) $paymentIds[] = $pid;
+                    $invoices[$idx]['realtor_payment_id'] = $pid;
+                } elseif (preg_match('/REALTOR_MANUAL\s+client_id=(\d+)\s+listing_id=(\d+)/', $notes, $m)) {
+                    $cid = (int)$m[1];
+                    $lid = (int)$m[2];
+                    $manualPairs[] = ['client_id' => $cid, 'listing_id' => $lid, 'idx' => $idx];
+                    $invoices[$idx]['realtor_manual_client_id'] = $cid;
+                    $invoices[$idx]['realtor_manual_listing_id'] = $lid;
+                }
+            }
+
+            $paymentIds = array_values(array_unique(array_filter($paymentIds, fn($v) => $v > 0)));
+            $map = [];
+            if (!empty($paymentIds)) {
+                $ph = implode(',', array_fill(0, count($paymentIds), '?'));
+                $stmt = $db->prepare(
+                    "SELECT p.id AS payment_id, rc.name AS client_name, rl.title AS listing_title\n"
+                    . "FROM payments p\n"
+                    . "LEFT JOIN realtor_clients rc ON rc.id = p.realtor_client_id\n"
+                    . "LEFT JOIN realtor_listings rl ON rl.id = p.realtor_listing_id\n"
+                    . "WHERE p.realtor_user_id = ? AND p.id IN ($ph)"
+                );
+                $stmt->execute(array_merge([(int)$this->userId], $paymentIds));
+                $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+                foreach ($rows as $rr) {
+                    $map[(int)$rr['payment_id']] = [
+                        'client_name' => (string)($rr['client_name'] ?? ''),
+                        'listing_title' => (string)($rr['listing_title'] ?? ''),
+                    ];
+                }
+            }
+
+            foreach ($invoices as $idx => $r) {
+                $pid = (int)($r['realtor_payment_id'] ?? 0);
+                if ($pid > 0 && isset($map[$pid])) {
+                    $invoices[$idx]['realtor_client_name'] = $map[$pid]['client_name'];
+                    $invoices[$idx]['realtor_listing_title'] = $map[$pid]['listing_title'];
+                }
+            }
+
+            if (!empty($manualPairs)) {
+                $clientIds = array_values(array_unique(array_filter(array_map(fn($p) => (int)$p['client_id'], $manualPairs), fn($v) => $v > 0)));
+                $listingIds = array_values(array_unique(array_filter(array_map(fn($p) => (int)$p['listing_id'], $manualPairs), fn($v) => $v > 0)));
+                $clientMap = [];
+                $listingMap = [];
+                if (!empty($clientIds)) {
+                    $ph = implode(',', array_fill(0, count($clientIds), '?'));
+                    $stmt = $db->prepare("SELECT id, name FROM realtor_clients WHERE user_id = ? AND id IN ($ph)");
+                    $stmt->execute(array_merge([(int)$this->userId], $clientIds));
+                    foreach (($stmt->fetchAll(\PDO::FETCH_ASSOC) ?: []) as $rr) {
+                        $clientMap[(int)$rr['id']] = (string)($rr['name'] ?? '');
+                    }
+                }
+                if (!empty($listingIds)) {
+                    $ph = implode(',', array_fill(0, count($listingIds), '?'));
+                    $stmt = $db->prepare("SELECT id, title FROM realtor_listings WHERE user_id = ? AND id IN ($ph)");
+                    $stmt->execute(array_merge([(int)$this->userId], $listingIds));
+                    foreach (($stmt->fetchAll(\PDO::FETCH_ASSOC) ?: []) as $rr) {
+                        $listingMap[(int)$rr['id']] = (string)($rr['title'] ?? '');
+                    }
+                }
+                foreach ($manualPairs as $p) {
+                    $idx = (int)$p['idx'];
+                    $cid = (int)$p['client_id'];
+                    $lid = (int)$p['listing_id'];
+                    $invoices[$idx]['realtor_client_name'] = $clientMap[$cid] ?? '';
+                    $invoices[$idx]['realtor_listing_title'] = $listingMap[$lid] ?? '';
+                }
+            }
+        }
         require 'views/invoices/index.php';
     }
 
     public function create()
     {
-        $tenantModel = new Tenant();
-        $tenants = $tenantModel->getAll($this->userId);
+        $role = strtolower((string)($_SESSION['user_role'] ?? ''));
+        $tenants = [];
+        $realtorClients = [];
+        $realtorListings = [];
+
+        if ($role === 'realtor') {
+            $clientModel = new RealtorClient();
+            $listingModel = new RealtorListing();
+            $realtorClients = $clientModel->getAll((int)$this->userId);
+            $realtorListings = $listingModel->getAll((int)$this->userId);
+        } else {
+            $tenantModel = new Tenant();
+            $tenants = $tenantModel->getAll($this->userId);
+        }
         require 'views/invoices/create.php';
     }
 
@@ -120,6 +224,8 @@ class InvoicesController
         try {
             if (($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'POST') throw new \Exception('Invalid request');
             if (!function_exists('verify_csrf_token') || !verify_csrf_token()) throw new \Exception('Invalid CSRF token');
+
+            $role = strtolower((string)($_SESSION['user_role'] ?? ''));
 
             $items = [];
             $descs = $_POST['item_desc'] ?? [];
@@ -135,12 +241,29 @@ class InvoicesController
             if (empty($items)) throw new \Exception('Add at least one item');
 
             $invModel = new Invoice();
+
+            $tenantId = !empty($_POST['tenant_id']) ? (int)$_POST['tenant_id'] : null;
+            $notes = $_POST['notes'] ?? null;
+            if ($role === 'realtor') {
+                $tenantId = null;
+                $cid = isset($_POST['realtor_client_id']) ? (int)$_POST['realtor_client_id'] : 0;
+                $lid = isset($_POST['realtor_listing_id']) ? (int)$_POST['realtor_listing_id'] : 0;
+                if ($cid <= 0) {
+                    throw new \Exception('Client is required');
+                }
+                if ($lid <= 0) {
+                    $lid = 0;
+                }
+                $tag = 'REALTOR_MANUAL client_id=' . (int)$cid . ' listing_id=' . (int)$lid;
+                $notes = trim($tag . ' ' . trim((string)$notes));
+            }
+
             $invoiceId = $invModel->createInvoice([
-                'tenant_id' => !empty($_POST['tenant_id']) ? (int)$_POST['tenant_id'] : null,
+                'tenant_id' => $tenantId,
                 'issue_date' => $_POST['issue_date'] ?? date('Y-m-d'),
                 'due_date' => $_POST['due_date'] ?? null,
                 'status' => 'sent',
-                'notes' => $_POST['notes'] ?? null,
+                'notes' => $notes,
                 'tax_rate' => isset($_POST['tax_rate']) && $_POST['tax_rate'] !== '' ? (float)$_POST['tax_rate'] : null,
                 'user_id' => $this->userId,
             ], $items);
@@ -319,6 +442,7 @@ class InvoicesController
 
     public function pdf($id)
     {
+        $role = strtolower((string)($_SESSION['user_role'] ?? ''));
         $invModel = new Invoice();
         $invoice = $invModel->getWithItems((int)$id);
         if (!$invoice) { http_response_code(404); echo 'Invoice not found'; exit; }
@@ -362,14 +486,14 @@ class InvoicesController
             $logoDataUri = 'data:' . $mime . ';base64,' . $base64;
         }
         // Refresh status before generating
-        if (!empty($invoice['tenant_id']) && !empty($invoice['issue_date'])) {
+        if ($role !== 'realtor' && !empty($invoice['tenant_id']) && !empty($invoice['issue_date'])) {
             try { $invModel->updateStatusForTenantMonth((int)$invoice['tenant_id'], $invoice['issue_date']); } catch (\Exception $e) { error_log('Invoice status refresh (pdf) failed: ' . $e->getMessage()); }
             $invoice = $invModel->getWithItems((int)$id);
         }
         // Payment status summary (same as show)
         $paymentStatus = null;
         $maintenancePayments = [];
-        if (!empty($invoice['tenant_id']) && !empty($invoice['issue_date'])) {
+        if ($role !== 'realtor' && !empty($invoice['tenant_id']) && !empty($invoice['issue_date'])) {
             $leaseModel = new Lease();
             $lease = $leaseModel->getActiveLeaseByTenant((int)$invoice['tenant_id']);
             if ($lease) {
@@ -479,6 +603,67 @@ class InvoicesController
                 ];
             }
         }
+
+        $realtorContext = null;
+        if ($role === 'realtor' && empty($invoice['tenant_id'])) {
+            $notes = (string)($invoice['notes'] ?? '');
+            $db = $invModel->getDb();
+            $clientName = '';
+            $clientEmail = '';
+            $listingTitle = '';
+            $listingLocation = '';
+            if (preg_match('/REALTOR_PAYMENT#(\d+)/', $notes, $m)) {
+                $pid = (int)$m[1];
+                if ($pid > 0) {
+                    try {
+                        $stmt = $db->prepare(
+                            "SELECT rc.name AS client_name, rc.email AS client_email, rl.title AS listing_title, rl.location AS listing_location\n"
+                            . "FROM payments p\n"
+                            . "LEFT JOIN realtor_clients rc ON rc.id = p.realtor_client_id\n"
+                            . "LEFT JOIN realtor_listings rl ON rl.id = p.realtor_listing_id\n"
+                            . "WHERE p.id = ? AND p.realtor_user_id = ? LIMIT 1"
+                        );
+                        $stmt->execute([(int)$pid, (int)$this->userId]);
+                        $rr = $stmt->fetch(\PDO::FETCH_ASSOC) ?: [];
+                        $clientName = (string)($rr['client_name'] ?? '');
+                        $clientEmail = (string)($rr['client_email'] ?? '');
+                        $listingTitle = (string)($rr['listing_title'] ?? '');
+                        $listingLocation = (string)($rr['listing_location'] ?? '');
+                    } catch (\Throwable $e) {
+                    }
+                }
+            } elseif (preg_match('/REALTOR_MANUAL\s+client_id=(\d+)\s+listing_id=(\d+)/', $notes, $m)) {
+                $cid = (int)$m[1];
+                $lid = (int)$m[2];
+                try {
+                    if ($cid > 0) {
+                        $stmt = $db->prepare("SELECT name, email FROM realtor_clients WHERE user_id = ? AND id = ? LIMIT 1");
+                        $stmt->execute([(int)$this->userId, (int)$cid]);
+                        $rr = $stmt->fetch(\PDO::FETCH_ASSOC) ?: [];
+                        $clientName = (string)($rr['name'] ?? '');
+                        $clientEmail = (string)($rr['email'] ?? '');
+                    }
+                } catch (\Throwable $e) {
+                }
+                try {
+                    if ($lid > 0) {
+                        $stmt = $db->prepare("SELECT title, location FROM realtor_listings WHERE user_id = ? AND id = ? LIMIT 1");
+                        $stmt->execute([(int)$this->userId, (int)$lid]);
+                        $rr = $stmt->fetch(\PDO::FETCH_ASSOC) ?: [];
+                        $listingTitle = (string)($rr['title'] ?? '');
+                        $listingLocation = (string)($rr['location'] ?? '');
+                    }
+                } catch (\Throwable $e) {
+                }
+            }
+
+            $realtorContext = [
+                'client_name' => $clientName,
+                'client_email' => $clientEmail,
+                'listing_title' => $listingTitle,
+                'listing_location' => $listingLocation,
+            ];
+        }
         ob_start();
         include __DIR__ . '/../../views/invoices/invoice_pdf.php';
         $html = ob_get_clean();
@@ -499,7 +684,8 @@ class InvoicesController
             $invModel = new Invoice();
             $invoice = $invModel->getWithItems((int)$id);
             if (!$invoice) throw new \Exception('Invoice not found');
-            if (empty($invoice['tenant_email'])) throw new \Exception('Tenant has no email');
+            $role = strtolower((string)($_SESSION['user_role'] ?? ''));
+            if ($role !== 'realtor' && empty($invoice['tenant_email'])) throw new \Exception('Tenant has no email');
 
             // Build PDF HTML (allow per-user branding)
             $settingsModel = new \App\Models\Setting();
@@ -541,9 +727,69 @@ class InvoicesController
                 require_once __DIR__ . '/../../vendor/dompdf/dompdf/src/Dompdf.php';
             }
             // Refresh status before generating
-            if (!empty($invoice['tenant_id']) && !empty($invoice['issue_date'])) {
+            if ($role !== 'realtor' && !empty($invoice['tenant_id']) && !empty($invoice['issue_date'])) {
                 try { $invModel->updateStatusForTenantMonth((int)$invoice['tenant_id'], $invoice['issue_date']); } catch (\Exception $e) { error_log('Invoice status refresh (email) failed: ' . $e->getMessage()); }
                 $invoice = $invModel->getWithItems((int)$id);
+            }
+
+            $realtorContext = null;
+            if ($role === 'realtor' && empty($invoice['tenant_id'])) {
+                $notes = (string)($invoice['notes'] ?? '');
+                $db = $invModel->getDb();
+                $clientName = '';
+                $clientEmail = '';
+                $listingTitle = '';
+                $listingLocation = '';
+                if (preg_match('/REALTOR_PAYMENT#(\d+)/', $notes, $m)) {
+                    $pid = (int)$m[1];
+                    if ($pid > 0) {
+                        try {
+                            $stmt = $db->prepare(
+                                "SELECT rc.name AS client_name, rc.email AS client_email, rl.title AS listing_title, rl.location AS listing_location\n"
+                                . "FROM payments p\n"
+                                . "LEFT JOIN realtor_clients rc ON rc.id = p.realtor_client_id\n"
+                                . "LEFT JOIN realtor_listings rl ON rl.id = p.realtor_listing_id\n"
+                                . "WHERE p.id = ? AND p.realtor_user_id = ? LIMIT 1"
+                            );
+                            $stmt->execute([(int)$pid, (int)$this->userId]);
+                            $rr = $stmt->fetch(\PDO::FETCH_ASSOC) ?: [];
+                            $clientName = (string)($rr['client_name'] ?? '');
+                            $clientEmail = (string)($rr['client_email'] ?? '');
+                            $listingTitle = (string)($rr['listing_title'] ?? '');
+                            $listingLocation = (string)($rr['listing_location'] ?? '');
+                        } catch (\Throwable $e) {
+                        }
+                    }
+                } elseif (preg_match('/REALTOR_MANUAL\s+client_id=(\d+)\s+listing_id=(\d+)/', $notes, $m)) {
+                    $cid = (int)$m[1];
+                    $lid = (int)$m[2];
+                    try {
+                        if ($cid > 0) {
+                            $stmt = $db->prepare("SELECT name, email FROM realtor_clients WHERE user_id = ? AND id = ? LIMIT 1");
+                            $stmt->execute([(int)$this->userId, (int)$cid]);
+                            $rr = $stmt->fetch(\PDO::FETCH_ASSOC) ?: [];
+                            $clientName = (string)($rr['name'] ?? '');
+                            $clientEmail = (string)($rr['email'] ?? '');
+                        }
+                    } catch (\Throwable $e) {
+                    }
+                    try {
+                        if ($lid > 0) {
+                            $stmt = $db->prepare("SELECT title, location FROM realtor_listings WHERE user_id = ? AND id = ? LIMIT 1");
+                            $stmt->execute([(int)$this->userId, (int)$lid]);
+                            $rr = $stmt->fetch(\PDO::FETCH_ASSOC) ?: [];
+                            $listingTitle = (string)($rr['title'] ?? '');
+                            $listingLocation = (string)($rr['location'] ?? '');
+                        }
+                    } catch (\Throwable $e) {
+                    }
+                }
+                $realtorContext = [
+                    'client_name' => $clientName,
+                    'client_email' => $clientEmail,
+                    'listing_title' => $listingTitle,
+                    'listing_location' => $listingLocation,
+                ];
             }
             ob_start();
             include __DIR__ . '/../../views/invoices/invoice_pdf.php';
@@ -570,7 +816,16 @@ class InvoicesController
             $mail->Password = $settings['smtp_pass'] ?? '';
             $mail->SMTPSecure = \PHPMailer\PHPMailer\PHPMailer::ENCRYPTION_STARTTLS;
             $mail->setFrom($settings['smtp_user'] ?? '', $siteName);
-            $mail->addAddress($invoice['tenant_email'], $invoice['tenant_name'] ?? 'Tenant');
+            $toEmail = $invoice['tenant_email'] ?? '';
+            $toName = $invoice['tenant_name'] ?? 'Tenant';
+            if ($role === 'realtor' && $realtorContext) {
+                $toEmail = (string)($realtorContext['client_email'] ?? '');
+                $toName = (string)($realtorContext['client_name'] ?? 'Client');
+            }
+            if ($toEmail === '') {
+                throw new \Exception('Customer has no email');
+            }
+            $mail->addAddress($toEmail, $toName);
             $mail->Subject = 'Invoice ' . ($invoice['number'] ?? ('#' . $invoice['id']));
             $mail->isHTML(true);
             $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
@@ -580,11 +835,12 @@ class InvoicesController
             $logoForEmail = $logoFilename ?? ($settings['site_logo'] ?? '');
             $logoUrl = !empty($logoForEmail) ? ($siteUrl . '/public/assets/images/' . $logoForEmail) : '';
             $footer = '<div style="margin-top:30px;font-size:12px;color:#888;text-align:center;">Powered by <a href="https://timestentechnologies.co.ke" target="_blank" style="color:#888;text-decoration:none;">Timesten Technologies</a></div>';
-            $plain = 'Dear ' . ($invoice['tenant_name'] ?? 'Customer') . ",\n\nPlease find attached your invoice " . ($invoice['number'] ?? ('#' . $invoice['id'])) . ".\nTotal Due: Ksh " . number_format((float)$invoice['total'], 2) . "\nDue Date: " . ($invoice['due_date'] ?? '-') . "\n\nRegards,\n" . $siteName;
+            $custName = ($role === 'realtor' && $realtorContext) ? ($realtorContext['client_name'] ?? 'Customer') : ($invoice['tenant_name'] ?? 'Customer');
+            $plain = 'Dear ' . $custName . ",\n\nPlease find attached your invoice " . ($invoice['number'] ?? ('#' . $invoice['id'])) . ".\nTotal Due: Ksh " . number_format((float)$invoice['total'], 2) . "\nDue Date: " . ($invoice['due_date'] ?? '-') . "\n\nRegards,\n" . $siteName;
             $html =
                 '<div style="max-width:520px;margin:auto;border:1px solid #eee;padding:24px;font-family:sans-serif;">'
                 . ($logoUrl ? '<div style="text-align:center;margin-bottom:24px;"><img src="' . $logoUrl . '" alt="Logo" style="max-width:180px;max-height:80px;"></div>' : '') .
-                '<p style="font-size:16px;">Dear ' . htmlspecialchars($invoice['tenant_name'] ?? 'Customer') . ',</p>' .
+                '<p style="font-size:16px;">Dear ' . htmlspecialchars($custName) . ',</p>' .
                 '<p>Please find attached your invoice ' . htmlspecialchars($invoice['number'] ?? ('#' . $invoice['id'])) . '.</p>' .
                 '<p><strong>Total Due:</strong> Ksh ' . number_format((float)$invoice['total'], 2) . '</p>' .
                 '<p><strong>Due Date:</strong> ' . htmlspecialchars($invoice['due_date'] ?? '-') . '</p>' .

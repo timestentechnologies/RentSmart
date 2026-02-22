@@ -174,9 +174,9 @@ class RealtorClientsController
                 } catch (\Throwable $e) {
                 }
 
-                // Reset linked lead back to new (and unconvert)
+                // Mark linked lead as lost (and unconvert)
                 try {
-                    $stmtLead = $db->prepare("UPDATE realtor_leads SET status = 'new', converted_client_id = NULL WHERE user_id = ? AND converted_client_id = ?");
+                    $stmtLead = $db->prepare("UPDATE realtor_leads SET status = 'lost', converted_client_id = NULL WHERE user_id = ? AND converted_client_id = ?");
                     $stmtLead->execute([(int)$this->userId, (int)$id]);
                 } catch (\Throwable $e) {
                 }
