@@ -133,7 +133,9 @@ ob_start();
                                                 <?php endif; ?>
                                             </td>
                                             <td>
-                                                <?php if ($unit['is_posted']): ?>
+                                                <?php if (!empty($unit['__is_realtor_listing'] ?? null)): ?>
+                                                    <span class="badge bg-light text-dark">Listing</span>
+                                                <?php elseif ($unit['is_posted']): ?>
                                                     <span class="badge bg-success">
                                                         <i class="bi bi-check-circle me-1"></i>Posted
                                                     </span>
@@ -144,7 +146,9 @@ ob_start();
                                                 <?php endif; ?>
                                             </td>
                                             <td>
-                                                <?php if ($unit['is_posted']): ?>
+                                                <?php if (!empty($unit['__is_realtor_listing'] ?? null)): ?>
+                                                    <span class="text-muted small">Posting is available for Units only</span>
+                                                <?php elseif ($unit['is_posted']): ?>
                                                     <button type="button" class="btn btn-sm btn-outline-danger"
                                                             onclick="deleteFromFacebook(<?= $unit['id'] ?>)">
                                                         <i class="bi bi-trash me-1"></i>Remove
