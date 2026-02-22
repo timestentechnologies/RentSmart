@@ -24,31 +24,29 @@
 
     .head-left { width: 34%; background: #f9fafb; padding: 18px 28px; }
     .head-right { width: 66%; background: #f9fafb; padding: 18px 28px; }
-
-    .left { width: 34%; background: transparent; padding: 0; }
-    .left-panel {
-      background: #111827;
-      color: #e5e7eb;
-      padding: 22px 26px 18px 18px;
-      border-top-right-radius: 24px;
-      border-bottom-right-radius: 70px;
-    }
-    .right {
-      width: 66%;
-      background: #f9fafb;
-      padding: 22px 18px 18px 18px;
-    }
+    .content { background: #f9fafb; padding: 18px 28px 10px 28px; }
 
     .logo { max-height: 64px; margin: 0; }
     .head-brand { font-size: 14px; font-weight: 800; margin-top: 8px; color: #111827; }
 
-    .left-title { font-size: 11px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #f59e0b; margin: 18px 0 10px; }
-    .left-box { width: 100%; border: 1px solid rgba(255,255,255,0.14); padding: 12px 10px; background: rgba(255,255,255,0.035); border-radius: 10px; margin-right: 10px; }
-    .left-row { margin: 0 0 8px 0; }
-    .left-label { font-size: 10px; letter-spacing: .8px; text-transform: uppercase; color: rgba(229,231,235,0.75); }
-    .left-value { font-size: 12.5px; font-weight: 600; color: #fff; }
-    .left-small { font-size: 12px; color: rgba(229,231,235,0.88); }
-    .left-value, .left-small { word-break: break-word; overflow-wrap: anywhere; }
+    .dark-block {
+      background: #111827;
+      color: #e5e7eb;
+      border-radius: 22px;
+      padding: 18px 18px;
+      margin: 12px 28px 0 28px;
+      page-break-inside: avoid;
+    }
+    .dark-block.top { border-top-left-radius: 28px; border-top-right-radius: 28px; }
+    .dark-block.bottom { border-bottom-left-radius: 40px; border-bottom-right-radius: 70px; margin-top: 14px; margin-bottom: 14px; }
+
+    .dark-title { font-size: 11px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #f59e0b; margin: 0 0 10px; }
+    .dark-card { width: 100%; border: 1px solid rgba(255,255,255,0.14); padding: 12px 12px; background: rgba(255,255,255,0.035); border-radius: 12px; }
+    .dark-row { margin: 0 0 8px 0; }
+    .dark-label { font-size: 10px; letter-spacing: .8px; text-transform: uppercase; color: rgba(229,231,235,0.75); }
+    .dark-value { font-size: 12.5px; font-weight: 700; color: #fff; }
+    .dark-small { font-size: 12px; color: rgba(229,231,235,0.88); }
+    .dark-value, .dark-small { word-break: break-word; overflow-wrap: anywhere; }
 
     .inv-title { font-size: 34px; font-weight: 900; letter-spacing: 1.8px; margin: 0; }
     .meta { margin-top: 6px; font-size: 12px; color: #6b7280; }
@@ -134,67 +132,66 @@
       </tr>
 
       <tr>
-        <td class="left">
-          <div class="left-panel">
-            <div class="left-title">From</div>
-            <div class="left-box">
-              <div class="left-row">
-                <div class="left-label">Company</div>
-                <div class="left-value"><?= htmlspecialchars($siteName ?? '-') ?></div>
-              </div>
-              <div class="left-row">
-                <div class="left-label">Address</div>
-                <div class="left-small"><?= htmlspecialchars($settings['site_address'] ?? '-') ?></div>
-              </div>
-              <div class="left-row">
-                <div class="left-label">Phone</div>
-                <div class="left-small"><?= htmlspecialchars($settings['site_phone'] ?? '-') ?></div>
-              </div>
-              <div class="left-row">
-                <div class="left-label">Email</div>
-                <div class="left-small"><?= htmlspecialchars($settings['site_email'] ?? '-') ?></div>
-              </div>
-            </div>
+        <td colspan="2">
+          <div class="dark-block top">
+            <table style="width:100%;border-collapse:collapse;">
+              <tr>
+                <td style="width:50%;padding-right:12px;vertical-align:top;">
+                  <div class="dark-title">From</div>
+                  <div class="dark-card">
+                    <div class="dark-row">
+                      <div class="dark-label">Company</div>
+                      <div class="dark-value"><?= htmlspecialchars($siteName ?? '-') ?></div>
+                    </div>
+                    <div class="dark-row">
+                      <div class="dark-label">Address</div>
+                      <div class="dark-small"><?= htmlspecialchars($settings['site_address'] ?? '-') ?></div>
+                    </div>
+                    <div class="dark-row">
+                      <div class="dark-label">Phone</div>
+                      <div class="dark-small"><?= htmlspecialchars($settings['site_phone'] ?? '-') ?></div>
+                    </div>
+                    <div class="dark-row">
+                      <div class="dark-label">Email</div>
+                      <div class="dark-small"><?= htmlspecialchars($settings['site_email'] ?? '-') ?></div>
+                    </div>
+                  </div>
+                </td>
 
-            <div class="left-title">Bill To</div>
-            <div class="left-box">
-              <div class="left-row">
-                <div class="left-label">Customer</div>
-                <div class="left-value"><?= htmlspecialchars(!empty($realtorContext) ? (($realtorContext['client_name'] ?? '-') ?: '-') : ($invoice['tenant_name'] ?? '-')) ?></div>
-              </div>
-              <div class="left-row">
-                <div class="left-label">Email</div>
-                <div class="left-small"><?= htmlspecialchars(!empty($realtorContext) ? (($realtorContext['client_email'] ?? '-') ?: '-') : ($invoice['tenant_email'] ?? '-')) ?></div>
-              </div>
-              <?php if (!empty($realtorContext) && (!empty($realtorContext['listing_title']) || !empty($realtorContext['listing_location']))): ?>
-              <div class="left-row">
-                <div class="left-label">Listing</div>
-                <div class="left-small">
-                  <?= htmlspecialchars((string)($realtorContext['listing_title'] ?? '')) ?>
-                  <?= !empty($realtorContext['listing_location']) ? (' • ' . htmlspecialchars((string)$realtorContext['listing_location'])) : '' ?>
-                </div>
-              </div>
-              <?php endif; ?>
-              <div class="left-row">
-                <div class="left-label">Due Date</div>
-                <div class="left-small"><?= htmlspecialchars($invoice['due_date'] ?? '-') ?></div>
-              </div>
-            </div>
-
-            <div class="left-title">Terms & Notes</div>
-            <div class="left-box">
-              <div class="left-small">
-                <?php if (!empty($invoice['notes'])): ?>
-                  <?= nl2br(htmlspecialchars($displayNotes ?? $invoice['notes'])) ?>
-                <?php else: ?>
-                  Payment is due by the due date indicated. Late payments may incur penalties as per your agreement.
-                <?php endif; ?>
-              </div>
-            </div>
+                <td style="width:50%;padding-left:12px;vertical-align:top;">
+                  <div class="dark-title">Bill To</div>
+                  <div class="dark-card">
+                    <div class="dark-row">
+                      <div class="dark-label">Customer</div>
+                      <div class="dark-value"><?= htmlspecialchars(!empty($realtorContext) ? (($realtorContext['client_name'] ?? '-') ?: '-') : ($invoice['tenant_name'] ?? '-')) ?></div>
+                    </div>
+                    <div class="dark-row">
+                      <div class="dark-label">Email</div>
+                      <div class="dark-small"><?= htmlspecialchars(!empty($realtorContext) ? (($realtorContext['client_email'] ?? '-') ?: '-') : ($invoice['tenant_email'] ?? '-')) ?></div>
+                    </div>
+                    <?php if (!empty($realtorContext) && (!empty($realtorContext['listing_title']) || !empty($realtorContext['listing_location']))): ?>
+                    <div class="dark-row">
+                      <div class="dark-label">Listing</div>
+                      <div class="dark-small">
+                        <?= htmlspecialchars((string)($realtorContext['listing_title'] ?? '')) ?>
+                        <?= !empty($realtorContext['listing_location']) ? (' • ' . htmlspecialchars((string)$realtorContext['listing_location'])) : '' ?>
+                      </div>
+                    </div>
+                    <?php endif; ?>
+                    <div class="dark-row">
+                      <div class="dark-label">Due Date</div>
+                      <div class="dark-small"><?= htmlspecialchars($invoice['due_date'] ?? '-') ?></div>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </table>
           </div>
         </td>
+      </tr>
 
-        <td class="right">
+      <tr>
+        <td colspan="2" class="content">
           <div class="total-due">
             <div class="lbl">Total Due</div>
             <div class="amt">Ksh <?= number_format((float)($invoice['total'] ?? 0), 2) ?></div>
@@ -247,6 +244,23 @@
 
           <div class="footer">
             Generated by <?= htmlspecialchars($siteName ?? 'RentSmart') ?> — <?= date('Y-m-d H:i') ?>
+          </div>
+        </td>
+      </tr>
+
+      <tr>
+        <td colspan="2">
+          <div class="dark-block bottom">
+            <div class="dark-title">Terms & Notes</div>
+            <div class="dark-card">
+              <div class="dark-small">
+                <?php if (!empty($invoice['notes'])): ?>
+                  <?= nl2br(htmlspecialchars($displayNotes ?? $invoice['notes'])) ?>
+                <?php else: ?>
+                  Payment is due by the due date indicated. Late payments may incur penalties as per your agreement.
+                <?php endif; ?>
+              </div>
+            </div>
           </div>
         </td>
       </tr>
