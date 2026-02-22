@@ -171,20 +171,28 @@ class Invoice extends Model
         }
 
         $clientName = '';
+        $clientPhone = '';
+        $clientEmail = '';
         $listingTitle = '';
+        $listingLocation = '';
         try {
             if ($clientId > 0) {
-                $s = $this->db->prepare("SELECT name FROM realtor_clients WHERE id = ? LIMIT 1");
+                $s = $this->db->prepare("SELECT name, phone, email FROM realtor_clients WHERE id = ? LIMIT 1");
                 $s->execute([(int)$clientId]);
-                $clientName = (string)($s->fetch(\PDO::FETCH_ASSOC)['name'] ?? '');
+                $cr = $s->fetch(\PDO::FETCH_ASSOC) ?: [];
+                $clientName = (string)($cr['name'] ?? '');
+                $clientPhone = (string)($cr['phone'] ?? '');
+                $clientEmail = (string)($cr['email'] ?? '');
             }
         } catch (\Exception $e) {
         }
         try {
             if ($listingId > 0) {
-                $s = $this->db->prepare("SELECT title FROM realtor_listings WHERE id = ? LIMIT 1");
+                $s = $this->db->prepare("SELECT title, location FROM realtor_listings WHERE id = ? LIMIT 1");
                 $s->execute([(int)$listingId]);
-                $listingTitle = (string)($s->fetch(\PDO::FETCH_ASSOC)['title'] ?? '');
+                $lr = $s->fetch(\PDO::FETCH_ASSOC) ?: [];
+                $listingTitle = (string)($lr['title'] ?? '');
+                $listingLocation = (string)($lr['location'] ?? '');
             }
         } catch (\Exception $e) {
         }
@@ -200,12 +208,32 @@ class Invoice extends Model
 
         $issue = $issueDate ? (string)$issueDate : date('Y-m-d');
         try {
+            $notesParts = [$tag];
+            if ($clientName !== '') {
+                $clientLine = $clientName;
+                $extra = [];
+                if ($clientPhone !== '') $extra[] = $clientPhone;
+                if ($clientEmail !== '') $extra[] = $clientEmail;
+                if (!empty($extra)) {
+                    $clientLine .= ' (' . implode(' / ', $extra) . ')';
+                }
+                $notesParts[] = $clientLine;
+            }
+            if ($listingTitle !== '' || $listingLocation !== '') {
+                $listingLine = trim($listingTitle);
+                if ($listingLocation !== '') {
+                    $listingLine = $listingLine !== '' ? ($listingLine . ' • ' . $listingLocation) : $listingLocation;
+                }
+                if ($listingLine !== '') {
+                    $notesParts[] = $listingLine;
+                }
+            }
             return (int)$this->createInvoice([
                 'tenant_id' => null,
                 'issue_date' => $issue,
                 'due_date' => null,
                 'status' => 'sent',
-                'notes' => trim($tag . ' client_id=' . (int)$clientId . ' listing_id=' . (int)$listingId),
+                'notes' => trim(implode("\n", $notesParts)),
                 'user_id' => (int)$userId,
             ], [[
                 'description' => $desc,
