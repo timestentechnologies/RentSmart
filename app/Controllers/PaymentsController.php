@@ -848,7 +848,7 @@ class PaymentsController
 
         $role = strtolower((string)($_SESSION['user_role'] ?? ''));
         $uid = (int)($_SESSION['user_id'] ?? 0);
-        if ($uid > 0 && in_array($role, ['manager', 'agent', 'landlord'], true)) {
+        if ($uid > 0 && in_array($role, ['manager', 'agent', 'landlord', 'realtor'], true)) {
             $companyNameKey = 'company_name_user_' . $uid;
             $companyLogoKey = 'company_logo_user_' . $uid;
             $companyName = trim((string)($settings[$companyNameKey] ?? ''));

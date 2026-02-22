@@ -1295,6 +1295,7 @@ ob_clean();
         <div class="sidebar-logo">
             <a href="<?= BASE_URL ?>/" class="d-flex align-items-center text-decoration-none">
                 <img src="<?= htmlspecialchars($siteLogo) ?>" alt="<?= htmlspecialchars($siteName) ?> Logo" class="img-fluid">
+                <span><?= htmlspecialchars($siteName) ?></span>
             </a>
             <button class="sidebar-close" id="sidebarClose">
                 <i class="bi bi-x-lg"></i>
