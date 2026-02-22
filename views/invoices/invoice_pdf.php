@@ -37,6 +37,11 @@
       padding: 16px 16px;
       page-break-inside: avoid;
     }
+    .dark-cols { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    .dark-cols td { vertical-align: top; }
+    .dark-col { width: 50%; padding: 0 8px; }
+    .dark-col:first-child { padding-left: 0; }
+    .dark-col:last-child { padding-right: 0; }
     .dark-bottom {
       background: #111827;
       color: #e5e7eb;
@@ -138,9 +143,9 @@
       <tr>
         <td colspan="2" class="content">
           <div class="dark-panel">
-            <table style="width:100%; border-collapse: collapse;">
+            <table class="dark-cols">
               <tr>
-                <td style="width:50%; padding-right:10px; vertical-align: top;">
+                <td class="dark-col">
                   <div class="dark-title">From</div>
                   <div class="dark-card">
                     <div class="dark-row">
@@ -161,7 +166,7 @@
                     </div>
                   </div>
                 </td>
-                <td style="width:50%; padding-left:10px; vertical-align: top;">
+                <td class="dark-col">
                   <div class="dark-title">Bill To</div>
                   <div class="dark-card">
                     <div class="dark-row">
