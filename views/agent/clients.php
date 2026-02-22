@@ -410,10 +410,27 @@ ob_start();
     try{
       const res = await fetch('<?= BASE_URL ?>' + '/agent/clients/update/' + id, { method:'POST', body: fd });
       const data = await res.json();
-      if(!data.success){ alert(data.message || 'Failed to update'); return; }
-      location.reload();
+      if(!data.success){
+        const msg = (data && data.message) ? data.message : 'Failed to update';
+        if (window.Swal && Swal.fire) {
+          Swal.fire({ icon: 'error', title: 'Notice', html: msg, confirmButtonText: 'OK' });
+        } else {
+          alert(msg);
+        }
+        return;
+      }
+      if (window.Swal && Swal.fire) {
+        Swal.fire({ icon: 'success', title: 'Success!', html: (data && data.message) ? data.message : 'Client updated successfully', confirmButtonText: 'OK' })
+          .then(()=> location.reload());
+      } else {
+        location.reload();
+      }
     }catch(err){
-      alert('Failed to update');
+      if (window.Swal && Swal.fire) {
+        Swal.fire({ icon: 'error', title: 'Notice', html: 'Failed to update', confirmButtonText: 'OK' });
+      } else {
+        alert('Failed to update');
+      }
     }
   });
 
