@@ -357,6 +357,19 @@ class AgentClientsController
                 } catch (\Exception $e) {
                 }
 
+                $lostStageKey = 'lost';
+                try {
+                    $stmt = $clientModel->getDb()->prepare(
+                        "SELECT stage_key FROM agent_lead_stages WHERE user_id = ? AND is_lost = 1 ORDER BY id DESC LIMIT 1"
+                    );
+                    $stmt->execute([(int)$this->userId]);
+                    $rowStage = $stmt->fetch(\PDO::FETCH_ASSOC);
+                    if (!empty($rowStage['stage_key'])) {
+                        $lostStageKey = (string)$rowStage['stage_key'];
+                    }
+                } catch (\Exception $e) {
+                }
+
                 $clientPhone = trim((string)($row['phone'] ?? ''));
                 $clientEmail = trim((string)($row['email'] ?? ''));
                 $propertyIds = $clientModel->getClientPropertyIds((int)$id, (int)$this->userId);
@@ -364,7 +377,7 @@ class AgentClientsController
                     $stmt = $clientModel->getDb()->prepare(
                         "UPDATE inquiries i\n"
                         . "LEFT JOIN properties p ON p.id = i.property_id\n"
-                        . "SET i.crm_stage = 'new'\n"
+                        . "SET i.crm_stage = ?\n"
                         . "WHERE i.property_id = ?\n"
                         . "  AND i.crm_stage = ?\n"
                         . "  AND (i.contact = ? OR i.contact = ?)\n"
@@ -372,6 +385,7 @@ class AgentClientsController
                     );
                     foreach ($propertyIds as $propertyId) {
                         $stmt->execute([
+                            (string)$lostStageKey,
                             (int)$propertyId,
                             (string)$wonStageKey,
                             (string)$clientPhone,
