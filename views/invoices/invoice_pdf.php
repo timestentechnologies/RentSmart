@@ -6,7 +6,7 @@
   <title>Invoice <?= htmlspecialchars($invoice['number'] ?? ('#'.$invoice['id'])) ?></title>
   <style>
     @page { margin: 0px; }
-    html, body { height: 100%; }
+    html, body { height: auto; }
     * { box-sizing: border-box; }
     body { font-family: DejaVu Sans, Arial, Helvetica, sans-serif; font-size: 12.5px; line-height: 1.35; color: #111827; margin: 0; padding: 0; background: #f9fafb; }
     .wrap {
@@ -15,22 +15,23 @@
       border-radius: 0;
       overflow: hidden;
       border: none;
+      page-break-inside: avoid;
     }
 
-    .layout { width: 100%; border-collapse: collapse; table-layout: fixed; height: 100%; }
+    .layout { width: 100%; border-collapse: collapse; table-layout: fixed; }
     .layout td { vertical-align: top; padding: 0; }
+    .layout tr { page-break-inside: avoid; }
 
-    .head-left { width: 34%; background: #f9fafb; padding: 18px 22px; }
-    .head-right { width: 66%; background: #f9fafb; padding: 18px 20px; }
+    .head-left { width: 34%; background: #f9fafb; padding: 18px 28px; }
+    .head-right { width: 66%; background: #f9fafb; padding: 18px 28px; }
 
     .left { width: 34%; background: transparent; padding: 0; }
     .left-panel {
       background: #111827;
       color: #e5e7eb;
-      padding: 22px 16px 18px 16px;
+      padding: 22px 26px 18px 18px;
       border-top-right-radius: 24px;
-      border-bottom-right-radius: 90px;
-      min-height: 100%;
+      border-bottom-right-radius: 70px;
     }
     .right {
       width: 66%;
@@ -42,7 +43,7 @@
     .head-brand { font-size: 14px; font-weight: 800; margin-top: 8px; color: #111827; }
 
     .left-title { font-size: 11px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #f59e0b; margin: 18px 0 10px; }
-    .left-box { width: 100%; border: 1px solid rgba(255,255,255,0.14); padding: 12px 10px; background: rgba(255,255,255,0.035); border-radius: 10px; }
+    .left-box { width: 100%; border: 1px solid rgba(255,255,255,0.14); padding: 12px 10px; background: rgba(255,255,255,0.035); border-radius: 10px; margin-right: 10px; }
     .left-row { margin: 0 0 8px 0; }
     .left-label { font-size: 10px; letter-spacing: .8px; text-transform: uppercase; color: rgba(229,231,235,0.75); }
     .left-value { font-size: 12.5px; font-weight: 600; color: #fff; }
