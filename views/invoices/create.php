@@ -2,6 +2,7 @@
 ob_start();
 ?>
 <div class="container-fluid pt-4">
+  <?php $role = strtolower((string)($_SESSION['user_role'] ?? '')); ?>
   <div class="card page-header mb-3">
     <div class="card-body d-flex justify-content-between align-items-center">
       <h1 class="h4 mb-0"><i class="bi bi-receipt-cutoff text-primary me-2"></i>Create Invoice</h1>
@@ -22,14 +23,35 @@ ob_start();
         <?= csrf_field() ?>
         <div class="row g-3">
           <div class="col-md-4">
-            <label class="form-label">Tenant (optional)</label>
-            <select name="tenant_id" class="form-select">
-              <option value="">-- Select Tenant --</option>
-              <?php foreach (($tenants ?? []) as $t): ?>
-                <option value="<?= (int)$t['id'] ?>"><?= htmlspecialchars($t['name']) ?> <?= !empty($t['unit_number']) ? '(' . htmlspecialchars($t['unit_number']) . ')' : '' ?></option>
+            <?php if ($role === 'realtor'): ?>
+              <label class="form-label">Client</label>
+              <select name="realtor_client_id" class="form-select" required>
+                <option value="">-- Select Client --</option>
+                <?php foreach (($realtorClients ?? []) as $c): ?>
+                  <option value="<?= (int)$c['id'] ?>"><?= htmlspecialchars((string)($c['name'] ?? ('Client #' . (int)$c['id']))) ?></option>
+                <?php endforeach; ?>
+              </select>
+            <?php else: ?>
+              <label class="form-label">Tenant (optional)</label>
+              <select name="tenant_id" class="form-select">
+                <option value="">-- Select Tenant --</option>
+                <?php foreach (($tenants ?? []) as $t): ?>
+                  <option value="<?= (int)$t['id'] ?>"><?= htmlspecialchars($t['name']) ?> <?= !empty($t['unit_number']) ? '(' . htmlspecialchars($t['unit_number']) . ')' : '' ?></option>
+                <?php endforeach; ?>
+              </select>
+            <?php endif; ?>
+          </div>
+          <?php if ($role === 'realtor'): ?>
+          <div class="col-md-4">
+            <label class="form-label">Listing (optional)</label>
+            <select name="realtor_listing_id" class="form-select">
+              <option value="">-- Select Listing --</option>
+              <?php foreach (($realtorListings ?? []) as $ls): ?>
+                <option value="<?= (int)$ls['id'] ?>"><?= htmlspecialchars((string)($ls['title'] ?? ('Listing #' . (int)$ls['id']))) ?></option>
               <?php endforeach; ?>
             </select>
           </div>
+          <?php endif; ?>
           <div class="col-md-4">
             <label class="form-label">Issue Date</label>
             <input type="date" name="issue_date" class="form-control" value="<?= date('Y-m-d') ?>">

@@ -335,7 +335,7 @@ ob_start();
 <div class="modal fade" id="realtorLeadAddListingModal" tabindex="-1" aria-hidden="true">
   <div class="modal-dialog">
     <div class="modal-content">
-      <form id="realtorLeadAddListingForm" method="POST" action="<?= BASE_URL ?>/realtor/listings/store">
+      <form id="realtorLeadAddListingForm" method="POST" action="<?= BASE_URL ?>/realtor/listings/store" enctype="multipart/form-data">
         <?= csrf_field() ?>
         <div class="modal-header">
           <h5 class="modal-title">Add Listing</h5>
@@ -344,6 +344,14 @@ ob_start();
         <div class="modal-body">
           <div class="alert alert-danger d-none" id="realtorLeadAddListingError"></div>
           <div class="mb-3"><label class="form-label">Title</label><input type="text" name="title" class="form-control" required></div>
+          <div class="mb-3">
+            <label class="form-label">Listing Type</label>
+            <select name="listing_type" class="form-select">
+              <option value="plot">Plot</option>
+              <option value="commercial_apartment">Commercial Apartment</option>
+              <option value="residential_apartment">Residential Apartment</option>
+            </select>
+          </div>
           <div class="mb-3"><label class="form-label">Location</label><input type="text" name="location" class="form-control" required></div>
           <div class="mb-3">
             <label class="form-label">Price</label>
@@ -352,7 +360,11 @@ ob_start();
               <input type="number" step="0.01" min="0" name="price" class="form-control" placeholder="0.00">
             </div>
           </div>
-          <input type="hidden" name="listing_type" value="plot">
+          <div class="mb-3">
+            <label class="form-label">Images (optional)</label>
+            <input type="file" class="form-control" name="listing_images[]" accept="image/*" multiple>
+            <div class="form-text">You can skip now and add images later from the listing page.</div>
+          </div>
           <input type="hidden" name="status" value="active">
         </div>
         <div class="modal-footer">

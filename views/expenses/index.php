@@ -2,6 +2,7 @@
 ob_start();
 ?>
 <div class="container-fluid pt-4">
+    <?php $role = strtolower((string)($_SESSION['user_role'] ?? '')); ?>
     <div class="card page-header mb-4">
         <div class="card-body d-flex justify-content-between align-items-center">
             <h1 class="h3 mb-0"><i class="bi bi-receipt text-primary me-2"></i>Expenses</h1>
@@ -105,7 +106,9 @@ ob_start();
             <div class="mb-3">
                 <label class="form-label">Source of Funds</label>
                 <select name="source_of_funds" class="form-select" required>
+                    <?php if ($role !== 'realtor'): ?>
                     <option value="rent_balance">Rent Balance</option>
+                    <?php endif; ?>
                     <option value="cash">Cash</option>
                     <option value="bank">Bank</option>
                     <option value="mpesa">M-Pesa</option>
@@ -180,7 +183,9 @@ ob_start();
             <div class="mb-3">
                 <label class="form-label">Source of Funds</label>
                 <select id="edit_source_of_funds" name="source_of_funds" class="form-select" required>
+                    <?php if ($role !== 'realtor'): ?>
                     <option value="rent_balance">Rent Balance</option>
+                    <?php endif; ?>
                     <option value="cash">Cash</option>
                     <option value="bank">Bank</option>
                     <option value="mpesa">M-Pesa</option>

@@ -2,6 +2,7 @@
 ob_start();
 ?>
 <div class="container-fluid pt-4">
+  <?php $role = strtolower((string)($_SESSION['user_role'] ?? '')); ?>
   <div class="card page-header mb-3">
     <div class="card-body d-flex justify-content-between align-items-center">
       <h1 class="h4 mb-0"><i class="bi bi-receipt text-primary me-2"></i>Invoices</h1>
@@ -21,7 +22,7 @@ ob_start();
       <form method="get" class="row g-2 align-items-end" id="invoiceFiltersForm">
         <div class="col-12 col-md-3">
           <label class="form-label mb-1">Search</label>
-          <input type="text" class="form-control" name="q" value="<?= htmlspecialchars($_GET['q'] ?? '') ?>" placeholder="Invoice no, tenant, notes" id="invoiceSearchInput" autocomplete="off">
+          <input type="text" class="form-control" name="q" value="<?= htmlspecialchars($_GET['q'] ?? '') ?>" placeholder="Invoice no, <?= $role === 'realtor' ? 'client, listing' : 'tenant' ?>, notes" id="invoiceSearchInput" autocomplete="off">
         </div>
         <div class="col-6 col-md-2">
           <label class="form-label mb-1">Status</label>
@@ -44,16 +45,18 @@ ob_start();
             <option value="all" <?= ($vis==='all')?'selected':'' ?>>All</option>
           </select>
         </div>
-        <div class="col-12 col-md-3">
-          <label class="form-label mb-1">Tenant</label>
-          <?php $tid = $_GET['tenant_id'] ?? ''; ?>
-          <select class="form-select" name="tenant_id">
-            <option value="">All tenants</option>
-            <?php foreach (($tenants ?? []) as $t): ?>
-              <option value="<?= (int)$t['id'] ?>" <?= ((string)$tid === (string)$t['id'])?'selected':'' ?>><?= htmlspecialchars($t['name'] ?? ('Tenant #'.$t['id'])) ?></option>
-            <?php endforeach; ?>
-          </select>
-        </div>
+        <?php if ($role !== 'realtor'): ?>
+          <div class="col-12 col-md-3">
+            <label class="form-label mb-1">Tenant</label>
+            <?php $tid = $_GET['tenant_id'] ?? ''; ?>
+            <select class="form-select" name="tenant_id">
+              <option value="">All tenants</option>
+              <?php foreach (($tenants ?? []) as $t): ?>
+                <option value="<?= (int)$t['id'] ?>" <?= ((string)$tid === (string)$t['id'])?'selected':'' ?>><?= htmlspecialchars($t['name'] ?? ('Tenant #'.$t['id'])) ?></option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+        <?php endif; ?>
         <div class="col-6 col-md-1">
           <label class="form-label mb-1">From</label>
           <input type="date" class="form-control" name="date_from" value="<?= htmlspecialchars($_GET['date_from'] ?? '') ?>">
@@ -77,7 +80,12 @@ ob_start();
           <thead class="bg-light">
             <tr>
               <th>No.</th>
-              <th>Tenant</th>
+              <?php if ($role === 'realtor'): ?>
+                <th>Client</th>
+                <th>Listing</th>
+              <?php else: ?>
+                <th>Tenant</th>
+              <?php endif; ?>
               <th>Issued</th>
               <th>Due</th>
               <th class="text-end">Total</th>
@@ -90,7 +98,12 @@ ob_start();
             <?php foreach (($invoices ?? []) as $inv): ?>
               <tr>
                 <td><?= htmlspecialchars($inv['number']) ?></td>
-                <td><?= htmlspecialchars($inv['tenant_name'] ?? '-') ?></td>
+                <?php if ($role === 'realtor'): ?>
+                  <td><?= htmlspecialchars($inv['realtor_client_name'] ?? '-') ?></td>
+                  <td><?= htmlspecialchars($inv['realtor_listing_title'] ?? '-') ?></td>
+                <?php else: ?>
+                  <td><?= htmlspecialchars($inv['tenant_name'] ?? '-') ?></td>
+                <?php endif; ?>
                 <td><?= htmlspecialchars($inv['issue_date']) ?></td>
                 <td><?= htmlspecialchars($inv['due_date'] ?? '-') ?></td>
                 <td class="text-end"><?= number_format((float)$inv['total'], 2) ?></td>
@@ -123,7 +136,7 @@ ob_start();
               </tr>
             <?php endforeach; ?>
             <?php if (empty($invoices)): ?>
-              <tr><td colspan="8" class="text-center py-4 text-muted">No invoices</td></tr>
+              <tr><td colspan="<?= $role === 'realtor' ? '9' : '8' ?>" class="text-center py-4 text-muted">No invoices</td></tr>
             <?php endif; ?>
           </tbody>
         </table>
