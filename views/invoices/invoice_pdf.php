@@ -19,6 +19,9 @@
     .layout { width: 100%; border-collapse: collapse; table-layout: fixed; height: 100%; }
     .layout td { vertical-align: top; padding: 0; }
 
+    .head-left { width: 34%; background: #f9fafb; padding: 16px 18px; }
+    .head-right { width: 66%; background: #f9fafb; padding: 16px 20px; }
+
     .left {
       width: 34%;
       background: #111827;
@@ -31,8 +34,8 @@
       padding: 24px 20px 18px 20px;
     }
 
-    .logo { max-height: 64px; margin: 0 0 12px; }
-    .brand { font-size: 16px; font-weight: 800; margin-top: 6px; color: #fff; }
+    .logo { max-height: 64px; margin: 0; }
+    .head-brand { font-size: 14px; font-weight: 800; margin-top: 8px; color: #111827; }
 
     .left-title { font-size: 11px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #f59e0b; margin: 18px 0 10px; }
     .left-box { border: 1px solid rgba(255,255,255,0.14); padding: 12px 10px; background: rgba(255,255,255,0.035); border-radius: 10px; }
@@ -43,7 +46,7 @@
 
     .inv-title { font-size: 34px; font-weight: 900; letter-spacing: 1.8px; margin: 0; }
     .meta { margin-top: 6px; font-size: 12px; color: #6b7280; }
-    .accent-bar { height: 10px; background: #f59e0b; margin: 12px 0 16px; }
+    .accent-bar { height: 10px; background: #f59e0b; margin: 0; }
 
     .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; }
     .badge-success { background: #16a34a; color: #fff; }
@@ -101,12 +104,31 @@
   <div class="wrap">
     <table class="layout">
       <tr>
-        <td class="left">
+        <td class="head-left">
           <?php if (!empty($logoDataUri)): ?>
             <img class="logo" src="<?= $logoDataUri ?>" alt="Logo">
           <?php endif; ?>
-          <div class="brand"><?= htmlspecialchars($siteName ?? '-') ?></div>
+          <div class="head-brand"><?= htmlspecialchars($siteName ?? '-') ?></div>
+        </td>
 
+        <td class="head-right">
+          <div style="text-align:right;">
+            <div class="inv-title">INVOICE</div>
+            <div class="meta">
+              Invoice <?= htmlspecialchars($invoice['number'] ?? ('#'.$invoice['id'])) ?>
+              • Date: <?= htmlspecialchars($invoice['issue_date']) ?>
+              • Status: <span class="badge <?= $statusClass ?>"><?= htmlspecialchars(ucfirst((string)($invoice['status'] ?? 'draft'))) ?></span>
+            </div>
+          </div>
+        </td>
+      </tr>
+
+      <tr>
+        <td colspan="2"><div class="accent-bar"></div></td>
+      </tr>
+
+      <tr>
+        <td class="left">
           <div class="left-title">From</div>
           <div class="left-box">
             <div class="left-row">
@@ -165,16 +187,6 @@
         </td>
 
         <td class="right">
-          <div style="text-align:right;">
-            <div class="inv-title">INVOICE</div>
-            <div class="meta">
-              Invoice <?= htmlspecialchars($invoice['number'] ?? ('#'.$invoice['id'])) ?>
-              • Date: <?= htmlspecialchars($invoice['issue_date']) ?>
-              • Status: <span class="badge <?= $statusClass ?>"><?= htmlspecialchars(ucfirst((string)($invoice['status'] ?? 'draft'))) ?></span>
-            </div>
-          </div>
-          <div class="accent-bar"></div>
-
           <div class="total-due">
             <div class="lbl">Total Due</div>
             <div class="amt">Ksh <?= number_format((float)($invoice['total'] ?? 0), 2) ?></div>
