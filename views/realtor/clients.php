@@ -238,6 +238,46 @@ ob_start();
             <div class="mb-3"><label class="form-label">Name</label><input type="text" name="name" class="form-control" required></div>
             <div class="mb-3"><label class="form-label">Phone</label><input type="text" name="phone" class="form-control" required></div>
             <div class="mb-3"><label class="form-label">Email</label><input type="email" name="email" class="form-control"></div>
+
+            <div class="mb-3">
+                <label class="form-label">Select Listing</label>
+                <select class="form-select" name="realtor_listing_id" id="add_client_listing_id" required>
+                    <option value="">Select listing</option>
+                    <?php foreach (($listings ?? []) as $l): ?>
+                        <option value="<?= (int)($l['id'] ?? 0) ?>">
+                            <?= htmlspecialchars((string)($l['title'] ?? '')) ?><?= !empty($l['location'] ?? null) ? ' - ' . htmlspecialchars((string)($l['location'] ?? '')) : '' ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Payment Terms</label>
+                <select class="form-select" name="terms_type" id="add_client_terms_type" required>
+                    <option value="one_time">One Time</option>
+                    <option value="monthly">Monthly</option>
+                </select>
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Total Amount</label>
+                <div class="input-group">
+                    <span class="input-group-text">Ksh</span>
+                    <input type="number" step="0.01" min="0" class="form-control" name="total_amount" id="add_client_total_amount" required>
+                </div>
+            </div>
+
+            <div id="add_client_monthly_fields" style="display:none;">
+                <div class="mb-3">
+                    <label class="form-label">Start Month</label>
+                    <input type="month" class="form-control" name="start_month" id="add_client_start_month">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Duration (Months)</label>
+                    <input type="number" min="1" step="1" class="form-control" name="duration_months" id="add_client_duration_months">
+                </div>
+            </div>
+
             <div class="mb-3"><label class="form-label">Notes</label><textarea name="notes" class="form-control" rows="3"></textarea></div>
         </div>
         <div class="modal-footer">
@@ -413,6 +453,29 @@ document.getElementById('confirmDeleteClientBtn')?.addEventListener('click', fun
     .then(r=>r.json()).then(resp=>{ if(resp.success){ location.reload(); } else { alert(resp.message || 'Failed'); } })
     .catch(()=>alert('Failed to delete client'));
 });
+
+(function(){
+  const terms = document.getElementById('add_client_terms_type');
+  const fields = document.getElementById('add_client_monthly_fields');
+  const start = document.getElementById('add_client_start_month');
+  const dur = document.getElementById('add_client_duration_months');
+  if(!terms || !fields) return;
+
+  const apply = () => {
+    const t = terms.value;
+    if(t === 'monthly'){
+      fields.style.display = '';
+      start && start.setAttribute('required','');
+      dur && dur.setAttribute('required','');
+    } else {
+      fields.style.display = 'none';
+      start && start.removeAttribute('required');
+      dur && dur.removeAttribute('required');
+    }
+  };
+  terms.addEventListener('change', apply);
+  apply();
+})();
 </script>
 
 <?php
