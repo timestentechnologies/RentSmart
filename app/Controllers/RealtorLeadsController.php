@@ -13,6 +13,46 @@ class RealtorLeadsController
 {
     private $userId;
 
+    private function ensureLeadHasListingId(array $lead, RealtorLead $leadModel): array
+    {
+        if (!empty($lead['realtor_listing_id'])) {
+            return $lead;
+        }
+
+        $listingName = trim((string)($lead['listing_name'] ?? ''));
+        if ($listingName === '') {
+            return $lead;
+        }
+
+        try {
+            $listingModel = new RealtorListing();
+            $location = trim((string)($lead['address'] ?? ''));
+            if ($location === '') {
+                $location = $listingName;
+            }
+            $price = (float)($lead['amount'] ?? 0);
+
+            $listingId = (int)$listingModel->insert([
+                'user_id' => (int)$this->userId,
+                'title' => $listingName,
+                'listing_type' => 'plot',
+                'location' => $location,
+                'price' => $price,
+                'status' => 'active',
+                'description' => '',
+            ]);
+            if ($listingId > 0) {
+                $leadModel->updateById((int)($lead['id'] ?? 0), [
+                    'realtor_listing_id' => (int)$listingId,
+                ]);
+                $lead['realtor_listing_id'] = (int)$listingId;
+            }
+        } catch (\Exception $e) {
+        }
+
+        return $lead;
+    }
+
     public function __construct()
     {
         $this->userId = $_SESSION['user_id'] ?? null;
@@ -82,6 +122,8 @@ class RealtorLeadsController
                 exit;
             }
 
+            $lead = $this->ensureLeadHasListingId($lead, $leadModel);
+
             $stageModel = new RealtorLeadStage();
             $stages = $stageModel->getAll($this->userId);
             $wonKey = null;
@@ -130,12 +172,17 @@ class RealtorLeadsController
             // Convert to client + contract
             $conv = $this->maybeConvertToClient((int)$id);
 
+            $redirectUrl = BASE_URL . '/realtor/listings?edit=' . (int)$listingId;
+            if (!empty($conv['contract_id'])) {
+                $redirectUrl = BASE_URL . '/realtor/contracts/show/' . (int)$conv['contract_id'];
+            }
+
             echo json_encode([
                 'success' => true,
                 'listing_id' => (int)$listingId,
                 'client_id' => $conv['client_id'] ?? null,
                 'contract_id' => $conv['contract_id'] ?? null,
-                'redirect_url' => BASE_URL . '/realtor/listings?edit=' . (int)$listingId,
+                'redirect_url' => $redirectUrl,
             ]);
         } catch (\Exception $e) {
             error_log('RealtorLeads winCreateListing failed: ' . $e->getMessage());
@@ -203,6 +250,8 @@ class RealtorLeadsController
         if (!$lead) {
             return ['converted' => false, 'client_id' => null];
         }
+
+        $lead = $this->ensureLeadHasListingId($lead, $leadModel);
 
         if (!empty($lead['converted_client_id'])) {
             $contractId = null;
