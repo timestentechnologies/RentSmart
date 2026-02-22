@@ -33,13 +33,12 @@ ob_start();
         <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
       </div>
       <div class="modal-body">
-        <div class="mb-2">Choose how you want to mark this lead as won.</div>
-        <div class="small text-muted">If you choose "Won + Create Listing", a new listing will be created from the lead's listing name and address.</div>
+        <div class="mb-2">This will mark the lead as won and create the client and contract.</div>
       </div>
       <div class="modal-footer" style="display:flex; flex-wrap:nowrap; gap:8px;">
         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-        <button type="button" class="btn" id="realtorWinOnlyBtn" style="white-space:nowrap; background:#f59e0b; border-color:#f59e0b; color:#fff;">Won Only</button>
-        <button type="button" class="btn" id="realtorWinCreateListingBtn" style="white-space:nowrap; background:#6f42c1; border-color:#6f42c1; color:#fff;">Won + Create Listing</button>
+        <button type="button" class="btn" id="realtorWinOnlyBtn" style="white-space:nowrap; background:#f59e0b; border-color:#f59e0b; color:#fff;">Mark Won</button>
+        <button type="button" class="btn d-none" id="realtorWinCreateListingBtn" style="white-space:nowrap; background:#6f42c1; border-color:#6f42c1; color:#fff;">Won + Create Listing</button>
       </div>
     </div>
   </div>
@@ -630,10 +629,8 @@ document.querySelectorAll('[data-dropzone="1"]').forEach(zone=>{
     const targetCol = document.querySelector('.crm-col[data-status="' + targetStatus + '"]');
     const isWonTarget = (targetCol?.getAttribute('data-is-won') || '0') === '1';
     if (isWonTarget) {
-      pendingWinCard = card;
-      pendingWinFromZone = card.parentElement;
-      pendingWinTargetStatus = targetStatus;
-      showWinModal(draggedLeadId);
+      // Auto win: no prompt. Backend auto-creates client + contract.
+      markWonOnly(draggedLeadId);
       return;
     }
 
