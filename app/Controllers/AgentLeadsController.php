@@ -347,7 +347,7 @@ class AgentLeadsController
                 }
 
                 try {
-                    $conv = $this->maybeConvertInquiryToClientAndContract((int)$id);
+                    $conv = $this->maybeConvertInquiryToClientAndContract((int)$id, (int)$propertyId);
                     $clientId = $conv['client_id'] ?? null;
                     $contractId = $conv['contract_id'] ?? null;
                 } catch (\Exception $e) {
@@ -418,7 +418,7 @@ class AgentLeadsController
             $contractId = null;
             if ($ok && ($wonKey !== null && $stage === $wonKey)) {
                 try {
-                    $conv = $this->maybeConvertInquiryToClientAndContract((int)$id);
+                    $conv = $this->maybeConvertInquiryToClientAndContract((int)$id, null);
                     $clientId = $conv['client_id'] ?? null;
                     $contractId = $conv['contract_id'] ?? null;
                 } catch (\Exception $ex) {
@@ -584,7 +584,7 @@ class AgentLeadsController
         exit;
     }
 
-    private function maybeConvertInquiryToClientAndContract(int $inquiryId): array
+    private function maybeConvertInquiryToClientAndContract(int $inquiryId, ?int $propertyIdOverride = null): array
     {
         $inquiryModel = new Inquiry();
         $inq = $inquiryModel->getByIdVisibleForUser($inquiryId, (int)$this->userId, $this->role);
@@ -592,21 +592,105 @@ class AgentLeadsController
             return ['client_id' => null, 'contract_id' => null];
         }
 
+        $parseContact = function (string $contact): array {
+            $contact = trim($contact);
+            if ($contact === '') {
+                return ['phone' => null, 'email' => null];
+            }
+
+            $parts = preg_split('/\s*(?:\/|,|;|\||\n|\r)+\s*/', $contact) ?: [];
+            if (empty($parts)) {
+                $parts = [$contact];
+            }
+
+            $email = null;
+            $phone = null;
+
+            foreach ($parts as $p) {
+                $p = trim((string)$p);
+                if ($p === '') {
+                    continue;
+                }
+                if ($email === null && filter_var($p, FILTER_VALIDATE_EMAIL)) {
+                    $email = $p;
+                    continue;
+                }
+            }
+
+            foreach ($parts as $p) {
+                $p = trim((string)$p);
+                if ($p === '') {
+                    continue;
+                }
+                if ($email !== null && strcasecmp($p, $email) === 0) {
+                    continue;
+                }
+                $candidate = preg_replace('/[^0-9+]/', '', $p);
+                $digitsOnly = preg_replace('/[^0-9]/', '', (string)$candidate);
+                if ($candidate !== '' && strlen((string)$digitsOnly) >= 7) {
+                    $phone = $candidate;
+                    break;
+                }
+            }
+
+            return [
+                'phone' => $phone !== '' ? $phone : null,
+                'email' => $email !== '' ? $email : null,
+            ];
+        };
+
         $propertyId = null;
-        if (isset($inq['property_id']) && (int)$inq['property_id'] > 0) {
+        if ($propertyIdOverride !== null && (int)$propertyIdOverride > 0) {
+            $propertyId = (int)$propertyIdOverride;
+        } elseif (isset($inq['property_id']) && (int)$inq['property_id'] > 0) {
             $propertyId = (int)$inq['property_id'];
         }
         $name = trim((string)($inq['name'] ?? ''));
         $contact = trim((string)($inq['contact'] ?? ''));
         $message = trim((string)($inq['message'] ?? ''));
 
+        $parsed = $parseContact((string)$contact);
+        $phone = $parsed['phone'] ?? null;
+        $email = $parsed['email'] ?? null;
+
+        if ($phone === null && $email === null) {
+            // Backwards compatible fallback if the old contact was only one value.
+            if ($contact !== '') {
+                $phone = $contact;
+                if (filter_var($contact, FILTER_VALIDATE_EMAIL)) {
+                    $email = $contact;
+                }
+            }
+        }
+
         $clientId = null;
         if (($name !== '' || $contact !== '')) {
             $clientModel = new AgentClient();
-            $existing = $clientModel->query(
-                "SELECT id FROM agent_clients WHERE user_id = ? AND property_id <=> ? AND (phone = ? OR email = ?) ORDER BY id DESC LIMIT 1",
-                [(int)$this->userId, $propertyId, (string)$contact, (string)$contact]
-            );
+
+            $whereParts = [];
+            $params = [(int)$this->userId, $propertyId];
+            if ($phone !== null && $phone !== '') {
+                $whereParts[] = 'c.phone = ?';
+                $params[] = (string)$phone;
+            }
+            if ($email !== null && $email !== '') {
+                $whereParts[] = 'c.email = ?';
+                $params[] = (string)$email;
+            }
+            if (empty($whereParts) && $contact !== '') {
+                $whereParts[] = 'c.phone = ?';
+                $params[] = (string)$contact;
+                $whereParts[] = 'c.email = ?';
+                $params[] = (string)$contact;
+            }
+
+            $existing = [];
+            if (!empty($whereParts)) {
+                $existing = $clientModel->query(
+                    "SELECT c.id FROM agent_clients c WHERE c.user_id = ? AND c.property_id <=> ? AND (" . implode(' OR ', $whereParts) . ") ORDER BY c.id DESC LIMIT 1",
+                    $params
+                );
+            }
             if (!empty($existing)) {
                 $clientId = (int)($existing[0]['id'] ?? 0);
             } else {
@@ -614,10 +698,20 @@ class AgentLeadsController
                     'user_id' => (int)$this->userId,
                     'property_id' => $propertyId,
                     'name' => $name !== '' ? $name : $contact,
-                    'phone' => $contact,
-                    'email' => (strpos($contact, '@') !== false) ? $contact : null,
+                    'phone' => (string)($phone ?? $contact),
+                    'email' => $email,
                     'notes' => $message !== '' ? $message : null,
                 ]);
+            }
+
+            // If this inquiry is tied to a property, ensure the client-property link exists.
+            // This is required for the agent clients list to show the property.
+            if ($clientId && $propertyId) {
+                try {
+                    $clientModel->syncClientProperties((int)$clientId, (int)$this->userId, [(int)$propertyId]);
+                } catch (\Exception $e) {
+                    // non-blocking
+                }
             }
         }
 
