@@ -138,6 +138,20 @@ class PaymentMethod extends Model
         }
     }
 
+    // Return all methods created/owned by a given user (any scope; includes inactive)
+    public function getAllByOwner($ownerUserId)
+    {
+        $this->ensureScopeColumn();
+        try {
+            $sql = "SELECT * FROM {$this->table} WHERE owner_user_id = ? ORDER BY name ASC";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([intval($ownerUserId)]);
+            return $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+        } catch (\Exception $e) {
+            return [];
+        }
+    }
+
     // Ensure the linking table exists
     private function ensureLinkTable()
     {
