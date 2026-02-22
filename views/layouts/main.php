@@ -65,10 +65,10 @@ try {
     $siteDescription = $settings['site_description'] ?? 'Property Management System';
     $siteLogo = $settings['site_logo'] ? BASE_URL . '/public/assets/images/' . $settings['site_logo'] : BASE_URL . '/public/assets/images/logo.svg';
 
-    // Per-user company branding override (manager/agent/landlord only)
+    // Per-user company branding override (manager/agent/landlord/realtor only)
     $role = strtolower((string)($_SESSION['user_role'] ?? ''));
     $userId = (int)($_SESSION['user_id'] ?? 0);
-    if ($userId > 0 && in_array($role, ['manager', 'agent', 'landlord'], true)) {
+    if ($userId > 0 && in_array($role, ['manager', 'agent', 'landlord', 'realtor'], true)) {
         $companyNameKey = 'company_name_user_' . $userId;
         $companyLogoKey = 'company_logo_user_' . $userId;
         $companyName = trim((string)($settings[$companyNameKey] ?? ''));
@@ -1556,7 +1556,7 @@ ob_clean();
                     </li>
                 <?php endif; ?>
                 
-                <?php if (!$isRealtor && isset($_SESSION['user_role']) && in_array(strtolower($_SESSION['user_role']), ['manager','agent','landlord'], true)): ?>
+                <?php if (isset($_SESSION['user_role']) && in_array(strtolower($_SESSION['user_role']), ['manager','agent','landlord','realtor'], true)): ?>
                 <li class="nav-item mt-3">
                     <small class="nav-header text-uppercase px-3">Settings</small>
                 </li>

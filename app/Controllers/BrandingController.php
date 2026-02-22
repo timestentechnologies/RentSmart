@@ -21,7 +21,7 @@ class BrandingController
         }
 
         $role = strtolower((string)($_SESSION['user_role'] ?? ''));
-        if (!in_array($role, ['manager', 'agent', 'landlord'], true)) {
+        if (!in_array($role, ['manager', 'agent', 'landlord', 'realtor'], true)) {
             $_SESSION['flash_message'] = 'Access denied';
             $_SESSION['flash_type'] = 'danger';
             header('Location: ' . BASE_URL . '/dashboard');
