@@ -339,6 +339,7 @@ class AgentClientsController
             }
 
             $contractModel = new AgentContract();
+            $propertyModel = new Property();
 
             $clientModel->beginTransaction();
             try {
@@ -373,28 +374,81 @@ class AgentClientsController
                 $clientPhone = trim((string)($row['phone'] ?? ''));
                 $clientEmail = trim((string)($row['email'] ?? ''));
                 $propertyIds = $clientModel->getClientPropertyIds((int)$id, (int)$this->userId);
-                if (!empty($propertyIds) && ($clientPhone !== '' || $clientEmail !== '')) {
-                    $stmt = $clientModel->getDb()->prepare(
-                        "UPDATE inquiries i\n"
-                        . "LEFT JOIN properties p ON p.id = i.property_id\n"
-                        . "SET i.crm_stage = ?\n"
-                        . "WHERE i.property_id = ?\n"
-                        . "  AND i.crm_stage = ?\n"
-                        . "  AND (i.contact = ? OR i.contact = ?)\n"
-                        . "  AND (p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ?)"
-                    );
-                    foreach ($propertyIds as $propertyId) {
+                if ($clientPhone !== '' || $clientEmail !== '') {
+                    $phoneLike = $clientPhone !== '' ? ('%' . $clientPhone . '%') : null;
+                    $emailLike = $clientEmail !== '' ? ('%' . $clientEmail . '%') : null;
+
+                    // Case 1: inquiry tied to a property (property_id present) and user has access via property ownership/assignment.
+                    if (!empty($propertyIds)) {
+                        $stmt = $clientModel->getDb()->prepare(
+                            "UPDATE inquiries i\n"
+                            . "LEFT JOIN properties p ON p.id = i.property_id\n"
+                            . "SET i.crm_stage = ?\n"
+                            . "WHERE i.property_id = ?\n"
+                            . "  AND i.crm_stage = ?\n"
+                            . "  AND ((? IS NOT NULL AND i.contact LIKE ?) OR (? IS NOT NULL AND i.contact LIKE ?))\n"
+                            . "  AND (p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ?)"
+                        );
+                        foreach ($propertyIds as $propertyId) {
+                            $stmt->execute([
+                                (string)$lostStageKey,
+                                (int)$propertyId,
+                                (string)$wonStageKey,
+                                $phoneLike,
+                                $phoneLike,
+                                $emailLike,
+                                $emailLike,
+                                (int)$this->userId,
+                                (int)$this->userId,
+                                (int)$this->userId,
+                                (int)$this->userId,
+                            ]);
+                        }
+                    }
+
+                    // Case 2: agent CRM inquiries may not have a property_id (or property not accessible via join).
+                    // Match by crm_user_id + source + contact substring.
+                    try {
+                        $stmt = $clientModel->getDb()->prepare(
+                            "UPDATE inquiries\n"
+                            . "SET crm_stage = ?\n"
+                            . "WHERE crm_stage = ?\n"
+                            . "  AND source = 'agent_crm'\n"
+                            . "  AND crm_user_id = ?\n"
+                            . "  AND ((? IS NOT NULL AND contact LIKE ?) OR (? IS NOT NULL AND contact LIKE ?))"
+                        );
                         $stmt->execute([
                             (string)$lostStageKey,
-                            (int)$propertyId,
                             (string)$wonStageKey,
-                            (string)$clientPhone,
-                            (string)($clientEmail !== '' ? $clientEmail : $clientPhone),
                             (int)$this->userId,
-                            (int)$this->userId,
-                            (int)$this->userId,
-                            (int)$this->userId,
+                            $phoneLike,
+                            $phoneLike,
+                            $emailLike,
+                            $emailLike,
                         ]);
+                    } catch (\Exception $e) {
+                    }
+                }
+
+                // Delete all properties linked to this client (and related records).
+                // Property::delete handles cascading cleanup for units, leases, payments, etc.
+                if (!empty($propertyIds)) {
+                    foreach ($propertyIds as $propertyId) {
+                        $propRow = null;
+                        try {
+                            $propRow = $propertyModel->getById((int)$propertyId, (int)$this->userId);
+                        } catch (\Exception $e) {
+                            $propRow = null;
+                        }
+                        if (!$propRow) {
+                            continue;
+                        }
+
+                        try {
+                            $propertyModel->delete((int)$propertyId);
+                        } catch (\Exception $e) {
+                            throw $e;
+                        }
                     }
                 }
 
@@ -405,7 +459,11 @@ class AgentClientsController
 
                 $clientModel->syncClientProperties((int)$id, (int)$this->userId, []);
 
-                $clientModel->deleteById((int)$id);
+                // Client may have been deleted by Property::delete cleanup; ensure it's removed.
+                try {
+                    $clientModel->deleteById((int)$id);
+                } catch (\Exception $e) {
+                }
 
                 $clientModel->commit();
             } catch (\Exception $e) {
