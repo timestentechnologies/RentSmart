@@ -22,9 +22,9 @@
     .layout td { vertical-align: top; padding: 0; }
     .layout tr { page-break-inside: avoid; }
 
-    .head-left { width: 34%; background: #f9fafb; padding: 16px 18px; }
-    .head-right { width: 66%; background: #f9fafb; padding: 16px 18px; }
-    .content { background: #f9fafb; padding: 16px 18px 10px 18px; }
+    .head-left { width: 34%; background: #f9fafb; padding: 16px 22px; }
+    .head-right { width: 66%; background: #f9fafb; padding: 16px 22px; }
+    .content { background: #f9fafb; padding: 16px 22px 10px 22px; }
 
     .logo { max-height: 64px; margin: 0; }
     .head-brand { font-size: 14px; font-weight: 800; margin-top: 8px; color: #111827; }
@@ -34,11 +34,11 @@
       color: #e5e7eb;
       border-radius: 22px;
       padding: 16px 16px;
-      margin: 12px 18px 0 18px;
+      margin: 12px 22px 0 22px;
       page-break-inside: avoid;
     }
     .dark-block.top { border-top-left-radius: 28px; border-top-right-radius: 28px; }
-    .dark-block.bottom { border-bottom-left-radius: 32px; border-bottom-right-radius: 62px; margin-top: 14px; margin-bottom: 16px; }
+    .dark-block.bottom { border-bottom-left-radius: 32px; border-bottom-right-radius: 62px; margin-top: 14px; margin-bottom: 18px; }
 
     .dark-title { font-size: 11px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: #f59e0b; margin: 0 0 10px; }
     .dark-card { width: 100%; border: 1px solid rgba(255,255,255,0.14); padding: 12px 12px; background: rgba(255,255,255,0.035); border-radius: 12px; }
@@ -136,7 +136,7 @@
           <div class="dark-block top">
             <table style="width:100%;border-collapse:collapse;table-layout:fixed;">
               <tr>
-                <td style="width:50%;padding-right:10px;vertical-align:top;">
+                <td style="width:49%;padding-right:0;vertical-align:top;">
                   <div class="dark-title">From</div>
                   <div class="dark-card">
                     <div class="dark-row">
@@ -158,7 +158,8 @@
                   </div>
                 </td>
 
-                <td style="width:50%;padding-left:10px;vertical-align:top;">
+                <td style="width:2%;padding:0;">&nbsp;</td>
+                <td style="width:49%;padding-left:0;vertical-align:top;">
                   <div class="dark-title">Bill To</div>
                   <div class="dark-card">
                     <div class="dark-row">
