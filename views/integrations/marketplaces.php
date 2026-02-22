@@ -56,6 +56,58 @@ ob_start();
         </div>
     </div>
 
+    <?php if (!empty($isRealtorListings ?? false)): ?>
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-card-list me-2"></i>
+                        Available Listings
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <?php if (empty($listings ?? [])): ?>
+                        <div class="alert alert-info mb-0">
+                            <i class="bi bi-info-circle me-2"></i>
+                            No listings available to export.
+                        </div>
+                    <?php else: ?>
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Listing</th>
+                                        <th>Type</th>
+                                        <th>Location</th>
+                                        <th class="text-end">Price (KSh)</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach (($listings ?? []) as $ls): ?>
+                                        <tr>
+                                            <td><strong><?= htmlspecialchars((string)($ls['title'] ?? '')) ?></strong></td>
+                                            <td><?= htmlspecialchars((string)($ls['listing_type'] ?? '')) ?></td>
+                                            <td><?= htmlspecialchars((string)($ls['location'] ?? '')) ?></td>
+                                            <td class="text-end"><strong>KSh <?= number_format((float)($ls['price'] ?? 0), 2) ?></strong></td>
+                                            <td>
+                                                <span class="badge bg-light text-dark">
+                                                    <?= htmlspecialchars((string)($ls['status'] ?? 'active')) ?>
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <!-- Export Options -->
     <div class="row mb-4">
         <div class="col-md-12">

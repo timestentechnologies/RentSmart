@@ -10,7 +10,11 @@ ob_start();
                 <i class="bi bi-facebook text-primary me-2"></i>
                 Facebook Marketplace Integration
             </h1>
-            <p class="text-muted">Automatically post your vacant units to Facebook Marketplace</p>
+            <p class="text-muted">
+                <?= !empty($isRealtorListings ?? false)
+                    ? 'Manage your listings for Facebook Marketplace posting'
+                    : 'Automatically post your vacant units to Facebook Marketplace' ?>
+            </p>
         </div>
     </div>
 
@@ -75,7 +79,7 @@ ob_start();
                         <div class="col-md-9">
                             <p class="mb-2"><strong>Access Token:</strong> <?= substr($accessToken ?? '', 0, 20) ?>...</p>
                             <p class="mb-2"><strong>Page ID:</strong> <?= $pageId ?? 'Not set' ?></p>
-                            <p class="mb-0"><strong>Status:</strong> Ready to post units</p>
+                            <p class="mb-0"><strong>Status:</strong> Ready to post</p>
                         </div>
                     </div>
                 </div>
@@ -91,24 +95,26 @@ ob_start();
                 <div class="card-header bg-white">
                     <h5 class="mb-0">
                         <i class="bi bi-house-door me-2"></i>
-                        Vacant Units Ready to Post
+                        <?= !empty($isRealtorListings ?? false) ? 'Listings Ready to Post' : 'Vacant Units Ready to Post' ?>
                     </h5>
                 </div>
                 <div class="card-body">
                     <?php if (empty($vacantUnits)): ?>
                         <div class="alert alert-info">
                             <i class="bi bi-info-circle me-2"></i>
-                            No vacant units available. All your units are currently occupied.
+                            <?= !empty($isRealtorListings ?? false)
+                                ? 'No listings available to post.'
+                                : 'No vacant units available. All your units are currently occupied.' ?>
                         </div>
                     <?php else: ?>
                         <div class="table-responsive">
                             <table class="table table-hover">
                                 <thead>
                                     <tr>
-                                        <th>Property</th>
-                                        <th>Unit</th>
+                                        <th><?= !empty($isRealtorListings ?? false) ? 'Listing' : 'Property' ?></th>
+                                        <th><?= !empty($isRealtorListings ?? false) ? 'Ref' : 'Unit' ?></th>
                                         <th>Type</th>
-                                        <th>Rent (KSh)</th>
+                                        <th><?= !empty($isRealtorListings ?? false) ? 'Price (KSh)' : 'Rent (KSh)' ?></th>
                                         <th>Images</th>
                                         <th>Facebook Status</th>
                                         <th>Actions</th>
@@ -147,7 +153,9 @@ ob_start();
                                             </td>
                                             <td>
                                                 <?php if (!empty($unit['__is_realtor_listing'] ?? null)): ?>
-                                                    <span class="text-muted small">Posting is available for Units only</span>
+                                                    <a href="<?= BASE_URL ?>/realtor/listings" class="btn btn-sm btn-outline-secondary">
+                                                        <i class="bi bi-box-arrow-up-right me-1"></i>Open Listings
+                                                    </a>
                                                 <?php elseif ($unit['is_posted']): ?>
                                                     <button type="button" class="btn btn-sm btn-outline-danger"
                                                             onclick="deleteFromFacebook(<?= $unit['id'] ?>)">

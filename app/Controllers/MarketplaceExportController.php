@@ -29,6 +29,7 @@ class MarketplaceExportController
                 $listings = $listingModel->getAllNotSold($userId);
                 $vacantCount = count($listings);
                 $isRealtorListings = true;
+                $units = [];
                 require 'views/integrations/marketplaces.php';
                 return;
             }
@@ -47,6 +48,7 @@ class MarketplaceExportController
 
             $vacantCount = count($units);
             $isRealtorListings = false;
+            $listings = [];
 
             require 'views/integrations/marketplaces.php';
 
