@@ -370,6 +370,7 @@ ob_clean();
 
         .sidebar-logo a {
             display: flex;
+            flex-direction: column;
             align-items: center;
             flex: 1;
         }
@@ -384,7 +385,9 @@ ob_clean();
         .sidebar-logo span {
             font-weight: 600;
             color: var(--primary-color);
-            margin-left: 0.75rem;
+            margin-left: 0;
+            margin-top: 0.5rem;
+            text-align: center;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -695,7 +698,7 @@ ob_clean();
             }
 
             .sidebar-logo span {
-                display: none;
+                display: block;
             }
 
             .sidebar-logo img {
