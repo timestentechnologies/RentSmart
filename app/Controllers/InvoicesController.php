@@ -649,7 +649,7 @@ class InvoicesController
 
         $userId = (int)($_SESSION['user_id'] ?? 0);
         $role = strtolower((string)($_SESSION['user_role'] ?? ''));
-        if ($userId > 0 && in_array($role, ['manager', 'agent', 'landlord'], true)) {
+        if ($userId > 0 && in_array($role, ['manager', 'agent', 'landlord', 'realtor'], true)) {
             $companyNameKey = 'company_name_user_' . $userId;
             $companyLogoKey = 'company_logo_user_' . $userId;
             $companyName = trim((string)($settings[$companyNameKey] ?? ''));
@@ -936,7 +936,7 @@ class InvoicesController
 
             $userId = (int)($_SESSION['user_id'] ?? 0);
             $role = strtolower((string)($_SESSION['user_role'] ?? ''));
-            if ($userId > 0 && in_array($role, ['manager', 'agent', 'landlord'], true)) {
+            if ($userId > 0 && in_array($role, ['manager', 'agent', 'landlord', 'realtor'], true)) {
                 $companyNameKey = 'company_name_user_' . $userId;
                 $companyLogoKey = 'company_logo_user_' . $userId;
                 $companyName = trim((string)($settings[$companyNameKey] ?? ''));
