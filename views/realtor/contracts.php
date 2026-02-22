@@ -501,6 +501,27 @@ function editRealtorContract(id){
     sync();
   }
 })();
+
+// Auto-open edit modal when redirected from lead win / client creation flows
+(function(){
+  function onReady(fn){
+    if(document.readyState === 'loading'){
+      document.addEventListener('DOMContentLoaded', fn);
+    } else {
+      fn();
+    }
+  }
+
+  onReady(function(){
+    try {
+      const params = new URLSearchParams(window.location.search || '');
+      const id = parseInt(params.get('edit') || '0', 10);
+      if(id > 0 && typeof window.editRealtorContract === 'function'){
+        window.editRealtorContract(id);
+      }
+    } catch(e) {}
+  });
+})();
 </script>
 
 <?php

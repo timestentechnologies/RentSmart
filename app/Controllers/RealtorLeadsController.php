@@ -174,7 +174,7 @@ class RealtorLeadsController
 
             $redirectUrl = BASE_URL . '/realtor/listings?edit=' . (int)$listingId;
             if (!empty($conv['contract_id'])) {
-                $redirectUrl = BASE_URL . '/realtor/contracts/show/' . (int)$conv['contract_id'] . '?edit=1';
+                $redirectUrl = BASE_URL . '/realtor/contracts?edit=' . (int)$conv['contract_id'];
             }
 
             echo json_encode([
