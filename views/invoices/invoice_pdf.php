@@ -5,31 +5,20 @@
   <meta charset="utf-8">
   <title>Invoice <?= htmlspecialchars($invoice['number'] ?? ('#'.$invoice['id'])) ?></title>
   <style>
-    @page { margin: 0; }
+    @page { margin: 14px; }
     * { box-sizing: border-box; }
-    body { font-family: DejaVu Sans, Arial, Helvetica, sans-serif; font-size: 11px; line-height: 1.35; color: #111827; margin: 0; padding: 0; background: #ffffff; }
+    body { font-family: DejaVu Sans, Arial, Helvetica, sans-serif; font-size: 12px; line-height: 1.35; color: #111827; margin: 0; padding: 0; background: #ffffff; }
 
-    .sheet { padding: 12mm; }
-    .frame { width: 100%; border-collapse: collapse; table-layout: fixed; border: 1px solid #e5e7eb; }
-    .frame td { vertical-align: top; }
+    .container { width: 100%; border: 1px solid #e5e7eb; }
+    .header { width: 100%; border-collapse: collapse; }
+    .header td { vertical-align: top; padding: 14px 14px; }
+    .logo { max-height: 58px; width: auto; }
+    .brand { font-size: 14px; font-weight: 800; margin-top: 6px; }
+    .invoice-title { font-size: 28px; font-weight: 900; letter-spacing: 1px; margin: 0; }
+    .meta { margin-top: 6px; font-size: 11.5px; color: #6b7280; }
+    .accent { height: 6px; background: #f59e0b; }
 
-    .side { width: 56mm; background: #1f2937; color: #e5e7eb; padding: 10mm 6mm; }
-    .main { background: #ffffff; padding: 10mm 9mm; }
-
-    .brand-logo { max-height: 24mm; width: auto; display: block; margin-bottom: 4mm; }
-    .brand-name { font-size: 12px; font-weight: 900; color: #fff; }
-
-    .side-divider { height: 1px; background: rgba(255,255,255,0.14); margin: 6mm 0; }
-    .side-title { font-size: 10px; font-weight: 900; letter-spacing: .8px; text-transform: uppercase; color: #f59e0b; margin: 0 0 3mm 0; }
-    .side-label { font-size: 9px; letter-spacing: .6px; text-transform: uppercase; color: rgba(229,231,235,0.75); margin: 0; }
-    .side-value { font-size: 10.5px; font-weight: 700; color: #fff; margin: 0 0 2mm 0; word-break: break-word; overflow-wrap: anywhere; }
-    .side-small { font-size: 10px; color: rgba(229,231,235,0.9); margin: 0 0 2mm 0; word-break: break-word; overflow-wrap: anywhere; }
-
-    .main-title { font-size: 30px; font-weight: 900; letter-spacing: 1.4px; margin: 0; }
-    .meta { margin-top: 2mm; font-size: 10.5px; color: #6b7280; }
-    .accent { height: 4mm; background: #f59e0b; margin: 5mm 0 6mm; }
-
-    .badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 10px; font-weight: 800; }
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; }
     .badge-success { background: #16a34a; color: #fff; }
     .badge-warning { background: #f59e0b; color: #111; }
     .badge-primary { background: #2563eb; color: #fff; }
@@ -37,30 +26,38 @@
     .badge-secondary { background: #6b7280; color: #fff; }
     .badge-dark { background: #111827; color: #fff; }
 
-    .total-block { border: 1px solid #e5e7eb; padding: 4mm 4mm; margin: 0 0 6mm; }
-    .total-label { font-size: 10px; text-transform: uppercase; letter-spacing: .6px; color: #6b7280; margin: 0; }
-    .total-value { font-size: 16px; font-weight: 900; margin: 1mm 0 0; }
+    .section { padding: 12px 14px; }
+    .section-title { font-size: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: .6px; color: #111827; margin: 0 0 8px 0; }
 
-    .section-title { font-size: 11px; font-weight: 900; margin: 0 0 3mm 0; }
+    .info { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    .info td { vertical-align: top; width: 50%; padding: 0 8px; }
+    .info td:first-child { padding-left: 0; }
+    .info td:last-child { padding-right: 0; }
+    .box { border: 1px solid #e5e7eb; background: #f9fafb; padding: 10px; }
+    .row { margin: 0 0 6px 0; }
+    .label { font-size: 10px; letter-spacing: .6px; text-transform: uppercase; color: #6b7280; }
+    .value { font-weight: 700; color: #111827; word-break: break-word; overflow-wrap: anywhere; }
+    .small { font-size: 11.5px; color: #374151; word-break: break-word; overflow-wrap: anywhere; }
 
-    table.items { width: 100%; border-collapse: collapse; table-layout: fixed; }
-    table.items th, table.items td { border: 1px solid #e5e7eb; padding: 7px 6px; }
-    table.items th { background: #f59e0b; color: #fff; font-size: 10px; text-transform: uppercase; letter-spacing: .6px; }
+    .items { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    .items th, .items td { border: 1px solid #e5e7eb; padding: 9px 8px; }
+    .items th { background: #111827; color: #fff; font-size: 11px; text-transform: uppercase; letter-spacing: .6px; }
     .right { text-align: right; }
-    .num { white-space: nowrap; font-size: 9.5px; }
-    .desc { word-break: break-word; overflow-wrap: anywhere; }
 
-    table.summary { width: 100%; border-collapse: collapse; margin-top: 4mm; }
-    table.summary td { padding: 6px 6px; }
-    .sum-k { text-align: right; color: #6b7280; font-weight: 800; }
-    .sum-v { text-align: right; font-weight: 900; }
-    .grand { background: #f59e0b; color: #fff; padding: 7px 8px; }
+    .totals { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    .totals td { border: 1px solid #e5e7eb; padding: 8px 8px; }
+    .totals .k { text-align: right; color: #6b7280; font-weight: 800; }
+    .totals .v { text-align: right; font-weight: 900; }
+    .totals .grand td { background: #f59e0b; color: #111827; }
 
-    .sig { margin-top: 10mm; }
-    .sig-line { border-top: 1px solid #9ca3af; height: 1px; margin-top: 14mm; }
-    .foot { text-align: center; font-size: 10px; color: #9ca3af; margin-top: 8mm; }
+    .signature { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    .signature td { vertical-align: top; width: 50%; padding: 0 8px; }
+    .signature td:first-child { padding-left: 0; }
+    .signature td:last-child { padding-right: 0; }
+    .sigline { border-top: 1px solid #9ca3af; height: 1px; margin-top: 38px; }
+    .foot { text-align: center; font-size: 11px; color: #9ca3af; padding: 10px 14px 14px 14px; }
 
-    .watermark { position: fixed; top: 52%; left: 12%; right: 12%; text-align: center; font-size: 58px; color: rgba(17,24,39,0.05); transform: rotate(-18deg); z-index: 0; }
+    .watermark { position: fixed; top: 46%; left: 8%; right: 8%; text-align: center; font-size: 64px; color: rgba(17,24,39,0.05); transform: rotate(-18deg); z-index: 0; }
   </style>
 </head>
 <body>
@@ -74,115 +71,124 @@
     elseif ($st === 'overdue') $statusClass = 'badge-danger';
     elseif ($st === 'void') $statusClass = 'badge-dark';
   ?>
-  <div class="sheet">
-    <table class="frame">
+  <div class="container">
+    <table class="header">
       <tr>
-        <td class="side">
+        <td style="width:50%">
           <?php if (!empty($logoDataUri)): ?>
-            <img class="brand-logo" src="<?= $logoDataUri ?>" alt="Logo">
+            <img class="logo" src="<?= $logoDataUri ?>" alt="Logo">
           <?php endif; ?>
-          <div class="brand-name"><?= htmlspecialchars($siteName ?? '-') ?></div>
-
-          <div class="side-divider"></div>
-
-          <div class="side-title">Invoice To</div>
-          <p class="side-value"><?= htmlspecialchars(!empty($realtorContext) ? (($realtorContext['client_name'] ?? '-') ?: '-') : ($invoice['tenant_name'] ?? '-')) ?></p>
-          <p class="side-small"><?= htmlspecialchars(!empty($realtorContext) ? (($realtorContext['client_email'] ?? '-') ?: '-') : ($invoice['tenant_email'] ?? '-')) ?></p>
-          <?php if (!empty($realtorContext) && (!empty($realtorContext['client_phone']))): ?>
-            <p class="side-small"><?= htmlspecialchars((string)$realtorContext['client_phone']) ?></p>
-          <?php endif; ?>
-          <?php if (!empty($realtorContext) && (!empty($realtorContext['listing_title']) || !empty($realtorContext['listing_location']))): ?>
-            <p class="side-small"><?= htmlspecialchars((string)($realtorContext['listing_title'] ?? '')) ?><?= !empty($realtorContext['listing_location']) ? (' • ' . htmlspecialchars((string)$realtorContext['listing_location'])) : '' ?></p>
-          <?php endif; ?>
-
-          <div class="side-divider"></div>
-
-          <div class="side-title">From</div>
-          <p class="side-label">Company</p>
-          <p class="side-value"><?= htmlspecialchars($siteName ?? '-') ?></p>
-          <p class="side-label">Email</p>
-          <p class="side-small"><?= htmlspecialchars($settings['site_email'] ?? '-') ?></p>
-          <p class="side-label">Phone</p>
-          <p class="side-small"><?= htmlspecialchars($settings['site_phone'] ?? '-') ?></p>
-
-          <div class="side-divider"></div>
-
-          <div class="side-title">Terms & Notes</div>
-          <p class="side-small">
-            <?php if (!empty($invoice['notes'])): ?>
-              <?= nl2br(htmlspecialchars($displayNotes ?? $invoice['notes'])) ?>
-            <?php else: ?>
-              Payment is due by the due date indicated. Late payments may incur penalties.
-            <?php endif; ?>
-          </p>
+          <div class="brand"><?= htmlspecialchars($siteName ?? '-') ?></div>
         </td>
-
-        <td class="main">
-          <div class="main-title">INVOICE</div>
+        <td style="width:50%; text-align:right;">
+          <div class="invoice-title">INVOICE</div>
           <div class="meta">
-            Invoice No: <?= htmlspecialchars($invoice['number'] ?? ('#'.$invoice['id'])) ?>
+            Invoice <?= htmlspecialchars($invoice['number'] ?? ('#'.$invoice['id'])) ?>
             • Date: <?= htmlspecialchars($invoice['issue_date']) ?>
             • Status: <span class="badge <?= $statusClass ?>"><?= htmlspecialchars(ucfirst((string)($invoice['status'] ?? 'draft'))) ?></span>
-          </div>
-
-          <div class="accent"></div>
-
-          <div class="total-block">
-            <p class="total-label">Total Due</p>
-            <p class="total-value">Ksh <?= number_format((float)($invoice['total'] ?? 0), 2) ?></p>
-          </div>
-
-          <div class="section-title">Product & Services</div>
-          <table class="items">
-            <thead>
-              <tr>
-                <th style="width:55%">Description</th>
-                <th style="width:10%" class="right">Qty</th>
-                <th style="width:17%" class="right">Unit Price</th>
-                <th style="width:18%" class="right">Amount</th>
-              </tr>
-            </thead>
-            <tbody>
-              <?php foreach (($invoice['items'] ?? []) as $it): ?>
-                <tr>
-                  <td class="desc"><?= htmlspecialchars((string)($it['description'] ?? '')) ?></td>
-                  <td class="right num"><?= number_format((float)($it['quantity'] ?? 0), 2) ?></td>
-                  <td class="right num"><?= number_format((float)($it['unit_price'] ?? 0), 2) ?></td>
-                  <td class="right num"><?= number_format((float)($it['line_total'] ?? 0), 2) ?></td>
-                </tr>
-              <?php endforeach; ?>
-            </tbody>
-          </table>
-
-          <table class="summary">
-            <tr>
-              <td class="sum-k" style="width:70%">Subtotal</td>
-              <td class="sum-v" style="width:30%">Ksh <?= number_format((float)($invoice['subtotal'] ?? 0), 2) ?></td>
-            </tr>
-            <?php if (!empty($invoice['tax_rate'])): ?>
-            <tr>
-              <td class="sum-k">Tax (<?= number_format((float)$invoice['tax_rate'], 2) ?>%)</td>
-              <td class="sum-v">Ksh <?= number_format((float)($invoice['tax_amount'] ?? 0), 2) ?></td>
-            </tr>
-            <?php endif; ?>
-            <tr>
-              <td class="sum-k grand">Grand Total</td>
-              <td class="sum-v grand">Ksh <?= number_format((float)($invoice['total'] ?? 0), 2) ?></td>
-            </tr>
-          </table>
-
-          <div class="sig">
-            <div class="section-title">Authorized Signature</div>
-            <div class="sig-line"></div>
-            <div class="meta">Sign and return if required.</div>
-          </div>
-
-          <div class="foot">
-            Generated by <?= htmlspecialchars($siteName ?? 'RentSmart') ?> — <?= date('Y-m-d H:i') ?>
           </div>
         </td>
       </tr>
     </table>
+    <div class="accent"></div>
+
+    <div class="section">
+      <table class="info">
+        <tr>
+          <td>
+            <div class="section-title">From</div>
+            <div class="box">
+              <div class="row"><div class="label">Company</div><div class="value"><?= htmlspecialchars($siteName ?? '-') ?></div></div>
+              <div class="row"><div class="label">Address</div><div class="small"><?= htmlspecialchars($settings['site_address'] ?? '-') ?></div></div>
+              <div class="row"><div class="label">Phone</div><div class="small"><?= htmlspecialchars($settings['site_phone'] ?? '-') ?></div></div>
+              <div class="row"><div class="label">Email</div><div class="small"><?= htmlspecialchars($settings['site_email'] ?? '-') ?></div></div>
+            </div>
+          </td>
+          <td>
+            <div class="section-title">Bill To</div>
+            <div class="box">
+              <div class="row"><div class="label">Customer</div><div class="value"><?= htmlspecialchars(!empty($realtorContext) ? (($realtorContext['client_name'] ?? '-') ?: '-') : ($invoice['tenant_name'] ?? '-')) ?></div></div>
+              <div class="row"><div class="label">Email</div><div class="small"><?= htmlspecialchars(!empty($realtorContext) ? (($realtorContext['client_email'] ?? '-') ?: '-') : ($invoice['tenant_email'] ?? '-')) ?></div></div>
+              <?php if (!empty($realtorContext) && (!empty($realtorContext['listing_title']) || !empty($realtorContext['listing_location']))): ?>
+              <div class="row"><div class="label">Listing</div><div class="small"><?= htmlspecialchars((string)($realtorContext['listing_title'] ?? '')) ?><?= !empty($realtorContext['listing_location']) ? (' • ' . htmlspecialchars((string)$realtorContext['listing_location'])) : '' ?></div></div>
+              <?php endif; ?>
+              <div class="row"><div class="label">Due Date</div><div class="small"><?= htmlspecialchars($invoice['due_date'] ?? '-') ?></div></div>
+            </div>
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Items</div>
+      <table class="items">
+        <thead>
+          <tr>
+            <th style="width:58%">Description</th>
+            <th style="width:12%" class="right">Qty</th>
+            <th style="width:15%" class="right">Unit Price</th>
+            <th style="width:15%" class="right">Amount</th>
+          </tr>
+        </thead>
+        <tbody>
+          <?php foreach (($invoice['items'] ?? []) as $it): ?>
+            <tr>
+              <td><?= htmlspecialchars((string)($it['description'] ?? '')) ?></td>
+              <td class="right"><?= number_format((float)($it['quantity'] ?? 0), 2) ?></td>
+              <td class="right"><?= number_format((float)($it['unit_price'] ?? 0), 2) ?></td>
+              <td class="right"><?= number_format((float)($it['line_total'] ?? 0), 2) ?></td>
+            </tr>
+          <?php endforeach; ?>
+        </tbody>
+      </table>
+
+      <table class="totals">
+        <tr>
+          <td class="k" style="width:80%">Subtotal</td>
+          <td class="v" style="width:20%">Ksh <?= number_format((float)($invoice['subtotal'] ?? 0), 2) ?></td>
+        </tr>
+        <?php if (!empty($invoice['tax_rate'])): ?>
+        <tr>
+          <td class="k">Tax (<?= number_format((float)$invoice['tax_rate'], 2) ?>%)</td>
+          <td class="v">Ksh <?= number_format((float)($invoice['tax_amount'] ?? 0), 2) ?></td>
+        </tr>
+        <?php endif; ?>
+        <tr class="grand">
+          <td class="k">Grand Total</td>
+          <td class="v">Ksh <?= number_format((float)($invoice['total'] ?? 0), 2) ?></td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="section">
+      <table class="signature">
+        <tr>
+          <td>
+            <div class="section-title">Terms & Notes</div>
+            <div class="box">
+              <div class="small">
+                <?php if (!empty($invoice['notes'])): ?>
+                  <?= nl2br(htmlspecialchars($displayNotes ?? $invoice['notes'])) ?>
+                <?php else: ?>
+                  Payment is due by the due date indicated. Late payments may incur penalties as per your agreement.
+                <?php endif; ?>
+              </div>
+            </div>
+          </td>
+          <td>
+            <div class="section-title">Authorized Signature</div>
+            <div class="box" style="height:92px;">
+              <div class="sigline"></div>
+              <div class="small" style="margin-top:6px; color:#6b7280;">Sign and return if required.</div>
+            </div>
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <div class="foot">
+      Generated by <?= htmlspecialchars($siteName ?? 'RentSmart') ?> — <?= date('Y-m-d H:i') ?>
+    </div>
   </div>
 
   <?php if (empty($realtorContext) && !empty($paymentStatus)): ?>
