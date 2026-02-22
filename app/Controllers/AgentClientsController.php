@@ -125,15 +125,8 @@ class AgentClientsController
                         $unitIds[] = $uid;
                         $rentTotal += (float)($u['rent_amount'] ?? 0);
                     }
-                    if (empty($unitIds) || $rentTotal <= 0) {
-                        continue;
-                    }
-
                     $commissionPercent = 10.0;
-                    $totalAmount = round(($rentTotal * $commissionPercent) / 100, 2);
-                    if ($totalAmount <= 0) {
-                        continue;
-                    }
+                    $totalAmount = $rentTotal > 0 ? round(($rentTotal * $commissionPercent) / 100, 2) : 0.0;
 
                     $newContractId = $contractModel->insert([
                         'user_id' => (int)$this->userId,
@@ -149,7 +142,9 @@ class AgentClientsController
                         'rent_total' => (float)$rentTotal,
                         'status' => 'active',
                     ]);
-                    $contractModel->syncContractUnits((int)$newContractId, (int)$this->userId, $unitIds);
+                    if (!empty($unitIds)) {
+                        $contractModel->syncContractUnits((int)$newContractId, (int)$this->userId, $unitIds);
+                    }
                 }
                 $clientModel->commit();
             } catch (\Exception $e) {
@@ -274,15 +269,8 @@ class AgentClientsController
                                 $unitIds[] = $uid;
                                 $rentTotal += (float)($u['rent_amount'] ?? 0);
                             }
-                            if (empty($unitIds) || $rentTotal <= 0) {
-                                continue;
-                            }
-
                             $commissionPercent = 10.0;
-                            $totalAmount = round(($rentTotal * $commissionPercent) / 100, 2);
-                            if ($totalAmount <= 0) {
-                                continue;
-                            }
+                            $totalAmount = $rentTotal > 0 ? round(($rentTotal * $commissionPercent) / 100, 2) : 0.0;
 
                             $newContractId = $contractModel->insert([
                                 'user_id' => (int)$this->userId,
@@ -298,7 +286,9 @@ class AgentClientsController
                                 'rent_total' => (float)$rentTotal,
                                 'status' => 'active',
                             ]);
-                            $contractModel->syncContractUnits((int)$newContractId, (int)$this->userId, $unitIds);
+                            if (!empty($unitIds)) {
+                                $contractModel->syncContractUnits((int)$newContractId, (int)$this->userId, $unitIds);
+                            }
                         }
                     } catch (\Exception $e) {
                         error_log('AgentClients auto-contract create failed: ' . $e->getMessage());
@@ -310,7 +300,7 @@ class AgentClientsController
                 throw $e;
             }
 
-            echo json_encode(['success' => (bool)$ok]);
+            echo json_encode(['success' => (bool)$ok, 'message' => $ok ? 'Client updated successfully' : 'Failed to update client']);
         } catch (\Exception $e) {
             error_log('AgentClients update failed: ' . $e->getMessage());
             echo json_encode(['success' => false, 'message' => 'Failed to update client']);
