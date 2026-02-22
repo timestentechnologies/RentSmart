@@ -51,6 +51,15 @@ class RealtorListing extends Model
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
 
+    public function getAllNotSold($userId)
+    {
+        $stmt = $this->db->prepare(
+            "SELECT * FROM {$this->table} WHERE user_id = ? AND status <> 'sold' ORDER BY id DESC"
+        );
+        $stmt->execute([(int)$userId]);
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+    }
+
     public function getRecent($userId, $limit = 5)
     {
         $stmt = $this->db->prepare("SELECT * FROM {$this->table} WHERE user_id = ? ORDER BY id DESC LIMIT " . (int)$limit);

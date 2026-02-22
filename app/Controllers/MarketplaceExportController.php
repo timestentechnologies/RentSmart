@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Database\Connection;
+use App\Models\RealtorListing;
 
 class MarketplaceExportController
 {
@@ -21,6 +22,17 @@ class MarketplaceExportController
         try {
             requireAuth();
 
+            $role = strtolower((string)($_SESSION['user_role'] ?? ''));
+            if ($role === 'realtor') {
+                $userId = (int)($_SESSION['user_id'] ?? 0);
+                $listingModel = new RealtorListing();
+                $listings = $listingModel->getAllNotSold($userId);
+                $vacantCount = count($listings);
+                $isRealtorListings = true;
+                require 'views/integrations/marketplaces.php';
+                return;
+            }
+
             require_once __DIR__ . '/../Models/Unit.php';
             $unitModel = new \App\Models\Unit();
 
@@ -34,6 +46,7 @@ class MarketplaceExportController
             }
 
             $vacantCount = count($units);
+            $isRealtorListings = false;
 
             require 'views/integrations/marketplaces.php';
 
@@ -54,6 +67,96 @@ class MarketplaceExportController
     {
         try {
             requireAuth();
+
+            $role = strtolower((string)($_SESSION['user_role'] ?? ''));
+            if ($role === 'realtor') {
+                $userId = (int)($_SESSION['user_id'] ?? 0);
+                $listingModel = new RealtorListing();
+                $listings = $listingModel->getAllNotSold($userId);
+                if (empty($listings)) {
+                    $_SESSION['flash_message'] = 'No listings available to export';
+                    $_SESSION['flash_type'] = 'warning';
+                    header('Location: ' . BASE_URL . '/integrations/marketplaces');
+                    exit;
+                }
+
+                $csvData = [];
+                $csvData[] = [
+                    'Platform',
+                    'Title',
+                    'Description',
+                    'Category',
+                    'Property Type',
+                    'Price (KSh)',
+                    'Currency',
+                    'Bedrooms',
+                    'Bathrooms',
+                    'Location (City)',
+                    'Full Address',
+                    'Contact Name',
+                    'Contact Phone',
+                    'Contact Email',
+                    'Image 1',
+                    'Image 2',
+                    'Image 3',
+                    'Image 4',
+                    'Image 5',
+                    'Property Name',
+                    'Unit Number',
+                    'Unit Type'
+                ];
+
+                $platforms = ['Jiji', 'PigiaMe', 'BuyRentKenya', 'OLX', 'Property24'];
+                foreach (($listings ?? []) as $ls) {
+                    $title = (string)($ls['title'] ?? ('Listing #' . (int)($ls['id'] ?? 0)));
+                    $location = (string)($ls['location'] ?? '');
+                    $price = (float)($ls['price'] ?? 0);
+                    $description = "Available Listing\n\n";
+                    $descExtra = trim((string)($ls['description'] ?? ''));
+                    if ($descExtra !== '') {
+                        $description .= strip_tags($descExtra) . "\n\n";
+                    }
+                    $description .= "Location: " . $location . "\n";
+                    $description .= "Price: KSh " . number_format($price, 2) . "\n";
+                    $description .= "Managed by RentSmart";
+
+                    foreach ($platforms as $platform) {
+                        $csvData[] = [
+                            $platform,
+                            $title,
+                            $description,
+                            'Real Estate',
+                            (string)($ls['listing_type'] ?? ''),
+                            number_format($price, 0, '', ''),
+                            'KES',
+                            '',
+                            '',
+                            $location,
+                            $location,
+                            'RentSmart',
+                            '+254718883983',
+                            'timestentechnologies@gmail.com',
+                            '', '', '', '', '',
+                            $title,
+                            '#'.(int)($ls['id'] ?? 0),
+                            (string)($ls['listing_type'] ?? '')
+                        ];
+                    }
+                }
+
+                $filename = 'marketplace_export_' . date('Y-m-d_His') . '.csv';
+                header('Content-Type: text/csv; charset=utf-8');
+                header('Content-Disposition: attachment; filename="' . $filename . '"');
+                header('Pragma: no-cache');
+                header('Expires: 0');
+                $output = fopen('php://output', 'w');
+                fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
+                foreach ($csvData as $row) {
+                    fputcsv($output, $row);
+                }
+                fclose($output);
+                exit;
+            }
 
             require_once __DIR__ . '/../Models/Unit.php';
             require_once __DIR__ . '/../Models/Property.php';
@@ -225,6 +328,69 @@ class MarketplaceExportController
     {
         try {
             requireAuth();
+
+            $role = strtolower((string)($_SESSION['user_role'] ?? ''));
+            if ($role === 'realtor') {
+                $validPlatforms = ['jiji', 'pigiame', 'buyrentkenya', 'olx', 'property24'];
+                $platform = strtolower($platform);
+                if (!in_array($platform, $validPlatforms)) {
+                    throw new \Exception('Invalid platform');
+                }
+
+                $userId = (int)($_SESSION['user_id'] ?? 0);
+                $listingModel = new RealtorListing();
+                $listings = $listingModel->getAllNotSold($userId);
+                if (empty($listings)) {
+                    $_SESSION['flash_message'] = 'No listings available';
+                    $_SESSION['flash_type'] = 'warning';
+                    header('Location: ' . BASE_URL . '/integrations/marketplaces');
+                    exit;
+                }
+
+                $csvData = [];
+                if (in_array($platform, ['jiji', 'pigiame', 'olx'], true)) {
+                    $csvData[] = ['Title', 'Description', 'Category', 'Price', 'Location', 'Bedrooms', 'Contact Phone', 'Contact Email', 'Images'];
+                } elseif ($platform === 'buyrentkenya') {
+                    $csvData[] = ['Title', 'Description', 'Property Type', 'Price', 'City', 'Address', 'Bedrooms', 'Bathrooms', 'Contact', 'Email', 'Images'];
+                } else {
+                    $csvData[] = ['Listing Title', 'Description', 'Property Type', 'Monthly Rent', 'Location', 'Bedrooms', 'Bathrooms', 'Contact Number', 'Email', 'Photo URLs'];
+                }
+
+                foreach (($listings ?? []) as $ls) {
+                    $title = (string)($ls['title'] ?? ('Listing #' . (int)($ls['id'] ?? 0)));
+                    $location = (string)($ls['location'] ?? '');
+                    $price = (float)($ls['price'] ?? 0);
+                    $desc = "Available Listing\n\n";
+                    $descExtra = trim((string)($ls['description'] ?? ''));
+                    if ($descExtra !== '') {
+                        $desc .= strip_tags($descExtra) . "\n\n";
+                    }
+                    $desc .= "Location: " . $location . "\n";
+                    $desc .= "Price: KSh " . number_format($price, 2) . "\n";
+                    $desc .= "Managed by RentSmart";
+
+                    if (in_array($platform, ['jiji', 'pigiame', 'olx'], true)) {
+                        $csvData[] = [$title, $desc, 'Real Estate', $price, $location, '', '+254718883983', 'timestentechnologies@gmail.com', ''];
+                    } elseif ($platform === 'buyrentkenya') {
+                        $csvData[] = [$title, $desc, (string)($ls['listing_type'] ?? ''), $price, $location, $location, '', '', '+254718883983', 'timestentechnologies@gmail.com', ''];
+                    } else {
+                        $csvData[] = [$title, $desc, (string)($ls['listing_type'] ?? ''), $price, $location, '', '', '+254718883983', 'timestentechnologies@gmail.com', ''];
+                    }
+                }
+
+                $filename = $platform . '_export_' . date('Y-m-d_His') . '.csv';
+                header('Content-Type: text/csv; charset=utf-8');
+                header('Content-Disposition: attachment; filename="' . $filename . '"');
+                header('Pragma: no-cache');
+                header('Expires: 0');
+                $output = fopen('php://output', 'w');
+                fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
+                foreach ($csvData as $row) {
+                    fputcsv($output, $row);
+                }
+                fclose($output);
+                exit;
+            }
 
             $validPlatforms = ['jiji', 'pigiame', 'buyrentkenya', 'olx', 'property24'];
             $platform = strtolower($platform);

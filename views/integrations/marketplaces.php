@@ -10,7 +10,11 @@ ob_start();
                 <i class="bi bi-shop text-primary me-2"></i>
                 Marketplace Export
             </h1>
-            <p class="text-muted">Export your vacant units to multiple marketplace platforms</p>
+            <p class="text-muted">
+                <?= !empty($isRealtorListings ?? false)
+                    ? 'Export your listings to multiple marketplace platforms'
+                    : 'Export your vacant units to multiple marketplace platforms' ?>
+            </p>
         </div>
     </div>
 
@@ -65,7 +69,9 @@ ob_start();
                 <div class="card-body">
                     <div class="alert alert-success">
                         <i class="bi bi-info-circle me-2"></i>
-                        <strong><?= $vacantCount ?></strong> vacant units ready to export
+                        <strong><?= $vacantCount ?></strong>
+                        <?= !empty($isRealtorListings ?? false) ? 'listings' : 'vacant units' ?>
+                        ready to export
                     </div>
 
                     <div class="row g-3">

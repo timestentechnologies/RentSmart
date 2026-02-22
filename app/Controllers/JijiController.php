@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Database\Connection;
+use App\Models\RealtorListing;
 
 class JijiController
 {
@@ -20,6 +21,30 @@ class JijiController
     {
         try {
             requireAuth();
+
+            $role = strtolower((string)($_SESSION['user_role'] ?? ''));
+            if ($role === 'realtor') {
+                $userId = (int)($_SESSION['user_id'] ?? 0);
+                $listingModel = new RealtorListing();
+                $rows = $listingModel->getAllNotSold($userId);
+                $vacantUnits = [];
+                foreach (($rows ?? []) as $r) {
+                    $vacantUnits[] = [
+                        'id' => (int)($r['id'] ?? 0),
+                        'property_name' => (string)($r['title'] ?? ''),
+                        'unit_number' => '#'.(int)($r['id'] ?? 0),
+                        'type' => (string)($r['listing_type'] ?? ''),
+                        'rent_amount' => (float)($r['price'] ?? 0),
+                        'city' => (string)($r['location'] ?? ''),
+                        'images' => [],
+                        'image_count' => 0,
+                        '__is_realtor_listing' => 1,
+                    ];
+                }
+
+                require 'views/jiji/manage.php';
+                return;
+            }
 
             require_once __DIR__ . '/../Models/Unit.php';
             require_once __DIR__ . '/../Models/Property.php';
@@ -73,6 +98,80 @@ class JijiController
     {
         try {
             requireAuth();
+
+            $role = strtolower((string)($_SESSION['user_role'] ?? ''));
+            if ($role === 'realtor') {
+                $userId = (int)($_SESSION['user_id'] ?? 0);
+                $listingModel = new RealtorListing();
+                $listings = $listingModel->getAllNotSold($userId);
+                if (empty($listings)) {
+                    $_SESSION['flash_message'] = 'No listings available to export';
+                    $_SESSION['flash_type'] = 'warning';
+                    header('Location: ' . BASE_URL . '/jiji');
+                    exit;
+                }
+
+                $csvData = [];
+                $csvData[] = [
+                    'Title',
+                    'Description',
+                    'Category',
+                    'Price',
+                    'Location',
+                    'Bedrooms',
+                    'Bathrooms',
+                    'Property Type',
+                    'Contact Phone',
+                    'Contact Email',
+                    'Images'
+                ];
+
+                foreach ($listings as $ls) {
+                    $title = (string)($ls['title'] ?? ('Listing #' . (int)($ls['id'] ?? 0)));
+                    if (strlen($title) > 70) {
+                        $title = substr($title, 0, 67) . '...';
+                    }
+                    $location = (string)($ls['location'] ?? '');
+                    $price = (float)($ls['price'] ?? 0);
+                    $description = "Available Listing\n\n";
+                    $description .= "Title: " . (string)($ls['title'] ?? '') . "\n";
+                    $description .= "Location: " . $location . "\n";
+                    $description .= "Price: KSh " . number_format($price, 2) . "\n\n";
+                    $descExtra = trim((string)($ls['description'] ?? ''));
+                    if ($descExtra !== '') {
+                        $description .= strip_tags($descExtra) . "\n\n";
+                    }
+                    $description .= "Managed by RentSmart";
+
+                    $csvData[] = [
+                        $title,
+                        $description,
+                        'Houses & Apartments For Sale',
+                        number_format($price, 0, '', ''),
+                        $location,
+                        '',
+                        '',
+                        (string)($ls['listing_type'] ?? ''),
+                        '+254718883983',
+                        'timestentechnologies@gmail.com',
+                        ''
+                    ];
+                }
+
+                $filename = 'jiji_export_' . date('Y-m-d_His') . '.csv';
+                header('Content-Type: text/csv; charset=utf-8');
+                header('Content-Disposition: attachment; filename="' . $filename . '"');
+                header('Pragma: no-cache');
+                header('Expires: 0');
+
+                $output = fopen('php://output', 'w');
+                fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF));
+                foreach ($csvData as $row) {
+                    fputcsv($output, $row);
+                }
+                fclose($output);
+                exit;
+            }
 
             require_once __DIR__ . '/../Models/Unit.php';
             require_once __DIR__ . '/../Models/Property.php';
@@ -219,6 +318,38 @@ class JijiController
         try {
             requireAuth();
 
+            $role = strtolower((string)($_SESSION['user_role'] ?? ''));
+            if ($role === 'realtor') {
+                $userId = (int)($_SESSION['user_id'] ?? 0);
+                $listingModel = new RealtorListing();
+                $ls = $listingModel->getByIdWithAccess((int)$unitId, (int)$userId);
+                if (!$ls) {
+                    throw new \Exception('Listing not found');
+                }
+
+                $title = urlencode((string)($ls['title'] ?? ('Listing #' . (int)($ls['id'] ?? 0))));
+                $price = (float)($ls['price'] ?? 0);
+                $location = urlencode((string)($ls['location'] ?? ''));
+
+                $jijiUrl = "https://jiji.co.ke/post-ad?";
+                $jijiUrl .= "category=real-estate";
+                $jijiUrl .= "&title=" . $title;
+                if ($price > 0) {
+                    $jijiUrl .= "&price=" . $price;
+                }
+                if ($location !== '') {
+                    $jijiUrl .= "&location=" . $location;
+                }
+
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'success' => true,
+                    'url' => $jijiUrl,
+                    'message' => 'Jiji listing URL generated'
+                ]);
+                exit;
+            }
+
             require_once __DIR__ . '/../Models/Unit.php';
             require_once __DIR__ . '/../Models/Property.php';
 
@@ -278,6 +409,43 @@ class JijiController
     {
         try {
             requireAuth();
+
+            $role = strtolower((string)($_SESSION['user_role'] ?? ''));
+            if ($role === 'realtor') {
+                $userId = (int)($_SESSION['user_id'] ?? 0);
+                $listingModel = new RealtorListing();
+                $listings = $listingModel->getAllNotSold((int)$userId);
+                $jijiUrls = [];
+                foreach (($listings ?? []) as $ls) {
+                    $title = urlencode((string)($ls['title'] ?? ('Listing #' . (int)($ls['id'] ?? 0))));
+                    $price = (float)($ls['price'] ?? 0);
+                    $location = urlencode((string)($ls['location'] ?? ''));
+                    $jijiUrl = "https://jiji.co.ke/post-ad?";
+                    $jijiUrl .= "category=real-estate";
+                    $jijiUrl .= "&title=" . $title;
+                    if ($price > 0) {
+                        $jijiUrl .= "&price=" . $price;
+                    }
+                    if ($location !== '') {
+                        $jijiUrl .= "&location=" . $location;
+                    }
+
+                    $jijiUrls[] = [
+                        'unit_id' => (int)($ls['id'] ?? 0),
+                        'unit_number' => '#'.(int)($ls['id'] ?? 0),
+                        'property_name' => (string)($ls['title'] ?? ''),
+                        'url' => $jijiUrl,
+                    ];
+                }
+
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'success' => true,
+                    'urls' => $jijiUrls,
+                    'count' => count($jijiUrls)
+                ]);
+                exit;
+            }
 
             require_once __DIR__ . '/../Models/Unit.php';
             require_once __DIR__ . '/../Models/Property.php';

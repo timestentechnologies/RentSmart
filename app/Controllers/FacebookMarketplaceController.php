@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Database\Connection;
+use App\Models\RealtorListing;
 
 class FacebookMarketplaceController
 {
@@ -30,6 +31,33 @@ class FacebookMarketplaceController
     {
         try {
             requireAuth();
+
+            $role = strtolower((string)($_SESSION['user_role'] ?? ''));
+            if ($role === 'realtor') {
+                $userId = (int)($_SESSION['user_id'] ?? 0);
+                $listingModel = new RealtorListing();
+                $rows = $listingModel->getAllNotSold($userId);
+                $vacantUnits = [];
+                foreach (($rows ?? []) as $r) {
+                    $vacantUnits[] = [
+                        'id' => (int)($r['id'] ?? 0),
+                        'property_name' => (string)($r['title'] ?? ''),
+                        'unit_number' => '#'.(int)($r['id'] ?? 0),
+                        'type' => (string)($r['listing_type'] ?? ''),
+                        'rent_amount' => (float)($r['price'] ?? 0),
+                        'image_count' => 0,
+                        'is_posted' => false,
+                        '__is_realtor_listing' => 1,
+                    ];
+                }
+
+                $isConfigured = !empty($this->accessToken) && !empty($this->pageId);
+                $accessToken = $this->accessToken;
+                $pageId = $this->pageId;
+
+                require 'views/integrations/facebook_marketplace.php';
+                return;
+            }
 
             require_once __DIR__ . '/../Models/Unit.php';
             require_once __DIR__ . '/../Models/Property.php';
