@@ -447,6 +447,13 @@ ob_start();
     return window.bootstrap.Modal.getOrCreateInstance(addPropModalEl);
   }
 
+  const addClientModalEl = document.getElementById('addClientModal');
+  function getAddClientModal(){
+    if(!addClientModalEl) return null;
+    if(!(window.bootstrap && window.bootstrap.Modal)) return null;
+    return window.bootstrap.Modal.getOrCreateInstance(addClientModalEl);
+  }
+
   function upsertPropertyCheckbox(listEl, id, label, prefix){
     if(!listEl) return;
     const val = String(id);
@@ -501,11 +508,19 @@ ob_start();
       upsertPropertyCheckbox(propertyList, data.property_id, label, 'add_prop');
       upsertPropertyCheckbox(editPropertyList, data.property_id, label, 'edit_prop');
       const newVal = String(data.property_id);
-      propertyList.querySelector('input[type="checkbox"][value="' + newVal.replace(/"/g,'') + '"]')?.click();
+      const newCheckbox = propertyList.querySelector('input[type="checkbox"][value="' + newVal.replace(/"/g,'') + '"]');
+      if (newCheckbox) {
+        newCheckbox.checked = true;
+      }
       syncClientPropertyDropdown('agent_client_property');
       syncClientPropertyDropdown('edit_client_property');
       const addPropModal = getAddPropModal();
       if (addPropModal) addPropModal.hide();
+
+      const addClientModal = getAddClientModal();
+      if (addClientModal) {
+        addClientModal.show();
+      }
     } catch (err){
       if(addPropErr){
         addPropErr.textContent = String(err && err.message ? err.message : err);

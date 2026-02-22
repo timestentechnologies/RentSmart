@@ -95,7 +95,12 @@ class AgentClientsController
                     exit;
                 }
             }
-            $clientModel->beginTransaction();
+            $txStarted = false;
+            try {
+                $txStarted = (bool)$clientModel->beginTransaction();
+            } catch (\Throwable $e) {
+                $txStarted = false;
+            }
             try {
                 $clientId = $clientModel->insert([
                     'user_id' => (int)$this->userId,
@@ -146,9 +151,13 @@ class AgentClientsController
                         $contractModel->syncContractUnits((int)$newContractId, (int)$this->userId, $unitIds);
                     }
                 }
-                $clientModel->commit();
+                if ($txStarted && $clientModel->getDb()->inTransaction()) {
+                    $clientModel->commit();
+                }
             } catch (\Exception $e) {
-                $clientModel->rollback();
+                if ($txStarted && $clientModel->getDb()->inTransaction()) {
+                    $clientModel->rollback();
+                }
                 throw $e;
             }
 
