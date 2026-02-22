@@ -483,22 +483,28 @@ class InvoicesController
         $realtorContext = null;
         $displayNotes = $invoice['notes'] ?? null;
         $hidePostToLedger = !empty($invoice['posted_at']);
+
         if ($role === 'realtor' && empty($invoice['tenant_id'])) {
             $notes = (string)($invoice['notes'] ?? '');
             $db = $invModel->getDb();
+
             $clientName = '';
             $clientEmail = '';
+            $clientPhone = '';
             $listingTitle = '';
             $listingLocation = '';
+
             $paymentId = 0;
             $manualClientId = 0;
             $manualListingId = 0;
+            $contractId = 0;
+
             if (preg_match('/REALTOR_PAYMENT#(\d+)/', $notes, $m)) {
                 $paymentId = (int)$m[1];
                 if ($paymentId > 0) {
                     try {
                         $stmt = $db->prepare(
-                            "SELECT rc.name AS client_name, rc.email AS client_email, rl.title AS listing_title, rl.location AS listing_location\n"
+                            "SELECT rc.name AS client_name, rc.email AS client_email, rc.phone AS client_phone, rl.title AS listing_title, rl.location AS listing_location\n"
                             . "FROM payments p\n"
                             . "LEFT JOIN realtor_clients rc ON rc.id = p.realtor_client_id\n"
                             . "LEFT JOIN realtor_listings rl ON rl.id = p.realtor_listing_id\n"
@@ -508,6 +514,7 @@ class InvoicesController
                         $rr = $stmt->fetch(\PDO::FETCH_ASSOC) ?: [];
                         $clientName = (string)($rr['client_name'] ?? '');
                         $clientEmail = (string)($rr['client_email'] ?? '');
+                        $clientPhone = (string)($rr['client_phone'] ?? '');
                         $listingTitle = (string)($rr['listing_title'] ?? '');
                         $listingLocation = (string)($rr['listing_location'] ?? '');
                     } catch (\Throwable $e) {
@@ -518,11 +525,12 @@ class InvoicesController
                 $manualListingId = (int)$m[2];
                 try {
                     if ($manualClientId > 0) {
-                        $stmt = $db->prepare("SELECT name, email FROM realtor_clients WHERE user_id = ? AND id = ? LIMIT 1");
+                        $stmt = $db->prepare("SELECT name, email, phone FROM realtor_clients WHERE user_id = ? AND id = ? LIMIT 1");
                         $stmt->execute([(int)$this->userId, (int)$manualClientId]);
                         $rr = $stmt->fetch(\PDO::FETCH_ASSOC) ?: [];
                         $clientName = (string)($rr['name'] ?? '');
                         $clientEmail = (string)($rr['email'] ?? '');
+                        $clientPhone = (string)($rr['phone'] ?? '');
                     }
                 } catch (\Throwable $e) {
                 }
@@ -536,16 +544,50 @@ class InvoicesController
                     }
                 } catch (\Throwable $e) {
                 }
+            } elseif (preg_match('/REALTOR_CONTRACT#(\d+)/', $notes, $m)) {
+                $contractId = (int)$m[1];
+                if ($contractId > 0) {
+                    try {
+                        $stmt = $db->prepare(
+                            "SELECT rc.name AS client_name, rc.email AS client_email, rc.phone AS client_phone, rl.title AS listing_title, rl.location AS listing_location\n"
+                            . "FROM realtor_contracts c\n"
+                            . "LEFT JOIN realtor_clients rc ON rc.id = c.realtor_client_id\n"
+                            . "LEFT JOIN realtor_listings rl ON rl.id = c.realtor_listing_id\n"
+                            . "WHERE c.user_id = ? AND c.id = ? LIMIT 1"
+                        );
+                        $stmt->execute([(int)$this->userId, (int)$contractId]);
+                        $rr = $stmt->fetch(\PDO::FETCH_ASSOC) ?: [];
+                        $clientName = (string)($rr['client_name'] ?? '');
+                        $clientEmail = (string)($rr['client_email'] ?? '');
+                        $clientPhone = (string)($rr['client_phone'] ?? '');
+                        $listingTitle = (string)($rr['listing_title'] ?? '');
+                        $listingLocation = (string)($rr['listing_location'] ?? '');
+                    } catch (\Throwable $e) {
+                    }
+                }
             }
 
-            $realtorContext = [
-                'client_name' => $clientName,
-                'client_email' => $clientEmail,
-                'listing_title' => $listingTitle,
-                'listing_location' => $listingLocation,
-            ];
+            if ($clientName !== '' || $clientEmail !== '' || $clientPhone !== '' || $listingTitle !== '' || $listingLocation !== '') {
+                $realtorContext = [
+                    'client_name' => $clientName,
+                    'client_email' => $clientEmail,
+                    'client_phone' => $clientPhone,
+                    'listing_title' => $listingTitle,
+                    'listing_location' => $listingLocation,
+                ];
+            }
 
-            if ($paymentId > 0) {
+            if ($contractId > 0) {
+                $displayNotes = 'Contract #' . (int)$contractId;
+                $suffix = [];
+                if ($clientName !== '') $suffix[] = $clientName;
+                if ($listingTitle !== '') $suffix[] = $listingTitle;
+                if ($listingLocation !== '') $suffix[] = $listingLocation;
+                if (!empty($suffix)) {
+                    $displayNotes .= ' (' . implode(' / ', $suffix) . ')';
+                }
+                $displayNotes .= "\n" . 'REALTOR_CONTRACT#' . (int)$contractId;
+            } elseif ($paymentId > 0) {
                 $displayNotes = 'Auto-created from payment #' . (int)$paymentId;
                 $suffix = [];
                 if ($clientName !== '') $suffix[] = $clientName;
