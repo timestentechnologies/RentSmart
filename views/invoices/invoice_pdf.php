@@ -20,14 +20,17 @@
     .layout { width: 100%; border-collapse: collapse; table-layout: fixed; height: 100%; }
     .layout td { vertical-align: top; padding: 0; }
 
-    .head-left { width: 34%; background: #f9fafb; padding: 18px 18px; }
+    .head-left { width: 34%; background: #f9fafb; padding: 18px 22px; }
     .head-right { width: 66%; background: #f9fafb; padding: 18px 20px; }
 
-    .left {
-      width: 34%;
+    .left { width: 34%; background: transparent; padding: 0; }
+    .left-panel {
       background: #111827;
       color: #e5e7eb;
       padding: 22px 16px 18px 16px;
+      border-top-right-radius: 24px;
+      border-bottom-right-radius: 90px;
+      min-height: 100%;
     }
     .right {
       width: 66%;
@@ -44,6 +47,7 @@
     .left-label { font-size: 10px; letter-spacing: .8px; text-transform: uppercase; color: rgba(229,231,235,0.75); }
     .left-value { font-size: 12.5px; font-weight: 600; color: #fff; }
     .left-small { font-size: 12px; color: rgba(229,231,235,0.88); }
+    .left-value, .left-small { word-break: break-word; overflow-wrap: anywhere; }
 
     .inv-title { font-size: 34px; font-weight: 900; letter-spacing: 1.8px; margin: 0; }
     .meta { margin-top: 6px; font-size: 12px; color: #6b7280; }
@@ -130,59 +134,61 @@
 
       <tr>
         <td class="left">
-          <div class="left-title">From</div>
-          <div class="left-box">
-            <div class="left-row">
-              <div class="left-label">Company</div>
-              <div class="left-value"><?= htmlspecialchars($siteName ?? '-') ?></div>
-            </div>
-            <div class="left-row">
-              <div class="left-label">Address</div>
-              <div class="left-small"><?= htmlspecialchars($settings['site_address'] ?? '-') ?></div>
-            </div>
-            <div class="left-row">
-              <div class="left-label">Phone</div>
-              <div class="left-small"><?= htmlspecialchars($settings['site_phone'] ?? '-') ?></div>
-            </div>
-            <div class="left-row">
-              <div class="left-label">Email</div>
-              <div class="left-small"><?= htmlspecialchars($settings['site_email'] ?? '-') ?></div>
-            </div>
-          </div>
-
-          <div class="left-title">Bill To</div>
-          <div class="left-box">
-            <div class="left-row">
-              <div class="left-label">Customer</div>
-              <div class="left-value"><?= htmlspecialchars(!empty($realtorContext) ? (($realtorContext['client_name'] ?? '-') ?: '-') : ($invoice['tenant_name'] ?? '-')) ?></div>
-            </div>
-            <div class="left-row">
-              <div class="left-label">Email</div>
-              <div class="left-small"><?= htmlspecialchars(!empty($realtorContext) ? (($realtorContext['client_email'] ?? '-') ?: '-') : ($invoice['tenant_email'] ?? '-')) ?></div>
-            </div>
-            <?php if (!empty($realtorContext) && (!empty($realtorContext['listing_title']) || !empty($realtorContext['listing_location']))): ?>
-            <div class="left-row">
-              <div class="left-label">Listing</div>
-              <div class="left-small">
-                <?= htmlspecialchars((string)($realtorContext['listing_title'] ?? '')) ?>
-                <?= !empty($realtorContext['listing_location']) ? (' • ' . htmlspecialchars((string)$realtorContext['listing_location'])) : '' ?>
+          <div class="left-panel">
+            <div class="left-title">From</div>
+            <div class="left-box">
+              <div class="left-row">
+                <div class="left-label">Company</div>
+                <div class="left-value"><?= htmlspecialchars($siteName ?? '-') ?></div>
+              </div>
+              <div class="left-row">
+                <div class="left-label">Address</div>
+                <div class="left-small"><?= htmlspecialchars($settings['site_address'] ?? '-') ?></div>
+              </div>
+              <div class="left-row">
+                <div class="left-label">Phone</div>
+                <div class="left-small"><?= htmlspecialchars($settings['site_phone'] ?? '-') ?></div>
+              </div>
+              <div class="left-row">
+                <div class="left-label">Email</div>
+                <div class="left-small"><?= htmlspecialchars($settings['site_email'] ?? '-') ?></div>
               </div>
             </div>
-            <?php endif; ?>
-            <div class="left-row">
-              <div class="left-label">Due Date</div>
-              <div class="left-small"><?= htmlspecialchars($invoice['due_date'] ?? '-') ?></div>
-            </div>
-          </div>
 
-          <div class="left-title">Terms & Notes</div>
-          <div class="left-box">
-            <div class="left-small">
-              <?php if (!empty($invoice['notes'])): ?>
-                <?= nl2br(htmlspecialchars($displayNotes ?? $invoice['notes'])) ?>
-              <?php else: ?>
-                Payment is due by the due date indicated. Late payments may incur penalties as per your agreement.
+            <div class="left-title">Bill To</div>
+            <div class="left-box">
+              <div class="left-row">
+                <div class="left-label">Customer</div>
+                <div class="left-value"><?= htmlspecialchars(!empty($realtorContext) ? (($realtorContext['client_name'] ?? '-') ?: '-') : ($invoice['tenant_name'] ?? '-')) ?></div>
+              </div>
+              <div class="left-row">
+                <div class="left-label">Email</div>
+                <div class="left-small"><?= htmlspecialchars(!empty($realtorContext) ? (($realtorContext['client_email'] ?? '-') ?: '-') : ($invoice['tenant_email'] ?? '-')) ?></div>
+              </div>
+              <?php if (!empty($realtorContext) && (!empty($realtorContext['listing_title']) || !empty($realtorContext['listing_location']))): ?>
+              <div class="left-row">
+                <div class="left-label">Listing</div>
+                <div class="left-small">
+                  <?= htmlspecialchars((string)($realtorContext['listing_title'] ?? '')) ?>
+                  <?= !empty($realtorContext['listing_location']) ? (' • ' . htmlspecialchars((string)$realtorContext['listing_location'])) : '' ?>
+                </div>
+              </div>
               <?php endif; ?>
+              <div class="left-row">
+                <div class="left-label">Due Date</div>
+                <div class="left-small"><?= htmlspecialchars($invoice['due_date'] ?? '-') ?></div>
+              </div>
+            </div>
+
+            <div class="left-title">Terms & Notes</div>
+            <div class="left-box">
+              <div class="left-small">
+                <?php if (!empty($invoice['notes'])): ?>
+                  <?= nl2br(htmlspecialchars($displayNotes ?? $invoice['notes'])) ?>
+                <?php else: ?>
+                  Payment is due by the due date indicated. Late payments may incur penalties as per your agreement.
+                <?php endif; ?>
+              </div>
             </div>
           </div>
         </td>
