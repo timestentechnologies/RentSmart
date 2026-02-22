@@ -515,8 +515,45 @@ document.getElementById('leadStageFilter')?.addEventListener('change', applyLead
     document.getElementById('addLeadModal')?.addEventListener('shown.bs.modal', syncHiddenFieldsFromListing);
 
     addListingBtn?.addEventListener('click', function(){
-      const m = getModal(addListingModalEl);
-      if(m) m.show();
+      const addLeadEl = document.getElementById('addLeadModal');
+      const addLeadModal = getModal(addLeadEl);
+      const addListingModal = getModal(addListingModalEl);
+      if(addListingModalEl && addListingModalEl.parentElement && addListingModalEl.parentElement !== document.body){
+        document.body.appendChild(addListingModalEl);
+      }
+
+      if(addLeadModal){
+        addLeadModal.hide();
+      }
+      if(addListingModal){
+        addListingModal.show();
+      }
+    });
+
+    // When Add Listing closes (cancel or save), return to Add Lead modal.
+    addListingModalEl?.addEventListener('hidden.bs.modal', function(){
+      const addLeadEl = document.getElementById('addLeadModal');
+      const addLeadModal = getModal(addLeadEl);
+      if(addLeadModal){
+        addLeadModal.show();
+      }
+    });
+
+    // Keep Add Listing modal above any existing modal/backdrop.
+    addListingModalEl?.addEventListener('show.bs.modal', function(){
+      try{
+        const base = 1055;
+        const openModals = document.querySelectorAll('.modal.show').length;
+        const zIndex = base + (openModals * 10);
+        addListingModalEl.style.zIndex = String(zIndex);
+        setTimeout(function(){
+          const backdrops = document.querySelectorAll('.modal-backdrop');
+          if(backdrops.length){
+            const last = backdrops[backdrops.length - 1];
+            last.style.zIndex = String(zIndex - 1);
+          }
+        }, 0);
+      } catch(e){}
     });
 
     addListingForm?.addEventListener('submit', async function(e){
