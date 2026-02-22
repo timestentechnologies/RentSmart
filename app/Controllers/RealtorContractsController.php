@@ -7,6 +7,7 @@ use App\Models\RealtorClient;
 use App\Models\RealtorListing;
 use App\Models\Payment;
 use App\Models\Setting;
+use App\Models\Invoice;
 
 class RealtorContractsController
 {
@@ -291,6 +292,20 @@ class RealtorContractsController
                 'start_month' => $startMonthDate,
                 'status' => 'active',
             ]);
+
+            try {
+                $invModel = new Invoice();
+                $invModel->ensureRealtorContractInvoice(
+                    (int)$this->userId,
+                    (int)$contractId,
+                    (int)$clientId,
+                    (int)$listingId,
+                    (float)$totalAmount,
+                    date('Y-m-d')
+                );
+            } catch (\Throwable $e) {
+                // Do not block contract creation
+            }
 
             $listingModel->updateById((int)$listingId, [
                 'status' => 'sold',
