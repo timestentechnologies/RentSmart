@@ -87,23 +87,28 @@ ob_start();
                                 </td>
                                 <td class="text-truncate" style="max-width:240px;" title="<?= htmlspecialchars((string)($x['notes'] ?? '')) ?>"><?= htmlspecialchars((string)($x['notes'] ?? '')) ?></td>
                                 <td>
-                                    <button
-                                        type="button"
-                                        class="btn btn-sm btn-outline-success me-1 js-open-client-contract"
-                                        data-client-id="<?= (int)($x['id'] ?? 0) ?>"
-                                        data-listing-id="<?= (int)($x['realtor_listing_id'] ?? 0) ?>"
-                                        data-client-name="<?= htmlspecialchars((string)($x['name'] ?? '')) ?>"
-                                        data-listing-title="<?= htmlspecialchars((string)($x['listing_title'] ?? '')) ?>"
-                                        title="Create Contract"
-                                    >
-                                        <i class="bi bi-file-earmark-plus"></i>
+                                    <button type="button" class="btn btn-sm btn-outline-primary me-1" onclick="editRealtorClient(<?= (int)$x['id'] ?>)" title="View Client">
+                                        <i class="bi bi-person"></i>
                                     </button>
+
                                     <?php if (!empty($x['contract_id'] ?? null)): ?>
                                         <a class="btn btn-sm btn-outline-secondary me-1" href="<?= BASE_URL ?>/realtor/contracts/show/<?= (int)($x['contract_id'] ?? 0) ?>" title="View Contract">
-                                            <i class="bi bi-eye"></i>
+                                            <i class="bi bi-file-text"></i>
                                         </a>
+                                    <?php else: ?>
+                                        <button
+                                            type="button"
+                                            class="btn btn-sm btn-outline-success me-1 js-open-client-contract"
+                                            data-client-id="<?= (int)($x['id'] ?? 0) ?>"
+                                            data-listing-id="<?= (int)($x['realtor_listing_id'] ?? 0) ?>"
+                                            data-client-name="<?= htmlspecialchars((string)($x['name'] ?? '')) ?>"
+                                            data-listing-title="<?= htmlspecialchars((string)($x['listing_title'] ?? '')) ?>"
+                                            title="Create Contract"
+                                        >
+                                            <i class="bi bi-file-earmark-plus"></i>
+                                        </button>
                                     <?php endif; ?>
-                                    <button type="button" class="btn btn-sm btn-outline-primary me-1" onclick="editRealtorClient(<?= (int)$x['id'] ?>)"><i class="bi bi-pencil"></i></button>
+
                                     <button type="button" class="btn btn-sm btn-outline-danger" onclick="confirmDeleteRealtorClient(<?= (int)$x['id'] ?>)"><i class="bi bi-trash"></i></button>
                                 </td>
                             </tr>

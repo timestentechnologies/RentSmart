@@ -174,7 +174,7 @@ class RealtorLeadsController
 
             $redirectUrl = BASE_URL . '/realtor/listings?edit=' . (int)$listingId;
             if (!empty($conv['contract_id'])) {
-                $redirectUrl = BASE_URL . '/realtor/contracts/show/' . (int)$conv['contract_id'];
+                $redirectUrl = BASE_URL . '/realtor/contracts/show/' . (int)$conv['contract_id'] . '?edit=1';
             }
 
             echo json_encode([
@@ -200,7 +200,7 @@ class RealtorLeadsController
             $stages = $stageModel->getAll($this->userId);
 
             $listingModel = new RealtorListing();
-            $listings = $listingModel->getAll($this->userId);
+            $listings = $listingModel->getAllActive($this->userId);
             echo view('realtor/leads', [
                 'title' => 'CRM - Leads',
                 'leads' => $leads,
@@ -266,6 +266,14 @@ class RealtorLeadsController
                 }
             } catch (\Exception $e) {
             }
+
+            if (!empty($lead['realtor_listing_id'])) {
+                try {
+                    $listingModel = new RealtorListing();
+                    $listingModel->updateById((int)$lead['realtor_listing_id'], ['status' => 'sold']);
+                } catch (\Exception $e) {
+                }
+            }
             return ['converted' => false, 'client_id' => (int)$lead['converted_client_id'], 'contract_id' => $contractId];
         }
 
@@ -315,6 +323,14 @@ class RealtorLeadsController
                 ]);
             } else {
                 $contractId = (int)($existing[0]['id'] ?? 0);
+            }
+
+            if (!empty($listingId)) {
+                try {
+                    $listingModel2 = new RealtorListing();
+                    $listingModel2->updateById((int)$listingId, ['status' => 'sold']);
+                } catch (\Exception $e) {
+                }
             }
         } catch (\Exception $e) {
             // ignore contract creation errors

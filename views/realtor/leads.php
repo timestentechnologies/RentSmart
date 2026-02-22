@@ -656,7 +656,7 @@ document.querySelectorAll('[data-dropzone="1"]').forEach(zone=>{
         return;
       }
       if(data.contract_id){
-        window.location.href = '<?= BASE_URL ?>' + '/realtor/contracts/show/' + data.contract_id;
+        window.location.href = '<?= BASE_URL ?>' + '/realtor/contracts/show/' + data.contract_id + '?edit=1';
         return;
       }
       card.setAttribute('data-status', targetStatus);
@@ -796,7 +796,7 @@ async function markWonOnly(id){
       return;
     }
     if(data.contract_id){
-      window.location.href = '<?= BASE_URL ?>' + '/realtor/contracts/show/' + data.contract_id;
+      window.location.href = '<?= BASE_URL ?>' + '/realtor/contracts/show/' + data.contract_id + '?edit=1';
       return;
     }
     location.reload();
@@ -861,7 +861,7 @@ async function convertLead(id){
     const data = await res.json();
     if(data.success){
       if(data.contract_id){
-        window.location.href = '<?= BASE_URL ?>' + '/realtor/contracts/show/' + data.contract_id;
+        window.location.href = '<?= BASE_URL ?>' + '/realtor/contracts/show/' + data.contract_id + '?edit=1';
         return;
       }
       location.reload();
