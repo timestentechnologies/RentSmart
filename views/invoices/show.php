@@ -15,7 +15,7 @@ ob_start();
         <?php endif; ?>
         <a class="btn btn-outline-primary" href="<?= BASE_URL ?>/invoices/pdf/<?= (int)$invoice['id'] ?>">Download PDF</a>
         <a class="btn btn-outline-secondary" href="<?= BASE_URL ?>/invoices/email/<?= (int)$invoice['id'] ?>">Email PDF</a>
-        <?php if (empty($invoice['posted_at'])): ?>
+        <?php if (empty($hidePostToLedger) && empty($invoice['posted_at'])): ?>
           <a class="btn btn-outline-success" href="<?= BASE_URL ?>/invoices/post/<?= (int)$invoice['id'] ?>">Post to Ledger</a>
         <?php endif; ?>
         <a class="btn btn-outline-danger" href="<?= BASE_URL ?>/invoices/delete/<?= (int)$invoice['id'] ?>" onclick="return confirm('Delete this invoice?')">Delete</a>
@@ -28,8 +28,14 @@ ob_start();
       <div class="row g-3">
         <div class="col-md-6">
           <h6>Bill To</h6>
-          <div><?= htmlspecialchars($invoice['tenant_name'] ?? '-') ?></div>
-          <div class="text-muted small"><?= htmlspecialchars($invoice['tenant_email'] ?? '-') ?></div>
+          <div><?= htmlspecialchars(!empty($realtorContext) ? (($realtorContext['client_name'] ?? '-') ?: '-') : ($invoice['tenant_name'] ?? '-')) ?></div>
+          <div class="text-muted small"><?= htmlspecialchars(!empty($realtorContext) ? (($realtorContext['client_email'] ?? '-') ?: '-') : ($invoice['tenant_email'] ?? '-')) ?></div>
+          <?php if (!empty($realtorContext) && (!empty($realtorContext['listing_title']) || !empty($realtorContext['listing_location']))): ?>
+            <div class="text-muted small">
+              <?= htmlspecialchars((string)($realtorContext['listing_title'] ?? '')) ?>
+              <?= !empty($realtorContext['listing_location']) ? (' • ' . htmlspecialchars((string)$realtorContext['listing_location'])) : '' ?>
+            </div>
+          <?php endif; ?>
         </div>
         <div class="col-md-6 text-md-end">
           <div><strong>Issue:</strong> <?= htmlspecialchars($invoice['issue_date']) ?></div>
@@ -38,7 +44,7 @@ ob_start();
           <div><strong>Posted:</strong> <?= !empty($invoice['posted_at']) ? date('Y-m-d', strtotime($invoice['posted_at'])) : '-' ?></div>
         </div>
       </div>
-      <?php if (!empty($paymentStatus)): ?>
+      <?php if (empty($realtorContext) && !empty($paymentStatus)): ?>
       <div class="alert alert-light border mt-3">
         <div class="d-flex flex-wrap align-items-center gap-3">
           <strong class="me-2">Payment Status for <?= htmlspecialchars($paymentStatus['month_label']) ?>:</strong>
@@ -96,7 +102,7 @@ ob_start();
         </table>
       </div>
 
-      <?php if (!empty($maintenancePayments)): ?>
+      <?php if (empty($realtorContext) && !empty($maintenancePayments)): ?>
       <div class="mt-4">
         <h6>Maintenance Payments</h6>
         <div class="table-responsive">
@@ -129,7 +135,7 @@ ob_start();
       <?php if (!empty($invoice['notes'])): ?>
       <div class="mt-3">
         <h6>Notes</h6>
-        <p><?= nl2br(htmlspecialchars($invoice['notes'])) ?></p>
+        <p><?= nl2br(htmlspecialchars($displayNotes ?? $invoice['notes'])) ?></p>
       </div>
       <?php endif; ?>
     </div>

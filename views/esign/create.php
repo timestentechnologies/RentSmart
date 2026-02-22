@@ -2,6 +2,7 @@
 ob_start();
 ?>
 <div class="container-fluid pt-4">
+  <?php $role = strtolower((string)($_SESSION['user_role'] ?? '')); ?>
   <div class="card page-header mb-3">
     <div class="card-body d-flex justify-content-between align-items-center">
       <h1 class="h4 mb-0"><i class="bi bi-pen text-primary me-2"></i>New E‑Signature Request</h1>
@@ -36,8 +37,12 @@ ob_start();
           <div class="col-md-4">
             <label class="form-label">Recipient Type</label>
             <select class="form-select" id="recipient_type" name="recipient_type">
-              <option value="user">User (admin/manager/agent/landlord/caretaker)</option>
-              <option value="tenant">Tenant</option>
+              <?php if ($role === 'realtor'): ?>
+                <option value="realtor_client">Client</option>
+              <?php else: ?>
+                <option value="user">User (admin/manager/agent/landlord/caretaker)</option>
+                <option value="tenant">Tenant</option>
+              <?php endif; ?>
             </select>
           </div>
           <div class="col-md-4" id="user_select_wrap">
@@ -45,6 +50,14 @@ ob_start();
             <select class="form-select" name="recipient_id" id="user_select">
               <?php foreach (($users ?? []) as $u): ?>
                 <option value="<?= (int)$u['id'] ?>"><?= htmlspecialchars($u['name']) ?> (<?= htmlspecialchars($u['role']) ?>)</option>
+              <?php endforeach; ?>
+            </select>
+          </div>
+          <div class="col-md-4 d-none" id="client_select_wrap">
+            <label class="form-label">Select Client</label>
+            <select class="form-select" id="client_select">
+              <?php foreach (($realtorClients ?? []) as $c): ?>
+                <option value="<?= (int)$c['id'] ?>"><?= htmlspecialchars((string)($c['name'] ?? ('Client #' . (int)$c['id']))) ?></option>
               <?php endforeach; ?>
             </select>
           </div>
@@ -82,19 +95,29 @@ ob_start();
 (function(){
   const typeSel = document.getElementById('recipient_type');
   const userWrap = document.getElementById('user_select_wrap');
+  const clientWrap = document.getElementById('client_select_wrap');
   const tenantWrap = document.getElementById('tenant_select_wrap');
   const form = document.querySelector('form');
   const tenantSel = document.getElementById('tenant_select');
+  const clientSel = document.getElementById('client_select');
   const submitBtn = form ? form.querySelector('button[type="submit"]') : null;
 
   function sync() {
     if (typeSel.value === 'tenant') {
       userWrap.classList.add('d-none');
+      if (clientWrap) clientWrap.classList.add('d-none');
       tenantWrap.classList.remove('d-none');
-    } else {
-      tenantWrap.classList.add('d-none');
-      userWrap.classList.remove('d-none');
+      return;
     }
+    if (typeSel.value === 'realtor_client') {
+      tenantWrap.classList.add('d-none');
+      userWrap.classList.add('d-none');
+      if (clientWrap) clientWrap.classList.remove('d-none');
+      return;
+    }
+    tenantWrap.classList.add('d-none');
+    if (clientWrap) clientWrap.classList.add('d-none');
+    userWrap.classList.remove('d-none');
   }
   typeSel.addEventListener('change', sync);
   sync();
@@ -105,7 +128,7 @@ ob_start();
       return;
     }
 
-    if (typeSel.value === 'tenant') {
+    if (typeSel.value === 'tenant' || typeSel.value === 'realtor_client') {
       let hidden = form.querySelector('input[type="hidden"][name="recipient_id"]');
       if (!hidden) {
         hidden = document.createElement('input');
@@ -113,7 +136,7 @@ ob_start();
         hidden.name = 'recipient_id';
         form.appendChild(hidden);
       }
-      hidden.value = tenantSel.value;
+      hidden.value = (typeSel.value === 'tenant') ? tenantSel.value : (clientSel ? clientSel.value : '');
     }
 
     form.dataset.submitting = '1';
