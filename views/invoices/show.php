@@ -40,7 +40,16 @@ ob_start();
         <div class="col-md-6 text-md-end">
           <div><strong>Issue:</strong> <?= htmlspecialchars($invoice['issue_date']) ?></div>
           <div><strong>Due:</strong> <?= htmlspecialchars($invoice['due_date'] ?? '-') ?></div>
-          <div><strong>Status:</strong> <span class="badge bg-secondary"><?= htmlspecialchars(ucfirst($invoice['status'])) ?></span></div>
+          <?php
+            $st = strtolower((string)($invoice['status'] ?? 'draft'));
+            $statusBadge = 'secondary';
+            if ($st === 'paid') $statusBadge = 'success';
+            elseif ($st === 'partial') $statusBadge = 'warning';
+            elseif ($st === 'sent') $statusBadge = 'primary';
+            elseif ($st === 'overdue') $statusBadge = 'danger';
+            elseif ($st === 'void') $statusBadge = 'dark';
+          ?>
+          <div><strong>Status:</strong> <span class="badge bg-<?= $statusBadge ?><?= $statusBadge === 'warning' ? ' text-dark' : '' ?>"><?= htmlspecialchars(ucfirst($invoice['status'])) ?></span></div>
           <div><strong>Posted:</strong> <?= !empty($invoice['posted_at']) ? date('Y-m-d', strtotime($invoice['posted_at'])) : '-' ?></div>
         </div>
       </div>

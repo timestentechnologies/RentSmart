@@ -21,6 +21,13 @@
     .footer { text-align: center; font-size: 12px; color: #888; margin-top: 16px; }
     .flex { display: table; width: 100%; }
     .col { display: table-cell; vertical-align: top; padding: 0 6px; }
+    .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: bold; }
+    .badge-success { background: #198754; color: #fff; }
+    .badge-warning { background: #ffc107; color: #111; }
+    .badge-primary { background: #0d6efd; color: #fff; }
+    .badge-danger { background: #dc3545; color: #fff; }
+    .badge-secondary { background: #6c757d; color: #fff; }
+    .badge-dark { background: #212529; color: #fff; }
     .watermark {
       position: fixed; top: 35%; left: 10%; right: 10%; text-align: center;
       font-size: 64px; color: rgba(0,0,0,0.06); transform: rotate(-20deg);
@@ -36,7 +43,16 @@
       <img class="logo" src="<?= $logoDataUri ?>" alt="Logo">
     <?php endif; ?>
     <div class="title">INVOICE</div>
-    <div class="meta">Invoice <?= htmlspecialchars($invoice['number'] ?? ('#'.$invoice['id'])) ?> • Date: <?= htmlspecialchars($invoice['issue_date']) ?></div>
+    <?php
+      $st = strtolower((string)($invoice['status'] ?? 'draft'));
+      $statusClass = 'badge-secondary';
+      if ($st === 'paid') $statusClass = 'badge-success';
+      elseif ($st === 'partial') $statusClass = 'badge-warning';
+      elseif ($st === 'sent') $statusClass = 'badge-primary';
+      elseif ($st === 'overdue') $statusClass = 'badge-danger';
+      elseif ($st === 'void') $statusClass = 'badge-dark';
+    ?>
+    <div class="meta">Invoice <?= htmlspecialchars($invoice['number'] ?? ('#'.$invoice['id'])) ?> • Date: <?= htmlspecialchars($invoice['issue_date']) ?> • Status: <span class="badge <?= $statusClass ?>"><?= htmlspecialchars(ucfirst((string)($invoice['status'] ?? 'draft'))) ?></span></div>
   </div>
 
   <div class="section">
@@ -181,7 +197,7 @@
         <div class="section-title">Terms & Notes</div>
         <div class="small">
           <?php if (!empty($invoice['notes'])): ?>
-            <?= nl2br(htmlspecialchars($invoice['notes'])) ?>
+            <?= nl2br(htmlspecialchars($displayNotes ?? $invoice['notes'])) ?>
           <?php else: ?>
             Payment is due by the due date indicated. Late payments may incur penalties as per your agreement. Thank you for your business.
           <?php endif; ?>
@@ -200,7 +216,7 @@
   <?php if (!empty($invoice['notes'])): ?>
     <div class="section">
       <div class="section-title">Notes</div>
-      <div class="small"><?= nl2br(htmlspecialchars($invoice['notes'])) ?></div>
+      <div class="small"><?= nl2br(htmlspecialchars($displayNotes ?? $invoice['notes'])) ?></div>
     </div>
   <?php endif; ?>
 

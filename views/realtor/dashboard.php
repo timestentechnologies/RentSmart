@@ -8,6 +8,30 @@ ob_start();
         </div>
     </div>
 
+    <?php
+        $leadBadgeClass = function ($status) {
+            $s = strtolower(trim((string)$status));
+            if ($s === 'won') return 'bg-success';
+            if ($s === 'lost') return 'bg-danger';
+            if ($s === 'new') return 'bg-info';
+            if ($s === 'contacted') return 'bg-primary';
+            if ($s === 'viewing') return 'bg-warning text-dark';
+            if ($s === 'negotiation') return 'bg-warning text-dark';
+            if ($s === 'closed') return 'bg-dark';
+            return 'bg-secondary';
+        };
+
+        $listingBadgeClass = function ($status) {
+            $s = strtolower(trim((string)$status));
+            if ($s === 'active') return 'bg-success';
+            if ($s === 'sold') return 'bg-dark';
+            if ($s === 'pending') return 'bg-warning text-dark';
+            if ($s === 'draft') return 'bg-secondary';
+            if ($s === 'inactive') return 'bg-secondary';
+            return 'bg-secondary';
+        };
+    ?>
+
     <div class="row g-3 mb-4">
         <div class="col-md-3">
             <div class="stat-card occupancy">
@@ -120,7 +144,8 @@ ob_start();
                                     <tr>
                                         <td><?= htmlspecialchars((string)($l['name'] ?? '')) ?></td>
                                         <td><?= htmlspecialchars((string)($l['phone'] ?? '')) ?></td>
-                                        <td><span class="badge bg-secondary"><?= htmlspecialchars((string)($l['status'] ?? 'new')) ?></span></td>
+                                        <?php $ls = (string)($l['status'] ?? 'new'); ?>
+                                        <td><span class="badge <?= htmlspecialchars($leadBadgeClass($ls)) ?>"><?= htmlspecialchars($ls) ?></span></td>
                                     </tr>
                                 <?php endforeach; ?>
                                 <?php if (empty($recentLeads)): ?>
@@ -154,7 +179,8 @@ ob_start();
                                     <tr>
                                         <td><?= htmlspecialchars((string)($r['title'] ?? '')) ?></td>
                                         <td><?= htmlspecialchars((string)($r['listing_type'] ?? '')) ?></td>
-                                        <td><span class="badge bg-secondary"><?= htmlspecialchars((string)($r['status'] ?? 'active')) ?></span></td>
+                                        <?php $rs = (string)($r['status'] ?? 'active'); ?>
+                                        <td><span class="badge <?= htmlspecialchars($listingBadgeClass($rs)) ?>"><?= htmlspecialchars($rs) ?></span></td>
                                     </tr>
                                 <?php endforeach; ?>
                                 <?php if (empty($recentListings)): ?>
