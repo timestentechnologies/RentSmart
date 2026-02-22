@@ -85,6 +85,7 @@ ob_start();
   const tenantWrap = document.getElementById('tenant_select_wrap');
   const form = document.querySelector('form');
   const tenantSel = document.getElementById('tenant_select');
+  const submitBtn = form ? form.querySelector('button[type="submit"]') : null;
 
   function sync() {
     if (typeSel.value === 'tenant') {
@@ -98,13 +99,36 @@ ob_start();
   typeSel.addEventListener('change', sync);
   sync();
 
-  form.addEventListener('submit', function(){
+  form.addEventListener('submit', function(e){
+    if (form.dataset.submitting === '1') {
+      e.preventDefault();
+      return;
+    }
+
     if (typeSel.value === 'tenant') {
-      const hidden = document.createElement('input');
-      hidden.type = 'hidden';
-      hidden.name = 'recipient_id';
+      let hidden = form.querySelector('input[type="hidden"][name="recipient_id"]');
+      if (!hidden) {
+        hidden = document.createElement('input');
+        hidden.type = 'hidden';
+        hidden.name = 'recipient_id';
+        form.appendChild(hidden);
+      }
       hidden.value = tenantSel.value;
-      form.appendChild(hidden);
+    }
+
+    form.dataset.submitting = '1';
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = 'Sending...';
+    }
+    if (window.Swal && Swal.fire) {
+      Swal.fire({
+        title: 'Sending',
+        html: 'Please wait...',
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        didOpen: () => { Swal.showLoading(); }
+      });
     }
   });
 })();
