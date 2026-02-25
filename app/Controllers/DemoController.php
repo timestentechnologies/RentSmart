@@ -20,11 +20,6 @@ class DemoController
         }
 
         try {
-            $secret = (string)(getenv('DEMO_LINK_SECRET') ?: (getenv('DEBUG_KEY') ?: ''));
-            if ($secret === '') {
-                throw new \Exception('Demo is not configured');
-            }
-
             $db = Connection::getInstance()->getConnection();
             $settings = new Setting();
             $userModel = new User();
@@ -58,7 +53,7 @@ class DemoController
             exit;
         } catch (\Throwable $e) {
             error_log('Demo start failed: ' . $e->getMessage());
-            $_SESSION['flash_message'] = 'Failed to start demo';
+            $_SESSION['flash_message'] = 'Failed to start demo: ' . $e->getMessage();
             $_SESSION['flash_type'] = 'danger';
             header('Location: ' . BASE_URL . '/');
             exit;
