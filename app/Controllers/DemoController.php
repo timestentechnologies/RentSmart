@@ -329,14 +329,15 @@ class DemoController
 
     private function ensureDemoData($db, Setting $settings, int $userId, string $role): void
     {
+        // Realtor seeding touches schema (DDL) via models, which can implicitly commit in MySQL.
+        // Do not wrap realtor demo seeding in a transaction to avoid "There is no active transaction" on commit.
+        if ($role === 'realtor') {
+            $this->ensureDemoRealtorData($db, $settings, $userId);
+            return;
+        }
+
         $db->beginTransaction();
         try {
-            if ($role === 'realtor') {
-                $this->ensureDemoRealtorData($db, $settings, $userId);
-                $db->commit();
-                return;
-            }
-
             $propId = $this->ensureDemoProperty($db, $settings, $userId, $role);
             $unitIds = $this->ensureDemoUnits($db, $settings, $userId, $propId);
             $tenantId = $this->ensureDemoTenant($db, $settings, $userId, $propId, $unitIds[0] ?? null);
@@ -348,7 +349,9 @@ class DemoController
                 $this->ensureDemoUtilities($db, $settings, $userId, (int)$propId, (int)$unitIds[0], (int)$tenantId);
             }
 
-            $db->commit();
+            if ($db->inTransaction()) {
+                $db->commit();
+            }
         } catch (\Throwable $e) {
             if ($db->inTransaction()) {
                 $db->rollBack();
