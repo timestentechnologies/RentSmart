@@ -6,7 +6,7 @@
     <title>Subscription Invoice</title>
     <style>
         body { font-family: DejaVu Sans, Arial, Helvetica, sans-serif; font-size: 12px; color: #222; margin: 0; padding: 0; background: #fff; }
-        .page { padding: 24px 28px; position: relative; }
+        .page { padding: 24px 28px; position: relative; overflow: visible; }
 
         /* Watermark using logo */
         .watermark {
@@ -93,29 +93,8 @@
 
         .footer-text { margin-top: 28px; font-size: 10px; color: #6b7280; position: relative; z-index: 2; }
 
-        /* Decorative corner shapes */
-        .shape-top-right {
-            position: absolute;
-            top: -40px;
-            right: -40px;
-            width: 120px;
-            height: 120px;
-            background: #e85d4c;
-            border-radius: 50%;
-            z-index: 0;
-            opacity: 0.9;
-        }
-        .shape-bottom-left {
-            position: absolute;
-            bottom: -30px;
-            left: -30px;
-            width: 100px;
-            height: 100px;
-            background: #16a34a;
-            border-radius: 50%;
-            z-index: 0;
-            opacity: 0.85;
-        }
+        /* Decorative corner shapes - hidden, using SVG instead */
+        .shape-top-right, .shape-bottom-left { display: none; }
         .status-pill {
             display: inline-block;
             padding: 3px 10px;
@@ -150,7 +129,15 @@
         : date('Y-m-d', strtotime('+30 days', strtotime($issueDate)));
 ?>
 <div class="page">
-    <!-- Decorative shapes -->
+    <!-- Decorative shapes using SVG -->
+    <svg style="position:absolute;top:8px;right:8px;z-index:10;" width="50" height="50">
+        <rect x="0" y="0" width="50" height="50" fill="#e85d4c"/>
+    </svg>
+    <svg style="position:absolute;bottom:8px;left:8px;z-index:10;" width="45" height="45">
+        <rect x="0" y="0" width="45" height="45" fill="#16a34a"/>
+    </svg>
+
+    <!-- Decorative shapes (fallback divs) -->
     <div class="shape-top-right"></div>
     <div class="shape-bottom-left"></div>
 
