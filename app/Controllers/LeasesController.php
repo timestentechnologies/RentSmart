@@ -277,6 +277,19 @@ class LeasesController {
                 throw new Exception("Lease not found or access denied");
             }
 
+            try {
+                $settings = new \App\Models\Setting();
+                $raw = (string)($settings->get('demo_protected_lease_ids_json') ?? '[]');
+                $ids = json_decode($raw, true);
+                $ids = is_array($ids) ? array_map('intval', $ids) : [];
+                if (in_array((int)$id, $ids, true)) {
+                    throw new Exception('Demo data cannot be deleted');
+                }
+            } catch (Exception $e) {
+                throw $e;
+            } catch (\Throwable $e) {
+            }
+
             // Begin transaction
             $this->db->beginTransaction();
 

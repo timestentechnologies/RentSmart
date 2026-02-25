@@ -218,6 +218,10 @@ if (!function_exists('requireAuth')) {
             return;
         }
 
+        if (!empty($_SESSION['demo_mode'])) {
+            return;
+        }
+
         if (!isset($_SESSION['user_id'])) {
             $_SESSION['flash_message'] = 'Please login to continue';
             $_SESSION['flash_type'] = 'warning';

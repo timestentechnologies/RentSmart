@@ -145,6 +145,7 @@ $routes = [
         'POST' => ['controller' => 'AuthController', 'action' => 'resetPassword'],
     ],
     'logout' => ['controller' => 'AuthController', 'action' => 'logout'],
+    'demo/start' => ['controller' => 'DemoController', 'action' => 'start'],
     'subscription/renew' => [
         'GET' => ['controller' => 'SubscriptionController', 'action' => 'showRenew'],
         'POST' => ['controller' => 'SubscriptionController', 'action' => 'renew'],

@@ -775,6 +775,7 @@ class SettingsController
             'footer_social_twitter' => 'https://twitter.com/RentSmartKE',
             'footer_social_linkedin' => 'https://www.linkedin.com/posts/timestentechnologies_proptech-propertymanagement-rentsmart-activity-7413190378020925440-JRdI?utm_source=share&utm_medium=member_desktop&rcm=ACoAADXDMdEBsC18bIJ4cOHS2WbzS9hlKU1YxY4',
             'footer_social_instagram' => 'https://www.instagram.com/rentsmartke',
+            'demo_enabled' => '0',
         ];
 
         foreach ($defaults as $key => $value) {
@@ -855,6 +856,7 @@ class SettingsController
                 'footer_social_twitter',
                 'footer_social_linkedin',
                 'footer_social_instagram',
+                'demo_enabled',
             ];
 
             foreach ($allowedTextKeys as $key) {

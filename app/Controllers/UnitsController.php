@@ -553,6 +553,19 @@ class UnitsController
                 throw new Exception('Unit not found or access denied');
             }
 
+            try {
+                $settings = new \App\Models\Setting();
+                $raw = (string)($settings->get('demo_protected_unit_ids_json') ?? '[]');
+                $ids = json_decode($raw, true);
+                $ids = is_array($ids) ? array_map('intval', $ids) : [];
+                if (in_array((int)$id, $ids, true)) {
+                    throw new Exception('Demo data cannot be deleted');
+                }
+            } catch (Exception $e) {
+                throw $e;
+            } catch (\Throwable $e) {
+            }
+
             // Only admin, property owner, manager, or agent can delete
             $property = $this->property->getById($unit['property_id'], $_SESSION['user_id']);
             if (!$this->user->isAdmin() && 

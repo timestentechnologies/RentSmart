@@ -658,6 +658,19 @@ class PropertyController
                 throw new Exception('Access denied');
             }
 
+            try {
+                $settings = new \App\Models\Setting();
+                $raw = (string)($settings->get('demo_protected_property_ids_json') ?? '[]');
+                $ids = json_decode($raw, true);
+                $ids = is_array($ids) ? array_map('intval', $ids) : [];
+                if (in_array((int)$id, $ids, true)) {
+                    throw new Exception('Demo data cannot be deleted');
+                }
+            } catch (Exception $e) {
+                throw $e;
+            } catch (\Throwable $e) {
+            }
+
             if ($this->property->delete($id)) {
                 $ip = $_SERVER['REMOTE_ADDR'] ?? null;
                 $agent = $_SERVER['HTTP_USER_AGENT'] ?? null;

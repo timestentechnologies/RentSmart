@@ -832,6 +832,13 @@
                         </a>
                         <a href="#features" class="btn btn-outline-accent btn-lg"><?= htmlspecialchars($heroSecondaryText) ?></a>
                     </div>
+                    <?php if (site_setting('demo_enabled', '0') === '1'): ?>
+                        <div class="mt-3">
+                            <a href="#" class="btn btn-light btn-lg" data-bs-toggle="modal" data-bs-target="#demoModal">
+                                <i class="bi bi-play-circle me-2"></i>Try Demo
+                            </a>
+                        </div>
+                    <?php endif; ?>
                     <a href="#" class="btn btn-accent btn-lg" style="margin: 20px 0;" data-bs-toggle="modal" data-bs-target="#tenantLoginModal">Tenant Portal</a>
                 </div>
                 <div class="col-lg-6">
@@ -1476,6 +1483,26 @@
                             <button type="submit" class="btn btn-accent">Login</button>
                         </div>
                     </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Demo Role Selector Modal -->
+    <div class="modal fade" id="demoModal" tabindex="-1" aria-labelledby="demoModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title" id="demoModalLabel">Choose Demo Role</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="d-grid gap-2">
+                        <a class="btn btn-outline-primary" href="<?= BASE_URL ?>/demo/start?role=landlord">Landlord Demo</a>
+                        <a class="btn btn-outline-primary" href="<?= BASE_URL ?>/demo/start?role=manager">Manager Demo</a>
+                        <a class="btn btn-outline-primary" href="<?= BASE_URL ?>/demo/start?role=agent">Agent Demo</a>
+                        <a class="btn btn-outline-primary" href="<?= BASE_URL ?>/demo/start?role=realtor">Realtor Demo</a>
+                    </div>
                 </div>
             </div>
         </div>
