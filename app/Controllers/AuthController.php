@@ -890,6 +890,15 @@ class AuthController
                     );
                 }
             } catch (\Exception $ex) { error_log('auth.logout log failed: ' . $ex->getMessage()); }
+
+            try {
+                $isDemo = !empty($_SESSION['demo_mode']);
+                $uid = (int)($_SESSION['user_id'] ?? 0);
+                if ($isDemo && $uid > 0 && function_exists('demo_cleanup_user_data')) {
+                    demo_cleanup_user_data($uid);
+                }
+            } catch (\Throwable $e) {
+            }
             // Clear all session variables
             session_unset();
             

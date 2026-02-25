@@ -23,6 +23,26 @@ require_once __DIR__ . '/app/helpers.php';
 // Start session
 session_start();
 
+// Demo inactivity cleanup (1 hour)
+try {
+    $now = time();
+    $last = (int)($_SESSION['last_activity'] ?? $now);
+    if (!empty($_SESSION['demo_mode']) && isset($_SESSION['user_id'])) {
+        if (($now - $last) > 3600) {
+            $uid = (int)($_SESSION['user_id'] ?? 0);
+            if ($uid > 0 && function_exists('demo_cleanup_user_data')) {
+                demo_cleanup_user_data($uid);
+            }
+            session_unset();
+            session_destroy();
+            header('Location: ' . (defined('BASE_URL') ? BASE_URL : '') . '/');
+            exit;
+        }
+    }
+    $_SESSION['last_activity'] = $now;
+} catch (\Throwable $e) {
+}
+
 // Check for .env file
 if (!file_exists(__DIR__ . '/.env')) {
     error_log('Missing .env file');

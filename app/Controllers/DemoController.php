@@ -271,6 +271,11 @@ class DemoController
                 }
             }
 
+            try {
+                $this->protectId($settings, 'realtor_listing', (int)$listingId);
+            } catch (\Throwable $e) {
+            }
+
             $stmtC = $db->prepare('SELECT id FROM realtor_clients WHERE user_id = ? ORDER BY id DESC LIMIT 1');
             $stmtC->execute([(int)$userId]);
             $clientId = (int)($stmtC->fetch(\PDO::FETCH_ASSOC)['id'] ?? 0);
@@ -285,6 +290,11 @@ class DemoController
                     'Sample client interested in the demo listing',
                 ]);
                 $clientId = (int)$db->lastInsertId();
+            }
+
+            try {
+                $this->protectId($settings, 'realtor_client', (int)$clientId);
+            } catch (\Throwable $e) {
             }
 
             $stmtK = $db->prepare('SELECT id FROM realtor_contracts WHERE user_id = ? AND realtor_client_id = ? ORDER BY id DESC LIMIT 1');
@@ -309,6 +319,11 @@ class DemoController
                     $db->prepare('UPDATE realtor_contracts SET total_amount = ? WHERE id = ? AND user_id = ?')->execute([(float)$demoContractTotal, (int)$contractId, (int)$userId]);
                 } catch (\Throwable $e) {
                 }
+            }
+
+            try {
+                $this->protectId($settings, 'realtor_contract', (int)$contractId);
+            } catch (\Throwable $e) {
             }
 
             // Seed at least one realtor payment
@@ -365,6 +380,18 @@ class DemoController
                     $db->prepare('UPDATE payments SET amount = ? WHERE id = ?')->execute([(float)$demoContractTotal, (int)$rpId]);
                 } catch (\Throwable $e) {
                 }
+            }
+
+            // Protect the baseline contract invoice (if it exists) so demo cleanup won't remove it.
+            try {
+                $tag = 'REALTOR_CONTRACT#' . (int)$contractId;
+                $stmtInv = $db->prepare("SELECT id FROM invoices WHERE user_id = ? AND notes LIKE ? ORDER BY id DESC LIMIT 1");
+                $stmtInv->execute([(int)$userId, '%' . $tag . '%']);
+                $invId = (int)($stmtInv->fetch(\PDO::FETCH_ASSOC)['id'] ?? 0);
+                if ($invId > 0) {
+                    $this->protectId($settings, 'invoice', (int)$invId);
+                }
+            } catch (\Throwable $e) {
             }
 
             // Clean up any old duplicates that may have been created in earlier versions of demo seeding.

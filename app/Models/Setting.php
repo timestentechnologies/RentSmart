@@ -123,7 +123,11 @@ class Setting extends Model
             'demo_protected_unit_ids_json' => '[]',
             'demo_protected_tenant_ids_json' => '[]',
             'demo_protected_lease_ids_json' => '[]',
-            'demo_protected_payment_ids_json' => '[]'
+            'demo_protected_payment_ids_json' => '[]',
+            'demo_protected_invoice_ids_json' => '[]',
+            'demo_protected_realtor_listing_ids_json' => '[]',
+            'demo_protected_realtor_client_ids_json' => '[]',
+            'demo_protected_realtor_contract_ids_json' => '[]'
         ];
 
         foreach ($defaults as $key => $value) {
