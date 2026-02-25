@@ -93,8 +93,7 @@
 
         .footer-text { margin-top: 28px; font-size: 10px; color: #6b7280; position: relative; z-index: 2; }
 
-        /* Decorative corner shapes - hidden, using SVG instead */
-        .shape-top-right, .shape-bottom-left { display: none; }
+        /* Decorative corner shapes - inline styles used instead */
         .status-pill {
             display: inline-block;
             padding: 3px 10px;
@@ -129,17 +128,9 @@
         : date('Y-m-d', strtotime('+30 days', strtotime($issueDate)));
 ?>
 <div class="page">
-    <!-- Decorative shapes using SVG -->
-    <svg style="position:absolute;top:8px;right:8px;z-index:10;" width="50" height="50">
-        <rect x="0" y="0" width="50" height="50" fill="#e85d4c"/>
-    </svg>
-    <svg style="position:absolute;bottom:8px;left:8px;z-index:10;" width="45" height="45">
-        <rect x="0" y="0" width="45" height="45" fill="#16a34a"/>
-    </svg>
-
-    <!-- Decorative shapes (fallback divs) -->
-    <div class="shape-top-right"></div>
-    <div class="shape-bottom-left"></div>
+    <!-- Decorative shapes using float instead of absolute positioning -->
+    <div style="float:right;width:40px;height:40px;background:#e85d4c;margin-top:-20px;margin-right:-10px;"></div>
+    <div style="clear:both;"></div>
 
     <?php if (!empty($logoDataUri)): ?>
         <div class="watermark">
@@ -264,6 +255,9 @@
     <div class="footer-text">
         Thank you for your business.
     </div>
+    <!-- Bottom decorative shape -->
+    <div style="float:left;width:40px;height:40px;background:#16a34a;margin-top:10px;"></div>
+    <div style="clear:both;"></div>
 </div>
 </body>
 </html>
