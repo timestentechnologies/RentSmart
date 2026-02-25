@@ -12,26 +12,26 @@
             overflow: hidden;
         }
 
-        /* Single corner circles positioned at very edges */
+        /* Single corner circles at actual page edges (outside padding) */
         .corner-circle {
             position: absolute;
             border-radius: 50%;
             pointer-events: none;
             z-index: 0;
         }
-        /* Top-right: salmon/coral - quarter circle in corner */
+        /* Top-right: salmon/coral - accounts for 24px top + 28px right padding */
         .corner-circle.tr {
-            top: -120px;
-            right: -120px;
+            top: -144px;  /* -120px - 24px padding */
+            right: -148px; /* -120px - 28px padding */
             width: 200px;
             height: 200px;
             background: #F4A88A;
             opacity: 0.5;
         }
-        /* Bottom-left: lavender/purple - quarter circle in corner */
+        /* Bottom-left: lavender/purple - accounts for 24px bottom + 28px left padding */
         .corner-circle.bl {
-            bottom: -120px;
-            left: -120px;
+            bottom: -144px; /* -120px - 24px padding */
+            left: -148px;  /* -120px - 28px padding */
             width: 200px;
             height: 200px;
             background: #B8A8E8;
