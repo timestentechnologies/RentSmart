@@ -12,16 +12,29 @@ class RealtorDashboardController
 {
     private $userId;
 
+    private function demoLog(string $message): void
+    {
+        try {
+            $root = dirname(__DIR__, 2);
+            $path = $root . DIRECTORY_SEPARATOR . 'logs' . DIRECTORY_SEPARATOR . 'demo.log';
+            $line = '[' . date('Y-m-d H:i:s') . '] ' . $message . "\n";
+            @file_put_contents($path, $line, FILE_APPEND);
+        } catch (\Throwable $e) {
+        }
+    }
+
     public function __construct()
     {
         $this->userId = $_SESSION['user_id'] ?? null;
         if (!isset($_SESSION['user_id'])) {
+            $this->demoLog('realtor dashboard denied: missing session user_id. session_role=' . (string)($_SESSION['user_role'] ?? ''));
             $_SESSION['flash_message'] = 'Please login to continue';
             $_SESSION['flash_type'] = 'warning';
             header('Location: ' . BASE_URL . '/');
             exit;
         }
         if (strtolower((string)($_SESSION['user_role'] ?? '')) !== 'realtor') {
+            $this->demoLog('realtor dashboard denied: wrong role. user_id=' . (int)($_SESSION['user_id'] ?? 0) . ' session_role=' . (string)($_SESSION['user_role'] ?? ''));
             $_SESSION['flash_message'] = 'Access denied';
             $_SESSION['flash_type'] = 'danger';
             header('Location: ' . BASE_URL . '/dashboard');

@@ -10,6 +10,17 @@ use App\Models\User;
 
 class DemoController
 {
+    private function demoLog(string $message): void
+    {
+        try {
+            $root = dirname(__DIR__, 2);
+            $path = $root . DIRECTORY_SEPARATOR . 'logs' . DIRECTORY_SEPARATOR . 'demo.log';
+            $line = '[' . date('Y-m-d H:i:s') . '] ' . $message . "\n";
+            @file_put_contents($path, $line, FILE_APPEND);
+        } catch (\Throwable $e) {
+        }
+    }
+
     public function start()
     {
         $role = strtolower(trim((string)($_GET['role'] ?? '')));
@@ -26,6 +37,7 @@ class DemoController
         }
 
         try {
+            $this->demoLog('start requested role=' . $role . ' uri=' . (string)($_SERVER['REQUEST_URI'] ?? ''));
             error_log('Demo start requested. role=' . $role . ' uri=' . (string)($_SERVER['REQUEST_URI'] ?? ''));
             $db = Connection::getInstance()->getConnection();
             $settings = new Setting();
@@ -58,12 +70,14 @@ class DemoController
             unset($_SESSION['flash_message'], $_SESSION['flash_type']);
 
             $redirectPath = ($role === 'realtor') ? '/realtor/dashboard' : '/dashboard';
+            $this->demoLog('start success user_id=' . (int)$user['id'] . ' role=' . $role . ' redirect=' . BASE_URL . $redirectPath);
             error_log('Demo start success. user_id=' . (int)$user['id'] . ' role=' . $role . ' redirect=' . BASE_URL . $redirectPath);
             header('Location: ' . BASE_URL . $redirectPath);
             exit;
         } catch (\Throwable $e) {
             error_log('Demo start failed: ' . $e->getMessage());
             error_log('Demo start failed trace: ' . $e->getTraceAsString());
+            $this->demoLog('start failed role=' . $role . ' error=' . $e->getMessage());
             $_SESSION['flash_message'] = 'Failed to start demo: ' . $e->getMessage();
             $_SESSION['flash_type'] = 'danger';
             header('Location: ' . BASE_URL . '/');
