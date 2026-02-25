@@ -32,6 +32,35 @@ class TenantsController
             $tenants = $this->tenant->getAll($userId);
             error_log("TenantsController::index - Loaded " . count($tenants) . " tenants");
 
+            try {
+                $userModel = new \App\Models\User();
+                $userData = $userModel->find($userId);
+                $isAdmin = is_array($userData) && in_array(strtolower((string)($userData['role'] ?? '')), ['admin', 'administrator'], true);
+                if ($isAdmin && empty($_SESSION['demo_mode'])) {
+                    $settings = new \App\Models\Setting();
+                    $tRaw = (string)($settings->get('demo_protected_tenant_ids_json') ?? '[]');
+                    $pRaw = (string)($settings->get('demo_protected_property_ids_json') ?? '[]');
+                    $tIds = json_decode($tRaw, true);
+                    $pIds = json_decode($pRaw, true);
+                    $tIds = is_array($tIds) ? array_map('intval', $tIds) : [];
+                    $pIds = is_array($pIds) ? array_map('intval', $pIds) : [];
+                    if (!empty($tIds) || !empty($pIds)) {
+                        $tenants = array_values(array_filter(($tenants ?? []), function ($t) use ($tIds, $pIds) {
+                            $tid = (int)($t['id'] ?? 0);
+                            $pid = (int)($t['property_id'] ?? 0);
+                            if ($tid > 0 && !empty($tIds) && in_array($tid, $tIds, true)) {
+                                return false;
+                            }
+                            if ($pid > 0 && !empty($pIds) && in_array($pid, $pIds, true)) {
+                                return false;
+                            }
+                            return true;
+                        }));
+                    }
+                }
+            } catch (\Throwable $e) {
+            }
+
             // Align rent due calculation with tenant portal (sum missed rent months)
             try {
                 $paymentModel = new Payment();
