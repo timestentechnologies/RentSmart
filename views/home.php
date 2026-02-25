@@ -879,16 +879,16 @@
                         <a href="#" class="btn btn-accent btn-lg" data-bs-toggle="modal" data-bs-target="#registerModal">
                             <i class="bi bi-rocket-takeoff me-2"></i><?= htmlspecialchars($heroPrimaryText) ?>
                         </a>
-                        <a href="#features" class="btn btn-outline-accent btn-lg"><?= htmlspecialchars($heroSecondaryText) ?></a>
-                    </div>
-                    <?php if (site_setting('demo_enabled', '0') === '1'): ?>
+                        <?php if (site_setting('demo_enabled', '0') === '1'): ?>
                         <div class="mt-3">
                             <a href="#" class="btn btn-light btn-lg" data-bs-toggle="modal" data-bs-target="#demoModal">
                                 <i class="bi bi-play-circle me-2"></i>Try Demo
                             </a>
                         </div>
                     <?php endif; ?>
-                                        <a href="#" class="btn btn-accent btn-lg" style="margin: 20px 0;" data-bs-toggle="modal" data-bs-target="#tenantLoginModal">Tenant Portal</a>
+                    </div>
+                    
+                    <a href="#" class="btn btn-accent btn-lg" style="margin: 20px 0;" data-bs-toggle="modal" data-bs-target="#tenantLoginModal">Tenant Portal</a>
                 </div>
                 <div class="col-lg-6">
                     <div class="dashboard-preview">
