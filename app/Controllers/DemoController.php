@@ -13,6 +13,11 @@ class DemoController
     public function start()
     {
         $role = strtolower(trim((string)($_GET['role'] ?? '')));
+
+        // Backward/typo compatibility
+        if ($role === 'realator') {
+            $role = 'realtor';
+        }
         if (!in_array($role, ['landlord', 'manager', 'agent', 'realtor'], true)) {
             $_SESSION['flash_message'] = 'Invalid demo role selected';
             $_SESSION['flash_type'] = 'danger';
