@@ -48,6 +48,8 @@ class DemoController
             $_SESSION['is_admin'] = false;
             $_SESSION['demo_mode'] = true;
 
+            unset($_SESSION['flash_message'], $_SESSION['flash_type']);
+
             $redirectPath = ($role === 'realtor') ? '/realtor/dashboard' : '/dashboard';
             header('Location: ' . BASE_URL . $redirectPath);
             exit;
@@ -257,12 +259,25 @@ class DemoController
             }
         }
 
+        $email = 'demo.tenant+' . (int)$propertyId . '@rentsmart.local';
+        try {
+            $stmt = $db->prepare('SELECT id FROM tenants WHERE email = ? LIMIT 1');
+            $stmt->execute([$email]);
+            $found = (int)($stmt->fetch(\PDO::FETCH_ASSOC)['id'] ?? 0);
+            if ($found > 0) {
+                $settings->updateByKey($key, (string)$found);
+                $this->protectId($settings, 'tenant', $found);
+                return $found;
+            }
+        } catch (\Throwable $e) {
+        }
+
         $stmt = $db->prepare('INSERT INTO tenants (name, first_name, last_name, email, phone, unit_id, property_id, notes, registered_on, created_at, updated_at, rent_amount) VALUES (?,?,?,?,?,?,?,?,?,NOW(),NOW(),?)');
         $stmt->execute([
             'Demo Tenant',
             'Demo',
             'Tenant',
-            'demo.tenant@rentsmart.local',
+            $email,
             '0711111111',
             $unitId ? (int)$unitId : null,
             (int)$propertyId,
