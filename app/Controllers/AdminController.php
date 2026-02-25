@@ -141,6 +141,28 @@ class AdminController
     {
         try {
             $users = $this->user->getAllUsers();
+
+            try {
+                $settings = new \App\Models\Setting();
+                $raw = (string)($settings->get('demo_protected_user_ids_json') ?? '[]');
+                $ids = json_decode($raw, true);
+                $ids = is_array($ids) ? array_map('intval', $ids) : [];
+                if (!empty($ids) || !empty($users)) {
+                    $users = array_values(array_filter($users, function ($u) use ($ids) {
+                        $id = (int)($u['id'] ?? 0);
+                        $email = strtolower(trim((string)($u['email'] ?? '')));
+                        $isDemoEmail = (strpos($email, 'demo+') === 0) && (strpos($email, '@rentsmart.local') !== false);
+                        if ($isDemoEmail) {
+                            return false;
+                        }
+                        if ($id > 0 && in_array($id, $ids, true)) {
+                            return false;
+                        }
+                        return true;
+                    }));
+                }
+            } catch (\Throwable $e) {
+            }
             
             echo view('admin/users', [
                 'title' => 'User Management - RentSmart',
@@ -616,6 +638,24 @@ class AdminController
             $plans = $this->subscription->getAllPlans();
             $subscriptions = $this->subscription->getAllSubscriptions();
             $users = $this->user->getAllUsers();
+
+            try {
+                $settings = new \App\Models\Setting();
+                $raw = (string)($settings->get('demo_protected_user_ids_json') ?? '[]');
+                $ids = json_decode($raw, true);
+                $ids = is_array($ids) ? array_map('intval', $ids) : [];
+                if (!empty($ids)) {
+                    $subscriptions = array_values(array_filter($subscriptions, function ($s) use ($ids) {
+                        $uid = (int)($s['user_id'] ?? 0);
+                        return !($uid > 0 && in_array($uid, $ids, true));
+                    }));
+                    $users = array_values(array_filter($users, function ($u) use ($ids) {
+                        $uid = (int)($u['id'] ?? 0);
+                        return !($uid > 0 && in_array($uid, $ids, true));
+                    }));
+                }
+            } catch (\Throwable $e) {
+            }
             
             echo view('admin/subscriptions', [
                 'title' => 'Subscription Management - RentSmart',
@@ -767,6 +807,44 @@ class AdminController
         try {
             $payments = $this->payment->getAllPayments();
             $subscriptions = $this->subscription->getAllSubscriptions();
+
+            try {
+                $settings = new \App\Models\Setting();
+                $raw = (string)($settings->get('demo_protected_user_ids_json') ?? '[]');
+                $ids = json_decode($raw, true);
+                $ids = is_array($ids) ? array_map('intval', $ids) : [];
+
+                if (!empty($ids) || !empty($payments)) {
+                    $payments = array_values(array_filter($payments, function ($p) use ($ids) {
+                        $uid = (int)($p['user_id'] ?? 0);
+                        $email = strtolower(trim((string)($p['user_email'] ?? '')));
+                        $isDemoEmail = (strpos($email, 'demo+') === 0) && (strpos($email, '@rentsmart.local') !== false);
+                        if ($isDemoEmail) {
+                            return false;
+                        }
+                        if ($uid > 0 && in_array($uid, $ids, true)) {
+                            return false;
+                        }
+                        return true;
+                    }));
+                }
+
+                if (!empty($ids) || !empty($subscriptions)) {
+                    $subscriptions = array_values(array_filter($subscriptions, function ($s) use ($ids) {
+                        $uid = (int)($s['user_id'] ?? 0);
+                        $email = strtolower(trim((string)($s['user_email'] ?? '')));
+                        $isDemoEmail = (strpos($email, 'demo+') === 0) && (strpos($email, '@rentsmart.local') !== false);
+                        if ($isDemoEmail) {
+                            return false;
+                        }
+                        if ($uid > 0 && in_array($uid, $ids, true)) {
+                            return false;
+                        }
+                        return true;
+                    }));
+                }
+            } catch (\Throwable $e) {
+            }
 
             // Compute expected revenue from current subscriptions (latest per user)
             $expected = 0;

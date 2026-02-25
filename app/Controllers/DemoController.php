@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Database\Connection;
+use App\Models\Payment;
 use App\Models\Setting;
 use App\Models\Subscription;
 use App\Models\User;
@@ -147,6 +148,163 @@ class DemoController
         }
     }
 
+    private function ensureDemoUtilities($db, Setting $settings, int $userId, int $propertyId, int $unitId, int $tenantId): void
+    {
+        try {
+            $stmt = $db->prepare("SELECT id FROM leases WHERE unit_id = ? AND tenant_id = ? AND status = 'active' ORDER BY id DESC LIMIT 1");
+            $stmt->execute([(int)$unitId, (int)$tenantId]);
+            $leaseId = (int)($stmt->fetch(\PDO::FETCH_ASSOC)['id'] ?? 0);
+            if ($leaseId <= 0) {
+                return;
+            }
+
+            $types = [
+                ['utility_type' => 'water', 'flat_rate' => 1200.00],
+                ['utility_type' => 'electricity', 'flat_rate' => 1800.00],
+            ];
+
+            foreach ($types as $t) {
+                $ut = (string)$t['utility_type'];
+                $flat = (float)$t['flat_rate'];
+
+                $stmtU = $db->prepare('SELECT id, flat_rate FROM utilities WHERE unit_id = ? AND utility_type = ? ORDER BY id DESC LIMIT 1');
+                $stmtU->execute([(int)$unitId, $ut]);
+                $rowU = $stmtU->fetch(\PDO::FETCH_ASSOC);
+                $utilityId = (int)($rowU['id'] ?? 0);
+
+                if ($utilityId <= 0) {
+                    $ins = $db->prepare('INSERT INTO utilities (unit_id, utility_type, meter_number, is_metered, flat_rate) VALUES (?,?,NULL,0,?)');
+                    $ins->execute([(int)$unitId, $ut, $flat]);
+                    $utilityId = (int)$db->lastInsertId();
+                    $this->protectId($settings, 'utility', $utilityId);
+                } else {
+                    $this->protectId($settings, 'utility', $utilityId);
+                    try {
+                        $db->prepare('UPDATE utilities SET flat_rate = ? WHERE id = ?')->execute([$flat, (int)$utilityId]);
+                    } catch (\Throwable $e) {
+                    }
+                }
+
+                // Ensure at least one utility payment exists, but less than cost so balance_due appears
+                $stmtP = $db->prepare("SELECT id FROM payments WHERE lease_id = ? AND utility_id = ? AND payment_type = 'utility' LIMIT 1");
+                $stmtP->execute([(int)$leaseId, (int)$utilityId]);
+                $payId = (int)($stmtP->fetch(\PDO::FETCH_ASSOC)['id'] ?? 0);
+                if ($payId <= 0) {
+                    $amount = max(0.0, round($flat * 0.5, 2));
+                    $insP = $db->prepare("INSERT INTO payments (user_id, tenant_id, lease_id, property_id, unit_id, utility_id, amount, payment_date, payment_method, payment_type, status, notes, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?, 'utility', 'completed', ?, NOW(), NOW())");
+                    $insP->execute([
+                        (int)$userId,
+                        (int)$tenantId,
+                        (int)$leaseId,
+                        (int)$propertyId,
+                        (int)$unitId,
+                        (int)$utilityId,
+                        $amount,
+                        date('Y-m-d'),
+                        'mpesa',
+                        'Demo utility payment',
+                    ]);
+                    $newPayId = (int)$db->lastInsertId();
+                    $this->protectId($settings, 'payment', $newPayId);
+                } else {
+                    $this->protectId($settings, 'payment', $payId);
+                }
+            }
+        } catch (\Throwable $e) {
+        }
+    }
+
+    private function ensureDemoRealtorData($db, Setting $settings, int $userId): void
+    {
+        try {
+            // Ensure tables/columns exist
+            try {
+                new \App\Models\RealtorListing();
+                new \App\Models\RealtorClient();
+                new \App\Models\RealtorContract();
+                new Payment();
+            } catch (\Throwable $e) {
+            }
+
+            $stmtL = $db->prepare('SELECT id FROM realtor_listings WHERE user_id = ? ORDER BY id DESC LIMIT 1');
+            $stmtL->execute([(int)$userId]);
+            $listingId = (int)($stmtL->fetch(\PDO::FETCH_ASSOC)['id'] ?? 0);
+            if ($listingId <= 0) {
+                $ins = $db->prepare("INSERT INTO realtor_listings (user_id, title, listing_type, location, price, status, description, created_at, updated_at) VALUES (?,?,?,?,?, 'active', ?, NOW(), NOW())");
+                $ins->execute([
+                    (int)$userId,
+                    'Demo Listing - 2BR Apartment',
+                    'residential_apartment',
+                    'Kilimani, Nairobi',
+                    8500000.00,
+                    'Sample demo listing with photos, inquiries, and contracts',
+                ]);
+                $listingId = (int)$db->lastInsertId();
+            }
+
+            $stmtC = $db->prepare('SELECT id FROM realtor_clients WHERE user_id = ? ORDER BY id DESC LIMIT 1');
+            $stmtC->execute([(int)$userId]);
+            $clientId = (int)($stmtC->fetch(\PDO::FETCH_ASSOC)['id'] ?? 0);
+            if ($clientId <= 0) {
+                $ins = $db->prepare('INSERT INTO realtor_clients (user_id, realtor_listing_id, name, phone, email, notes, created_at, updated_at) VALUES (?,?,?,?,?,?,NOW(),NOW())');
+                $ins->execute([
+                    (int)$userId,
+                    $listingId > 0 ? (int)$listingId : null,
+                    'Demo Client',
+                    '+254700000111',
+                    'demo.client@rentsmart.local',
+                    'Sample client interested in the demo listing',
+                ]);
+                $clientId = (int)$db->lastInsertId();
+            }
+
+            $stmtK = $db->prepare('SELECT id FROM realtor_contracts WHERE user_id = ? AND realtor_client_id = ? ORDER BY id DESC LIMIT 1');
+            $stmtK->execute([(int)$userId, (int)$clientId]);
+            $contractId = (int)($stmtK->fetch(\PDO::FETCH_ASSOC)['id'] ?? 0);
+            if ($contractId <= 0) {
+                $ins = $db->prepare("INSERT INTO realtor_contracts (user_id, realtor_client_id, realtor_listing_id, terms_type, total_amount, monthly_amount, duration_months, start_month, instructions, status, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?, 'active', NOW(), NOW())");
+                $ins->execute([
+                    (int)$userId,
+                    (int)$clientId,
+                    $listingId > 0 ? (int)$listingId : null,
+                    'one_time',
+                    120000.00,
+                    null,
+                    null,
+                    date('Y-m-01'),
+                    'Demo contract instructions',
+                ]);
+                $contractId = (int)$db->lastInsertId();
+            }
+
+            // Seed at least one realtor payment
+            $stmtRP = $db->prepare("SELECT id FROM payments WHERE realtor_user_id = ? AND realtor_contract_id = ? AND payment_type = 'realtor' LIMIT 1");
+            $stmtRP->execute([(int)$userId, (int)$contractId]);
+            $rpId = (int)($stmtRP->fetch(\PDO::FETCH_ASSOC)['id'] ?? 0);
+            if ($rpId <= 0) {
+                $paymentModel = new Payment();
+                $pid = $paymentModel->createRealtorPayment([
+                    'realtor_user_id' => (int)$userId,
+                    'realtor_client_id' => (int)$clientId,
+                    'realtor_listing_id' => $listingId > 0 ? (int)$listingId : null,
+                    'realtor_contract_id' => (int)$contractId,
+                    'amount' => 60000.00,
+                    'payment_date' => date('Y-m-d'),
+                    'applies_to_month' => date('Y-m-01'),
+                    'payment_type' => 'realtor',
+                    'payment_method' => 'mpesa',
+                    'reference_number' => 'DEMO-REALTOR-001',
+                    'status' => 'completed',
+                    'notes' => 'Demo realtor payment',
+                ]);
+                $this->protectId($settings, 'payment', (int)$pid);
+            } else {
+                $this->protectId($settings, 'payment', (int)$rpId);
+            }
+        } catch (\Throwable $e) {
+        }
+    }
+
     private function ensureDemoData($db, Setting $settings, int $userId, string $role): void
     {
         $db->beginTransaction();
@@ -156,6 +314,14 @@ class DemoController
             $tenantId = $this->ensureDemoTenant($db, $settings, $userId, $propId, $unitIds[0] ?? null);
             if (!empty($unitIds[0]) && !empty($tenantId)) {
                 $this->ensureDemoLeaseAndPayment($db, $settings, $userId, (int)$unitIds[0], (int)$tenantId, (int)$propId);
+            }
+
+            if (in_array($role, ['landlord', 'manager', 'agent'], true) && !empty($unitIds[0]) && !empty($tenantId)) {
+                $this->ensureDemoUtilities($db, $settings, $userId, (int)$propId, (int)$unitIds[0], (int)$tenantId);
+            }
+
+            if ($role === 'realtor') {
+                $this->ensureDemoRealtorData($db, $settings, $userId);
             }
             $db->commit();
         } catch (\Throwable $e) {
