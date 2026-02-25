@@ -326,9 +326,16 @@ class DemoController
             } catch (\Throwable $e) {
             }
 
-            // Seed at least one realtor payment
-            $stmtRP = $db->prepare("SELECT id FROM payments WHERE realtor_user_id = ? AND realtor_contract_id = ? AND payment_type = 'realtor' ORDER BY id DESC LIMIT 1");
-            $stmtRP->execute([(int)$userId, (int)$contractId]);
+            // Seed exactly one demo realtor payment (idempotent by reference_number)
+            $stmtRP = $db->prepare(
+                "SELECT id FROM payments\n"
+                . "WHERE realtor_user_id = ?\n"
+                . "  AND payment_type = 'realtor'\n"
+                . "  AND reference_number = 'DEMO-REALTOR-001'\n"
+                . "ORDER BY id DESC\n"
+                . "LIMIT 1"
+            );
+            $stmtRP->execute([(int)$userId]);
             $rpId = (int)($stmtRP->fetch(\PDO::FETCH_ASSOC)['id'] ?? 0);
 
             // Normalize any older demo rows from previous seeding versions.
@@ -353,7 +360,7 @@ class DemoController
 
             // Re-evaluate after normalization
             try {
-                $stmtRP->execute([(int)$userId, (int)$contractId]);
+                $stmtRP->execute([(int)$userId]);
                 $rpId = (int)($stmtRP->fetch(\PDO::FETCH_ASSOC)['id'] ?? 0);
             } catch (\Throwable $e) {
             }
@@ -377,7 +384,17 @@ class DemoController
             } else {
                 $this->protectId($settings, 'payment', (int)$rpId);
                 try {
-                    $db->prepare('UPDATE payments SET amount = ? WHERE id = ?')->execute([(float)$demoContractTotal, (int)$rpId]);
+                    $db->prepare(
+                        "UPDATE payments\n"
+                        . "SET realtor_contract_id = ?, realtor_client_id = ?, realtor_listing_id = ?, amount = ?, notes = 'Demo realtor payment'\n"
+                        . "WHERE id = ?"
+                    )->execute([
+                        (int)$contractId,
+                        (int)$clientId,
+                        $listingId > 0 ? (int)$listingId : null,
+                        (float)$demoContractTotal,
+                        (int)$rpId,
+                    ]);
                 } catch (\Throwable $e) {
                 }
             }
@@ -402,10 +419,10 @@ class DemoController
                         "SELECT id FROM payments\n"
                         . "WHERE realtor_user_id = ?\n"
                         . "  AND payment_type = 'realtor'\n"
-                        . "  AND (realtor_contract_id = ? OR reference_number = 'DEMO-REALTOR-001' OR notes = 'Demo realtor payment')\n"
+                        . "  AND (reference_number = 'DEMO-REALTOR-001' OR notes = 'Demo realtor payment')\n"
                         . "ORDER BY id DESC"
                     );
-                    $stmtAll->execute([(int)$userId, (int)$contractId]);
+                    $stmtAll->execute([(int)$userId]);
                     $rows = $stmtAll->fetchAll(\PDO::FETCH_ASSOC) ?: [];
                     foreach ($rows as $r) {
                         $delId = (int)($r['id'] ?? 0);
