@@ -315,6 +315,33 @@ class DemoController
             $stmtRP = $db->prepare("SELECT id FROM payments WHERE realtor_user_id = ? AND realtor_contract_id = ? AND payment_type = 'realtor' ORDER BY id DESC LIMIT 1");
             $stmtRP->execute([(int)$userId, (int)$contractId]);
             $rpId = (int)($stmtRP->fetch(\PDO::FETCH_ASSOC)['id'] ?? 0);
+
+            // Normalize any older demo rows from previous seeding versions.
+            // Ensure they point to the current demo contract and have the correct amount.
+            try {
+                $stmtNorm = $db->prepare(
+                    "UPDATE payments\n"
+                    . "SET realtor_contract_id = ?, realtor_client_id = ?, realtor_listing_id = ?, amount = ?\n"
+                    . "WHERE realtor_user_id = ?\n"
+                    . "  AND payment_type = 'realtor'\n"
+                    . "  AND (reference_number = 'DEMO-REALTOR-001' OR notes = 'Demo realtor payment')"
+                );
+                $stmtNorm->execute([
+                    (int)$contractId,
+                    (int)$clientId,
+                    $listingId > 0 ? (int)$listingId : null,
+                    (float)$demoContractTotal,
+                    (int)$userId,
+                ]);
+            } catch (\Throwable $e) {
+            }
+
+            // Re-evaluate after normalization
+            try {
+                $stmtRP->execute([(int)$userId, (int)$contractId]);
+                $rpId = (int)($stmtRP->fetch(\PDO::FETCH_ASSOC)['id'] ?? 0);
+            } catch (\Throwable $e) {
+            }
             if ($rpId <= 0) {
                 $paymentModel = new Payment();
                 $pid = $paymentModel->createRealtorPayment([
@@ -344,7 +371,13 @@ class DemoController
             try {
                 $keepId = $rpId > 0 ? $rpId : (int)($pid ?? 0);
                 if ($keepId > 0) {
-                    $stmtAll = $db->prepare("SELECT id FROM payments WHERE realtor_user_id = ? AND realtor_contract_id = ? AND payment_type = 'realtor' ORDER BY id DESC");
+                    $stmtAll = $db->prepare(
+                        "SELECT id FROM payments\n"
+                        . "WHERE realtor_user_id = ?\n"
+                        . "  AND payment_type = 'realtor'\n"
+                        . "  AND (realtor_contract_id = ? OR reference_number = 'DEMO-REALTOR-001' OR notes = 'Demo realtor payment')\n"
+                        . "ORDER BY id DESC"
+                    );
                     $stmtAll->execute([(int)$userId, (int)$contractId]);
                     $rows = $stmtAll->fetchAll(\PDO::FETCH_ASSOC) ?: [];
                     foreach ($rows as $r) {
