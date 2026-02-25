@@ -6,51 +6,7 @@
     <title>Subscription Invoice</title>
     <style>
         body { font-family: DejaVu Sans, Arial, Helvetica, sans-serif; font-size: 12px; color: #222; margin: 0; padding: 0; background: #fff; }
-        .page { padding: 24px 28px; position: relative; overflow: hidden; }
-
-        /* ── Corner decorative shapes ── */
-        .corner-shape {
-            position: absolute;
-            border-radius: 50%;
-            z-index: 0;
-            pointer-events: none;
-        }
-        /* Top-right: salmon/pink blob */
-        .corner-top-right {
-            width: 180px;
-            height: 180px;
-            background: radial-gradient(circle at 60% 40%, #f9c5b0 0%, #f4a88a 60%, transparent 100%);
-            top: -70px;
-            right: -70px;
-            opacity: 0.55;
-        }
-        /* Bottom-left: soft lavender/purple blob */
-        .corner-bottom-left {
-            width: 220px;
-            height: 220px;
-            background: radial-gradient(circle at 40% 60%, #d5c8f0 0%, #b8a8e8 60%, transparent 100%);
-            bottom: -90px;
-            left: -80px;
-            opacity: 0.45;
-        }
-        /* Optional subtle accent: top-left small circle */
-        .corner-top-left {
-            width: 90px;
-            height: 90px;
-            background: radial-gradient(circle, #fde8d8 0%, transparent 70%);
-            top: -30px;
-            left: -30px;
-            opacity: 0.5;
-        }
-        /* Optional subtle accent: bottom-right small circle */
-        .corner-bottom-right {
-            width: 100px;
-            height: 100px;
-            background: radial-gradient(circle, #e0d5f8 0%, transparent 70%);
-            bottom: -35px;
-            right: -35px;
-            opacity: 0.5;
-        }
+        .page { padding: 24px 28px; position: relative; }
 
         /* Watermark using logo */
         .watermark {
@@ -171,13 +127,6 @@
         : date('Y-m-d', strtotime('+30 days', strtotime($issueDate)));
 ?>
 <div class="page">
-
-    <!-- ── Corner decorative shapes ── -->
-    <div class="corner-shape corner-top-right"></div>
-    <div class="corner-shape corner-bottom-left"></div>
-    <div class="corner-shape corner-top-left"></div>
-    <div class="corner-shape corner-bottom-right"></div>
-
     <?php if (!empty($logoDataUri)): ?>
         <div class="watermark">
             <img src="<?= $logoDataUri ?>" alt="Watermark">
