@@ -888,7 +888,7 @@
                             </a>
                         </div>
                     <?php endif; ?>
-                    <a href="#" class="btn btn-accent btn-lg" style="margin: 20px 0;" data-bs-toggle="modal" data-bs-target="#tenantLoginModal">Tenant Portal</a>
+                                        <a href="#" class="btn btn-accent btn-lg" style="margin: 20px 0;" data-bs-toggle="modal" data-bs-target="#tenantLoginModal">Tenant Portal</a>
                 </div>
                 <div class="col-lg-6">
                     <div class="dashboard-preview">
