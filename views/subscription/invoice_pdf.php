@@ -6,37 +6,18 @@
     <title>Subscription Invoice</title>
     <style>
         body { font-family: DejaVu Sans, Arial, Helvetica, sans-serif; font-size: 12px; color: #222; margin: 0; padding: 0; background: #fff; }
-        .page {
-            padding: 24px 28px;
-            position: relative;
-            overflow: hidden;
-        }
+        .page { padding: 24px 28px; position: relative; overflow: hidden; }
 
-        /* Single corner circles at actual page edges (outside padding) */
-        .corner-circle {
+        /* ── Corner blob SVGs ── */
+        .corner-blob {
             position: absolute;
-            border-radius: 50%;
-            pointer-events: none;
             z-index: 0;
+            pointer-events: none;
+            line-height: 0;
+            font-size: 0;
         }
-        /* Top-right: salmon/coral - accounts for 24px top + 28px right padding */
-        .corner-circle.tr {
-            top: -144px;  /* -120px - 24px padding */
-            right: -148px; /* -120px - 28px padding */
-            width: 200px;
-            height: 200px;
-            background: #F4A88A;
-            opacity: 0.5;
-        }
-        /* Bottom-left: lavender/purple - accounts for 24px bottom + 28px left padding */
-        .corner-circle.bl {
-            bottom: -144px; /* -120px - 24px padding */
-            left: -148px;  /* -120px - 28px padding */
-            width: 200px;
-            height: 200px;
-            background: #B8A8E8;
-            opacity: 0.5;
-        }
+        .corner-blob.top-right  { top: -10px;  right: -10px;  }
+        .corner-blob.bottom-left { bottom: -10px; left: -10px; }
 
         /* Watermark using logo */
         .watermark {
@@ -158,11 +139,23 @@
 ?>
 <div class="page">
 
-    <!-- Single corner circle: top-right salmon -->
-    <div class="corner-circle tr"></div>
+    <!-- ══ TOP-RIGHT corner blob: salmon/coral ══ -->
+    <div class="corner-blob top-right">
+        <svg width="210" height="210" viewBox="0 0 210 210" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <ellipse cx="160" cy="55"  rx="115" ry="100" fill="#F9C5AD" opacity="0.55"/>
+            <ellipse cx="180" cy="35"  rx="80"  ry="65"  fill="#F4A88A" opacity="0.45"/>
+            <ellipse cx="198" cy="18"  rx="52"  ry="42"  fill="#F08060" opacity="0.35"/>
+        </svg>
+    </div>
 
-    <!-- Single corner circle: bottom-left lavender -->
-    <div class="corner-circle bl"></div>
+    <!-- ══ BOTTOM-LEFT corner blob: lavender/purple ══ -->
+    <div class="corner-blob bottom-left">
+        <svg width="250" height="250" viewBox="0 0 250 250" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <ellipse cx="65"  cy="185" rx="125" ry="110" fill="#D5C8F0" opacity="0.55"/>
+            <ellipse cx="40"  cy="210" rx="86"  ry="72"  fill="#B8A8E8" opacity="0.45"/>
+            <ellipse cx="18"  cy="232" rx="55"  ry="46"  fill="#9A88D8" opacity="0.35"/>
+        </svg>
+    </div>
 
     <?php if (!empty($logoDataUri)): ?>
         <div class="watermark">
