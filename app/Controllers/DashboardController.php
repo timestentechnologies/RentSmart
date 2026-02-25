@@ -181,6 +181,36 @@ class DashboardController
             $roleUser->find($userId);
             $isAdmin = $roleUser->isAdmin();
 
+            $demoExclude = [
+                'property_ids' => [],
+                'unit_ids' => [],
+                'tenant_ids' => [],
+                'lease_ids' => [],
+                'payment_ids' => [],
+            ];
+            if ($isAdmin && empty($_SESSION['demo_mode'])) {
+                try {
+                    $settings = new \App\Models\Setting();
+                    $demoExclude['property_ids'] = json_decode((string)($settings->get('demo_protected_property_ids_json') ?? '[]'), true);
+                    $demoExclude['unit_ids'] = json_decode((string)($settings->get('demo_protected_unit_ids_json') ?? '[]'), true);
+                    $demoExclude['tenant_ids'] = json_decode((string)($settings->get('demo_protected_tenant_ids_json') ?? '[]'), true);
+                    $demoExclude['lease_ids'] = json_decode((string)($settings->get('demo_protected_lease_ids_json') ?? '[]'), true);
+                    $demoExclude['payment_ids'] = json_decode((string)($settings->get('demo_protected_payment_ids_json') ?? '[]'), true);
+
+                    foreach ($demoExclude as $k => $v) {
+                        $demoExclude[$k] = is_array($v) ? array_values(array_filter(array_map('intval', $v))) : [];
+                    }
+                } catch (\Throwable $e) {
+                }
+            }
+
+            $demoExcludePropsWhere = '';
+            $demoExcludePropsParams = [];
+            if (!empty($demoExclude['property_ids'])) {
+                $demoExcludePropsWhere = ' AND pr.id NOT IN (' . implode(',', array_fill(0, count($demoExclude['property_ids']), '?')) . ')';
+                $demoExcludePropsParams = $demoExclude['property_ids'];
+            }
+
             $accessWhere = '';
             $accessParams = [];
             if (!$isAdmin) {
@@ -203,9 +233,9 @@ class DashboardController
                         . "FROM leases l\n"
                         . "JOIN units u ON l.unit_id = u.id\n"
                         . "JOIN properties pr ON u.property_id = pr.id\n"
-                        . "WHERE l.status = 'active'" . $accessWhere . $propertyWhere
+                        . "WHERE l.status = 'active'" . $accessWhere . $propertyWhere . $demoExcludePropsWhere
                     );
-                    $stmtMinLease->execute(array_merge($accessParams, $propertyParams));
+                    $stmtMinLease->execute(array_merge($accessParams, $propertyParams, $demoExcludePropsParams));
                     $minLeaseDate = (string)($stmtMinLease->fetch(\PDO::FETCH_ASSOC)['d'] ?? '');
                     if ($minLeaseDate !== '') {
                         $dtMin = new \DateTime($minLeaseDate);
@@ -241,9 +271,9 @@ class DashboardController
                 . "  AND (\n"
                 . "        (p.applies_to_month IS NOT NULL AND p.applies_to_month BETWEEN ? AND ?)\n"
                 . "     OR (p.applies_to_month IS NULL AND p.payment_date BETWEEN ? AND ?)\n"
-                . "  )" . $accessWhere . $propertyWhere
+                . "  )" . $accessWhere . $propertyWhere . $demoExcludePropsWhere
             );
-            $stmtRentReceived->execute(array_merge([$rangeStart, $rangeEnd, $rangeStart, $rangeEnd], $accessParams, $propertyParams));
+            $stmtRentReceived->execute(array_merge([$rangeStart, $rangeEnd, $rangeStart, $rangeEnd], $accessParams, $propertyParams, $demoExcludePropsParams));
             $rentReceived = (float)($stmtRentReceived->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0);
 
             $stmtUtilityReceived = $db->prepare(
@@ -257,9 +287,9 @@ class DashboardController
                 . "  AND (\n"
                 . "        (p.applies_to_month IS NOT NULL AND p.applies_to_month BETWEEN ? AND ?)\n"
                 . "     OR (p.applies_to_month IS NULL AND p.payment_date BETWEEN ? AND ?)\n"
-                . "  )" . $accessWhere . $propertyWhere
+                . "  )" . $accessWhere . $propertyWhere . $demoExcludePropsWhere
             );
-            $stmtUtilityReceived->execute(array_merge([$rangeStart, $rangeEnd, $rangeStart, $rangeEnd], $accessParams, $propertyParams));
+            $stmtUtilityReceived->execute(array_merge([$rangeStart, $rangeEnd, $rangeStart, $rangeEnd], $accessParams, $propertyParams, $demoExcludePropsParams));
             $utilityReceived = (float)($stmtUtilityReceived->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0);
 
             $stmtMaintenanceReceived = $db->prepare(
@@ -274,9 +304,9 @@ class DashboardController
                 . "        (p.applies_to_month IS NOT NULL AND p.applies_to_month BETWEEN ? AND ?)\n"
                 . "     OR (p.applies_to_month IS NULL AND p.payment_date BETWEEN ? AND ?)\n"
                 . "  )\n"
-                . "  AND (p.notes LIKE 'Maintenance payment:%' OR p.notes LIKE '%MAINT-%')" . $accessWhere . $propertyWhere
+                . "  AND (p.notes LIKE 'Maintenance payment:%' OR p.notes LIKE '%MAINT-%')" . $accessWhere . $propertyWhere . $demoExcludePropsWhere
             );
-            $stmtMaintenanceReceived->execute(array_merge([$rangeStart, $rangeEnd, $rangeStart, $rangeEnd], $accessParams, $propertyParams));
+            $stmtMaintenanceReceived->execute(array_merge([$rangeStart, $rangeEnd, $rangeStart, $rangeEnd], $accessParams, $propertyParams, $demoExcludePropsParams));
             $maintenanceReceived = (float)($stmtMaintenanceReceived->fetch(\PDO::FETCH_ASSOC)['s'] ?? 0);
 
             $receivedTotal = $rentReceived + $utilityReceived + $maintenanceReceived;
@@ -293,9 +323,9 @@ class DashboardController
                     . "FROM leases l\n"
                     . "JOIN units u ON l.unit_id = u.id\n"
                     . "JOIN properties pr ON u.property_id = pr.id\n"
-                    . "WHERE l.status = 'active'" . $accessWhere . $propertyWhere
+                    . "WHERE l.status = 'active'" . $accessWhere . $propertyWhere . $demoExcludePropsWhere
                 );
-                $stmtLeases->execute(array_merge($accessParams, $propertyParams));
+                $stmtLeases->execute(array_merge($accessParams, $propertyParams, $demoExcludePropsParams));
                 $leasesRows = $stmtLeases->fetchAll(\PDO::FETCH_ASSOC) ?: [];
 
                 $unitsUtilitiesStmt = $db->prepare("SELECT id, is_metered, flat_rate FROM utilities WHERE unit_id = ?");
@@ -403,7 +433,17 @@ class DashboardController
             $walletTotal = max($receivedTotal - (float)$rentBalanceExpenses, 0.0);
 
             // Calculate total properties
-            $totalProperties = count($this->property->getAll($userId));
+            $allPropsForTotal = $this->property->getAll($userId);
+            if ($isAdmin && empty($_SESSION['demo_mode']) && !empty($demoExclude['property_ids'])) {
+                $allPropsForTotal = array_values(array_filter(($allPropsForTotal ?? []), function ($p) use ($demoExclude) {
+                    $pid = (int)($p['id'] ?? 0);
+                    if ($pid > 0 && in_array($pid, $demoExclude['property_ids'], true)) {
+                        return false;
+                    }
+                    return true;
+                }));
+            }
+            $totalProperties = is_array($allPropsForTotal) ? count($allPropsForTotal) : 0;
 
             // Active tenants: tenants assigned to a unit
             $activeTenantsCount = 0;
@@ -424,6 +464,11 @@ class DashboardController
                     $paramsActiveTenants[] = $selectedPropertyId;
                 }
                 $stmtAT = $db->prepare($sqlActiveTenants);
+                if ($isAdmin && $demoExcludePropsWhere !== '') {
+                    $sqlActiveTenants .= $demoExcludePropsWhere;
+                    $stmtAT = $db->prepare($sqlActiveTenants);
+                    $paramsActiveTenants = array_merge($paramsActiveTenants, $demoExcludePropsParams);
+                }
                 $stmtAT->execute($paramsActiveTenants);
                 $activeTenantsCount = (int)($stmtAT->fetch(\PDO::FETCH_ASSOC)['c'] ?? 0);
             } catch (\Throwable $e) {
@@ -431,7 +476,46 @@ class DashboardController
             }
 
             $totalTenants = count($this->tenant->getAll($userId));
-            $totalUnits = count($this->unit->getAll($userId));
+            $unitsForTotal = $this->unit->getAll($userId);
+            if ($isAdmin && empty($_SESSION['demo_mode']) && (!empty($demoExclude['property_ids']) || !empty($demoExclude['unit_ids']))) {
+                $unitsForTotal = array_values(array_filter(($unitsForTotal ?? []), function ($u) use ($demoExclude) {
+                    $uid = (int)($u['id'] ?? 0);
+                    $pid = (int)($u['property_id'] ?? 0);
+                    if ($uid > 0 && !empty($demoExclude['unit_ids']) && in_array($uid, $demoExclude['unit_ids'], true)) {
+                        return false;
+                    }
+                    if ($pid > 0 && !empty($demoExclude['property_ids']) && in_array($pid, $demoExclude['property_ids'], true)) {
+                        return false;
+                    }
+                    return true;
+                }));
+            }
+            $totalUnits = is_array($unitsForTotal) ? count($unitsForTotal) : 0;
+
+            if ($isAdmin && empty($_SESSION['demo_mode']) && !empty($demoExclude['property_ids'])) {
+                $activeLeases = array_values(array_filter(($activeLeases ?? []), function ($l) use ($demoExclude) {
+                    $pid = (int)($l['property_id'] ?? 0);
+                    if ($pid > 0 && in_array($pid, $demoExclude['property_ids'], true)) {
+                        return false;
+                    }
+                    return true;
+                }));
+                $expiringLeases = array_values(array_filter(($expiringLeases ?? []), function ($l) use ($demoExclude) {
+                    $pid = (int)($l['property_id'] ?? 0);
+                    if ($pid > 0 && in_array($pid, $demoExclude['property_ids'], true)) {
+                        return false;
+                    }
+                    return true;
+                }));
+                $recentPayments = array_values(array_filter(($recentPayments ?? []), function ($p) use ($demoExclude) {
+                    $pid = (int)($p['property_id'] ?? 0);
+                    if ($pid > 0 && in_array($pid, $demoExclude['property_ids'], true)) {
+                        return false;
+                    }
+                    return true;
+                }));
+            }
+
             $totalExpiringLeases = is_array($expiringLeases) ? count($expiringLeases) : 0;
             
             // Calculate total active leases
