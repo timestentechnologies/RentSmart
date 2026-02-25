@@ -77,6 +77,13 @@ class Payment extends Model
             $this->db->exec("ALTER TABLE payments ADD INDEX idx_realtor_contract (realtor_contract_id)");
         } catch (\Exception $e) {
         }
+
+        // Ensure reference-based idempotency is enforceable for demo realtor payments.
+        // MySQL UNIQUE allows multiple NULLs, but demo uses a fixed non-null reference.
+        try {
+            $this->db->exec("ALTER TABLE payments ADD UNIQUE KEY uq_realtor_payment_ref (realtor_user_id, payment_type, reference_number)");
+        } catch (\Exception $e) {
+        }
     }
 
     public function createRealtorPayment(array $data)

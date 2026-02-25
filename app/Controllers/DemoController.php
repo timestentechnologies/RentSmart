@@ -327,6 +327,18 @@ class DemoController
             }
 
             // Seed exactly one demo realtor payment (idempotent by reference_number)
+            try {
+                $stmtCnt = $db->prepare(
+                    "SELECT COUNT(*) AS c FROM payments\n"
+                    . "WHERE realtor_user_id = ?\n"
+                    . "  AND payment_type = 'realtor'\n"
+                    . "  AND reference_number = 'DEMO-REALTOR-001'"
+                );
+                $stmtCnt->execute([(int)$userId]);
+                $cnt = (int)($stmtCnt->fetch(\PDO::FETCH_ASSOC)['c'] ?? 0);
+                $this->demoLog('realtor payment pre-check user_id=' . (int)$userId . ' ref=DEMO-REALTOR-001 count=' . $cnt);
+            } catch (\Throwable $e) {
+            }
             $stmtRP = $db->prepare(
                 "SELECT id FROM payments\n"
                 . "WHERE realtor_user_id = ?\n"
@@ -337,6 +349,7 @@ class DemoController
             );
             $stmtRP->execute([(int)$userId]);
             $rpId = (int)($stmtRP->fetch(\PDO::FETCH_ASSOC)['id'] ?? 0);
+            $this->demoLog('realtor payment selected user_id=' . (int)$userId . ' rp_id=' . (int)$rpId);
 
             // Normalize any older demo rows from previous seeding versions.
             // Ensure they point to the current demo contract and have the correct amount.
@@ -364,8 +377,10 @@ class DemoController
                 $rpId = (int)($stmtRP->fetch(\PDO::FETCH_ASSOC)['id'] ?? 0);
             } catch (\Throwable $e) {
             }
+            $this->demoLog('realtor payment after-normalize user_id=' . (int)$userId . ' rp_id=' . (int)$rpId);
             if ($rpId <= 0) {
                 $paymentModel = new Payment();
+                $this->demoLog('realtor payment inserting user_id=' . (int)$userId . ' contract_id=' . (int)$contractId);
                 $pid = $paymentModel->createRealtorPayment([
                     'realtor_user_id' => (int)$userId,
                     'realtor_client_id' => (int)$clientId,
@@ -380,6 +395,7 @@ class DemoController
                     'status' => 'completed',
                     'notes' => 'Demo realtor payment',
                 ]);
+                $this->demoLog('realtor payment inserted user_id=' . (int)$userId . ' payment_id=' . (int)$pid);
                 $this->protectId($settings, 'payment', (int)$pid);
             } else {
                 $this->protectId($settings, 'payment', (int)$rpId);
