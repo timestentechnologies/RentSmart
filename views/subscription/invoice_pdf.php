@@ -128,9 +128,15 @@
         : date('Y-m-d', strtotime('+30 days', strtotime($issueDate)));
 ?>
 <div class="page">
-    <!-- Decorative shapes using float instead of absolute positioning -->
-    <div style="float:right;width:40px;height:40px;background:#e85d4c;margin-top:-20px;margin-right:-10px;"></div>
-    <div style="clear:both;"></div>
+    <!-- Large curved decorative shapes using SVG -->
+    <!-- Top right decorative shape - large curved peach/pink -->
+    <svg style="position:absolute;top:0;right:0;z-index:0;" width="300" height="250" viewBox="0 0 300 250" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="220" cy="80" rx="180" ry="140" fill="#fca5a5" opacity="0.35"/>
+    </svg>
+    <!-- Bottom left decorative shape - large curved purple -->
+    <svg style="position:absolute;bottom:0;left:0;z-index:0;" width="300" height="250" viewBox="0 0 300 250" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="80" cy="180" rx="160" ry="130" fill="#c4b5fd" opacity="0.35"/>
+    </svg>
 
     <?php if (!empty($logoDataUri)): ?>
         <div class="watermark">
@@ -255,9 +261,6 @@
     <div class="footer-text">
         Thank you for your business.
     </div>
-    <!-- Bottom decorative shape -->
-    <div style="float:left;width:40px;height:40px;background:#16a34a;margin-top:10px;"></div>
-    <div style="clear:both;"></div>
 </div>
 </body>
 </html>
