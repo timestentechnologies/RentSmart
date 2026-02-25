@@ -257,7 +257,15 @@ class Payment extends Model
                 LEFT JOIN realtor_clients rc ON rc.id = p.realtor_client_id
                 LEFT JOIN realtor_listings rl ON rl.id = p.realtor_listing_id
                 LEFT JOIN realtor_contracts c ON c.id = p.realtor_contract_id
-                LEFT JOIN manual_mpesa_payments mmp ON mmp.payment_id = p.id
+                LEFT JOIN (
+                    SELECT m1.payment_id, m1.phone_number, m1.transaction_code
+                    FROM manual_mpesa_payments m1
+                    INNER JOIN (
+                        SELECT payment_id, MAX(id) AS id
+                        FROM manual_mpesa_payments
+                        GROUP BY payment_id
+                    ) mx ON mx.id = m1.id
+                ) mmp ON mmp.payment_id = p.id
                 WHERE p.realtor_user_id = ?
                 ORDER BY p.payment_date DESC, p.id DESC";
         $stmt = $this->db->prepare($sql);

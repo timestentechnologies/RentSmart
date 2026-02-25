@@ -239,6 +239,8 @@ class DemoController
     private function ensureDemoRealtorData($db, Setting $settings, int $userId): void
     {
         try {
+            $demoContractTotal = 120000.00;
+
             // Ensure tables/columns exist
             try {
                 new \App\Models\RealtorListing();
@@ -258,10 +260,15 @@ class DemoController
                     'Demo Listing - 2BR Apartment',
                     'residential_apartment',
                     'Kilimani, Nairobi',
-                    8500000.00,
+                    (float)$demoContractTotal,
                     'Sample demo listing with photos, inquiries, and contracts',
                 ]);
                 $listingId = (int)$db->lastInsertId();
+            } else {
+                try {
+                    $db->prepare('UPDATE realtor_listings SET price = ? WHERE id = ? AND user_id = ?')->execute([(float)$demoContractTotal, (int)$listingId, (int)$userId]);
+                } catch (\Throwable $e) {
+                }
             }
 
             $stmtC = $db->prepare('SELECT id FROM realtor_clients WHERE user_id = ? ORDER BY id DESC LIMIT 1');
@@ -290,17 +297,22 @@ class DemoController
                     (int)$clientId,
                     $listingId > 0 ? (int)$listingId : null,
                     'one_time',
-                    120000.00,
+                    (float)$demoContractTotal,
                     null,
                     null,
                     date('Y-m-01'),
                     'Demo contract instructions',
                 ]);
                 $contractId = (int)$db->lastInsertId();
+            } else {
+                try {
+                    $db->prepare('UPDATE realtor_contracts SET total_amount = ? WHERE id = ? AND user_id = ?')->execute([(float)$demoContractTotal, (int)$contractId, (int)$userId]);
+                } catch (\Throwable $e) {
+                }
             }
 
             // Seed at least one realtor payment
-            $stmtRP = $db->prepare("SELECT id FROM payments WHERE realtor_user_id = ? AND realtor_contract_id = ? AND payment_type = 'realtor' LIMIT 1");
+            $stmtRP = $db->prepare("SELECT id FROM payments WHERE realtor_user_id = ? AND realtor_contract_id = ? AND payment_type = 'realtor' ORDER BY id DESC LIMIT 1");
             $stmtRP->execute([(int)$userId, (int)$contractId]);
             $rpId = (int)($stmtRP->fetch(\PDO::FETCH_ASSOC)['id'] ?? 0);
             if ($rpId <= 0) {
@@ -310,7 +322,7 @@ class DemoController
                     'realtor_client_id' => (int)$clientId,
                     'realtor_listing_id' => $listingId > 0 ? (int)$listingId : null,
                     'realtor_contract_id' => (int)$contractId,
-                    'amount' => 60000.00,
+                    'amount' => (float)$demoContractTotal,
                     'payment_date' => date('Y-m-d'),
                     'applies_to_month' => date('Y-m-01'),
                     'payment_type' => 'realtor',
@@ -322,6 +334,30 @@ class DemoController
                 $this->protectId($settings, 'payment', (int)$pid);
             } else {
                 $this->protectId($settings, 'payment', (int)$rpId);
+                try {
+                    $db->prepare('UPDATE payments SET amount = ? WHERE id = ?')->execute([(float)$demoContractTotal, (int)$rpId]);
+                } catch (\Throwable $e) {
+                }
+            }
+
+            // Clean up any old duplicates that may have been created in earlier versions of demo seeding.
+            try {
+                $keepId = $rpId > 0 ? $rpId : (int)($pid ?? 0);
+                if ($keepId > 0) {
+                    $stmtAll = $db->prepare("SELECT id FROM payments WHERE realtor_user_id = ? AND realtor_contract_id = ? AND payment_type = 'realtor' ORDER BY id DESC");
+                    $stmtAll->execute([(int)$userId, (int)$contractId]);
+                    $rows = $stmtAll->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+                    foreach ($rows as $r) {
+                        $delId = (int)($r['id'] ?? 0);
+                        if ($delId > 0 && $delId !== $keepId) {
+                            try {
+                                $db->prepare('DELETE FROM payments WHERE id = ?')->execute([(int)$delId]);
+                            } catch (\Throwable $e) {
+                            }
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {
             }
         } catch (\Throwable $e) {
         }
