@@ -12,30 +12,30 @@
             overflow: hidden;
         }
 
-        /* Single corner circles positioned at edges */
+        /* Single corner circles positioned at very edges */
         .corner-circle {
             position: absolute;
             border-radius: 50%;
             pointer-events: none;
             z-index: 0;
         }
-        /* Top-right: salmon/coral - positioned at corner, half off-page */
+        /* Top-right: salmon/coral - quarter circle in corner */
         .corner-circle.tr {
-            top: -90px;
-            right: -90px;
-            width: 180px;
-            height: 180px;
+            top: -120px;
+            right: -120px;
+            width: 200px;
+            height: 200px;
             background: #F4A88A;
-            opacity: 0.6;
+            opacity: 0.5;
         }
-        /* Bottom-left: lavender/purple - positioned at corner, half off-page */
+        /* Bottom-left: lavender/purple - quarter circle in corner */
         .corner-circle.bl {
-            bottom: -90px;
-            left: -90px;
-            width: 180px;
-            height: 180px;
+            bottom: -120px;
+            left: -120px;
+            width: 200px;
+            height: 200px;
             background: #B8A8E8;
-            opacity: 0.6;
+            opacity: 0.5;
         }
 
         /* Watermark using logo */
