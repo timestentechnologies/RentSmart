@@ -26,6 +26,7 @@ class DemoController
         }
 
         try {
+            error_log('Demo start requested. role=' . $role . ' uri=' . (string)($_SERVER['REQUEST_URI'] ?? ''));
             $db = Connection::getInstance()->getConnection();
             $settings = new Setting();
             $userModel = new User();
@@ -57,10 +58,12 @@ class DemoController
             unset($_SESSION['flash_message'], $_SESSION['flash_type']);
 
             $redirectPath = ($role === 'realtor') ? '/realtor/dashboard' : '/dashboard';
+            error_log('Demo start success. user_id=' . (int)$user['id'] . ' role=' . $role . ' redirect=' . BASE_URL . $redirectPath);
             header('Location: ' . BASE_URL . $redirectPath);
             exit;
         } catch (\Throwable $e) {
             error_log('Demo start failed: ' . $e->getMessage());
+            error_log('Demo start failed trace: ' . $e->getTraceAsString());
             $_SESSION['flash_message'] = 'Failed to start demo: ' . $e->getMessage();
             $_SESSION['flash_type'] = 'danger';
             header('Location: ' . BASE_URL . '/');
@@ -314,6 +317,12 @@ class DemoController
     {
         $db->beginTransaction();
         try {
+            if ($role === 'realtor') {
+                $this->ensureDemoRealtorData($db, $settings, $userId);
+                $db->commit();
+                return;
+            }
+
             $propId = $this->ensureDemoProperty($db, $settings, $userId, $role);
             $unitIds = $this->ensureDemoUnits($db, $settings, $userId, $propId);
             $tenantId = $this->ensureDemoTenant($db, $settings, $userId, $propId, $unitIds[0] ?? null);
@@ -325,9 +334,6 @@ class DemoController
                 $this->ensureDemoUtilities($db, $settings, $userId, (int)$propId, (int)$unitIds[0], (int)$tenantId);
             }
 
-            if ($role === 'realtor') {
-                $this->ensureDemoRealtorData($db, $settings, $userId);
-            }
             $db->commit();
         } catch (\Throwable $e) {
             if ($db->inTransaction()) {
