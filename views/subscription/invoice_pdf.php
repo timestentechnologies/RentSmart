@@ -6,18 +6,33 @@
     <title>Subscription Invoice</title>
     <style>
         body { font-family: DejaVu Sans, Arial, Helvetica, sans-serif; font-size: 12px; color: #222; margin: 0; padding: 0; background: #fff; }
-        .page { padding: 24px 28px; position: relative; overflow: hidden; }
+        .page {
+            padding: 24px 28px;
+            position: relative;
+            overflow: hidden;
+        }
 
-        /* ── Corner blob SVGs ── */
+        /* Corner gradient blobs (Dompdf-friendly) */
         .corner-blob {
             position: absolute;
-            z-index: 0;
+            border-radius: 50%;
             pointer-events: none;
-            line-height: 0;
-            font-size: 0;
+            z-index: 0;
         }
-        .corner-blob.top-right  { top: -10px;  right: -10px;  }
-        .corner-blob.bottom-left { bottom: -10px; left: -10px; }
+        .corner-tr {
+            top: -60px;
+            right: -80px;
+            width: 220px;
+            height: 180px;
+            background: radial-gradient(circle at 40% 60%, rgba(249,197,173,0.55) 0%, rgba(244,168,138,0.35) 50%, rgba(240,128,96,0.15) 70%, transparent 100%);
+        }
+        .corner-bl {
+            bottom: -70px;
+            left: -90px;
+            width: 240px;
+            height: 200px;
+            background: radial-gradient(circle at 60% 40%, rgba(213,200,240,0.55) 0%, rgba(184,168,232,0.35) 50%, rgba(154,136,216,0.15) 70%, transparent 100%);
+        }
 
         /* Watermark using logo */
         .watermark {
@@ -139,23 +154,9 @@
 ?>
 <div class="page">
 
-    <!-- ══ TOP-RIGHT corner blob: salmon/coral ══ -->
-    <div class="corner-blob top-right">
-        <svg width="210" height="210" viewBox="0 0 210 210" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <ellipse cx="160" cy="55"  rx="115" ry="100" fill="#F9C5AD" opacity="0.55"/>
-            <ellipse cx="180" cy="35"  rx="80"  ry="65"  fill="#F4A88A" opacity="0.45"/>
-            <ellipse cx="198" cy="18"  rx="52"  ry="42"  fill="#F08060" opacity="0.35"/>
-        </svg>
-    </div>
-
-    <!-- ══ BOTTOM-LEFT corner blob: lavender/purple ══ -->
-    <div class="corner-blob bottom-left">
-        <svg width="250" height="250" viewBox="0 0 250 250" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <ellipse cx="65"  cy="185" rx="125" ry="110" fill="#D5C8F0" opacity="0.55"/>
-            <ellipse cx="40"  cy="210" rx="86"  ry="72"  fill="#B8A8E8" opacity="0.45"/>
-            <ellipse cx="18"  cy="232" rx="55"  ry="46"  fill="#9A88D8" opacity="0.35"/>
-        </svg>
-    </div>
+    <!-- Corner gradient blobs -->
+    <div class="corner-blob corner-tr"></div>
+    <div class="corner-blob corner-bl"></div>
 
     <?php if (!empty($logoDataUri)): ?>
         <div class="watermark">
