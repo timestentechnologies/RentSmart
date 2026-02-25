@@ -166,7 +166,7 @@ class SubscriptionController
             }
 
             $db = $this->subscription->getDb();
-            $stmt = $db->prepare("SELECT s.*, sp.name AS plan_name, sp.price AS plan_price, sp.duration 
+            $stmt = $db->prepare("SELECT s.*, sp.name AS plan_name, sp.price AS plan_price 
                                    FROM subscriptions s 
                                    LEFT JOIN subscription_plans sp ON s.plan_id = sp.id 
                                    WHERE s.id = ? AND s.user_id = ?");
@@ -175,14 +175,13 @@ class SubscriptionController
 
             // Fallback: some legacy records may store plan_id in subscription_id
             if (!$subscription) {
-                $fallbackPlanStmt = $db->prepare("SELECT name AS plan_name, price AS plan_price, duration FROM subscription_plans WHERE id = ?");
+                $fallbackPlanStmt = $db->prepare("SELECT name AS plan_name, price AS plan_price FROM subscription_plans WHERE id = ?");
                 $fallbackPlanStmt->execute([$payment['subscription_id']]);
                 $plan = $fallbackPlanStmt->fetch(\PDO::FETCH_ASSOC);
                 if ($plan) {
                     $subscription = [
                         'plan_name' => $plan['plan_name'],
                         'plan_price' => $plan['plan_price'],
-                        'duration' => $plan['duration'],
                         'current_period_starts_at' => null,
                         'current_period_ends_at' => null,
                         'plan_type' => $plan['plan_name']
