@@ -53,6 +53,251 @@ if (!function_exists('view')) {
     }
 }
 
+if (!function_exists('demo_setting_ids')) {
+    function demo_setting_ids(string $key): array
+    {
+        try {
+            $settings = new \App\Models\Setting();
+            $raw = (string)($settings->get($key) ?? '[]');
+            $ids = json_decode($raw, true);
+            if (!is_array($ids)) return [];
+            return array_values(array_unique(array_map('intval', $ids)));
+        } catch (\Throwable $e) {
+            return [];
+        }
+    }
+}
+
+if (!function_exists('demo_cleanup_user_data')) {
+    function demo_cleanup_user_data(int $userId): void
+    {
+        if ($userId <= 0) return;
+        try {
+            $db = \App\Database\Connection::getInstance()->getConnection();
+            $protectedUsers = demo_setting_ids('demo_protected_user_ids_json');
+            if (!in_array($userId, $protectedUsers, true)) {
+                return;
+            }
+
+            $protectedPayments = demo_setting_ids('demo_protected_payment_ids_json');
+            $protectedLeases = demo_setting_ids('demo_protected_lease_ids_json');
+            $protectedTenants = demo_setting_ids('demo_protected_tenant_ids_json');
+            $protectedUnits = demo_setting_ids('demo_protected_unit_ids_json');
+            $protectedProps = demo_setting_ids('demo_protected_property_ids_json');
+            $protectedInvoices = demo_setting_ids('demo_protected_invoice_ids_json');
+            $protectedRListings = demo_setting_ids('demo_protected_realtor_listing_ids_json');
+            $protectedRClients = demo_setting_ids('demo_protected_realtor_client_ids_json');
+            $protectedRContracts = demo_setting_ids('demo_protected_realtor_contract_ids_json');
+
+            $placeholders = function(array $ids): string {
+                return implode(',', array_fill(0, count($ids), '?'));
+            };
+
+            $deletedPaymentIds = [];
+            try {
+                $sql = "SELECT id FROM payments WHERE (user_id = ? OR realtor_user_id = ?)";
+                $params = [(int)$userId, (int)$userId];
+                if (!empty($protectedPayments)) {
+                    $sql .= " AND id NOT IN (" . $placeholders($protectedPayments) . ")";
+                    $params = array_merge($params, $protectedPayments);
+                }
+                $stmt = $db->prepare($sql);
+                $stmt->execute($params);
+                $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+                foreach ($rows as $r) {
+                    $pid = (int)($r['id'] ?? 0);
+                    if ($pid > 0) $deletedPaymentIds[] = $pid;
+                }
+                if (!empty($deletedPaymentIds)) {
+                    $delSql = "DELETE FROM payments WHERE id IN (" . $placeholders($deletedPaymentIds) . ")";
+                    $db->prepare($delSql)->execute($deletedPaymentIds);
+                }
+            } catch (\Throwable $e) {
+            }
+
+            if (!empty($deletedPaymentIds)) {
+                try {
+                    $delJe = "DELETE FROM journal_entries WHERE reference_type = 'payment' AND reference_id IN (" . $placeholders($deletedPaymentIds) . ")";
+                    $db->prepare($delJe)->execute($deletedPaymentIds);
+                } catch (\Throwable $e) {
+                }
+            }
+
+            $deletedInvoiceIds = [];
+            try {
+                $sql = "SELECT id FROM invoices WHERE user_id = ?";
+                $params = [(int)$userId];
+                if (!empty($protectedInvoices)) {
+                    $sql .= " AND id NOT IN (" . $placeholders($protectedInvoices) . ")";
+                    $params = array_merge($params, $protectedInvoices);
+                }
+                $stmt = $db->prepare($sql);
+                $stmt->execute($params);
+                $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+                foreach ($rows as $r) {
+                    $iid = (int)($r['id'] ?? 0);
+                    if ($iid > 0) $deletedInvoiceIds[] = $iid;
+                }
+                if (!empty($deletedInvoiceIds)) {
+                    $db->prepare("DELETE FROM invoice_items WHERE invoice_id IN (" . $placeholders($deletedInvoiceIds) . ")")->execute($deletedInvoiceIds);
+                    $db->prepare("DELETE FROM invoices WHERE id IN (" . $placeholders($deletedInvoiceIds) . ")")->execute($deletedInvoiceIds);
+                }
+            } catch (\Throwable $e) {
+            }
+
+            if (!empty($deletedInvoiceIds)) {
+                try {
+                    $db->prepare("DELETE FROM journal_entries WHERE reference_type = 'invoice' AND reference_id IN (" . $placeholders($deletedInvoiceIds) . ")")->execute($deletedInvoiceIds);
+                } catch (\Throwable $e) {
+                }
+            }
+
+            try {
+                $sql = "SELECT id FROM realtor_contracts WHERE user_id = ?";
+                $params = [(int)$userId];
+                if (!empty($protectedRContracts)) {
+                    $sql .= " AND id NOT IN (" . $placeholders($protectedRContracts) . ")";
+                    $params = array_merge($params, $protectedRContracts);
+                }
+                $stmt = $db->prepare($sql);
+                $stmt->execute($params);
+                $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+                $delIds = [];
+                foreach ($rows as $r) {
+                    $id = (int)($r['id'] ?? 0);
+                    if ($id > 0) $delIds[] = $id;
+                }
+                if (!empty($delIds)) {
+                    $db->prepare("DELETE FROM realtor_contracts WHERE id IN (" . $placeholders($delIds) . ")")->execute($delIds);
+                }
+            } catch (\Throwable $e) {
+            }
+
+            try {
+                $sql = "SELECT id FROM realtor_clients WHERE user_id = ?";
+                $params = [(int)$userId];
+                if (!empty($protectedRClients)) {
+                    $sql .= " AND id NOT IN (" . $placeholders($protectedRClients) . ")";
+                    $params = array_merge($params, $protectedRClients);
+                }
+                $stmt = $db->prepare($sql);
+                $stmt->execute($params);
+                $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+                $delIds = [];
+                foreach ($rows as $r) {
+                    $id = (int)($r['id'] ?? 0);
+                    if ($id > 0) $delIds[] = $id;
+                }
+                if (!empty($delIds)) {
+                    $db->prepare("DELETE FROM realtor_clients WHERE id IN (" . $placeholders($delIds) . ")")->execute($delIds);
+                }
+            } catch (\Throwable $e) {
+            }
+
+            try {
+                $sql = "SELECT id FROM realtor_listings WHERE user_id = ?";
+                $params = [(int)$userId];
+                if (!empty($protectedRListings)) {
+                    $sql .= " AND id NOT IN (" . $placeholders($protectedRListings) . ")";
+                    $params = array_merge($params, $protectedRListings);
+                }
+                $stmt = $db->prepare($sql);
+                $stmt->execute($params);
+                $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+                $delIds = [];
+                foreach ($rows as $r) {
+                    $id = (int)($r['id'] ?? 0);
+                    if ($id > 0) $delIds[] = $id;
+                }
+                if (!empty($delIds)) {
+                    $db->prepare("DELETE FROM realtor_listings WHERE id IN (" . $placeholders($delIds) . ")")->execute($delIds);
+                }
+            } catch (\Throwable $e) {
+            }
+
+            try {
+                $sqlProps = "SELECT id FROM properties WHERE (owner_id = ? OR manager_id = ? OR agent_id = ? OR caretaker_user_id = ?)";
+                $paramsProps = [(int)$userId, (int)$userId, (int)$userId, (int)$userId];
+                if (!empty($protectedProps)) {
+                    $sqlProps .= " AND id NOT IN (" . $placeholders($protectedProps) . ")";
+                    $paramsProps = array_merge($paramsProps, $protectedProps);
+                }
+                $stmt = $db->prepare($sqlProps);
+                $stmt->execute($paramsProps);
+                $propRows = $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+                $deletePropIds = [];
+                foreach ($propRows as $r) {
+                    $pid = (int)($r['id'] ?? 0);
+                    if ($pid > 0) $deletePropIds[] = $pid;
+                }
+                if (!empty($deletePropIds)) {
+                    $db->prepare("DELETE FROM properties WHERE id IN (" . $placeholders($deletePropIds) . ")")->execute($deletePropIds);
+                }
+            } catch (\Throwable $e) {
+            }
+
+            try {
+                $sqlUnits = "SELECT id FROM units WHERE user_id = ?";
+                $paramsUnits = [(int)$userId];
+                if (!empty($protectedUnits)) {
+                    $sqlUnits .= " AND id NOT IN (" . $placeholders($protectedUnits) . ")";
+                    $paramsUnits = array_merge($paramsUnits, $protectedUnits);
+                }
+                $stmt = $db->prepare($sqlUnits);
+                $stmt->execute($paramsUnits);
+                $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+                $delIds = [];
+                foreach ($rows as $r) {
+                    $id = (int)($r['id'] ?? 0);
+                    if ($id > 0) $delIds[] = $id;
+                }
+                if (!empty($delIds)) {
+                    $db->prepare("DELETE FROM units WHERE id IN (" . $placeholders($delIds) . ")")->execute($delIds);
+                }
+            } catch (\Throwable $e) {
+            }
+
+            try {
+                $sqlTen = "SELECT id FROM tenants WHERE (user_id = ? OR property_id IN (SELECT id FROM properties WHERE owner_id = ? OR manager_id = ? OR agent_id = ? OR caretaker_user_id = ?))";
+                $paramsTen = [(int)$userId, (int)$userId, (int)$userId, (int)$userId, (int)$userId];
+                if (!empty($protectedTenants)) {
+                    $sqlTen .= " AND id NOT IN (" . $placeholders($protectedTenants) . ")";
+                    $paramsTen = array_merge($paramsTen, $protectedTenants);
+                }
+                $stmt = $db->prepare($sqlTen);
+                $stmt->execute($paramsTen);
+                $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+                $delIds = [];
+                foreach ($rows as $r) {
+                    $id = (int)($r['id'] ?? 0);
+                    if ($id > 0) $delIds[] = $id;
+                }
+                if (!empty($delIds)) {
+                    $db->prepare("DELETE FROM tenants WHERE id IN (" . $placeholders($delIds) . ")")->execute($delIds);
+                }
+            } catch (\Throwable $e) {
+            }
+
+            try {
+                $sqlLease = "SELECT id FROM leases WHERE id IN (SELECT lease_id FROM payments WHERE user_id = ?)";
+                $stmt = $db->prepare($sqlLease);
+                $stmt->execute([(int)$userId]);
+                $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+                $delIds = [];
+                foreach ($rows as $r) {
+                    $id = (int)($r['id'] ?? 0);
+                    if ($id > 0 && !in_array($id, $protectedLeases, true)) $delIds[] = $id;
+                }
+                if (!empty($delIds)) {
+                    $db->prepare("DELETE FROM leases WHERE id IN (" . $placeholders($delIds) . ")")->execute($delIds);
+                }
+            } catch (\Throwable $e) {
+            }
+        } catch (\Throwable $e) {
+        }
+    }
+}
+
 if (!function_exists('redirect')) {
     /**
      * Redirect to a given URL
