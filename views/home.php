@@ -713,6 +713,55 @@
             background: linear-gradient(135deg, var(--secondary-color) 0%, var(--accent-color) 100%);
         }
 
+        #demoModal .modal-content {
+            border: none;
+            border-radius: 1rem;
+            overflow: hidden;
+            box-shadow: 0 20px 50px rgba(107, 62, 153, 0.25);
+        }
+
+        #demoModal .modal-header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 70%, rgba(255, 138, 0, 0.45) 100%);
+            color: #fff;
+            padding: 1rem 1.25rem;
+        }
+
+        #demoModal .modal-title {
+            font-weight: 700;
+        }
+
+        #demoModal .btn-close {
+            filter: invert(1);
+            opacity: 0.9;
+        }
+
+        #demoModal .modal-body {
+            padding: 1.25rem;
+            background: #fff;
+        }
+
+        #demoModal .demo-role-btn {
+            border-radius: 0.75rem;
+            padding: 0.75rem 1rem;
+            font-weight: 700;
+            border: 2px solid rgba(107, 62, 153, 0.20);
+            color: var(--primary-color);
+            background: rgba(107, 62, 153, 0.04);
+            transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease, background-color .15s ease;
+        }
+
+        #demoModal .demo-role-btn:hover {
+            transform: translateY(-1px);
+            border-color: rgba(255, 138, 0, 0.70);
+            box-shadow: 0 10px 25px rgba(107, 62, 153, 0.16);
+            background: rgba(255, 138, 0, 0.08);
+            color: var(--primary-color);
+        }
+
+        #demoModal .demo-role-btn:focus {
+            box-shadow: 0 0 0 0.25rem rgba(255, 138, 0, 0.20);
+        }
+
         .modal a {
             color: var(--primary-color);
             text-decoration: none;
@@ -1498,10 +1547,10 @@
                 </div>
                 <div class="modal-body">
                     <div class="d-grid gap-2">
-                        <a class="btn btn-outline-primary" href="<?= BASE_URL ?>/demo/start?role=landlord">Landlord Demo</a>
-                        <a class="btn btn-outline-primary" href="<?= BASE_URL ?>/demo/start?role=manager">Manager Demo</a>
-                        <a class="btn btn-outline-primary" href="<?= BASE_URL ?>/demo/start?role=agent">Agent Demo</a>
-                        <a class="btn btn-outline-primary" href="<?= BASE_URL ?>/demo/start?role=realtor">Realtor Demo</a>
+                        <a class="btn demo-role-btn" data-demo-role="landlord" href="<?= BASE_URL ?>/demo/start?role=landlord">Landlord Demo</a>
+                        <a class="btn demo-role-btn" data-demo-role="manager" href="<?= BASE_URL ?>/demo/start?role=manager">Manager Demo</a>
+                        <a class="btn demo-role-btn" data-demo-role="agent" href="<?= BASE_URL ?>/demo/start?role=agent">Agent Demo</a>
+                        <a class="btn demo-role-btn" data-demo-role="realtor" href="<?= BASE_URL ?>/demo/start?role=realtor">Realtor Demo</a>
                     </div>
                 </div>
             </div>
@@ -1511,6 +1560,17 @@
     <!-- JavaScript -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        document.addEventListener('click', function(e) {
+            const btn = e.target && e.target.closest ? e.target.closest('#demoModal a[data-demo-role]') : null;
+            if (!btn) return;
+
+            e.preventDefault();
+            const role = (btn.getAttribute('data-demo-role') || '').trim();
+            if (!role) return;
+
+            window.location.href = '<?= BASE_URL ?>/demo/start?role=' + encodeURIComponent(role);
+        });
+
         function showAlert(formId, message, type = 'danger') {
             const alert = document.getElementById(formId + 'Alert');
             alert.textContent = message;
