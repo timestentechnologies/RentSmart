@@ -95,16 +95,50 @@ class HomeController
             require_once __DIR__ . '/../Models/Property.php';
             require_once __DIR__ . '/../Models/RealtorListing.php';
             require_once __DIR__ . '/../Helpers/FileUploadHelper.php';
+            require_once __DIR__ . '/../Models/Setting.php';
 
             $unitModel = new \App\Models\Unit();
             $propertyModel = new \App\Models\Property();
             $realtorListingModel = new \App\Models\RealtorListing();
 
+            $settingsModel = new \App\Models\Setting();
+            $rawProtectedUnits = (string)($settingsModel->get('demo_protected_unit_ids_json') ?? '[]');
+            $rawProtectedProperties = (string)($settingsModel->get('demo_protected_property_ids_json') ?? '[]');
+            $rawProtectedUsers = (string)($settingsModel->get('demo_protected_user_ids_json') ?? '[]');
+            $protectedUnitIds = json_decode($rawProtectedUnits, true);
+            $protectedPropertyIds = json_decode($rawProtectedProperties, true);
+            $protectedUserIds = json_decode($rawProtectedUsers, true);
+            $protectedUnitIds = is_array($protectedUnitIds) ? array_map('intval', $protectedUnitIds) : [];
+            $protectedPropertyIds = is_array($protectedPropertyIds) ? array_map('intval', $protectedPropertyIds) : [];
+            $protectedUserIds = is_array($protectedUserIds) ? array_map('intval', $protectedUserIds) : [];
+
             // Get vacant units (public - no role filters)
             $units = $unitModel->getVacantUnitsPublic();
+            if (!empty($protectedUnitIds) || !empty($protectedPropertyIds)) {
+                $units = array_values(array_filter($units, function ($u) use ($protectedUnitIds, $protectedPropertyIds) {
+                    $uid = (int)($u['id'] ?? 0);
+                    $pid = (int)($u['property_id'] ?? 0);
+                    if ($uid > 0 && in_array($uid, $protectedUnitIds, true)) {
+                        return false;
+                    }
+                    if ($pid > 0 && in_array($pid, $protectedPropertyIds, true)) {
+                        return false;
+                    }
+                    return true;
+                }));
+            }
 
             // Public realtor listings
             $realtorListings = $realtorListingModel->getPublicAll();
+            if (!empty($protectedUserIds)) {
+                $realtorListings = array_values(array_filter($realtorListings, function ($l) use ($protectedUserIds) {
+                    $uid = (int)($l['user_id'] ?? 0);
+                    if ($uid > 0 && in_array($uid, $protectedUserIds, true)) {
+                        return false;
+                    }
+                    return true;
+                }));
+            }
 
             // Attach listing images
             try {
@@ -169,8 +203,6 @@ class HomeController
             }
 
             // Settings for header/favicon
-            require_once __DIR__ . '/../Models/Setting.php';
-            $settingsModel = new \App\Models\Setting();
             $settings = $settingsModel->getAllAsAssoc();
             $siteName = $settings['site_name'] ?? 'RentSmart';
             $favicon = $settings['site_favicon'] ?? '';
