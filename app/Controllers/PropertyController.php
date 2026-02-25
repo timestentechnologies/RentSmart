@@ -53,6 +53,23 @@ class PropertyController
     {
         try {
             $properties = $this->property->getAll($_SESSION['user_id']);
+
+            if ($this->user->isAdmin() && empty($_SESSION['demo_mode'])) {
+                try {
+                    $settings = new \App\Models\Setting();
+                    $raw = (string)($settings->get('demo_protected_property_ids_json') ?? '[]');
+                    $ids = json_decode($raw, true);
+                    $ids = is_array($ids) ? array_map('intval', $ids) : [];
+                    if (!empty($ids)) {
+                        $properties = array_values(array_filter(($properties ?? []), function ($p) use ($ids) {
+                            $pid = (int)($p['id'] ?? 0);
+                            return !($pid > 0 && in_array($pid, $ids, true));
+                        }));
+                    }
+                } catch (\Throwable $e) {
+                }
+            }
+
             // Load caretakers for selection dropdown
             $employeeModel = new Employee();
             $caretakers = $employeeModel->getCaretakers($_SESSION['user_id']);

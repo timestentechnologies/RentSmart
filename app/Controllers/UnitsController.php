@@ -57,6 +57,50 @@ class UnitsController
             $properties = $this->property->getAll($_SESSION['user_id']);
             $tenantModel = new Tenant();
             $tenants = $tenantModel->getAll($_SESSION['user_id']);
+
+            if ($this->user->isAdmin() && empty($_SESSION['demo_mode'])) {
+                try {
+                    $settings = new \App\Models\Setting();
+                    $pRaw = (string)($settings->get('demo_protected_property_ids_json') ?? '[]');
+                    $uRaw = (string)($settings->get('demo_protected_unit_ids_json') ?? '[]');
+                    $tRaw = (string)($settings->get('demo_protected_tenant_ids_json') ?? '[]');
+                    $pIds = json_decode($pRaw, true);
+                    $uIds = json_decode($uRaw, true);
+                    $tIds = json_decode($tRaw, true);
+                    $pIds = is_array($pIds) ? array_map('intval', $pIds) : [];
+                    $uIds = is_array($uIds) ? array_map('intval', $uIds) : [];
+                    $tIds = is_array($tIds) ? array_map('intval', $tIds) : [];
+
+                    if (!empty($pIds)) {
+                        $properties = array_values(array_filter(($properties ?? []), function ($p) use ($pIds) {
+                            $pid = (int)($p['id'] ?? 0);
+                            return !($pid > 0 && in_array($pid, $pIds, true));
+                        }));
+                    }
+
+                    if (!empty($uIds) || !empty($pIds)) {
+                        $units = array_values(array_filter(($units ?? []), function ($u) use ($uIds, $pIds) {
+                            $uid = (int)($u['id'] ?? 0);
+                            $pid = (int)($u['property_id'] ?? 0);
+                            if ($uid > 0 && !empty($uIds) && in_array($uid, $uIds, true)) {
+                                return false;
+                            }
+                            if ($pid > 0 && !empty($pIds) && in_array($pid, $pIds, true)) {
+                                return false;
+                            }
+                            return true;
+                        }));
+                    }
+
+                    if (!empty($tIds)) {
+                        $tenants = array_values(array_filter(($tenants ?? []), function ($t) use ($tIds) {
+                            $tid = (int)($t['id'] ?? 0);
+                            return !($tid > 0 && in_array($tid, $tIds, true));
+                        }));
+                    }
+                } catch (\Throwable $e) {
+                }
+            }
             // Only show tenants who are not assigned to a unit (no unit_id and no active lease/unit_number)
             $tenants = array_values(array_filter($tenants, function ($t) {
                 $unitId = (int)($t['unit_id'] ?? 0);

@@ -42,6 +42,66 @@ class LeasesController {
         $tenantModel = new \App\Models\Tenant();
         $tenants = $tenantModel->getAll($this->userId);
 
+        try {
+            $userModel = new \App\Models\User();
+            $ud = $userModel->find((int)$this->userId);
+            $isAdmin = is_array($ud) && in_array(strtolower((string)($ud['role'] ?? '')), ['admin', 'administrator'], true);
+            if ($isAdmin && empty($_SESSION['demo_mode'])) {
+                $settings = new \App\Models\Setting();
+                $pIds = json_decode((string)($settings->get('demo_protected_property_ids_json') ?? '[]'), true);
+                $uIds = json_decode((string)($settings->get('demo_protected_unit_ids_json') ?? '[]'), true);
+                $tIds = json_decode((string)($settings->get('demo_protected_tenant_ids_json') ?? '[]'), true);
+                $lIds = json_decode((string)($settings->get('demo_protected_lease_ids_json') ?? '[]'), true);
+                $pIds = is_array($pIds) ? array_map('intval', $pIds) : [];
+                $uIds = is_array($uIds) ? array_map('intval', $uIds) : [];
+                $tIds = is_array($tIds) ? array_map('intval', $tIds) : [];
+                $lIds = is_array($lIds) ? array_map('intval', $lIds) : [];
+
+                if (!empty($pIds)) {
+                    $properties = array_values(array_filter(($properties ?? []), function ($p) use ($pIds) {
+                        $pid = (int)($p['id'] ?? 0);
+                        return !($pid > 0 && in_array($pid, $pIds, true));
+                    }));
+                }
+
+                if (!empty($tIds) || !empty($pIds)) {
+                    $tenants = array_values(array_filter(($tenants ?? []), function ($t) use ($tIds, $pIds) {
+                        $tid = (int)($t['id'] ?? 0);
+                        $pid = (int)($t['property_id'] ?? 0);
+                        if ($tid > 0 && !empty($tIds) && in_array($tid, $tIds, true)) {
+                            return false;
+                        }
+                        if ($pid > 0 && !empty($pIds) && in_array($pid, $pIds, true)) {
+                            return false;
+                        }
+                        return true;
+                    }));
+                }
+
+                if (!empty($lIds)) {
+                    $leases = array_values(array_filter(($leases ?? []), function ($l) use ($lIds) {
+                        $lid = (int)($l['id'] ?? 0);
+                        return !($lid > 0 && in_array($lid, $lIds, true));
+                    }));
+                }
+
+                if (!empty($uIds) || !empty($pIds)) {
+                    $leases = array_values(array_filter(($leases ?? []), function ($l) use ($uIds, $pIds) {
+                        $uid = (int)($l['unit_id'] ?? 0);
+                        $pid = (int)($l['property_id'] ?? 0);
+                        if ($uid > 0 && !empty($uIds) && in_array($uid, $uIds, true)) {
+                            return false;
+                        }
+                        if ($pid > 0 && !empty($pIds) && in_array($pid, $pIds, true)) {
+                            return false;
+                        }
+                        return true;
+                    }));
+                }
+            }
+        } catch (\Throwable $e) {
+        }
+
         require 'views/leases/index.php';
     }
 
