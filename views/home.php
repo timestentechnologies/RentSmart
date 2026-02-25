@@ -880,11 +880,11 @@
                             <i class="bi bi-rocket-takeoff me-2"></i><?= htmlspecialchars($heroPrimaryText) ?>
                         </a>
                         <?php if (site_setting('demo_enabled', '0') === '1'): ?>
-                        <div class="mt-3">
+                       
                             <a href="#" class="btn btn-light btn-lg" data-bs-toggle="modal" data-bs-target="#demoModal">
                                 <i class="bi bi-play-circle me-2"></i>Try Demo
                             </a>
-                        </div>
+                        
                     <?php endif; ?>
                     </div>
                     
