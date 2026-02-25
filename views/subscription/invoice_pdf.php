@@ -12,29 +12,31 @@
             overflow: hidden;
         }
 
-        /* Corner blobs using overlapping circles (Dompdf-compatible) */
-        .blob-wrap {
+        /* Single corner circles positioned at edges */
+        .corner-circle {
             position: absolute;
+            border-radius: 50%;
             pointer-events: none;
             z-index: 0;
         }
-        .blob-wrap.tr { top: 0; right: 0; width: 200px; height: 150px; }
-        .blob-wrap.bl { bottom: 0; left: 0; width: 220px; height: 180px; }
-
-        .blob {
-            position: absolute;
-            border-radius: 50%;
-            opacity: 0.55;
+        /* Top-right: salmon/coral - positioned at corner, half off-page */
+        .corner-circle.tr {
+            top: -90px;
+            right: -90px;
+            width: 180px;
+            height: 180px;
+            background: #F4A88A;
+            opacity: 0.6;
         }
-        /* Salmon/coral blobs - top right */
-        .blob.tr1 { width: 180px; height: 140px; top: -40px; right: -60px; background: #F9C5AD; }
-        .blob.tr2 { width: 130px; height: 100px; top: -20px; right: -30px; background: #F4A88A; opacity: 0.45; }
-        .blob.tr3 { width: 90px; height: 70px; top: -5px; right: -10px; background: #F08060; opacity: 0.35; }
-
-        /* Lavender/purple blobs - bottom left */
-        .blob.bl1 { width: 190px; height: 160px; bottom: -50px; left: -70px; background: #D5C8F0; }
-        .blob.bl2 { width: 140px; height: 110px; bottom: -30px; left: -40px; background: #B8A8E8; opacity: 0.45; }
-        .blob.bl3 { width: 100px; height: 80px; bottom: -10px; left: -15px; background: #9A88D8; opacity: 0.35; }
+        /* Bottom-left: lavender/purple - positioned at corner, half off-page */
+        .corner-circle.bl {
+            bottom: -90px;
+            left: -90px;
+            width: 180px;
+            height: 180px;
+            background: #B8A8E8;
+            opacity: 0.6;
+        }
 
         /* Watermark using logo */
         .watermark {
@@ -156,19 +158,11 @@
 ?>
 <div class="page">
 
-    <!-- Corner blobs: salmon/coral top-right -->
-    <div class="blob-wrap tr">
-        <div class="blob tr1"></div>
-        <div class="blob tr2"></div>
-        <div class="blob tr3"></div>
-    </div>
+    <!-- Single corner circle: top-right salmon -->
+    <div class="corner-circle tr"></div>
 
-    <!-- Corner blobs: lavender/purple bottom-left -->
-    <div class="blob-wrap bl">
-        <div class="blob bl1"></div>
-        <div class="blob bl2"></div>
-        <div class="blob bl3"></div>
-    </div>
+    <!-- Single corner circle: bottom-left lavender -->
+    <div class="corner-circle bl"></div>
 
     <?php if (!empty($logoDataUri)): ?>
         <div class="watermark">
