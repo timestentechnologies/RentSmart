@@ -5,19 +5,8 @@
     <meta charset="utf-8">
     <title>Subscription Invoice</title>
     <style>
-        body { font-family: DejaVu Sans, Arial, Helvetica, sans-serif; font-size: 12px; color: #222; margin: 0; padding: 0; background: #fff; }
-        .page { padding: 24px 28px; position: relative; overflow: hidden; }
-
-        /* ── Corner blob SVGs ── */
-        .corner-blob {
-            position: absolute;
-            z-index: 0;
-            pointer-events: none;
-            line-height: 0;
-            font-size: 0;
-        }
-        .corner-blob.top-right  { top: -10px;  right: -10px;  }
-        .corner-blob.bottom-left { bottom: -10px; left: -10px; }
+        body { font-family: DejaVu Sans, Arial, Helvetica, sans-serif; font-size: 12px; color: #222; margin: 0; padding: 0; }
+        .page { padding: 24px 28px; position: relative; }
 
         /* Watermark using logo */
         .watermark {
@@ -25,93 +14,59 @@
             left: 50%;
             top: 55%;
             transform: translate(-50%, -50%);
-            opacity: 0.08;
+            opacity: 0.06;
             z-index: 0;
         }
-        .watermark img { width: 360px; max-width: 70%; }
+        .watermark img { width: 420px; max-width: 80%; }
 
-        .header-row { width: 100%; margin-bottom: 18px; position: relative; z-index: 2; }
-        .header-left { float: left; width: 58%; }
+        .header-row { width: 100%; margin-bottom: 20px; position: relative; z-index: 2; }
+        .header-left { float: left; width: 60%; }
         .header-right { float: right; width: 38%; text-align: right; }
 
-        .brand-name { font-size: 15px; font-weight: bold; margin-bottom: 2px; color: #222; }
-        .brand-meta { font-size: 10px; color: #555; line-height: 1.4; }
-        .logo-small { max-height: 36px; margin-bottom: 4px; }
+        .brand-name { font-size: 16px; font-weight: bold; margin-bottom: 2px; }
+        .brand-meta { font-size: 10px; color: #666; line-height: 1.4; }
+        .logo-small { max-height: 40px; margin-bottom: 4px; }
 
-        .invoice-label { font-size: 11px; color: #999; }
+        .invoice-label { font-size: 12px; color: #999; }
         .invoice-number { font-size: 13px; font-weight: bold; color: #c0392b; }
         .invoice-date { font-size: 10px; color: #666; margin-top: 4px; }
 
         .clear { clear: both; }
 
-        .card-row { width: 100%; margin-bottom: 10px; position: relative; z-index: 2; }
-        .card {
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            padding: 10px 12px;
-            font-size: 10px;
-            background: #fff;
-            min-height: 70px;
-        }
-        .card + .card { margin-left: 10px; }
-        .card-title {
-            font-weight: bold;
-            font-size: 10px;
-            margin-bottom: 6px;
-            color: #374151;
-            text-transform: uppercase;
-            letter-spacing: 0.4px;
-        }
-        .muted { color: #4b5563; font-size: 10px; line-height: 1.5; }
+        .card-row { width: 100%; margin-bottom: 12px; position: relative; z-index: 2; }
+        .card { border: 1px solid #e2e6f0; border-radius: 6px; padding: 10px 12px; font-size: 11px; box-sizing: border-box; }
+        .card-title { font-weight: bold; font-size: 11px; margin-bottom: 6px; color: #555; }
+        .muted { color: #777; font-size: 10px; line-height: 1.4; }
 
-        .card-half { float: left; width: 48%; box-sizing: border-box; }
+        .card-half { float: left; width: 49%; }
+        .card-half + .card-half { margin-left: 2%; }
 
-        .details-row { width: 100%; margin-bottom: 10px; position: relative; z-index: 2; }
-        .details-card {
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            padding: 10px 12px;
-            font-size: 10px;
-            background: #fff;
-        }
-        .details-table { width: 100%; border-collapse: collapse; font-size: 10px; }
-        .details-table th { width: 25%; text-align: left; padding: 4px 0; color: #4b5563; }
-        .details-table td { padding: 4px 0; color: #111; }
+        .details-row { width: 100%; margin-bottom: 12px; position: relative; z-index: 2; }
+        .details-card { border: 1px solid #e2e6f0; border-radius: 6px; padding: 10px 12px; font-size: 11px; }
+        .details-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+        .details-table th { width: 25%; text-align: left; padding: 4px 0; color: #777; }
+        .details-table td { padding: 4px 0; }
 
-        .items-row { width: 100%; margin-bottom: 12px; position: relative; z-index: 2; }
-        .items-table { width: 100%; border-collapse: collapse; font-size: 10px; border: 1px solid #e5e7eb; }
-        .items-table th, .items-table td { padding: 8px 8px; border: 1px solid #e5e7eb; }
-        .items-table th { background: #f3f4f6; font-weight: bold; text-align: left; color: #374151; }
+        .items-row { width: 100%; margin-bottom: 16px; position: relative; z-index: 2; }
+        .items-table { width: 100%; border-collapse: collapse; font-size: 11px; }
+        .items-table th, .items-table td { padding: 7px 6px; border: 1px solid #e3e6ef; }
+        .items-table th { background: #f6f7fb; font-weight: bold; text-align: left; }
         .items-table td.amount { text-align: right; }
 
         .totals-row { width: 100%; margin-top: 4px; position: relative; z-index: 2; }
-        .totals-card {
-            width: 38%;
-            float: right;
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            padding: 10px 12px;
-            font-size: 10px;
-            background: #fff;
-        }
+        .totals-card { width: 34%; float: right; border: 1px solid #e2e6f0; border-radius: 6px; padding: 8px 10px; font-size: 11px; }
         .totals-table { width: 100%; border-collapse: collapse; }
         .totals-table td { padding: 4px 0; font-size: 10px; }
-        .totals-label { color: #4b5563; }
+        .totals-label { color: #777; }
         .totals-value { text-align: right; }
-        .totals-strong { font-weight: bold; color: #111; }
+        .totals-strong { font-weight: bold; }
         .totals-paid { color: #16a34a; font-weight: bold; }
         .totals-balance { color: #c0392b; font-weight: bold; }
 
-        .footer-text { margin-top: 28px; font-size: 10px; color: #6b7280; position: relative; z-index: 2; }
+        .footer-text { margin-top: 28px; font-size: 10px; color: #777; position: relative; z-index: 2; }
 
-        .status-pill {
-            display: inline-block;
-            padding: 3px 10px;
-            border-radius: 999px;
-            font-size: 9px;
-            font-weight: bold;
-            color: #fff;
-        }
+        /* Simple status pill near totals */
+        .status-pill { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 9px; font-weight: bold; color: #fff; }
         .status-paid { background: #16a34a; }
         .status-pending { background: #f59e0b; }
         .status-failed { background: #dc2626; }
@@ -124,10 +79,10 @@
     $badgeText = ($ps === 'completed') ? 'Paid' : (($ps === 'failed') ? 'Failed' : 'Pending');
 
     $planName = $subscription['plan_name'] ?? ($subscription['plan_type'] ?? 'Subscription Plan');
-    $planDisplay = 'Subscription Plan - ' . $planName;
+    $planDescription = 'Subscription Plan - ' . $planName;
     $amount = (float)($payment['amount'] ?? $subscription['plan_price'] ?? 0);
     $subtotal = $amount;
-    $tax = 0.0;
+    $tax = 0.0; // currently exempt
     $total = $subtotal + $tax;
     $paid = ($ps === 'completed') ? $total : 0.0;
     $balance = $total - $paid;
@@ -138,25 +93,6 @@
         : date('Y-m-d', strtotime('+30 days', strtotime($issueDate)));
 ?>
 <div class="page">
-
-    <!-- ══ TOP-RIGHT corner blob: salmon/coral ══ -->
-    <div class="corner-blob top-right">
-        <svg width="210" height="210" viewBox="0 0 210 210" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <ellipse cx="160" cy="55"  rx="115" ry="100" fill="#F9C5AD" opacity="0.55"/>
-            <ellipse cx="180" cy="35"  rx="80"  ry="65"  fill="#F4A88A" opacity="0.45"/>
-            <ellipse cx="198" cy="18"  rx="52"  ry="42"  fill="#F08060" opacity="0.35"/>
-        </svg>
-    </div>
-
-    <!-- ══ BOTTOM-LEFT corner blob: lavender/purple ══ -->
-    <div class="corner-blob bottom-left">
-        <svg width="250" height="250" viewBox="0 0 250 250" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <ellipse cx="65"  cy="185" rx="125" ry="110" fill="#D5C8F0" opacity="0.55"/>
-            <ellipse cx="40"  cy="210" rx="86"  ry="72"  fill="#B8A8E8" opacity="0.45"/>
-            <ellipse cx="18"  cy="232" rx="55"  ry="46"  fill="#9A88D8" opacity="0.35"/>
-        </svg>
-    </div>
-
     <?php if (!empty($logoDataUri)): ?>
         <div class="watermark">
             <img src="<?= $logoDataUri ?>" alt="Watermark">
@@ -188,10 +124,10 @@
         <div class="card card-half">
             <div class="card-title">BILLED FROM</div>
             <div class="muted">
-                Rent Smart Kenya<br>
+                <?= htmlspecialchars($siteName ?? 'RentSmart') ?><br>
                 Westlands, Nairobi, Kenya 00100<br>
                 +254795155230<br>
-                rentsmart@timestentechnologies.co.ke
+                <?= htmlspecialchars($settings['site_email'] ?? 'rentsmart@timestentechnologies.co.ke') ?>
             </div>
         </div>
         <div class="card card-half">
@@ -236,7 +172,7 @@
             </thead>
             <tbody>
                 <tr>
-                    <td><?= htmlspecialchars($planDisplay) ?></td>
+                    <td><?= htmlspecialchars($planDescription) ?></td>
                     <td>1.00</td>
                     <td class="amount"><?= number_format($amount, 2) ?></td>
                     <td class="amount"><?= number_format($amount, 2) ?></td>
