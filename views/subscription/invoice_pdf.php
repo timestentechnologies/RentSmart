@@ -6,7 +6,7 @@
     <title>Subscription Invoice</title>
     <style>
         body { font-family: DejaVu Sans, Arial, Helvetica, sans-serif; font-size: 12px; color: #222; margin: 0; padding: 0; background: #fff; }
-        .page { padding: 24px 28px; position: relative; overflow: visible; }
+        .page { padding: 24px 28px; position: relative; }
 
         /* Watermark using logo */
         .watermark {
@@ -93,7 +93,6 @@
 
         .footer-text { margin-top: 28px; font-size: 10px; color: #6b7280; position: relative; z-index: 2; }
 
-        /* Decorative corner shapes - inline styles used instead */
         .status-pill {
             display: inline-block;
             padding: 3px 10px;
@@ -128,16 +127,6 @@
         : date('Y-m-d', strtotime('+30 days', strtotime($issueDate)));
 ?>
 <div class="page">
-    <!-- Large curved decorative shapes using SVG -->
-    <!-- Top right decorative shape - large curved peach/pink -->
-    <svg style="position:absolute;top:0;right:0;z-index:0;" width="300" height="250" viewBox="0 0 300 250" xmlns="http://www.w3.org/2000/svg">
-        <ellipse cx="220" cy="80" rx="180" ry="140" fill="#fca5a5" opacity="0.35"/>
-    </svg>
-    <!-- Bottom left decorative shape - large curved purple -->
-    <svg style="position:absolute;bottom:0;left:0;z-index:0;" width="300" height="250" viewBox="0 0 300 250" xmlns="http://www.w3.org/2000/svg">
-        <ellipse cx="80" cy="180" rx="160" ry="130" fill="#c4b5fd" opacity="0.35"/>
-    </svg>
-
     <?php if (!empty($logoDataUri)): ?>
         <div class="watermark">
             <img src="<?= $logoDataUri ?>" alt="Watermark">
