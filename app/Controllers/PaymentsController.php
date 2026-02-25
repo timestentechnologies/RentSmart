@@ -1122,6 +1122,19 @@ class PaymentsController
                 exit;
             }
 
+            try {
+                $settings = new \App\Models\Setting();
+                $raw = (string)($settings->get('demo_protected_payment_ids_json') ?? '[]');
+                $ids = json_decode($raw, true);
+                $ids = is_array($ids) ? array_map('intval', $ids) : [];
+                if (in_array((int)$id, $ids, true)) {
+                    http_response_code(400);
+                    echo json_encode(['success' => false, 'message' => 'Demo data cannot be deleted']);
+                    exit;
+                }
+            } catch (\Throwable $e) {
+            }
+
             // Delete the payment
             $success = $paymentModel->delete($id);
             

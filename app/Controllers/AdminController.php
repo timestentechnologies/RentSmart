@@ -275,18 +275,28 @@ class AdminController
     public function deleteUser($id)
     {
         try {
-            // Verify CSRF token
-            if (!verify_csrf_token()) {
-                http_response_code(400);
-                echo json_encode(['success' => false, 'message' => 'Invalid security token']);
-                return;
-            }
-
+            // Check if user exists
             $user = $this->user->find($id);
             if (!$user) {
                 http_response_code(404);
                 echo json_encode(['success' => false, 'message' => 'User not found']);
                 return;
+            }
+
+            // Prevent deleting demo users
+            try {
+                $settings = new \App\Models\Setting();
+                $raw = (string)($settings->get('demo_protected_user_ids_json') ?? '[]');
+                $ids = json_decode($raw, true);
+                $ids = is_array($ids) ? array_map('intval', $ids) : [];
+                $email = strtolower(trim((string)($user['email'] ?? '')));
+                $isDemoEmail = (strpos($email, 'demo+') === 0) && (strpos($email, '@rentsmart.local') !== false);
+                if ($isDemoEmail || in_array((int)$id, $ids, true)) {
+                    http_response_code(400);
+                    echo json_encode(['success' => false, 'message' => 'Demo user cannot be deleted']);
+                    return;
+                }
+            } catch (\Throwable $e) {
             }
 
             // Don't allow deleting admin users
@@ -296,10 +306,17 @@ class AdminController
                 return;
             }
 
-            // Don't allow deleting yourself
+            // Prevent deleting own account
             if ($id == $_SESSION['user_id']) {
                 http_response_code(400);
                 echo json_encode(['success' => false, 'message' => 'Cannot delete your own account']);
+                return;
+            }
+
+            // Verify CSRF token
+            if (!verify_csrf_token()) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'message' => 'Invalid security token']);
                 return;
             }
 
@@ -583,10 +600,10 @@ class AdminController
         } catch (Exception $e) {
             error_log("Delete user error: " . $e->getMessage());
             error_log("Stack trace: " . $e->getTraceAsString());
-            
+
             http_response_code(500);
             echo json_encode([
-                'success' => false, 
+                'success' => false,
                 'message' => 'Failed to delete user. Please check if there are dependent records.',
                 'error' => $e->getMessage()
             ]);

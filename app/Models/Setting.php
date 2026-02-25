@@ -116,7 +116,14 @@ class Setting extends Model
             // Google Gemini defaults
             'google_api_key' => '',
             'google_model' => 'gemini-3-flash-preview',
-            'ai_system_prompt' => 'You are RentSmart Support AI. Help users with property management tasks and app guidance.'
+            'ai_system_prompt' => 'You are RentSmart Support AI. Help users with property management tasks and app guidance.',
+            'demo_enabled' => '0',
+            'demo_protected_user_ids_json' => '[]',
+            'demo_protected_property_ids_json' => '[]',
+            'demo_protected_unit_ids_json' => '[]',
+            'demo_protected_tenant_ids_json' => '[]',
+            'demo_protected_lease_ids_json' => '[]',
+            'demo_protected_payment_ids_json' => '[]'
         ];
 
         foreach ($defaults as $key => $value) {

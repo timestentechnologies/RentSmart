@@ -227,6 +227,13 @@ function setting_json_pretty($key, $defaultJson = '[]') {
                                 <input type="text" class="form-control" name="home_hero_title" value="<?= htmlspecialchars(setting_raw('home_hero_title', '')) ?>">
                             </div>
                             <div class="col-md-6">
+                                <label class="form-label">Enable Demo Button</label>
+                                <select class="form-select" name="demo_enabled">
+                                    <option value="0" <?= setting_raw('demo_enabled', '0') === '0' ? 'selected' : '' ?>>Disabled</option>
+                                    <option value="1" <?= setting_raw('demo_enabled', '0') === '1' ? 'selected' : '' ?>>Enabled</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
                                 <label class="form-label">Hero Subtitle</label>
                                 <input type="text" class="form-control" name="home_hero_subtitle" value="<?= htmlspecialchars(setting_raw('home_hero_subtitle', '')) ?>">
                             </div>
