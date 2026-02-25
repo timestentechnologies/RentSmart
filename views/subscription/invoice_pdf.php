@@ -8,49 +8,16 @@
         body { font-family: DejaVu Sans, Arial, Helvetica, sans-serif; font-size: 12px; color: #222; margin: 0; padding: 0; background: #fff; }
         .page { padding: 24px 28px; position: relative; overflow: hidden; }
 
-        /* ── Corner decorative shapes ── */
-        .corner-shape {
+        /* ── Corner blob SVGs ── */
+        .corner-blob {
             position: absolute;
-            border-radius: 50%;
             z-index: 0;
             pointer-events: none;
+            line-height: 0;
+            font-size: 0;
         }
-        /* Top-right: salmon/pink blob */
-        .corner-top-right {
-            width: 180px;
-            height: 180px;
-            background: radial-gradient(circle at 60% 40%, #f9c5b0 0%, #f4a88a 60%, transparent 100%);
-            top: -70px;
-            right: -70px;
-            opacity: 0.55;
-        }
-        /* Bottom-left: soft lavender/purple blob */
-        .corner-bottom-left {
-            width: 220px;
-            height: 220px;
-            background: radial-gradient(circle at 40% 60%, #d5c8f0 0%, #b8a8e8 60%, transparent 100%);
-            bottom: -90px;
-            left: -80px;
-            opacity: 0.45;
-        }
-        /* Optional subtle accent: top-left small circle */
-        .corner-top-left {
-            width: 90px;
-            height: 90px;
-            background: radial-gradient(circle, #fde8d8 0%, transparent 70%);
-            top: -30px;
-            left: -30px;
-            opacity: 0.5;
-        }
-        /* Optional subtle accent: bottom-right small circle */
-        .corner-bottom-right {
-            width: 100px;
-            height: 100px;
-            background: radial-gradient(circle, #e0d5f8 0%, transparent 70%);
-            bottom: -35px;
-            right: -35px;
-            opacity: 0.5;
-        }
+        .corner-blob.top-right  { top: -10px;  right: -10px;  }
+        .corner-blob.bottom-left { bottom: -10px; left: -10px; }
 
         /* Watermark using logo */
         .watermark {
@@ -160,7 +127,7 @@
     $planDisplay = 'Subscription Plan - ' . $planName;
     $amount = (float)($payment['amount'] ?? $subscription['plan_price'] ?? 0);
     $subtotal = $amount;
-    $tax = 0.0; // currently exempt
+    $tax = 0.0;
     $total = $subtotal + $tax;
     $paid = ($ps === 'completed') ? $total : 0.0;
     $balance = $total - $paid;
@@ -172,11 +139,23 @@
 ?>
 <div class="page">
 
-    <!-- ── Corner decorative shapes ── -->
-    <div class="corner-shape corner-top-right"></div>
-    <div class="corner-shape corner-bottom-left"></div>
-    <div class="corner-shape corner-top-left"></div>
-    <div class="corner-shape corner-bottom-right"></div>
+    <!-- ══ TOP-RIGHT corner blob: salmon/coral ══ -->
+    <div class="corner-blob top-right">
+        <svg width="210" height="210" viewBox="0 0 210 210" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <ellipse cx="160" cy="55"  rx="115" ry="100" fill="#F9C5AD" opacity="0.55"/>
+            <ellipse cx="180" cy="35"  rx="80"  ry="65"  fill="#F4A88A" opacity="0.45"/>
+            <ellipse cx="198" cy="18"  rx="52"  ry="42"  fill="#F08060" opacity="0.35"/>
+        </svg>
+    </div>
+
+    <!-- ══ BOTTOM-LEFT corner blob: lavender/purple ══ -->
+    <div class="corner-blob bottom-left">
+        <svg width="250" height="250" viewBox="0 0 250 250" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <ellipse cx="65"  cy="185" rx="125" ry="110" fill="#D5C8F0" opacity="0.55"/>
+            <ellipse cx="40"  cy="210" rx="86"  ry="72"  fill="#B8A8E8" opacity="0.45"/>
+            <ellipse cx="18"  cy="232" rx="55"  ry="46"  fill="#9A88D8" opacity="0.35"/>
+        </svg>
+    </div>
 
     <?php if (!empty($logoDataUri)): ?>
         <div class="watermark">
