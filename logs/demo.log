@@ -1,0 +1,148 @@
+[2026-02-25 09:16:26] start requested role=realtor uri=/demo/start?role=realtor
+[2026-02-25 09:16:26] start failed role=realtor error=There is no active transaction
+[2026-02-25 09:16:30] start requested role=realtor uri=/demo/start?role=realtor
+[2026-02-25 09:16:30] start failed role=realtor error=There is no active transaction
+[2026-02-25 09:19:44] start requested role=realtor uri=/demo/start?role=realtor
+[2026-02-25 09:19:44] start success user_id=69 role=realtor redirect=/realtor/dashboard
+[2026-02-25 09:29:02] start requested role=realtor uri=/demo/start?role=realtor
+[2026-02-25 09:29:02] start success user_id=69 role=realtor redirect=/realtor/dashboard
+[2026-02-25 09:34:54] start requested role=realtor uri=/demo/start?role=realtor
+[2026-02-25 09:34:54] start success user_id=69 role=realtor redirect=/realtor/dashboard
+[2026-02-25 09:37:59] start requested role=realtor uri=/demo/start?role=realtor
+[2026-02-25 09:37:59] start success user_id=69 role=realtor redirect=/realtor/dashboard
+[2026-02-25 09:38:34] start requested role=realtor uri=/demo/start?role=realtor
+[2026-02-25 09:38:34] start success user_id=69 role=realtor redirect=/realtor/dashboard
+[2026-02-25 09:56:45] start requested role=realtor uri=/demo/start?role=realtor
+[2026-02-25 09:56:45] start success user_id=69 role=realtor redirect=/realtor/dashboard
+[2026-02-25 10:00:06] start requested role=realtor uri=/demo/start?role=realtor
+[2026-02-25 10:00:06] start success user_id=69 role=realtor redirect=/realtor/dashboard
+[2026-02-25 10:00:29] start requested role=realtor uri=/demo/start?role=realtor
+[2026-02-25 10:00:29] start success user_id=69 role=realtor redirect=/realtor/dashboard
+[2026-02-25 10:02:34] start requested role=realtor uri=/demo/start?role=realtor
+[2026-02-25 10:02:34] start success user_id=69 role=realtor redirect=/realtor/dashboard
+[2026-02-25 10:02:47] start requested role=realtor uri=/demo/start?role=realtor
+[2026-02-25 10:02:47] start success user_id=69 role=realtor redirect=/realtor/dashboard
+[2026-02-25 10:05:06] start requested role=realtor uri=/demo/start?role=realtor
+[2026-02-25 10:05:06] realtor payment pre-check user_id=69 ref=DEMO-REALTOR-001 count=0
+[2026-02-25 10:05:06] realtor payment selected user_id=69 rp_id=0
+[2026-02-25 10:05:06] realtor payment after-normalize user_id=69 rp_id=0
+[2026-02-25 10:05:06] realtor payment inserting user_id=69 contract_id=17
+[2026-02-25 10:05:06] realtor payment inserted user_id=69 payment_id=139
+[2026-02-25 10:05:06] start success user_id=69 role=realtor redirect=/realtor/dashboard
+[2026-02-25 10:05:24] start requested role=realtor uri=/demo/start?role=realtor
+[2026-02-25 10:05:24] realtor payment pre-check user_id=69 ref=DEMO-REALTOR-001 count=0
+[2026-02-25 10:05:24] realtor payment selected user_id=69 rp_id=0
+[2026-02-25 10:05:24] realtor payment after-normalize user_id=69 rp_id=0
+[2026-02-25 10:05:24] realtor payment inserting user_id=69 contract_id=17
+[2026-02-25 10:05:24] start success user_id=69 role=realtor redirect=/realtor/dashboard
+[2026-02-26 22:50:32] start requested role=manager uri=/demo/start?role=manager
+[2026-02-26 22:50:35] start requested role=realtor uri=/demo/start?role=realtor
+[2026-02-26 22:50:38] start requested role=agent uri=/demo/start?role=agent
+[2026-02-26 22:50:40] start requested role=landlord uri=/demo/start?role=landlord
+[2026-02-27 05:40:47] start requested role=landlord uri=/demo/start?role=landlord
+[2026-02-27 05:40:47] start success user_id=66 role=landlord redirect=/dashboard
+[2026-02-27 05:47:58] start requested role=landlord uri=/demo/start?role=landlord
+[2026-02-27 05:47:58] start success user_id=66 role=landlord redirect=/dashboard
+[2026-02-27 05:48:02] start requested role=manager uri=/demo/start?role=manager
+[2026-02-27 05:48:02] start success user_id=68 role=manager redirect=/dashboard
+[2026-02-27 05:48:05] start requested role=agent uri=/demo/start?role=agent
+[2026-02-27 05:48:05] start success user_id=67 role=agent redirect=/dashboard
+[2026-02-27 05:58:16] start requested role=realtor uri=/demo/start?role=realtor
+[2026-02-27 05:58:17] realtor payment pre-check user_id=69 ref=DEMO-REALTOR-001 count=0
+[2026-02-27 05:58:17] realtor payment selected user_id=69 rp_id=0
+[2026-02-27 05:58:17] realtor payment after-normalize user_id=69 rp_id=0
+[2026-02-27 05:58:17] realtor payment inserting user_id=69 contract_id=17
+[2026-02-27 05:58:17] start success user_id=69 role=realtor redirect=/realtor/dashboard
+[2026-02-27 05:58:24] start requested role=agent uri=/demo/start?role=agent
+[2026-02-27 05:58:24] start success user_id=67 role=agent redirect=/dashboard
+[2026-02-27 06:43:45] start requested role=landlord uri=/demo/start?role=landlord
+[2026-02-27 06:43:45] start success user_id=66 role=landlord redirect=/dashboard
+[2026-02-27 09:52:01] start requested role=landlord uri=/demo/start?role=landlord
+[2026-02-27 09:52:01] start success user_id=66 role=landlord redirect=/dashboard
+[2026-03-02 03:57:51] start requested role=realtor uri=/demo/start?role=realtor
+[2026-03-02 04:02:42] start requested role=agent uri=/demo/start?role=agent
+[2026-03-02 04:05:18] start requested role=manager uri=/demo/start?role=manager
+[2026-03-02 05:11:25] start requested role=realtor uri=/demo/start?role=realtor
+[2026-03-02 05:11:30] start requested role=agent uri=/demo/start?role=agent
+[2026-03-02 05:11:30] start requested role=landlord uri=/demo/start?role=landlord
+[2026-03-02 05:11:30] start requested role=manager uri=/demo/start?role=manager
+[2026-03-03 07:28:10] start requested role=landlord uri=/demo/start?role=landlord
+[2026-03-03 07:28:10] start success user_id=66 role=landlord redirect=/dashboard
+[2026-03-03 07:42:20] start requested role=landlord uri=/demo/start?role=landlord
+[2026-03-03 07:42:20] start success user_id=66 role=landlord redirect=/dashboard
+[2026-03-03 07:45:04] start requested role=agent uri=/demo/start?role=agent
+[2026-03-03 07:45:04] start success user_id=67 role=agent redirect=/dashboard
+[2026-03-03 08:16:31] start requested role=landlord uri=/demo/start?role=landlord
+[2026-03-03 08:16:42] start requested role=landlord uri=/demo/start?role=landlord
+[2026-03-03 08:17:12] start requested role=landlord uri=/demo/start?role=landlord
+[2026-03-03 08:17:12] start success user_id=66 role=landlord redirect=/dashboard
+[2026-03-03 08:18:25] start requested role=landlord uri=/demo/start?role=landlord
+[2026-03-03 08:18:25] start success user_id=66 role=landlord redirect=/dashboard
+[2026-03-03 08:18:32] start requested role=landlord uri=/demo/start?role=landlord
+[2026-03-03 08:18:32] start success user_id=66 role=landlord redirect=/dashboard
+[2026-03-03 08:27:13] start requested role=landlord uri=/demo/start?role=landlord
+[2026-03-03 08:27:13] start success user_id=66 role=landlord redirect=/dashboard
+[2026-03-03 08:27:15] start requested role=landlord uri=/demo/start?role=landlord
+[2026-03-03 08:27:15] start success user_id=66 role=landlord redirect=/dashboard
+[2026-03-03 08:27:54] start requested role=landlord uri=/demo/start?role=landlord
+[2026-03-03 08:27:54] start success user_id=66 role=landlord redirect=/dashboard
+[2026-03-03 08:28:02] start requested role=realtor uri=/demo/start?role=realtor
+[2026-03-03 08:28:02] realtor payment pre-check user_id=69 ref=DEMO-REALTOR-001 count=0
+[2026-03-03 08:28:02] realtor payment selected user_id=69 rp_id=0
+[2026-03-03 08:28:02] realtor payment after-normalize user_id=69 rp_id=0
+[2026-03-03 08:28:02] realtor payment inserting user_id=69 contract_id=17
+[2026-03-03 08:28:02] start success user_id=69 role=realtor redirect=/realtor/dashboard
+[2026-03-03 08:28:03] start requested role=realtor uri=/demo/start?role=realtor
+[2026-03-03 08:28:03] realtor payment pre-check user_id=69 ref=DEMO-REALTOR-001 count=0
+[2026-03-03 08:28:03] realtor payment selected user_id=69 rp_id=0
+[2026-03-03 08:28:03] realtor payment after-normalize user_id=69 rp_id=0
+[2026-03-03 08:28:03] realtor payment inserting user_id=69 contract_id=17
+[2026-03-03 08:28:03] start success user_id=69 role=realtor redirect=/realtor/dashboard
+[2026-03-03 08:28:06] start requested role=realtor uri=/demo/start?role=realtor
+[2026-03-03 08:28:06] realtor payment pre-check user_id=69 ref=DEMO-REALTOR-001 count=0
+[2026-03-03 08:28:06] realtor payment selected user_id=69 rp_id=0
+[2026-03-03 08:28:06] realtor payment after-normalize user_id=69 rp_id=0
+[2026-03-03 08:28:06] realtor payment inserting user_id=69 contract_id=17
+[2026-03-03 08:28:06] start success user_id=69 role=realtor redirect=/realtor/dashboard
+[2026-03-03 08:28:06] start requested role=realtor uri=/demo/start?role=realtor
+[2026-03-03 08:28:06] realtor payment pre-check user_id=69 ref=DEMO-REALTOR-001 count=0
+[2026-03-03 08:28:06] realtor payment selected user_id=69 rp_id=0
+[2026-03-03 08:28:06] realtor payment after-normalize user_id=69 rp_id=0
+[2026-03-03 08:28:06] realtor payment inserting user_id=69 contract_id=17
+[2026-03-03 08:28:06] start success user_id=69 role=realtor redirect=/realtor/dashboard
+[2026-03-03 08:28:16] start requested role=realtor uri=/demo/start?role=realtor
+[2026-03-03 08:28:16] realtor payment pre-check user_id=69 ref=DEMO-REALTOR-001 count=0
+[2026-03-03 08:28:16] realtor payment selected user_id=69 rp_id=0
+[2026-03-03 08:28:16] realtor payment after-normalize user_id=69 rp_id=0
+[2026-03-03 08:28:16] realtor payment inserting user_id=69 contract_id=17
+[2026-03-03 08:28:16] start success user_id=69 role=realtor redirect=/realtor/dashboard
+[2026-03-03 08:28:17] start requested role=realtor uri=/demo/start?role=realtor
+[2026-03-03 08:28:17] realtor payment pre-check user_id=69 ref=DEMO-REALTOR-001 count=0
+[2026-03-03 08:28:17] realtor payment selected user_id=69 rp_id=0
+[2026-03-03 08:28:17] realtor payment after-normalize user_id=69 rp_id=0
+[2026-03-03 08:28:17] realtor payment inserting user_id=69 contract_id=17
+[2026-03-03 08:28:17] start success user_id=69 role=realtor redirect=/realtor/dashboard
+[2026-03-03 08:28:28] start requested role=agent uri=/demo/start?role=agent
+[2026-03-03 08:28:28] start success user_id=67 role=agent redirect=/dashboard
+[2026-03-03 08:28:54] start requested role=agent uri=/demo/start?role=agent
+[2026-03-03 08:28:54] start success user_id=67 role=agent redirect=/dashboard
+[2026-03-03 08:28:54] start requested role=agent uri=/demo/start?role=agent
+[2026-03-03 08:28:54] start success user_id=67 role=agent redirect=/dashboard
+[2026-03-03 08:29:11] start requested role=manager uri=/demo/start?role=manager
+[2026-03-03 08:29:11] start success user_id=68 role=manager redirect=/dashboard
+[2026-03-03 08:29:12] start requested role=manager uri=/demo/start?role=manager
+[2026-03-03 08:29:12] start success user_id=68 role=manager redirect=/dashboard
+[2026-03-03 08:29:13] start requested role=manager uri=/demo/start?role=manager
+[2026-03-03 08:29:13] start success user_id=68 role=manager redirect=/dashboard
+[2026-03-03 08:29:15] start requested role=manager uri=/demo/start?role=manager
+[2026-03-03 08:29:15] start success user_id=68 role=manager redirect=/dashboard
+[2026-03-03 08:29:58] start requested role=realtor uri=/demo/start?role=realtor
+[2026-03-03 08:29:58] realtor payment pre-check user_id=69 ref=DEMO-REALTOR-001 count=0
+[2026-03-03 08:29:58] realtor payment selected user_id=69 rp_id=0
+[2026-03-03 08:29:58] realtor payment after-normalize user_id=69 rp_id=0
+[2026-03-03 08:29:58] realtor payment inserting user_id=69 contract_id=17
+[2026-03-03 08:29:58] start success user_id=69 role=realtor redirect=/realtor/dashboard
+[2026-03-07 14:34:50] start requested role=realtor uri=/demo/start?role=realtor
+[2026-03-07 14:34:53] start requested role=agent uri=/demo/start?role=agent
+[2026-03-07 14:34:55] start requested role=manager uri=/demo/start?role=manager
+[2026-03-07 14:34:58] start requested role=landlord uri=/demo/start?role=landlord
