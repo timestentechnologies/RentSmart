@@ -2,3 +2,4 @@ logs/php_errors.log
 views/logs/php_errors.log
 error_log
 logs/*.log
+*.log
