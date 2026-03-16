@@ -230,20 +230,17 @@ class AdminController
                 );
                 $financials['total_revenue_collected'] = (float)($stmtTotalRevenue->fetch(\PDO::FETCH_ASSOC)['total'] ?? 0);
                 
-                // Expected revenue from current active subscriptions (excluding trials and starter plans)
+                // Expected revenue from current active subscriptions
                 $stmtExpectedRevenue = $db->query(
-                    "SELECT COALESCE(SUM(sp.price), 0) AS expected
-                     FROM subscriptions s
-                     JOIN subscription_plans sp ON s.plan_id = sp.id
-                     WHERE s.status = 'active'
-                     AND LOWER(s.status) != 'trialing'
-                     AND s.user_id IN (
-                         SELECT user_id FROM (
-                             SELECT user_id, MAX(created_at) as latest
-                             FROM subscriptions 
-                             GROUP BY user_id
-                         ) latest_subs WHERE latest_subs.latest = s.created_at
-                     )"
+                    "SELECT COALESCE(SUM(sp.price), 0) AS expected\n"
+                    . "FROM subscriptions s\n"
+                    . "JOIN (\n"
+                    . "  SELECT user_id, MAX(created_at) AS latest_created_at\n"
+                    . "  FROM subscriptions\n"
+                    . "  GROUP BY user_id\n"
+                    . ") ls ON ls.user_id = s.user_id AND ls.latest_created_at = s.created_at\n"
+                    . "JOIN subscription_plans sp ON sp.id = s.plan_id\n"
+                    . "WHERE s.status = 'active'"
                 );
                 $financials['expected_revenue'] = (float)($stmtExpectedRevenue->fetch(\PDO::FETCH_ASSOC)['expected'] ?? 0);
                 
