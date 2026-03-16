@@ -777,12 +777,23 @@ class AuthController
             ]);
 
             // Set session variables
-            unset($_SESSION['tenant_id'], $_SESSION['impersonating'], $_SESSION['original_user']);
+            unset(
+                $_SESSION['tenant_id'],
+                $_SESSION['impersonating'],
+                $_SESSION['original_user'],
+                $_SESSION['impersonated_user_id'],
+                $_SESSION['impersonated_user_role']
+            );
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['user_name'] = $user['name'];
             $_SESSION['user_email'] = $user['email'];
             $_SESSION['user_role'] = strtolower($user['role']);
             $_SESSION['is_admin'] = ($user['role'] === 'admin' || $user['role'] === 'administrator');
+
+            // Prevent session fixation / stale session reuse after impersonation
+            if (function_exists('session_regenerate_id')) {
+                @session_regenerate_id(true);
+            }
 
             // Clear any stale flash messages from previous redirects (e.g. auth-required messages)
             unset($_SESSION['flash_message'], $_SESSION['flash_type']);
@@ -1025,6 +1036,10 @@ class AuthController
     public function logout()
     {
         try {
+            if (session_status() === PHP_SESSION_NONE) {
+                @session_start();
+            }
+
             // Activity Log: auth.logout (log before destroying session)
             try {
                 $uid = $_SESSION['user_id'] ?? null;
@@ -1054,9 +1069,25 @@ class AuthController
                 }
             } catch (\Throwable $e) {
             }
-            // Clear all session variables
+
+            // Clear all session variables (including impersonation state)
+            $_SESSION = [];
             session_unset();
-            
+
+            // Delete the session cookie so the browser cannot reuse the same session
+            if (ini_get('session.use_cookies')) {
+                $params = session_get_cookie_params();
+                setcookie(
+                    session_name(),
+                    '',
+                    time() - 42000,
+                    $params['path'] ?? '/',
+                    $params['domain'] ?? '',
+                    (bool)($params['secure'] ?? false),
+                    (bool)($params['httponly'] ?? true)
+                );
+            }
+
             // Destroy the session
             session_destroy();
             
