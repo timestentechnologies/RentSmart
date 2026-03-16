@@ -1393,6 +1393,11 @@ ob_clean();
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link <?= (strpos($current_uri, 'admin/newsletters') === 0) ? 'active' : '' ?>" href="<?= BASE_URL ?>/admin/newsletters">
+                            <i class="bi bi-envelope me-2"></i> Newsletter Management
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link <?= (strpos($current_uri, 'payment-methods') === 0) ? 'active' : '' ?>" href="<?= BASE_URL ?>/payment-methods">
                             <i class="bi bi-credit-card me-2"></i> Payment Methods
                         </a>

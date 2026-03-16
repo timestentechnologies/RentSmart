@@ -214,6 +214,19 @@ $routes = [
     'admin/payments/transaction/(\d+)' => ['controller' => 'AdminController', 'action' => 'getTransaction'],
     'admin/payments/manual-mpesa/(\d+)/verify' => ['controller' => 'AdminController', 'action' => 'verifyManualSubscriptionPayment'],
     
+    // Newsletter routes
+    'admin/newsletters' => ['controller' => 'NewsletterController', 'action' => 'index'],
+    'admin/newsletters/create' => ['controller' => 'NewsletterController', 'action' => 'create'],
+    'admin/newsletters/edit/(\d+)' => ['controller' => 'NewsletterController', 'action' => 'edit'],
+    'admin/newsletters/update/(\d+)' => ['controller' => 'NewsletterController', 'action' => 'updateCampaign'],
+    'admin/newsletters/send-test' => ['controller' => 'NewsletterController', 'action' => 'sendTest'],
+    'admin/newsletters/send/(\d+)' => ['controller' => 'NewsletterController', 'action' => 'sendCampaign'],
+    'admin/newsletters/stats/(\d+)' => ['controller' => 'NewsletterController', 'action' => 'viewStats'],
+    'admin/newsletters/follow-up-schedules' => ['controller' => 'NewsletterController', 'action' => 'followUpSchedules'],
+    'admin/newsletters/create-follow-up' => ['controller' => 'NewsletterController', 'action' => 'createFollowUpSchedule'],
+    'newsletter/track/(\d+)/(\d+)' => ['controller' => 'NewsletterController', 'action' => 'trackEmail'],
+    'newsletter/process-follow-ups' => ['controller' => 'NewsletterController', 'action' => 'processFollowUps'],
+    
     'properties' => ['controller' => 'PropertyController', 'action' => 'index'],
     'properties/create' => ['controller' => 'PropertyController', 'action' => 'create'],
     'properties/store' => ['controller' => 'PropertyController', 'action' => 'store'],

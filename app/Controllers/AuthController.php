@@ -366,14 +366,31 @@ class AuthController
                 $mail->addAddress($email, $name);
                 $mail->Subject = 'Welcome to RentSmart!';
                 $mail->Body =
-                    '<div style="max-width:500px;margin:auto;border:1px solid #eee;padding:24px;font-family:sans-serif;">'
-                    . ($logoUrl ? '<div style="text-align:center;margin-bottom:24px;"><img src="' . $logoUrl . '" alt="Logo" style="max-width:180px;max-height:80px;"></div>' : '') .
-                    '<p style="font-size:16px;">Dear ' . htmlspecialchars($name) . ',</p>' .
-                    '<p>Welcome to RentSmart! Your account has been created and your 7-day trial has started.</p>' .
-                    '<p>Login to your dashboard to get started.</p>' .
-                    '<p>Thank you,<br>RentSmart Team</p>' .
-                    $footer .
-                    '</div>';
+                    '<div style="max-width:600px;margin:auto;border:1px solid #e0e0e0;border-radius:8px;overflow:hidden;font-family:\'Segoe UI\', Tahoma, Geneva, Verdana, sans-serif;">'
+                    . ($logoUrl ? '<div style="background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);padding:30px;text-align:center;"><img src="' . $logoUrl . '" alt="Logo" style="max-width:200px;max-height:80px;"></div>' : '<div style="background:linear-gradient(135deg, #667eea 0%, #764ba2 100%);padding:40px;text-align:center;"><h1 style="color:white;margin:0;font-size:28px;">RentSmart</h1></div>') .
+                    '<div style="padding:40px;background:#ffffff;">'
+                    . '<h2 style="color:#333;margin:0 0 20px 0;font-size:24px;">Welcome to RentSmart, ' . htmlspecialchars($name) . '!</h2>'
+                    . '<p style="color:#666;font-size:16px;line-height:1.6;margin:0 0 20px 0;">We\'re excited to have you on board! Your account has been successfully created and your <strong>7-day free trial</strong> has begun.</p>'
+                    . '<div style="background:#f8f9fa;border-left:4px solid #667eea;padding:20px;margin:30px 0;">'
+                    . '<h3 style="color:#333;margin:0 0 10px 0;font-size:18px;">What\'s Next?</h3>'
+                    . '<ul style="color:#666;font-size:15px;line-height:1.6;margin:0;padding-left:20px;">'
+                    . '<li>Explore your dashboard and familiarize yourself with the features</li>'
+                    . '<li>Add your properties and units to get started</li>'
+                    . '<li>Invite team members to collaborate</li>'
+                    . '<li>Set up your tenant profiles and leases</li>'
+                    . '</ul>'
+                    . '</div>'
+                    . '<div style="text-align:center;margin:30px 0;">'
+                    . '<a href="' . BASE_URL . '/dashboard" style="display:inline-block;background:#667eea;color:white;padding:15px 30px;text-decoration:none;border-radius:5px;font-weight:600;font-size:16px;">Go to Dashboard</a>'
+                    . '</div>'
+                    . '<p style="color:#666;font-size:14px;line-height:1.6;margin:20px 0 0 0;">If you have any questions, reply to this email or contact our support team. We\'re here to help!</p>'
+                    . '</div>'
+                    . '<div style="background:#f8f9fa;padding:20px;text-align:center;border-top:1px solid #e0e0e0;">'
+                    . '<p style="color:#888;font-size:12px;margin:0 0 10px 0;">Follow us on social media for tips and updates</p>'
+                    . '<p style="color:#888;font-size:11px;margin:0;">© ' . date('Y') . ' RentSmart. All rights reserved.</p>'
+                    . $footer
+                    . '</div>'
+                    . '</div>';
                 $userMailSent = false;
                 try {
                     $userMailSent = $mail->send();

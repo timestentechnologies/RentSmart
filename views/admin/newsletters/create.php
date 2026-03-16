@@ -1,0 +1,248 @@
+<div class="container-fluid">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0">Create Newsletter</h1>
+        <a href="<?= BASE_URL ?>/admin/newsletters" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left me-2"></i>Back to Newsletters
+        </a>
+    </div>
+
+    <?php if (isset($_SESSION['flash_message'])): ?>
+        <div class="alert alert-<?= $_SESSION['flash_type'] ?> alert-dismissible fade show" role="alert">
+            <?= $_SESSION['flash_message'] ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        <?php unset($_SESSION['flash_message'], $_SESSION['flash_type']); ?>
+    <?php endif; ?>
+
+    <form method="POST" action="<?= BASE_URL ?>/admin/newsletters/create" enctype="multipart/form-data">
+        <div class="row">
+            <!-- Main Content -->
+            <div class="col-lg-8">
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Newsletter Content</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="title" class="form-label">Newsletter Title *</label>
+                            <input type="text" class="form-control" id="title" name="title" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="subject" class="form-label">Email Subject *</label>
+                            <input type="text" class="form-control" id="subject" name="subject" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="content" class="form-label">Email Content *</label>
+                            <textarea class="form-control" id="content" name="content" rows="15" required></textarea>
+                            <small class="text-muted">You can use HTML formatting for rich content.</small>
+                        </div>
+                        
+                        <!-- Rich Text Editor Toolbar -->
+                        <div class="mb-3">
+                            <label class="form-label">Quick HTML Templates</label>
+                            <div class="btn-group" role="group">
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="insertTemplate('logo')">RentSmart Logo</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="insertTemplate('header')">Header</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="insertTemplate('button')">Button</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="insertTemplate('image')">Image</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="insertTemplate('divider')">Divider</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Attachments -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Attachments</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="attachments" class="form-label">Upload Files</label>
+                            <input type="file" class="form-control" id="attachments" name="attachments[]" multiple accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.gif">
+                            <small class="text-muted">You can upload multiple files (PDF, DOC, images). Max 10MB per file.</small>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Survey Questions -->
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">Survey Questions (Optional)</h5>
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="addSurveyQuestion()">
+                            <i class="bi bi-plus-circle me-1"></i>Add Question
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div id="surveyQuestions">
+                            <!-- Survey questions will be added here dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sidebar -->
+            <div class="col-lg-4">
+                <!-- Settings -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Campaign Settings</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label for="type" class="form-label">Campaign Type</label>
+                            <select class="form-select" id="type" name="type">
+                                <option value="newsletter">Newsletter</option>
+                                <option value="custom">Custom Campaign</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="schedule_later" name="schedule_later">
+                                <label class="form-check-label" for="schedule_later">
+                                    Schedule for later
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div id="scheduleFields" style="display: none;">
+                            <div class="mb-3">
+                                <label for="schedule_date" class="form-label">Schedule Date</label>
+                                <input type="date" class="form-control" id="schedule_date" name="schedule_date">
+                            </div>
+                            <div class="mb-3">
+                                <label for="schedule_time" class="form-label">Schedule Time</label>
+                                <input type="time" class="form-control" id="schedule_time" name="schedule_time">
+                            </div>
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="button" class="btn btn-outline-primary" onclick="sendTest()">
+                                <i class="bi bi-send me-2"></i>Send Test Email
+                            </button>
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-save me-2"></i>Save Campaign
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Preview -->
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Preview</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="emailPreview" style="border: 1px solid #ddd; padding: 10px; min-height: 200px; background: white;">
+                            <p class="text-muted">Preview will appear here as you type...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+let surveyQuestionCount = 0;
+
+// Schedule checkbox toggle
+document.getElementById('schedule_later').addEventListener('change', function() {
+    document.getElementById('scheduleFields').style.display = this.checked ? 'block' : 'none';
+});
+
+// Live preview
+document.getElementById('content').addEventListener('input', function() {
+    document.getElementById('emailPreview').innerHTML = this.value || '<p class="text-muted">Preview will appear here as you type...</p>';
+});
+
+// Template insertion
+function insertTemplate(type) {
+    const textarea = document.getElementById('content');
+    const templates = {
+        logo: '<div style="text-align:center;margin-bottom:30px;"><img src="<?= BASE_URL ?>/public/assets/images/rentsmart-logo.png" alt="RentSmart Logo" style="max-width:200px;max-height:80px;"></div>',
+        header: '<h2 style="color: #333; margin-bottom: 20px;">Your Header Text</h2>',
+        button: '<div style="text-align: center; margin: 20px 0;"><a href="#" style="background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">Click Here</a></div>',
+        image: '<div style="text-align: center; margin: 20px 0;"><img src="https://via.placeholder.com/600x300" alt="Image" style="max-width: 100%; height: auto;"></div>',
+        divider: '<hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">'
+    };
+    
+    const cursorPos = textarea.selectionStart;
+    const textBefore = textarea.value.substring(0, cursorPos);
+    const textAfter = textarea.value.substring(cursorPos);
+    textarea.value = textBefore + templates[type] + textAfter;
+    textarea.focus();
+    textarea.setSelectionRange(cursorPos + templates[type].length, cursorPos + templates[type].length);
+    
+    // Update preview
+    document.getElementById('emailPreview').innerHTML = textarea.value;
+}
+
+// Add survey question
+function addSurveyQuestion() {
+    surveyQuestionCount++;
+    const questionHtml = `
+        <div class="survey-question mb-3 p-3 border rounded" data-question="${surveyQuestionCount}">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="mb-0">Question ${surveyQuestionCount}</h6>
+                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeSurveyQuestion(${surveyQuestionCount})">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+            <div class="mb-2">
+                <input type="text" class="form-control" name="survey_questions[]" placeholder="Enter your question..." required>
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <select class="form-select" name="survey_types[]" onchange="toggleQuestionOptions(${surveyQuestionCount})">
+                        <option value="text">Text</option>
+                        <option value="multiple_choice">Multiple Choice</option>
+                        <option value="rating">Rating (1-5)</option>
+                        <option value="yes_no">Yes/No</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="survey_required[]" value="${surveyQuestionCount}">
+                        <label class="form-check-label">Required</label>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-2" id="options_${surveyQuestionCount}" style="display: none;">
+                <textarea class="form-control" name="survey_options[]" placeholder="Enter options (one per line)" rows="3"></textarea>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('surveyQuestions').insertAdjacentHTML('beforeend', questionHtml);
+}
+
+function removeSurveyQuestion(id) {
+    document.querySelector(`[data-question="${id}"]`).remove();
+}
+
+function toggleQuestionOptions(id) {
+    const select = document.querySelector(`[data-question="${id}"] select`);
+    const optionsDiv = document.getElementById(`options_${id}`);
+    optionsDiv.style.display = select.value === 'multiple_choice' ? 'block' : 'none';
+}
+
+// Send test email
+function sendTest() {
+    const email = prompt('Enter test email address:');
+    if (email) {
+        // This would be implemented with AJAX
+        alert('Test email functionality would be implemented here');
+    }
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    // Set minimum date for scheduling to today
+    const today = new Date().toISOString().split('T')[0];
+    document.getElementById('schedule_date').setAttribute('min', today);
+});
+</script>
