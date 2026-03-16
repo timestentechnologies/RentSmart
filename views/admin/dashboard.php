@@ -53,7 +53,7 @@ ob_start();
                     <div>
                         <h6 class="card-title">Outstanding Balance</h6>
                         <h2 class="mt-3 mb-2" style="font-size: 1.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Ksh <?= number_format($financials['outstanding_balance'] ?? 0, 2) ?></h2>
-                        <p class="mb-0 text-muted">Unpaid rent</p>
+                        <p class="mb-0 text-muted">Outstanding payments</p>
                     </div>
                     <div class="stats-icon">
                         <i class="bi bi-exclamation-triangle fs-1 text-warning opacity-25"></i>
