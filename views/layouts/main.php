@@ -1371,8 +1371,18 @@ ob_clean();
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link <?= (strpos($current_uri, 'admin/subscriptions') === 0) ? 'active' : '' ?>" href="<?= BASE_URL ?>/admin/subscriptions">
-                            <i class="bi bi-credit-card-2-front me-2"></i> Subscriptions
+                        <a class="nav-link <?= (strpos($current_uri, 'admin/subscriptions/plans') === 0) ? 'active' : '' ?>" href="<?= BASE_URL ?>/admin/subscriptions/plans">
+                            <i class="bi bi-award me-2"></i> Subscription Plans
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link <?= (strpos($current_uri, 'admin/subscriptions/active') === 0) ? 'active' : '' ?>" href="<?= BASE_URL ?>/admin/subscriptions/active">
+                            <i class="bi bi-check-circle me-2"></i> Active Subscriptions
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link <?= (strpos($current_uri, 'admin/subscriptions') === 0 && strpos($current_uri, 'admin/subscriptions/') !== 0) ? 'active' : '' ?>" href="<?= BASE_URL ?>/admin/subscriptions">
+                            <i class="bi bi-credit-card-2-front me-2"></i> Subscriptions (All)
                         </a>
                     </li>
                     <li class="nav-item">

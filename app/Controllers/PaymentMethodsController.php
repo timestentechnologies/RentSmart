@@ -30,28 +30,61 @@ class PaymentMethodsController
             $paymentMethods = $isAdmin
                 ? $this->paymentMethod->getAllByOwner($userId)
                 : $this->paymentMethod->getByUser($userId);
-            
-            // Properties for linking in the UI
-            $propertyModel = new Property();
-            $properties = $isAdmin ? $propertyModel->getAll() : $propertyModel->getAll($userId);
-            
-            // Map linked properties per payment method (by names)
-            $propNamesById = [];
-            foreach (($properties ?? []) as $p) {
-                $propNamesById[(int)$p['id']] = $p['name'] ?? ('Property #' . $p['id']);
+
+            // Admin payment methods are for platform subscription billing only
+            if ($isAdmin) {
+                $paymentMethods = array_values(array_filter(($paymentMethods ?? []), function ($pm) {
+                    return strtolower((string)($pm['scope'] ?? 'tenant')) === 'subscription';
+                }));
             }
+
+            // Properties and linking are only relevant for tenant-scoped methods
+            $properties = [];
             $linkedPropertiesByMethod = [];
             $linkedPropertyIdsByMethod = [];
-            foreach (($paymentMethods ?? []) as $pm) {
-                $ids = $this->paymentMethod->getPropertyIdsForMethod($pm['id']);
-                $names = [];
-                foreach ($ids as $pid) {
-                    if (isset($propNamesById[$pid])) {
-                        $names[] = $propNamesById[$pid];
+
+            if (!$isAdmin) {
+                $propertyModel = new Property();
+                $properties = $propertyModel->getAll($userId);
+
+                // Filter demo properties from linking list
+                try {
+                    $settings = new \App\Models\Setting();
+                    $raw = (string)($settings->get('demo_protected_property_ids_json') ?? '[]');
+                    $ids = json_decode($raw, true);
+                    $ids = is_array($ids) ? array_map('intval', $ids) : [];
+                    if (!empty($ids) || !empty($properties)) {
+                        $properties = array_values(array_filter(($properties ?? []), function ($p) use ($ids) {
+                            $pid = (int)($p['id'] ?? 0);
+                            $name = strtolower(trim((string)($p['name'] ?? '')));
+                            $isDemoName = str_starts_with($name, 'demo property');
+                            if ($isDemoName) {
+                                return false;
+                            }
+                            if ($pid > 0 && in_array($pid, $ids, true)) {
+                                return false;
+                            }
+                            return true;
+                        }));
                     }
+                } catch (\Throwable $e) {
                 }
-                $linkedPropertiesByMethod[$pm['id']] = $names;
-                $linkedPropertyIdsByMethod[$pm['id']] = $ids;
+
+                $propNamesById = [];
+                foreach (($properties ?? []) as $p) {
+                    $propNamesById[(int)$p['id']] = $p['name'] ?? ('Property #' . $p['id']);
+                }
+                foreach (($paymentMethods ?? []) as $pm) {
+                    $ids = $this->paymentMethod->getPropertyIdsForMethod($pm['id']);
+                    $names = [];
+                    foreach ($ids as $pid) {
+                        if (isset($propNamesById[$pid])) {
+                            $names[] = $propNamesById[$pid];
+                        }
+                    }
+                    $linkedPropertiesByMethod[$pm['id']] = $names;
+                    $linkedPropertyIdsByMethod[$pm['id']] = $ids;
+                }
             }
             
             echo view('admin/payment_methods', [

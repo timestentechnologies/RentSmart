@@ -199,6 +199,8 @@ $routes = [
     ],
     
     'admin/subscriptions' => ['controller' => 'AdminController', 'action' => 'subscriptions'],
+    'admin/subscriptions/plans' => ['controller' => 'AdminController', 'action' => 'subscriptionPlans'],
+    'admin/subscriptions/active' => ['controller' => 'AdminController', 'action' => 'activeSubscriptions'],
     'admin/subscriptions/get-plan/(\d+)' => ['controller' => 'AdminController', 'action' => 'getPlan'],
     'admin/subscriptions/update-plan' => ['controller' => 'AdminController', 'action' => 'updatePlan'],
     'admin/subscriptions/update' => ['controller' => 'AdminController', 'action' => 'updateSubscription'],

@@ -43,12 +43,39 @@ class AdminController
     {
         try {
             $users = $this->user->getAllUsers();
+
+            // Filter out demo accounts
+            try {
+                $settings = new \App\Models\Setting();
+                $raw = (string)($settings->get('demo_protected_user_ids_json') ?? '[]');
+                $ids = json_decode($raw, true);
+                $ids = is_array($ids) ? array_map('intval', $ids) : [];
+                if (!empty($ids) || !empty($users)) {
+                    $users = array_values(array_filter(($users ?? []), function ($u) use ($ids) {
+                        $id = (int)($u['id'] ?? 0);
+                        $email = strtolower(trim((string)($u['email'] ?? '')));
+                        $isDemoEmail = (strpos($email, 'demo+') === 0) && (strpos($email, '@rentsmart.local') !== false);
+                        if ($isDemoEmail) {
+                            return false;
+                        }
+                        if ($id > 0 && in_array($id, $ids, true)) {
+                            return false;
+                        }
+                        return true;
+                    }));
+                }
+            } catch (\Throwable $e) {
+            }
             $counts = [
                 'managers' => 0,
                 'landlords' => 0,
                 'realtors' => 0,
                 'agents' => 0,
                 'tenants' => 0,
+                'expiring_30_days' => 0,
+                'trialing' => 0,
+                'new_users_30_days' => 0,
+                'active_subscriptions' => 0,
             ];
 
             foreach (($users ?? []) as $u) {
@@ -67,9 +94,126 @@ class AdminController
                 $counts['tenants'] = 0;
             }
 
+            $charts = [
+                'signup_labels' => [],
+                'signup_counts' => [],
+                'subscription_status_labels' => [],
+                'subscription_status_counts' => [],
+                'subscription_revenue_labels' => [],
+                'subscription_revenue_amounts' => [],
+            ];
+
+            try {
+                $db = $this->user->getDb();
+
+                $stmtNewUsers = $db->prepare("SELECT COUNT(*) AS c FROM users WHERE created_at >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL 30 DAY)");
+                $stmtNewUsers->execute();
+                $counts['new_users_30_days'] = (int)($stmtNewUsers->fetch(\PDO::FETCH_ASSOC)['c'] ?? 0);
+
+                $stmtLatestSubs = $db->query(
+                    "SELECT s.status, s.current_period_ends_at, s.trial_ends_at\n"
+                    . "FROM subscriptions s\n"
+                    . "JOIN (\n"
+                    . "  SELECT user_id, MAX(created_at) AS mc\n"
+                    . "  FROM subscriptions\n"
+                    . "  GROUP BY user_id\n"
+                    . ") x ON x.user_id = s.user_id AND x.mc = s.created_at"
+                );
+                $latestSubs = $stmtLatestSubs->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+                $now = new \DateTime('now', new \DateTimeZone('UTC'));
+                $cutoff = (clone $now)->modify('+30 days');
+
+                $statusCounts = [];
+                foreach ($latestSubs as $s) {
+                    $st = strtolower((string)($s['status'] ?? ''));
+                    if ($st === '') {
+                        $st = 'unknown';
+                    }
+                    $statusCounts[$st] = (int)($statusCounts[$st] ?? 0) + 1;
+
+                    if ($st === 'trialing') {
+                        $counts['trialing']++;
+                    }
+                    if ($st === 'active') {
+                        $counts['active_subscriptions']++;
+                    }
+
+                    $endRaw = (string)($s['current_period_ends_at'] ?? '');
+                    if ($endRaw !== '') {
+                        try {
+                            $end = new \DateTime($endRaw, new \DateTimeZone('UTC'));
+                            if ($end >= $now && $end <= $cutoff) {
+                                $counts['expiring_30_days']++;
+                            }
+                        } catch (\Throwable $e) {
+                        }
+                    }
+                }
+
+                $charts['subscription_status_labels'] = array_map(function ($k) {
+                    return ucfirst((string)$k);
+                }, array_keys($statusCounts));
+                $charts['subscription_status_counts'] = array_values($statusCounts);
+
+                $stmtSignups = $db->query(
+                    "SELECT DATE_FORMAT(created_at, '%Y-%m') AS ym, COUNT(*) AS c\n"
+                    . "FROM users\n"
+                    . "WHERE created_at >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL 12 MONTH)\n"
+                    . "GROUP BY ym\n"
+                    . "ORDER BY ym ASC"
+                );
+                $rowsSignups = $stmtSignups->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+                $signupMap = [];
+                foreach ($rowsSignups as $r) {
+                    $signupMap[(string)($r['ym'] ?? '')] = (int)($r['c'] ?? 0);
+                }
+
+                $labels = [];
+                $values = [];
+                $dt = new \DateTime('first day of this month', new \DateTimeZone('UTC'));
+                $dt->modify('-11 months');
+                for ($i = 0; $i < 12; $i++) {
+                    $ym = $dt->format('Y-m');
+                    $labels[] = $ym;
+                    $values[] = (int)($signupMap[$ym] ?? 0);
+                    $dt->modify('+1 month');
+                }
+                $charts['signup_labels'] = $labels;
+                $charts['signup_counts'] = $values;
+
+                $stmtRevenue = $db->query(
+                    "SELECT DATE_FORMAT(created_at, '%Y-%m') AS ym, COALESCE(SUM(amount),0) AS a\n"
+                    . "FROM subscription_payments\n"
+                    . "WHERE status IN ('completed','verified')\n"
+                    . "  AND created_at >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL 12 MONTH)\n"
+                    . "GROUP BY ym\n"
+                    . "ORDER BY ym ASC"
+                );
+                $rowsRev = $stmtRevenue->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+                $revMap = [];
+                foreach ($rowsRev as $r) {
+                    $revMap[(string)($r['ym'] ?? '')] = (float)($r['a'] ?? 0);
+                }
+                $revLabels = [];
+                $revValues = [];
+                $dt2 = new \DateTime('first day of this month', new \DateTimeZone('UTC'));
+                $dt2->modify('-11 months');
+                for ($i = 0; $i < 12; $i++) {
+                    $ym = $dt2->format('Y-m');
+                    $revLabels[] = $ym;
+                    $revValues[] = (float)($revMap[$ym] ?? 0);
+                    $dt2->modify('+1 month');
+                }
+                $charts['subscription_revenue_labels'] = $revLabels;
+                $charts['subscription_revenue_amounts'] = $revValues;
+
+            } catch (\Throwable $e) {
+            }
+
             echo view('admin/dashboard', [
                 'title' => 'Admin Dashboard - RentSmart',
                 'counts' => $counts,
+                'charts' => $charts,
             ]);
         } catch (Exception $e) {
             error_log($e->getMessage());
@@ -84,6 +228,30 @@ class AdminController
         try {
             $users = $this->user->getAllUsers();
             $roleLower = strtolower($role);
+
+            // Filter out demo accounts
+            try {
+                $settings = new \App\Models\Setting();
+                $raw = (string)($settings->get('demo_protected_user_ids_json') ?? '[]');
+                $ids = json_decode($raw, true);
+                $ids = is_array($ids) ? array_map('intval', $ids) : [];
+                if (!empty($ids) || !empty($users)) {
+                    $users = array_values(array_filter(($users ?? []), function ($u) use ($ids) {
+                        $id = (int)($u['id'] ?? 0);
+                        $email = strtolower(trim((string)($u['email'] ?? '')));
+                        $isDemoEmail = (strpos($email, 'demo+') === 0) && (strpos($email, '@rentsmart.local') !== false);
+                        if ($isDemoEmail) {
+                            return false;
+                        }
+                        if ($id > 0 && in_array($id, $ids, true)) {
+                            return false;
+                        }
+                        return true;
+                    }));
+                }
+            } catch (\Throwable $e) {
+            }
+
             $users = array_values(array_filter(($users ?? []), function ($u) use ($roleLower) {
                 return strtolower((string)($u['role'] ?? '')) === $roleLower;
             }));
@@ -743,6 +911,65 @@ class AdminController
                 'plans' => $plans,
                 'subscriptions' => $subscriptions,
                 'users' => $users
+            ]);
+        } catch (Exception $e) {
+            error_log($e->getMessage());
+            echo view('errors/500', [
+                'title' => '500 Internal Server Error'
+            ]);
+        }
+    }
+
+    public function subscriptionPlans()
+    {
+        try {
+            $plans = $this->subscription->getAllPlans();
+            echo view('admin/subscriptions', [
+                'title' => 'Subscription Plans - RentSmart',
+                'plans' => $plans,
+                'subscriptions' => [],
+                'users' => [],
+                'activeTab' => 'plans'
+            ]);
+        } catch (Exception $e) {
+            error_log($e->getMessage());
+            echo view('errors/500', [
+                'title' => '500 Internal Server Error'
+            ]);
+        }
+    }
+
+    public function activeSubscriptions()
+    {
+        try {
+            $plans = $this->subscription->getAllPlans();
+            $subscriptions = $this->subscription->getAllSubscriptions();
+            $users = $this->user->getAllUsers();
+
+            try {
+                $settings = new \App\Models\Setting();
+                $raw = (string)($settings->get('demo_protected_user_ids_json') ?? '[]');
+                $ids = json_decode($raw, true);
+                $ids = is_array($ids) ? array_map('intval', $ids) : [];
+                if (!empty($ids)) {
+                    $subscriptions = array_values(array_filter(($subscriptions ?? []), function ($s) use ($ids) {
+                        $uid = (int)($s['user_id'] ?? 0);
+                        return !($uid > 0 && in_array($uid, $ids, true));
+                    }));
+                    $users = array_values(array_filter(($users ?? []), function ($u) use ($ids) {
+                        $uid = (int)($u['id'] ?? 0);
+                        return !($uid > 0 && in_array($uid, $ids, true));
+                    }));
+                }
+            } catch (\Throwable $e) {
+            }
+
+            echo view('admin/subscriptions', [
+                'title' => 'Active Subscriptions - RentSmart',
+                'plans' => $plans,
+                'subscriptions' => $subscriptions,
+                'users' => $users,
+                'activeTab' => 'active'
             ]);
         } catch (Exception $e) {
             error_log($e->getMessage());

@@ -10,17 +10,20 @@ ob_start();
                     <i class="bi bi-credit-card text-primary me-2"></i>Payment Methods
                 </h1>
                 <div class="d-flex flex-wrap gap-2 align-items-center">
-                    <div class="d-flex align-items-center gap-2">
-                        <label for="pmFilterProperty" class="form-label mb-0 small text-muted">Filter by Property</label>
-                        <select id="pmFilterProperty" class="form-select form-select-sm" style="min-width: 220px;">
-                            <option value="all" selected>All Properties</option>
-                            <?php if (!empty($properties)): ?>
-                                <?php foreach ($properties as $p): ?>
-                                    <option value="<?= (int)$p['id'] ?>"><?= htmlspecialchars($p['name'] ?? ('Property #' . $p['id'])) ?></option>
-                                <?php endforeach; ?>
-                            <?php endif; ?>
-                        </select>
-                    </div>
+                    <?php $role = strtolower((string)($_SESSION['user_role'] ?? '')); $isAdmin = in_array($role, ['administrator', 'admin'], true); ?>
+                    <?php if (!$isAdmin): ?>
+                        <div class="d-flex align-items-center gap-2">
+                            <label for="pmFilterProperty" class="form-label mb-0 small text-muted">Filter by Property</label>
+                            <select id="pmFilterProperty" class="form-select form-select-sm" style="min-width: 220px;">
+                                <option value="all" selected>All Properties</option>
+                                <?php if (!empty($properties)): ?>
+                                    <?php foreach ($properties as $p): ?>
+                                        <option value="<?= (int)$p['id'] ?>"><?= htmlspecialchars($p['name'] ?? ('Property #' . $p['id'])) ?></option>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </select>
+                        </div>
+                    <?php endif; ?>
                     <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addPaymentMethodModal">
                         <i class="bi bi-plus-circle me-1"></i>Add Payment Method
                     </button>
@@ -41,7 +44,9 @@ ob_start();
                         <th class="text-muted">TYPE</th>
                         <th class="text-muted">SCOPE</th>
                         <th class="text-muted">DESCRIPTION</th>
-                        <th class="text-muted">LINKED PROPERTIES</th>
+                        <?php if (!$isAdmin): ?>
+                            <th class="text-muted">LINKED PROPERTIES</th>
+                        <?php endif; ?>
                         <th class="text-muted">STATUS</th>
                         <th class="text-muted">CREATED</th>
                         <th class="text-muted">ACTIONS</th>
@@ -50,7 +55,7 @@ ob_start();
                 <tbody>
                     <?php if (empty($paymentMethods)): ?>
                         <tr>
-                            <td class="text-center py-5" colspan="8">
+                            <td class="text-center py-5" colspan="<?= $isAdmin ? 7 : 8 ?>">
                                 <div class="w-100 d-flex flex-column align-items-center justify-content-center">
                                     <i class="bi bi-credit-card display-4 text-muted mb-3 d-block"></i>
                                     <h5>No payment methods found</h5>
@@ -60,7 +65,7 @@ ob_start();
                         </tr>
                     <?php else: ?>
                         <?php foreach ($paymentMethods as $method): ?>
-                            <tr data-prop-ids="<?= htmlspecialchars(implode(',', $linkedPropertyIdsByMethod[$method['id']] ?? [])) ?>">
+                            <tr data-prop-ids="<?= $isAdmin ? '' : htmlspecialchars(implode(',', $linkedPropertyIdsByMethod[$method['id']] ?? [])) ?>">
                                 <td>
                                     <div class="d-flex align-items-center">
                                         <div class="me-2">
@@ -116,23 +121,24 @@ ob_start();
                                         <?php endif; ?>
                                     <?php endif; ?>
                                 </td>
+                                <?php if (!$isAdmin): ?>
+                                    <td>
+                                        <?php 
+                                            $props = $linkedPropertiesByMethod[$method['id']] ?? [];
+                                            if (empty($props)) {
+                                                echo '<span class="text-muted">-</span>';
+                                            } else {
+                                                echo '<span class="small">' . htmlspecialchars(implode(', ', $props)) . '</span>';
+                                            }
+                                        ?>
+                                    </td>
+                                <?php endif; ?>
                                 <td>
-                                    <?php 
-                                    $linked = $linkedPropertiesByMethod[$method['id']] ?? []; 
-                                    if (empty($linked)) {
-                                        echo '<span class="badge bg-secondary">None</span>';
-                                    } else {
-                                        echo '<div class="d-flex flex-wrap gap-1">';
-                                        foreach ($linked as $pname) {
-                                            echo '<span class="badge bg-light text-dark">' . htmlspecialchars($pname) . '</span>';
-                                        }
-                                        echo '</div>';
-                                    }
-                                    ?>
-                                </td>
-                                <td>
-                                    <span class="badge bg-<?= $method['is_active'] ? 'success' : 'secondary' ?>">
-                                        <?= $method['is_active'] ? 'Active' : 'Inactive' ?>
+                                    <?php if ((int)($method['is_active'] ?? 0) === 1): ?>
+                                        <span class="badge bg-success">Active</span>
+                                    <?php else: ?>
+                                        <span class="badge bg-secondary">Inactive</span>
+                                    <?php endif; ?>
                                     </span>
                                 </td>
                                 <td>
@@ -186,13 +192,12 @@ ob_start();
                         </select>
                     </div>
 
-                    <?php $role = strtolower((string)($_SESSION['user_role'] ?? '')); $isAdmin = in_array($role, ['administrator', 'admin'], true); ?>
+                    <?php /* $isAdmin computed at top */ ?>
                     <?php if ($isAdmin): ?>
                         <div class="mb-3">
                             <label for="add_scope" class="form-label">Scope</label>
                             <select id="add_scope" name="scope" class="form-select">
-                                <option value="tenant" selected>Tenant Payments (Properties)</option>
-                                <option value="subscription">Subscription Billing (Platform)</option>
+                                <option value="subscription" selected>Subscription Billing (Platform)</option>
                             </select>
                         </div>
                     <?php endif; ?>
@@ -265,23 +270,25 @@ ob_start();
                             <label for="add_is_active" class="form-check-label">Active</label>
                         </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Link to Properties</label>
-                        <div class="border rounded p-2" style="max-height: 220px; overflow:auto;">
-                            <?php if (!empty($properties)): ?>
-                                <?php foreach ($properties as $p): ?>
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="add_property_ids_<?= $p['id'] ?>" name="property_ids[]" value="<?= $p['id'] ?>">
-                                        <label class="form-check-label" for="add_property_ids_<?= $p['id'] ?>">
-                                            <?= htmlspecialchars($p['name'] ?? ('Property #' . $p['id'])) ?>
-                                        </label>
-                                    </div>
-                                <?php endforeach; ?>
-                            <?php else: ?>
-                                <div class="text-muted small">No properties available to link.</div>
-                            <?php endif; ?>
+                    <?php if (!$isAdmin): ?>
+                        <div class="mb-3">
+                            <label class="form-label">Link to Properties</label>
+                            <div class="border rounded p-2" style="max-height: 220px; overflow:auto;">
+                                <?php if (!empty($properties)): ?>
+                                    <?php foreach ($properties as $p): ?>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="add_property_ids_<?= $p['id'] ?>" name="property_ids[]" value="<?= $p['id'] ?>">
+                                            <label class="form-check-label" for="add_property_ids_<?= $p['id'] ?>">
+                                                <?= htmlspecialchars($p['name'] ?? ('Property #' . $p['id'])) ?>
+                                            </label>
+                                        </div>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <div class="text-muted small">No properties available to link.</div>
+                                <?php endif; ?>
+                            </div>
                         </div>
-                    </div>
+                    <?php endif; ?>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -324,8 +331,7 @@ ob_start();
                         <div class="mb-3">
                             <label for="edit_scope" class="form-label">Scope</label>
                             <select id="edit_scope" name="scope" class="form-select">
-                                <option value="tenant">Tenant Payments (Properties)</option>
-                                <option value="subscription">Subscription Billing (Platform)</option>
+                                <option value="subscription" selected>Subscription Billing (Platform)</option>
                             </select>
                         </div>
                     <?php endif; ?>
@@ -398,23 +404,25 @@ ob_start();
                             <label for="edit_is_active" class="form-check-label">Active</label>
                         </div>
                     </div>
-                    <div class="mb-3">
-                        <label class="form-label">Link to Properties</label>
-                        <div class="border rounded p-2" style="max-height: 220px; overflow:auto;">
-                            <?php if (!empty($properties)): ?>
-                                <?php foreach ($properties as $p): ?>
-                                    <div class="form-check">
-                                        <input class="form-check-input" type="checkbox" id="edit_property_ids_<?= $p['id'] ?>" name="property_ids[]" value="<?= $p['id'] ?>">
-                                        <label class="form-check-label" for="edit_property_ids_<?= $p['id'] ?>">
-                                            <?= htmlspecialchars($p['name'] ?? ('Property #' . $p['id'])) ?>
-                                        </label>
-                                    </div>
-                                <?php endforeach; ?>
-                            <?php else: ?>
-                                <div class="text-muted small">No properties available to link.</div>
-                            <?php endif; ?>
+                    <?php if (!$isAdmin): ?>
+                        <div class="mb-3">
+                            <label class="form-label">Link to Properties</label>
+                            <div class="border rounded p-2" style="max-height: 220px; overflow:auto;">
+                                <?php if (!empty($properties)): ?>
+                                    <?php foreach ($properties as $p): ?>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="edit_property_ids_<?= $p['id'] ?>" name="property_ids[]" value="<?= $p['id'] ?>">
+                                            <label class="form-check-label" for="edit_property_ids_<?= $p['id'] ?>">
+                                                <?= htmlspecialchars($p['name'] ?? ('Property #' . $p['id'])) ?>
+                                            </label>
+                                        </div>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <div class="text-muted small">No properties available to link.</div>
+                                <?php endif; ?>
+                            </div>
                         </div>
-                    </div>
+                    <?php endif; ?>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -601,16 +609,18 @@ function editPaymentMethod(id) {
                 }
             }
             
-            // Pre-select linked properties
-            try {
-                // Uncheck all first
-                document.querySelectorAll('input[id^="edit_property_ids_"]').forEach(cb => cb.checked = false);
-                const linked = Array.isArray(data.property_ids) ? data.property_ids : [];
-                linked.forEach(function(pid){
-                    const el = document.getElementById('edit_property_ids_' + pid);
-                    if (el) el.checked = true;
-                });
-            } catch (e) {}
+            if (!<?= $isAdmin ? 'true' : 'false' ?>) {
+                // Pre-select linked properties
+                try {
+                    // Uncheck all first
+                    document.querySelectorAll('input[id^="edit_property_ids_"]').forEach(cb => cb.checked = false);
+                    const linked = Array.isArray(data.property_ids) ? data.property_ids : [];
+                    linked.forEach(function(pid){
+                        const el = document.getElementById('edit_property_ids_' + pid);
+                        if (el) el.checked = true;
+                    });
+                } catch (e) {}
+            }
             
             const modal = new bootstrap.Modal(document.getElementById('editPaymentMethodModal'));
             modal.show();

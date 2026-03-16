@@ -11,7 +11,18 @@ ob_start();
                     </h1>
                     <p class="text-muted mb-0 mt-1">Manage user subscriptions and plans</p>
                 </div>
-                
+                <div class="d-flex flex-wrap gap-2 align-items-center">
+                    <?php $tab = $activeTab ?? 'all'; ?>
+                    <a class="btn btn-sm <?= $tab === 'plans' ? 'btn-primary' : 'btn-outline-primary' ?>" href="<?= BASE_URL ?>/admin/subscriptions/plans">
+                        <i class="bi bi-award me-1"></i>Plans
+                    </a>
+                    <a class="btn btn-sm <?= $tab === 'active' ? 'btn-primary' : 'btn-outline-primary' ?>" href="<?= BASE_URL ?>/admin/subscriptions/active">
+                        <i class="bi bi-check-circle me-1"></i>Active Subscriptions
+                    </a>
+                    <a class="btn btn-sm <?= $tab === 'all' ? 'btn-primary' : 'btn-outline-primary' ?>" href="<?= BASE_URL ?>/admin/subscriptions">
+                        <i class="bi bi-layout-text-window-reverse me-1"></i>All
+                    </a>
+                </div>
             </div>
         </div>
     </div>
@@ -139,100 +150,103 @@ ob_start();
         </div>
     </div>
 
-    <!-- Subscription Plans -->
-    <div class="card mb-4">
-        <div class="card-header bg-light py-3">
-            <h5 class="mb-0">Subscription Plans</h5>
-        </div>
-        <div class="table-responsive">
-            <table class="table table-hover mb-0">
-                <thead class="bg-light">
-                    <tr>
-                        <th class="text-muted">PLAN NAME</th>
-                        <th class="text-muted">PRICE</th>
-                        <th class="text-muted">PROPERTY LIMIT</th>
-                        <th class="text-muted">LISTING LIMIT</th>
-                        <th class="text-muted">DESCRIPTION</th>
-                        <th class="text-muted">FEATURES</th>
-                        <th class="text-muted">ACTIONS</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($plans as $plan): ?>
+    <?php if (($activeTab ?? 'all') !== 'active'): ?>
+        <!-- Subscription Plans -->
+        <div class="card mb-4">
+            <div class="card-header bg-light py-3">
+                <h5 class="mb-0">Subscription Plans</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="bg-light">
                         <tr>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <div class="avatar-circle me-2">
-                                        <i class="bi bi-award fs-4"></i>
-                                    </div>
-                                    <?= htmlspecialchars($plan['name']) ?>
-                                </div>
-                            </td>
-                            <td>Ksh<?= number_format($plan['price'], 2) ?></td>
-                            <td>
-                                <?php
-                                $nameLower = strtolower($plan['name']);
-                                $limit = null;
-                                if (isset($plan['property_limit']) && $plan['property_limit'] !== null && $plan['property_limit'] !== '' && (int)$plan['property_limit'] > 0) {
-                                    $limit = (int)$plan['property_limit'];
-                                } else {
-                                    if ($nameLower === 'basic') { $limit = 10; }
-                                    elseif ($nameLower === 'professional') { $limit = 50; }
-                                    elseif ($nameLower === 'enterprise') { $limit = null; }
-                                }
-                                echo $limit === null ? '<span class="badge bg-success">Unlimited</span>' : '<span class="badge bg-secondary">' . (int)$limit . '</span>';
-                                ?>
-                            </td>
-                            <td>
-                                <?php
-                                $listingLimit = null;
-                                if (isset($plan['listing_limit']) && $plan['listing_limit'] !== null && $plan['listing_limit'] !== '' && (int)$plan['listing_limit'] > 0) {
-                                    $listingLimit = (int)$plan['listing_limit'];
-                                }
-                                echo $listingLimit === null ? '<span class="badge bg-success">Unlimited</span>' : '<span class="badge bg-secondary">' . (int)$listingLimit . '</span>';
-                                ?>
-                            </td>
-                            <td><?= htmlspecialchars($plan['description']) ?></td>
-                            <td>
-                                <ul class="list-unstyled mb-0">
-                                    <?php foreach (explode("\n", $plan['features']) as $feature): ?>
-                                        <li><i class="bi bi-check-circle-fill text-success me-2"></i><?= htmlspecialchars($feature) ?></li>
-                                    <?php endforeach; ?>
-                                </ul>
-                            </td>
-                            <td>
-                                <button class="btn btn-sm btn-outline-primary" onclick="editPlan(<?= $plan['id'] ?>)">
-                                    <i class="bi bi-pencil"></i>
-                                </button>
-                            </td>
+                            <th class="text-muted">PLAN NAME</th>
+                            <th class="text-muted">PRICE</th>
+                            <th class="text-muted">PROPERTY LIMIT</th>
+                            <th class="text-muted">LISTING LIMIT</th>
+                            <th class="text-muted">DESCRIPTION</th>
+                            <th class="text-muted">FEATURES</th>
+                            <th class="text-muted">ACTIONS</th>
                         </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        <?php foreach (($plans ?? []) as $plan): ?>
+                            <tr>
+                                <td>
+                                    <div class="d-flex align-items-center">
+                                        <div class="avatar-circle me-2">
+                                            <i class="bi bi-award fs-4"></i>
+                                        </div>
+                                        <?= htmlspecialchars($plan['name']) ?>
+                                    </div>
+                                </td>
+                                <td>Ksh<?= number_format($plan['price'], 2) ?></td>
+                                <td>
+                                    <?php
+                                    $nameLower = strtolower($plan['name']);
+                                    $limit = null;
+                                    if (isset($plan['property_limit']) && $plan['property_limit'] !== null && $plan['property_limit'] !== '' && (int)$plan['property_limit'] > 0) {
+                                        $limit = (int)$plan['property_limit'];
+                                    } else {
+                                        if ($nameLower === 'basic') { $limit = 10; }
+                                        elseif ($nameLower === 'professional') { $limit = 50; }
+                                        elseif ($nameLower === 'enterprise') { $limit = null; }
+                                    }
+                                    echo $limit === null ? '<span class="badge bg-success">Unlimited</span>' : '<span class="badge bg-secondary">' . (int)$limit . '</span>';
+                                    ?>
+                                </td>
+                                <td>
+                                    <?php
+                                    $listingLimit = null;
+                                    if (isset($plan['listing_limit']) && $plan['listing_limit'] !== null && $plan['listing_limit'] !== '' && (int)$plan['listing_limit'] > 0) {
+                                        $listingLimit = (int)$plan['listing_limit'];
+                                    }
+                                    echo $listingLimit === null ? '<span class="badge bg-success">Unlimited</span>' : '<span class="badge bg-secondary">' . (int)$listingLimit . '</span>';
+                                    ?>
+                                </td>
+                                <td><?= htmlspecialchars($plan['description']) ?></td>
+                                <td>
+                                    <ul class="list-unstyled mb-0">
+                                        <?php foreach (explode("\n", $plan['features']) as $feature): ?>
+                                            <li><i class="bi bi-check-circle-fill text-success me-2"></i><?= htmlspecialchars($feature) ?></li>
+                                        <?php endforeach; ?>
+                                    </ul>
+                                </td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-primary" onclick="editPlan(<?= $plan['id'] ?>)">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
         </div>
-    </div>
+    <?php endif; ?>
 
-    <!-- Active Subscriptions -->
-    <div class="card">
-        <div class="card-header bg-light py-3">
-            <h5 class="mb-0">Active Subscriptions</h5>
-        </div>
-        <div class="table-responsive">
-            <table class="table table-hover mb-0">
-                <thead class="bg-light">
-                    <tr>
-                        <th class="text-muted">USER</th>
-                        <th class="text-muted">PLAN</th>
-                        <th class="text-muted">PROPERTIES</th>
-                        <th class="text-muted">STATUS</th>
-                        <th class="text-muted">START DATE</th>
-                        <th class="text-muted">END DATE</th>
-                        <th class="text-muted">ACTIONS</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($subscriptions as $sub): ?>
+    <?php if (($activeTab ?? 'all') !== 'plans'): ?>
+        <!-- Active Subscriptions -->
+        <div class="card">
+            <div class="card-header bg-light py-3">
+                <h5 class="mb-0">Active Subscriptions</h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="bg-light">
                         <tr>
+                            <th class="text-muted">USER</th>
+                            <th class="text-muted">PLAN</th>
+                            <th class="text-muted">PROPERTIES</th>
+                            <th class="text-muted">STATUS</th>
+                            <th class="text-muted">START DATE</th>
+                            <th class="text-muted">END DATE</th>
+                            <th class="text-muted">ACTIONS</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach (($subscriptions ?? []) as $sub): ?>
+                            <tr>
                             <td>
                                 <div class="d-flex align-items-center">
                                     <div class="avatar-circle me-2">
@@ -271,6 +285,7 @@ ob_start();
             </table>
         </div>
     </div>
+    <?php endif; ?>
 </div>
 
 <!-- Edit Plan Modal -->
