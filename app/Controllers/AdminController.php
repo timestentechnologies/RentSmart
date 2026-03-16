@@ -45,11 +45,15 @@ class AdminController
             $users = $this->user->getAllUsers();
 
             // Filter out demo accounts
+            $demoUserIds = [];
             try {
                 $settings = new \App\Models\Setting();
                 $raw = (string)($settings->get('demo_protected_user_ids_json') ?? '[]');
                 $ids = json_decode($raw, true);
                 $ids = is_array($ids) ? array_map('intval', $ids) : [];
+                $demoUserIds = array_values(array_filter($ids, function ($v) {
+                    return (int)$v > 0;
+                }));
                 if (!empty($ids) || !empty($users)) {
                     $users = array_values(array_filter(($users ?? []), function ($u) use ($ids) {
                         $id = (int)($u['id'] ?? 0);
@@ -106,19 +110,36 @@ class AdminController
             try {
                 $db = $this->user->getDb();
 
-                $stmtNewUsers = $db->prepare("SELECT COUNT(*) AS c FROM users WHERE created_at >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL 30 DAY)");
-                $stmtNewUsers->execute();
+                $demoEmailLike = 'demo+%@rentsmart.local';
+                $excludeUserSql = " AND u.email NOT LIKE ?";
+                $excludeUserParams = [$demoEmailLike];
+                if (!empty($demoUserIds)) {
+                    $excludeUserSql .= " AND u.id NOT IN (" . implode(',', array_fill(0, count($demoUserIds), '?')) . ")";
+                    $excludeUserParams = array_merge($excludeUserParams, $demoUserIds);
+                }
+
+                // New Users (30 days) should match the same demo-user filtering as the users list
+                $sqlNewUsers = "SELECT COUNT(*) AS c FROM users u WHERE u.created_at >= DATE_SUB(UTC_TIMESTAMP(), INTERVAL 30 DAY)" . $excludeUserSql;
+                $stmtNewUsers = $db->prepare($sqlNewUsers);
+                $stmtNewUsers->execute($excludeUserParams);
                 $counts['new_users_30_days'] = (int)($stmtNewUsers->fetch(\PDO::FETCH_ASSOC)['c'] ?? 0);
 
-                $stmtLatestSubs = $db->query(
+                // Latest subscription per user (excluding demo users) for status-based counts
+                $sqlLatestSubs =
                     "SELECT s.status, s.current_period_ends_at, s.trial_ends_at\n"
                     . "FROM subscriptions s\n"
                     . "JOIN (\n"
-                    . "  SELECT user_id, MAX(created_at) AS mc\n"
-                    . "  FROM subscriptions\n"
-                    . "  GROUP BY user_id\n"
-                    . ") x ON x.user_id = s.user_id AND x.mc = s.created_at"
-                );
+                    . "  SELECT s2.user_id, MAX(s2.created_at) AS mc\n"
+                    . "  FROM subscriptions s2\n"
+                    . "  JOIN users u2 ON u2.id = s2.user_id\n"
+                    . "  WHERE 1=1" . str_replace('u.', 'u2.', $excludeUserSql) . "\n"
+                    . "  GROUP BY s2.user_id\n"
+                    . ") x ON x.user_id = s.user_id AND x.mc = s.created_at\n"
+                    . "JOIN users u ON u.id = s.user_id\n"
+                    . "WHERE 1=1" . $excludeUserSql;
+
+                $stmtLatestSubs = $db->prepare($sqlLatestSubs);
+                $stmtLatestSubs->execute(array_merge($excludeUserParams, $excludeUserParams));
                 $latestSubs = $stmtLatestSubs->fetchAll(\PDO::FETCH_ASSOC) ?: [];
                 $now = new \DateTime('now', new \DateTimeZone('UTC'));
                 $cutoff = (clone $now)->modify('+30 days');
@@ -129,6 +150,19 @@ class AdminController
                     if ($st === '') {
                         $st = 'unknown';
                     }
+
+                    // If trial_ends_at is in the future, treat as trialing even if status says active
+                    $trialEndsRaw = (string)($s['trial_ends_at'] ?? '');
+                    if ($trialEndsRaw !== '') {
+                        try {
+                            $trialEnds = new \DateTime($trialEndsRaw, new \DateTimeZone('UTC'));
+                            if ($trialEnds > $now) {
+                                $st = 'trialing';
+                            }
+                        } catch (\Throwable $e) {
+                        }
+                    }
+
                     $statusCounts[$st] = (int)($statusCounts[$st] ?? 0) + 1;
 
                     if ($st === 'trialing') {
@@ -231,17 +265,31 @@ class AdminController
                 $financials['total_revenue_collected'] = (float)($stmtTotalRevenue->fetch(\PDO::FETCH_ASSOC)['total'] ?? 0);
                 
                 // Expected revenue from current active subscriptions
-                $stmtExpectedRevenue = $db->query(
+                $demoEmailLike = 'demo+%@rentsmart.local';
+                $excludeUserSql = " AND u.email NOT LIKE ?";
+                $excludeUserParams = [$demoEmailLike];
+                if (!empty($demoUserIds)) {
+                    $excludeUserSql .= " AND u.id NOT IN (" . implode(',', array_fill(0, count($demoUserIds), '?')) . ")";
+                    $excludeUserParams = array_merge($excludeUserParams, $demoUserIds);
+                }
+
+                $sqlExpectedRevenue =
                     "SELECT COALESCE(SUM(sp.price), 0) AS expected\n"
                     . "FROM subscriptions s\n"
                     . "JOIN (\n"
-                    . "  SELECT user_id, MAX(created_at) AS latest_created_at\n"
-                    . "  FROM subscriptions\n"
-                    . "  GROUP BY user_id\n"
+                    . "  SELECT s2.user_id, MAX(s2.created_at) AS latest_created_at\n"
+                    . "  FROM subscriptions s2\n"
+                    . "  JOIN users u2 ON u2.id = s2.user_id\n"
+                    . "  WHERE 1=1" . str_replace('u.', 'u2.', $excludeUserSql) . "\n"
+                    . "  GROUP BY s2.user_id\n"
                     . ") ls ON ls.user_id = s.user_id AND ls.latest_created_at = s.created_at\n"
+                    . "JOIN users u ON u.id = s.user_id\n"
                     . "JOIN subscription_plans sp ON sp.id = s.plan_id\n"
-                    . "WHERE s.status = 'active'"
-                );
+                    . "WHERE s.status = 'active'\n"
+                    . "  AND (s.trial_ends_at IS NULL OR s.trial_ends_at <= UTC_TIMESTAMP())" . $excludeUserSql;
+
+                $stmtExpectedRevenue = $db->prepare($sqlExpectedRevenue);
+                $stmtExpectedRevenue->execute(array_merge($excludeUserParams, $excludeUserParams));
                 $financials['expected_revenue'] = (float)($stmtExpectedRevenue->fetch(\PDO::FETCH_ASSOC)['expected'] ?? 0);
                 
                 // Outstanding balance from rent payments
