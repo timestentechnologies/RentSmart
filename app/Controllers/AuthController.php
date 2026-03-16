@@ -815,13 +815,7 @@ class AuthController
                 );
             } catch (\Exception $ex) { error_log('auth.login log failed: ' . $ex->getMessage()); }
 
-            if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
-                header('Content-Type: application/json');
-                echo json_encode(['success' => true, 'message' => 'Login successful', 'redirect' => BASE_URL . $redirectPath]);
-                exit;
-            }
-
-            // Redirect to dashboard
+            // Determine redirect path
             $roleLower = strtolower((string)($user['role'] ?? ''));
             if (in_array($roleLower, ['admin', 'administrator'], true)) {
                 $redirectPath = '/admin/dashboard';
@@ -830,6 +824,14 @@ class AuthController
             } else {
                 $redirectPath = '/dashboard';
             }
+
+            if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
+                header('Content-Type: application/json');
+                echo json_encode(['success' => true, 'message' => 'Login successful', 'redirect' => BASE_URL . $redirectPath]);
+                exit;
+            }
+
+            // Redirect to dashboard
             header('Location: ' . BASE_URL . $redirectPath);
             exit;
         } catch (Exception $e) {
