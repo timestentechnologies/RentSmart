@@ -1388,6 +1388,11 @@ ob_clean();
                         </a>
                     </li>
                     <li class="nav-item">
+                        <a class="nav-link <?= (strpos($current_uri, 'admin/payments/overdue') === 0) ? 'active' : '' ?>" href="<?= BASE_URL ?>/admin/payments/overdue">
+                            <i class="bi bi-exclamation-circle me-2"></i> Overdue Payments
+                        </a>
+                    </li>
+                    <li class="nav-item">
                         <a class="nav-link <?= (strpos($current_uri, 'payment-methods') === 0) ? 'active' : '' ?>" href="<?= BASE_URL ?>/payment-methods">
                             <i class="bi bi-credit-card me-2"></i> Payment Methods
                         </a>

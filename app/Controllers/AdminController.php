@@ -342,6 +342,149 @@ class AdminController
         }
     }
 
+    public function overdueSubscriptionPayments()
+    {
+        try {
+            $db = $this->user->getDb();
+
+            // Demo-user filtering (same rule set as dashboard)
+            $demoUserIds = [];
+            try {
+                $settings = new \App\Models\Setting();
+                $raw = (string)($settings->get('demo_protected_user_ids_json') ?? '[]');
+                $ids = json_decode($raw, true);
+                $ids = is_array($ids) ? array_map('intval', $ids) : [];
+                $demoUserIds = array_values(array_filter($ids, function ($v) {
+                    return (int)$v > 0;
+                }));
+            } catch (\Throwable $e) {
+            }
+
+            $demoEmailLike = 'demo+%@rentsmart.local';
+            $excludeUserSql = " AND u.email NOT LIKE ?";
+            $excludeUserParams = [$demoEmailLike];
+            if (!empty($demoUserIds)) {
+                $excludeUserSql .= " AND u.id NOT IN (" . implode(',', array_fill(0, count($demoUserIds), '?')) . ")";
+                $excludeUserParams = array_merge($excludeUserParams, $demoUserIds);
+            }
+
+            // Billable users: latest subscription per user, active, and trial has ended
+            $sqlBillable =
+                "SELECT u.id AS user_id, u.name, u.email, s.id AS subscription_id, s.plan_id, s.plan_type, s.status, s.trial_ends_at, s.created_at AS subscription_created_at, sp.price\n"
+                . "FROM subscriptions s\n"
+                . "JOIN (\n"
+                . "  SELECT s2.user_id, MAX(s2.created_at) AS mc\n"
+                . "  FROM subscriptions s2\n"
+                . "  JOIN users u2 ON u2.id = s2.user_id\n"
+                . "  WHERE 1=1" . str_replace('u.', 'u2.', $excludeUserSql) . "\n"
+                . "  GROUP BY s2.user_id\n"
+                . ") x ON x.user_id = s.user_id AND x.mc = s.created_at\n"
+                . "JOIN users u ON u.id = s.user_id\n"
+                . "JOIN subscription_plans sp ON sp.id = s.plan_id\n"
+                . "WHERE 1=1" . $excludeUserSql . "\n"
+                . "  AND LOWER(s.status) = 'active'\n"
+                . "  AND s.trial_ends_at IS NOT NULL\n"
+                . "  AND s.trial_ends_at <= UTC_TIMESTAMP()\n"
+                . "ORDER BY s.trial_ends_at ASC";
+
+            $stmtBillable = $db->prepare($sqlBillable);
+            $stmtBillable->execute(array_merge($excludeUserParams, $excludeUserParams));
+            $billableUsers = $stmtBillable->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+
+            // Paid months per user (completed subscription payments)
+            $stmtPaidMonths = $db->prepare(
+                "SELECT DATE_FORMAT(created_at, '%Y-%m') AS ym\n"
+                . "FROM subscription_payments\n"
+                . "WHERE user_id = ? AND status = 'completed'\n"
+                . "GROUP BY ym\n"
+                . "ORDER BY ym ASC"
+            );
+
+            $nowUtc = new \DateTime('now', new \DateTimeZone('UTC'));
+            $currentMonthStart = new \DateTime($nowUtc->format('Y-m-01'), new \DateTimeZone('UTC'));
+
+            $rows = [];
+            foreach ($billableUsers as $u) {
+                $trialEndsRaw = (string)($u['trial_ends_at'] ?? '');
+                if ($trialEndsRaw === '') {
+                    continue;
+                }
+
+                // Billable months start: first day of the month AFTER trial ends
+                try {
+                    $trialEnds = new \DateTime($trialEndsRaw, new \DateTimeZone('UTC'));
+                } catch (\Throwable $e) {
+                    continue;
+                }
+                $billableStart = new \DateTime($trialEnds->format('Y-m-01'), new \DateTimeZone('UTC'));
+                $billableStart->modify('+1 month');
+
+                // Only consider full months up to last month (exclude current month)
+                $billableEndExclusive = clone $currentMonthStart;
+                if ($billableStart >= $billableEndExclusive) {
+                    continue;
+                }
+
+                // Paid months
+                $stmtPaidMonths->execute([(int)$u['user_id']]);
+                $paid = $stmtPaidMonths->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+                $paidMonths = [];
+                foreach ($paid as $p) {
+                    $ym = (string)($p['ym'] ?? '');
+                    if ($ym !== '') {
+                        $paidMonths[$ym] = true;
+                    }
+                }
+
+                // Expected months list
+                $missing = [];
+                $cursor = clone $billableStart;
+                while ($cursor < $billableEndExclusive) {
+                    $ym = $cursor->format('Y-m');
+                    if (empty($paidMonths[$ym])) {
+                        $missing[] = $ym;
+                    }
+                    $cursor->modify('+1 month');
+                }
+
+                if (empty($missing)) {
+                    continue;
+                }
+
+                $price = (float)($u['price'] ?? 0);
+                $rows[] = [
+                    'user_id' => (int)($u['user_id'] ?? 0),
+                    'name' => (string)($u['name'] ?? ''),
+                    'email' => (string)($u['email'] ?? ''),
+                    'plan' => (string)($u['plan_type'] ?? ''),
+                    'plan_price' => $price,
+                    'trial_ends_at' => $trialEndsRaw,
+                    'billable_start' => $billableStart->format('Y-m-d'),
+                    'missing_months' => $missing,
+                    'missing_count' => count($missing),
+                    'amount_due' => (float)count($missing) * $price,
+                ];
+            }
+
+            // Sort by most overdue months then amount due
+            usort($rows, function ($a, $b) {
+                $c = ((int)$b['missing_count']) <=> ((int)$a['missing_count']);
+                if ($c !== 0) return $c;
+                return ((float)$b['amount_due']) <=> ((float)$a['amount_due']);
+            });
+
+            echo view('admin/overdue_payments', [
+                'title' => 'Overdue Payments - RentSmart',
+                'rows' => $rows,
+            ]);
+        } catch (Exception $e) {
+            error_log($e->getMessage());
+            echo view('errors/500', [
+                'title' => '500 Internal Server Error'
+            ]);
+        }
+    }
+
     private function usersByRole(string $role, string $title)
     {
         try {

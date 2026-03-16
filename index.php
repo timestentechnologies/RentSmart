@@ -209,6 +209,7 @@ $routes = [
     'admin/subscriptions/get-subscription/(\d+)' => ['controller' => 'AdminController', 'action' => 'getSubscription'],
     
     'admin/payments' => ['controller' => 'AdminController', 'action' => 'payments'],
+    'admin/payments/overdue' => ['controller' => 'AdminController', 'action' => 'overdueSubscriptionPayments'],
     'admin/payments/get/(\d+)' => ['controller' => 'AdminController', 'action' => 'getPayment'],
     'admin/payments/transaction/(\d+)' => ['controller' => 'AdminController', 'action' => 'getTransaction'],
     'admin/payments/manual-mpesa/(\d+)/verify' => ['controller' => 'AdminController', 'action' => 'verifyManualSubscriptionPayment'],
