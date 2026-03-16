@@ -19,9 +19,6 @@ ob_start();
                     <a class="btn btn-sm <?= $tab === 'active' ? 'btn-primary' : 'btn-outline-primary' ?>" href="<?= BASE_URL ?>/admin/subscriptions/active">
                         <i class="bi bi-check-circle me-1"></i>Active Subscriptions
                     </a>
-                    <a class="btn btn-sm <?= $tab === 'all' ? 'btn-primary' : 'btn-outline-primary' ?>" href="<?= BASE_URL ?>/admin/subscriptions">
-                        <i class="bi bi-layout-text-window-reverse me-1"></i>All
-                    </a>
                 </div>
             </div>
         </div>
@@ -92,63 +89,95 @@ ob_start();
 
     <!-- Flash messages are now handled by main layout with SweetAlert2 -->
 
-    <!-- Stats Cards -->
-    <div class="row g-3 mb-4">
-        <div class="col-12 col-md-4">
-            <div class="stat-card">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <h6 class="card-title">Active Subscriptions</h6>
-                        <h2 class="mt-3 mb-2">
-                            <?= count(array_filter($subscriptions, function($sub) {
-                                return $sub['status'] === 'active';
-                            })) ?>
-                        </h2>
-                        <p class="mb-0 text-muted">Currently active users</p>
+    <?php if (($activeTab ?? 'all') === 'plans'): ?>
+        <!-- Plan Usage Metrics -->
+        <div class="row g-3 mb-4">
+            <div class="col-12 col-md-4">
+                <div class="stat-card">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="card-title">Plan with Most Users</h6>
+                            <h2 class="mt-3 mb-2">
+                                <?php
+                                $planCounts = [];
+                                foreach (($subscriptions ?? []) as $sub) {
+                                    $planId = $sub['plan_id'] ?? null;
+                                    if ($planId && ($sub['status'] ?? '') === 'active') {
+                                        $planCounts[$planId] = ($planCounts[$planId] ?? 0) + 1;
+                                    }
+                                }
+                                $maxPlanId = !empty($planCounts) ? array_keys($planCounts, max($planCounts))[0] : null;
+                                $maxPlanName = 'None';
+                                if ($maxPlanId) {
+                                    foreach (($plans ?? []) as $plan) {
+                                        if ((int)$plan['id'] === (int)$maxPlanId) {
+                                            $maxPlanName = htmlspecialchars($plan['name']);
+                                            break;
+                                        }
+                                    }
+                                }
+                                echo $maxPlanName;
+                                ?>
+                            </h2>
+                            <p class="mb-0 text-muted">
+                                <?= !empty($planCounts) ? max($planCounts) . ' users' : 'No active plans' ?>
+                            </p>
+                        </div>
+                        <div class="stats-icon">
+                            <i class="bi bi-trophy fs-1 text-warning opacity-25"></i>
+                        </div>
                     </div>
-                    <div class="stats-icon">
-                        <i class="bi bi-check-circle fs-1 text-success opacity-25"></i>
+                </div>
+            </div>
+            <div class="col-12 col-md-4">
+                <div class="stat-card">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="card-title">Plans with No Users</h6>
+                            <h2 class="mt-3 mb-2">
+                                <?php
+                                $unusedPlans = [];
+                                $usedPlanIds = array_unique(array_map(function($sub) {
+                                    return $sub['plan_id'] ?? null;
+                                }, array_filter(($subscriptions ?? []), function($sub) {
+                                    return ($sub['status'] ?? '') === 'active';
+                                })));
+                                foreach (($plans ?? []) as $plan) {
+                                    if (!in_array((int)$plan['id'], $usedPlanIds)) {
+                                        $unusedPlans[] = htmlspecialchars($plan['name']);
+                                    }
+                                }
+                                echo count($unusedPlans);
+                                ?>
+                            </h2>
+                            <p class="mb-0 text-muted">
+                                <?= !empty($unusedPlans) ? implode(', ', array_slice($unusedPlans, 0, 3)) . (count($unusedPlans) > 3 ? '...' : '') : 'All plans used' ?>
+                            </p>
+                        </div>
+                        <div class="stats-icon">
+                            <i class="bi bi-x-circle fs-1 text-danger opacity-25"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-12 col-md-4">
+                <div class="stat-card">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="card-title">Total Plans</h6>
+                            <h2 class="mt-3 mb-2">
+                                <?= count($plans ?? []) ?>
+                            </h2>
+                            <p class="mb-0 text-muted">Available subscription plans</p>
+                        </div>
+                        <div class="stats-icon">
+                            <i class="bi bi-collection fs-1 text-info opacity-25"></i>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col-12 col-md-4">
-            <div class="stat-card">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <h6 class="card-title">Trial Users</h6>
-                        <h2 class="mt-3 mb-2">
-                            <?= count(array_filter($subscriptions, function($sub) {
-                                return $sub['status'] === 'trialing';
-                            })) ?>
-                        </h2>
-                        <p class="mb-0 text-muted">Users in trial period</p>
-                    </div>
-                    <div class="stats-icon">
-                        <i class="bi bi-hourglass-split fs-1 text-info opacity-25"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col-12 col-md-4">
-            <div class="stat-card">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <h6 class="card-title">Expiring Soon</h6>
-                        <h2 class="mt-3 mb-2">
-                            <?= count(array_filter($subscriptions, function($sub) {
-                                return strtotime($sub['current_period_ends_at']) <= strtotime('+7 days');
-                            })) ?>
-                        </h2>
-                        <p class="mb-0 text-muted">Next 7 days</p>
-                    </div>
-                    <div class="stats-icon">
-                        <i class="bi bi-clock-history fs-1 text-warning opacity-25"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    <?php endif; ?>
 
     <?php if (($activeTab ?? 'all') !== 'active'): ?>
         <!-- Subscription Plans -->

@@ -924,10 +924,11 @@ class AdminController
     {
         try {
             $plans = $this->subscription->getAllPlans();
+            $subscriptions = $this->subscription->getAllSubscriptions();
             echo view('admin/subscriptions', [
                 'title' => 'Subscription Plans - RentSmart',
                 'plans' => $plans,
-                'subscriptions' => [],
+                'subscriptions' => $subscriptions,
                 'users' => [],
                 'activeTab' => 'plans'
             ]);
