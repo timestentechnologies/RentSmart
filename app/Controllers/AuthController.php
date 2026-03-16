@@ -27,6 +27,154 @@ class AuthController
         $this->activityLog = new ActivityLog();
     }
 
+    public function impersonateUser($targetUserId)
+    {
+        try {
+            if (!verify_csrf_token()) {
+                $_SESSION['flash_message'] = 'Invalid security token';
+                $_SESSION['flash_type'] = 'danger';
+                header('Location: ' . BASE_URL . '/admin/users');
+                exit;
+            }
+
+            if (empty($_SESSION['user_id']) || empty($_SESSION['user_role']) || strtolower((string)$_SESSION['user_role']) !== 'admin') {
+                $_SESSION['flash_message'] = 'Access denied';
+                $_SESSION['flash_type'] = 'danger';
+                header('Location: ' . BASE_URL . '/dashboard');
+                exit;
+            }
+
+            $targetUserId = (int)$targetUserId;
+            if ($targetUserId <= 0) {
+                $_SESSION['flash_message'] = 'Invalid user';
+                $_SESSION['flash_type'] = 'danger';
+                header('Location: ' . BASE_URL . '/admin/users');
+                exit;
+            }
+
+            $target = $this->user->find($targetUserId);
+            if (!$target) {
+                $_SESSION['flash_message'] = 'User not found';
+                $_SESSION['flash_type'] = 'danger';
+                header('Location: ' . BASE_URL . '/admin/users');
+                exit;
+            }
+
+            $targetRole = strtolower((string)($target['role'] ?? ''));
+            if (!in_array($targetRole, ['manager', 'landlord', 'realtor', 'agent', 'caretaker'], true)) {
+                $_SESSION['flash_message'] = 'You can only impersonate managers, landlords, realtors, agents, or caretakers';
+                $_SESSION['flash_type'] = 'warning';
+                header('Location: ' . BASE_URL . '/admin/users');
+                exit;
+            }
+
+            if (!isset($_SESSION['impersonating'])) {
+                $_SESSION['original_user'] = [
+                    'id' => $_SESSION['user_id'],
+                    'role' => $_SESSION['user_role'],
+                    'name' => $_SESSION['user_name'] ?? '',
+                    'email' => $_SESSION['user_email'] ?? ''
+                ];
+            }
+
+            $_SESSION['user_id'] = (int)$target['id'];
+            $_SESSION['user_name'] = (string)($target['name'] ?? '');
+            $_SESSION['user_email'] = (string)($target['email'] ?? '');
+            $_SESSION['user_role'] = $targetRole;
+            $_SESSION['is_admin'] = false;
+            $_SESSION['impersonating'] = true;
+            $_SESSION['impersonated_user_id'] = (int)$target['id'];
+            $_SESSION['impersonated_user_role'] = $targetRole;
+
+            try {
+                $ip = $_SERVER['REMOTE_ADDR'] ?? null;
+                $agent = $_SERVER['HTTP_USER_AGENT'] ?? null;
+                $this->activityLog->add(
+                    (int)($_SESSION['original_user']['id'] ?? null),
+                    (string)($_SESSION['original_user']['role'] ?? null),
+                    'auth.impersonate',
+                    'user',
+                    (int)$target['id'],
+                    null,
+                    json_encode(['target_role' => $targetRole, 'target_email' => $target['email'] ?? null]),
+                    $ip,
+                    $agent
+                );
+            } catch (\Throwable $e) {
+            }
+
+            $redirectPath = ($targetRole === 'realtor') ? '/realtor/dashboard' : '/dashboard';
+            header('Location: ' . BASE_URL . $redirectPath);
+            exit;
+        } catch (Exception $e) {
+            error_log($e->getMessage());
+            $_SESSION['flash_message'] = 'Failed to impersonate user';
+            $_SESSION['flash_type'] = 'danger';
+            header('Location: ' . BASE_URL . '/admin/users');
+            exit;
+        }
+    }
+
+    public function stopImpersonation()
+    {
+        try {
+            if (!verify_csrf_token()) {
+                $_SESSION['flash_message'] = 'Invalid security token';
+                $_SESSION['flash_type'] = 'danger';
+                header('Location: ' . BASE_URL . '/dashboard');
+                exit;
+            }
+
+            if (empty($_SESSION['impersonating']) || empty($_SESSION['original_user'])) {
+                header('Location: ' . BASE_URL . '/dashboard');
+                exit;
+            }
+
+            $original = $_SESSION['original_user'];
+
+            try {
+                $ip = $_SERVER['REMOTE_ADDR'] ?? null;
+                $agent = $_SERVER['HTTP_USER_AGENT'] ?? null;
+                $this->activityLog->add(
+                    (int)($original['id'] ?? null),
+                    (string)($original['role'] ?? null),
+                    'auth.stop_impersonation',
+                    'user',
+                    (int)($_SESSION['impersonated_user_id'] ?? 0),
+                    null,
+                    json_encode(['impersonated_role' => $_SESSION['impersonated_user_role'] ?? null]),
+                    $ip,
+                    $agent
+                );
+            } catch (\Throwable $e) {
+            }
+
+            $_SESSION['user_id'] = (int)($original['id'] ?? 0);
+            $_SESSION['user_role'] = (string)($original['role'] ?? 'admin');
+            $_SESSION['user_name'] = (string)($original['name'] ?? '');
+            $_SESSION['user_email'] = (string)($original['email'] ?? '');
+            $_SESSION['is_admin'] = (strtolower((string)$_SESSION['user_role']) === 'admin' || strtolower((string)$_SESSION['user_role']) === 'administrator');
+
+            unset(
+                $_SESSION['impersonating'],
+                $_SESSION['original_user'],
+                $_SESSION['impersonated_user_id'],
+                $_SESSION['impersonated_user_role']
+            );
+
+            $_SESSION['flash_message'] = 'Switched back to admin';
+            $_SESSION['flash_type'] = 'success';
+            header('Location: ' . BASE_URL . '/admin/dashboard');
+            exit;
+        } catch (Exception $e) {
+            error_log($e->getMessage());
+            $_SESSION['flash_message'] = 'Failed to switch back';
+            $_SESSION['flash_type'] = 'danger';
+            header('Location: ' . BASE_URL . '/dashboard');
+            exit;
+        }
+    }
+
     public function showLogin()
     {
         header('Location: ' . BASE_URL . '/#loginModal');

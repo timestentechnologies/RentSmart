@@ -39,6 +39,87 @@ class AdminController
         }
     }
 
+    public function dashboard()
+    {
+        try {
+            $users = $this->user->getAllUsers();
+            $counts = [
+                'managers' => 0,
+                'landlords' => 0,
+                'realtors' => 0,
+                'agents' => 0,
+                'tenants' => 0,
+            ];
+
+            foreach (($users ?? []) as $u) {
+                $r = strtolower((string)($u['role'] ?? ''));
+                if ($r === 'manager') $counts['managers']++;
+                if ($r === 'landlord') $counts['landlords']++;
+                if ($r === 'realtor') $counts['realtors']++;
+                if ($r === 'agent') $counts['agents']++;
+            }
+
+            try {
+                $db = $this->user->getDb();
+                $stmt = $db->query("SELECT COUNT(*) AS c FROM tenants");
+                $counts['tenants'] = (int)($stmt->fetch(\PDO::FETCH_ASSOC)['c'] ?? 0);
+            } catch (\Throwable $e) {
+                $counts['tenants'] = 0;
+            }
+
+            echo view('admin/dashboard', [
+                'title' => 'Admin Dashboard - RentSmart',
+                'counts' => $counts,
+            ]);
+        } catch (Exception $e) {
+            error_log($e->getMessage());
+            echo view('errors/500', [
+                'title' => '500 Internal Server Error'
+            ]);
+        }
+    }
+
+    private function usersByRole(string $role, string $title)
+    {
+        try {
+            $users = $this->user->getAllUsers();
+            $roleLower = strtolower($role);
+            $users = array_values(array_filter(($users ?? []), function ($u) use ($roleLower) {
+                return strtolower((string)($u['role'] ?? '')) === $roleLower;
+            }));
+
+            echo view('admin/users', [
+                'title' => $title,
+                'users' => $users
+            ]);
+        } catch (Exception $e) {
+            error_log($e->getMessage());
+            echo view('errors/500', [
+                'title' => '500 Internal Server Error'
+            ]);
+        }
+    }
+
+    public function managers()
+    {
+        return $this->usersByRole('manager', 'Managers - RentSmart');
+    }
+
+    public function landlords()
+    {
+        return $this->usersByRole('landlord', 'Landlords - RentSmart');
+    }
+
+    public function realtors()
+    {
+        return $this->usersByRole('realtor', 'Realtors - RentSmart');
+    }
+
+    public function agents()
+    {
+        return $this->usersByRole('agent', 'Agents - RentSmart');
+    }
+
     public function updateSubscription()
     {
         try {

@@ -139,6 +139,21 @@ ob_start();
                             <td><?= $user['last_login_at'] ? date('M j, Y H:i', strtotime($user['last_login_at'])) : 'Never' ?></td>
                             <td>
                                 <div class="btn-group">
+                                    <?php
+                                        $rowRoleLower = strtolower((string)($user['role'] ?? ''));
+                                        $canImpersonate = isset($_SESSION['user_role'])
+                                            && strtolower((string)$_SESSION['user_role']) === 'admin'
+                                            && empty($_SESSION['impersonating'])
+                                            && in_array($rowRoleLower, ['manager','landlord','realtor','agent','caretaker'], true);
+                                    ?>
+                                    <?php if ($canImpersonate): ?>
+                                        <form method="POST" action="<?= BASE_URL ?>/admin/impersonate/<?= (int)$user['id'] ?>" style="display:inline;">
+                                            <?= csrf_field() ?>
+                                            <button type="submit" class="btn btn-sm btn-outline-secondary" title="Login as">
+                                                <i class="bi bi-person-check"></i>
+                                            </button>
+                                        </form>
+                                    <?php endif; ?>
                                     <button class="btn btn-sm btn-outline-primary" onclick="editUser(<?= $user['id'] ?>)">
                                         <i class="bi bi-pencil"></i>
                                     </button>

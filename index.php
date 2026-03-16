@@ -180,11 +180,23 @@ $routes = [
     ],
     
     // Admin routes
+    'admin/dashboard' => ['controller' => 'AdminController', 'action' => 'dashboard'],
     'admin/users' => ['controller' => 'AdminController', 'action' => 'users'],
+    'admin/managers' => ['controller' => 'AdminController', 'action' => 'managers'],
+    'admin/landlords' => ['controller' => 'AdminController', 'action' => 'landlords'],
+    'admin/realtors' => ['controller' => 'AdminController', 'action' => 'realtors'],
+    'admin/agents' => ['controller' => 'AdminController', 'action' => 'agents'],
     'admin/users/store' => ['controller' => 'AdminController', 'action' => 'storeUser'],
     'admin/users/get/(\d+)' => ['controller' => 'AdminController', 'action' => 'getUser'],
     'admin/users/update' => ['controller' => 'AdminController', 'action' => 'updateUser'],
     'admin/users/delete/(\d+)' => ['controller' => 'AdminController', 'action' => 'deleteUser'],
+
+    'admin/impersonate/(\d+)' => [
+        'POST' => ['controller' => 'AuthController', 'action' => 'impersonateUser'],
+    ],
+    'admin/stop-impersonation' => [
+        'POST' => ['controller' => 'AuthController', 'action' => 'stopImpersonation'],
+    ],
     
     'admin/subscriptions' => ['controller' => 'AdminController', 'action' => 'subscriptions'],
     'admin/subscriptions/get-plan/(\d+)' => ['controller' => 'AdminController', 'action' => 'getPlan'],

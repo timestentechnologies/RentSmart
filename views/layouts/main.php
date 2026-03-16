@@ -1309,6 +1309,93 @@ ob_clean();
                 <?php $isRealtor = isset($_SESSION['user_role']) && strtolower((string)$_SESSION['user_role']) === 'realtor'; ?>
                 <?php $userRole = strtolower((string)($_SESSION['user_role'] ?? '')); ?>
                 <?php $isAgentSide = !$isRealtor && in_array($userRole, ['agent'], true); ?>
+                <?php $isAdmin = in_array($userRole, ['admin','administrator'], true); ?>
+                <?php $isImpersonating = !empty($_SESSION['impersonating']) && !empty($_SESSION['original_user']); ?>
+
+                <?php if ($isImpersonating): ?>
+                    <li class="nav-item px-3">
+                        <div class="alert alert-warning py-2 mb-2" style="border-radius:12px;">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div>
+                                    <div class="fw-semibold">Impersonating</div>
+                                    <div class="small">
+                                        <?= htmlspecialchars((string)($_SESSION['user_name'] ?? '')) ?>
+                                        (<?= htmlspecialchars((string)($_SESSION['user_role'] ?? '')) ?>)
+                                    </div>
+                                </div>
+                                <form method="POST" action="<?= BASE_URL ?>/admin/stop-impersonation" class="ms-2">
+                                    <?= csrf_field() ?>
+                                    <button type="submit" class="btn btn-sm btn-outline-dark">Switch back</button>
+                                </form>
+                            </div>
+                        </div>
+                    </li>
+                <?php endif; ?>
+
+                <?php if ($isAdmin && !$isImpersonating): ?>
+                    <li class="nav-item">
+                        <a class="nav-link <?= (strpos($current_uri, 'admin/dashboard') === 0) ? 'active' : '' ?>" href="<?= BASE_URL ?>/admin/dashboard">
+                            <i class="bi bi-shield-lock me-2"></i> Admin Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item mt-3">
+                        <small class="nav-header text-uppercase px-3">PEOPLE</small>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link <?= (strpos($current_uri, 'admin/managers') === 0) ? 'active' : '' ?>" href="<?= BASE_URL ?>/admin/managers">
+                            <i class="bi bi-person-workspace me-2"></i> Managers
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link <?= (strpos($current_uri, 'admin/landlords') === 0) ? 'active' : '' ?>" href="<?= BASE_URL ?>/admin/landlords">
+                            <i class="bi bi-person-badge me-2"></i> Landlords
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link <?= (strpos($current_uri, 'admin/realtors') === 0) ? 'active' : '' ?>" href="<?= BASE_URL ?>/admin/realtors">
+                            <i class="bi bi-building me-2"></i> Realtors
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link <?= (strpos($current_uri, 'admin/agents') === 0) ? 'active' : '' ?>" href="<?= BASE_URL ?>/admin/agents">
+                            <i class="bi bi-people me-2"></i> Agents
+                        </a>
+                    </li>
+
+                    <li class="nav-item mt-3">
+                        <small class="nav-header text-uppercase px-3">ADMINISTRATION</small>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link <?= (strpos($current_uri, 'admin/users') === 0) ? 'active' : '' ?>" href="<?= BASE_URL ?>/admin/users">
+                            <i class="bi bi-people-fill me-2"></i> Users
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link <?= (strpos($current_uri, 'admin/subscriptions') === 0) ? 'active' : '' ?>" href="<?= BASE_URL ?>/admin/subscriptions">
+                            <i class="bi bi-credit-card-2-front me-2"></i> Subscriptions
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link <?= (strpos($current_uri, 'admin/payments') === 0) ? 'active' : '' ?>" href="<?= BASE_URL ?>/admin/payments">
+                            <i class="bi bi-cash-coin me-2"></i> Payment History
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link <?= (strpos($current_uri, 'admin/contact-messages') === 0) ? 'active' : '' ?>" href="<?= BASE_URL ?>/admin/contact-messages">
+                            <i class="bi bi-inbox me-2"></i> Contact Messages
+                        </a>
+                    </li>
+
+                    <li class="nav-item mt-3">
+                        <small class="nav-header text-uppercase px-3">SYSTEM</small>
+                    </li>
+                    <li class="nav-item">
+                        <a href="<?= BASE_URL ?>/settings" class="nav-link <?= strpos($current_uri, 'settings') === 0 ? 'active' : '' ?>">
+                            <i class="bi bi-gear me-2"></i> Settings
+                        </a>
+                    </li>
+
+                <?php else: ?>
                 <!-- Dashboard -->
                 <li class="nav-item">
                     <a class="nav-link <?= ($current_uri === 'dashboard' || strpos($current_uri, 'realtor/dashboard') === 0) ? 'active' : '' ?>" href="<?= BASE_URL . ($isRealtor ? '/realtor/dashboard' : '/dashboard') ?>">
@@ -1697,6 +1784,8 @@ ob_clean();
                         <i class="bi bi-gear me-2"></i> Settings
                     </a>
                 </li>
+                <?php endif; ?>
+
                 <?php endif; ?>
 
             
