@@ -817,7 +817,7 @@ class AuthController
 
             if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
                 header('Content-Type: application/json');
-                echo json_encode(['success' => true, 'message' => 'Login successful']);
+                echo json_encode(['success' => true, 'message' => 'Login successful', 'redirect' => BASE_URL . $redirectPath]);
                 exit;
             }
 
