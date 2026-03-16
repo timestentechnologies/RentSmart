@@ -20,14 +20,14 @@ INSERT INTO follow_up_schedules (name, days_after_registration, subject, content
     </div>
     
     <div style="text-align:center;margin:30px 0;">
-        <a href="' . BASE_URL . '/dashboard" style="display:inline-block;background:#667eea;color:white;padding:15px 30px;text-decoration:none;border-radius:5px;font-weight:600;font-size:16px;">Visit Dashboard</a>
+        <a href="/dashboard" style="display:inline-block;background:#667eea;color:white;padding:15px 30px;text-decoration:none;border-radius:5px;font-weight:600;font-size:16px;">Visit Dashboard</a>
     </div>
     
     <p style="color:#666;font-size:14px;line-height:1.6;margin:20px 0 0 0;">If you have any questions or need help getting started, reply to this email or contact our support team. We\'re here to help you make the most of RentSmart!</p>
 </div>
 <div style="background:#f8f9fa;padding:20px;text-align:center;border-top:1px solid #e0e0e0;">
     <p style="color:#888;font-size:12px;margin:0 0 10px 0;">Follow us on social media for tips and updates</p>
-    <p style="color:#888;font-size:11px;margin:0;">© ' . date('Y') . ' RentSmart. All rights reserved.</p>
+    <p style="color:#888;font-size:11px;margin:0;">© 2026 RentSmart. All rights reserved.</p>
     <div style="margin-top:10px;font-size:12px;color:#888;text-align:center;">Powered by <a href="https://timestentechnologies.co.ke" target="_blank" style="color:#888;text-decoration:none;">Timesten Technologies</a></div>
 </div>
 </div>', 1);
