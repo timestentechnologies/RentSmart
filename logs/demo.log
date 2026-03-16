@@ -146,3 +146,10 @@
 [2026-03-07 14:34:53] start requested role=agent uri=/demo/start?role=agent
 [2026-03-07 14:34:55] start requested role=manager uri=/demo/start?role=manager
 [2026-03-07 14:34:58] start requested role=landlord uri=/demo/start?role=landlord
+[2026-03-08 08:35:52] start requested role=agent uri=/demo/start?role=agent
+[2026-03-09 09:07:15] start requested role=agent uri=/demo/start?role=agent
+[2026-03-11 10:10:58] start requested role=agent uri=/demo/start?role=agent
+[2026-03-11 10:12:43] start requested role=landlord uri=/demo/start?role=landlord
+[2026-03-11 10:13:15] start requested role=manager uri=/demo/start?role=manager
+[2026-03-11 10:15:13] start requested role=realtor uri=/demo/start?role=realtor
+[2026-03-12 22:01:51] start requested role=manager uri=/demo/start?role=manager
