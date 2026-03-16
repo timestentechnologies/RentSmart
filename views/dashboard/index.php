@@ -9,67 +9,6 @@ ob_start();
         </div>
     </div>
 
-    <?php if (!empty($impersonationData)): ?>
-        <!-- Impersonation Summary -->
-        <div class="card border-warning mb-4">
-            <div class="card-header bg-warning text-dark">
-                <h5 class="mb-0">
-                    <i class="bi bi-person-check me-2"></i>
-                    Impersonating: <?= htmlspecialchars($impersonationData['impersonated_user']['name'] ?? '') ?> 
-                    (<?= htmlspecialchars($impersonationData['impersonated_user']['role'] ?? '') ?>)
-                </h5>
-            </div>
-            <div class="card-body">
-                <div class="row g-3">
-                    <div class="col-12 col-md-3">
-                        <div class="text-center">
-                            <h4 class="text-primary"><?= (int)($impersonationData['total_properties'] ?? 0) ?></h4>
-                            <p class="mb-0 text-muted">Total Properties</p>
-                        </div>
-                    </div>
-                    <div class="col-12 col-md-3">
-                        <div class="text-center">
-                            <h4 class="text-info"><?= (int)($impersonationData['total_units'] ?? 0) ?></h4>
-                            <p class="mb-0 text-muted">Total Units</p>
-                        </div>
-                    </div>
-                    <div class="col-12 col-md-3">
-                        <div class="text-center">
-                            <h4 class="text-success"><?= (int)($impersonationData['total_tenants'] ?? 0) ?></h4>
-                            <p class="mb-0 text-muted">Total Tenants</p>
-                        </div>
-                    </div>
-                    <div class="col-12 col-md-3">
-                        <div class="text-center">
-                            <h4 class="text-warning"><?= (int)($impersonationData['active_leases'] ?? 0) ?></h4>
-                            <p class="mb-0 text-muted">Active Leases</p>
-                        </div>
-                    </div>
-                </div>
-                <div class="row g-3 mt-2">
-                    <div class="col-12 col-md-4">
-                        <div class="text-center">
-                            <h5 class="text-danger">Ksh <?= number_format($impersonationData['outstanding_balance'] ?? 0, 2) ?></h5>
-                            <p class="mb-0 text-muted">Outstanding Balance</p>
-                        </div>
-                    </div>
-                    <div class="col-12 col-md-4">
-                        <div class="text-center">
-                            <h5 class="text-success">Ksh <?= number_format($impersonationData['received_total'] ?? 0, 2) ?></h5>
-                            <p class="mb-0 text-muted">Total Received</p>
-                        </div>
-                    </div>
-                    <div class="col-12 col-md-4">
-                        <div class="text-center">
-                            <h5 class="text-primary">Ksh <?= number_format($impersonationData['expected_total'] ?? 0, 2) ?></h5>
-                            <p class="mb-0 text-muted">Expected Total</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    <?php endif; ?>
-
     <div class="card mt-4 mb-4">
         <div class="card-body">
             <form method="GET" id="dashboardFilters" class="row g-3 align-items-end">

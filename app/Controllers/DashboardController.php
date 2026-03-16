@@ -81,10 +81,8 @@ class DashboardController
     public function index()
     {
         try {
-            // Check if impersonating - if so, show impersonated user's data
-            $userId = !empty($_SESSION['impersonating']) && !empty($_SESSION['impersonated_user_id']) 
-                ? $_SESSION['impersonated_user_id'] 
-                : $_SESSION['user_id'];
+            // Get user-specific data
+            $userId = $_SESSION['user_id'];
             
             // Get user data
             $user = $this->user->find($userId);
@@ -181,8 +179,7 @@ class DashboardController
 
             $roleUser = new User();
             $roleUser->find($userId);
-            // When impersonating, treat as the impersonated user's role, not admin
-            $isAdmin = $roleUser->isAdmin() && empty($_SESSION['impersonating']);
+            $isAdmin = $roleUser->isAdmin();
 
             $demoExclude = [
                 'property_ids' => [],
@@ -523,24 +520,6 @@ class DashboardController
             
             // Calculate total active leases
             $totalActiveLeases = count($activeLeases);
-            
-            // Prepare impersonation data for view
-            $impersonationData = null;
-            if (!empty($_SESSION['impersonating']) && !empty($_SESSION['impersonated_user_id'])) {
-                $impersonationData = [
-                    'impersonated_user' => $user,
-                    'original_user' => $_SESSION['original_user'] ?? null,
-                    'total_properties' => $totalProperties,
-                    'total_units' => $totalUnits,
-                    'total_tenants' => $totalTenants,
-                    'active_tenants' => $activeTenantsCount,
-                    'active_leases' => $totalActiveLeases,
-                    'expiring_leases' => $totalExpiringLeases,
-                    'outstanding_balance' => $outstandingBalance,
-                    'received_total' => $receivedTotal,
-                    'expected_total' => $expectedTotal
-                ];
-            }
             
             require 'views/dashboard/index.php';
         } catch (Exception $e) {
