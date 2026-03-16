@@ -15,136 +15,6 @@ ob_start();
         </div>
     </div>
 
-    <div class="row g-3 mb-4">
-        <div class="col-12 col-md-3">
-            <div class="stat-card">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <h6 class="card-title">Expiring &lt; 30 days</h6>
-                        <h2 class="mt-3 mb-2"><?= (int)($counts['expiring_30_days'] ?? 0) ?></h2>
-                        <p class="mb-0 text-muted">Active/trial nearing end</p>
-                    </div>
-                    <div class="stats-icon">
-                        <i class="bi bi-hourglass-split fs-1" style="color:#ff6b00; opacity:.25;"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-12 col-md-3">
-            <div class="stat-card">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <h6 class="card-title">Trialing</h6>
-                        <h2 class="mt-3 mb-2"><?= (int)($counts['trialing'] ?? 0) ?></h2>
-                        <p class="mb-0 text-muted">Users on trial</p>
-                    </div>
-                    <div class="stats-icon">
-                        <i class="bi bi-lightning-charge fs-1" style="color:#6B3E99; opacity:.25;"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-12 col-md-3">
-            <div class="stat-card">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <h6 class="card-title">New Users (30 days)</h6>
-                        <h2 class="mt-3 mb-2"><?= (int)($counts['new_users_30_days'] ?? 0) ?></h2>
-                        <p class="mb-0 text-muted">Recently registered</p>
-                    </div>
-                    <div class="stats-icon">
-                        <i class="bi bi-person-plus fs-1" style="color:#1b8f4a; opacity:.25;"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-12 col-md-3">
-            <div class="stat-card">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <h6 class="card-title">Active Subscriptions</h6>
-                        <h2 class="mt-3 mb-2"><?= (int)($counts['active_subscriptions'] ?? 0) ?></h2>
-                        <p class="mb-0 text-muted">Latest subscription status</p>
-                    </div>
-                    <div class="stats-icon">
-                        <i class="bi bi-shield-check fs-1" style="color:#1b8f4a; opacity:.25;"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-12 col-md-3">
-            <a class="text-decoration-none" href="<?= BASE_URL ?>/admin/managers">
-                <div class="stat-card">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <h6 class="card-title">Managers</h6>
-                            <h2 class="mt-3 mb-2"><?= (int)($counts['managers'] ?? 0) ?></h2>
-                            <p class="mb-0 text-muted">View all managers</p>
-                        </div>
-                        <div class="stats-icon">
-                            <i class="bi bi-person-workspace fs-1 text-success opacity-25"></i>
-                        </div>
-                    </div>
-                </div>
-            </a>
-        </div>
-
-        <div class="col-12 col-md-3">
-            <a class="text-decoration-none" href="<?= BASE_URL ?>/admin/landlords">
-                <div class="stat-card">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <h6 class="card-title">Landlords</h6>
-                            <h2 class="mt-3 mb-2"><?= (int)($counts['landlords'] ?? 0) ?></h2>
-                            <p class="mb-0 text-muted">View all landlords</p>
-                        </div>
-                        <div class="stats-icon">
-                            <i class="bi bi-person-badge fs-1 text-warning opacity-25"></i>
-                        </div>
-                    </div>
-                </div>
-            </a>
-        </div>
-
-        <div class="col-12 col-md-3">
-            <a class="text-decoration-none" href="<?= BASE_URL ?>/admin/realtors">
-                <div class="stat-card">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <h6 class="card-title">Realtors</h6>
-                            <h2 class="mt-3 mb-2"><?= (int)($counts['realtors'] ?? 0) ?></h2>
-                            <p class="mb-0 text-muted">View all realtors</p>
-                        </div>
-                        <div class="stats-icon">
-                            <i class="bi bi-building fs-1 text-primary opacity-25"></i>
-                        </div>
-                    </div>
-                </div>
-            </a>
-        </div>
-
-        <div class="col-12 col-md-3">
-            <a class="text-decoration-none" href="<?= BASE_URL ?>/admin/agents">
-                <div class="stat-card">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div>
-                            <h6 class="card-title">Agents</h6>
-                            <h2 class="mt-3 mb-2"><?= (int)($counts['agents'] ?? 0) ?></h2>
-                            <p class="mb-0 text-muted">View all agents</p>
-                        </div>
-                        <div class="stats-icon">
-                            <i class="bi bi-people fs-1 text-info opacity-25"></i>
-                        </div>
-                    </div>
-                </div>
-            </a>
-        </div>
-    </div>
-
     <!-- Financial Summary Cards -->
     <div class="row g-3 mb-4">
         <div class="col-12 col-md-3">
@@ -152,7 +22,7 @@ ob_start();
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
                         <h6 class="card-title">Total Revenue Collected</h6>
-                        <h2 class="mt-3 mb-2">Ksh <?= number_format($financials['total_revenue_collected'] ?? 0, 2) ?></h2>
+                        <h2 class="mt-3 mb-2" style="font-size: 1.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Ksh <?= number_format($financials['total_revenue_collected'] ?? 0, 2) ?></h2>
                         <p class="mb-0 text-muted">All time revenue</p>
                     </div>
                     <div class="stats-icon">
@@ -167,7 +37,7 @@ ob_start();
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
                         <h6 class="card-title">Expected Revenue</h6>
-                        <h2 class="mt-3 mb-2">Ksh <?= number_format($financials['expected_revenue'] ?? 0, 2) ?></h2>
+                        <h2 class="mt-3 mb-2" style="font-size: 1.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Ksh <?= number_format($financials['expected_revenue'] ?? 0, 2) ?></h2>
                         <p class="mb-0 text-muted">From active subscriptions</p>
                     </div>
                     <div class="stats-icon">
@@ -182,7 +52,7 @@ ob_start();
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
                         <h6 class="card-title">Outstanding Balance</h6>
-                        <h2 class="mt-3 mb-2">Ksh <?= number_format($financials['outstanding_balance'] ?? 0, 2) ?></h2>
+                        <h2 class="mt-3 mb-2" style="font-size: 1.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Ksh <?= number_format($financials['outstanding_balance'] ?? 0, 2) ?></h2>
                         <p class="mb-0 text-muted">Unpaid rent</p>
                     </div>
                     <div class="stats-icon">
@@ -197,7 +67,7 @@ ob_start();
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
                         <h6 class="card-title">Monthly Revenue</h6>
-                        <h2 class="mt-3 mb-2">Ksh <?= number_format($financials['monthly_revenue'] ?? 0, 2) ?></h2>
+                        <h2 class="mt-3 mb-2" style="font-size: 1.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Ksh <?= number_format($financials['monthly_revenue'] ?? 0, 2) ?></h2>
                         <p class="mb-0 text-muted">This month</p>
                     </div>
                     <div class="stats-icon">
@@ -215,7 +85,9 @@ ob_start();
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
                         <h6 class="card-title">Pending Payments</h6>
-                        <h2 class="mt-3 mb-2"><?= ($financials['pending_payments']['count'] ?? 0) ?> payments</h2>
+                        <h2 class="mt-3 mb-2" style="font-size: 1.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                            <?= ($financials['pending_payments']['count'] ?? 0) ?> payments
+                        </h2>
                         <p class="mb-0 text-muted">Ksh <?= number_format($financials['pending_payments']['total'] ?? 0, 2) ?> total</p>
                     </div>
                     <div class="stats-icon">
@@ -230,7 +102,7 @@ ob_start();
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
                         <h6 class="card-title">Revenue Growth</h6>
-                        <h2 class="mt-3 mb-2">
+                        <h2 class="mt-3 mb-2" style="font-size: 1.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                             <?php
                             $monthlyRevenue = $financials['monthly_revenue'] ?? 0;
                             $lastMonthRevenue = 0;
@@ -250,6 +122,137 @@ ob_start();
             </div>
         </div>
     </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-md-3">
+            <div class="stat-card">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="card-title">Expiring &lt; 30 days</h6>
+                        <h2 class="mt-3 mb-2" style="font-size: 1.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?= (int)($counts['expiring_30_days'] ?? 0) ?></h2>
+                        <p class="mb-0 text-muted">Active/trial nearing end</p>
+                    </div>
+                    <div class="stats-icon">
+                        <i class="bi bi-hourglass-split fs-1" style="color:#ff6b00; opacity:.25;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-3">
+            <div class="stat-card">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="card-title">Trialing</h6>
+                        <h2 class="mt-3 mb-2" style="font-size: 1.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?= (int)($counts['trialing'] ?? 0) ?></h2>
+                        <p class="mb-0 text-muted">Users on trial</p>
+                    </div>
+                    <div class="stats-icon">
+                        <i class="bi bi-lightning-charge fs-1" style="color:#6B3E99; opacity:.25;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-3">
+            <div class="stat-card">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="card-title">New Users (30 days)</h6>
+                        <h2 class="mt-3 mb-2" style="font-size: 1.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?= (int)($counts['new_users_30_days'] ?? 0) ?></h2>
+                        <p class="mb-0 text-muted">Recently registered</p>
+                    </div>
+                    <div class="stats-icon">
+                        <i class="bi bi-person-plus fs-1" style="color:#1b8f4a; opacity:.25;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-3">
+            <div class="stat-card">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="card-title">Active Subscriptions</h6>
+                        <h2 class="mt-3 mb-2" style="font-size: 1.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?= (int)($counts['active_subscriptions'] ?? 0) ?></h2>
+                        <p class="mb-0 text-muted">Latest subscription status</p>
+                    </div>
+                    <div class="stats-icon">
+                        <i class="bi bi-shield-check fs-1" style="color:#1b8f4a; opacity:.25;"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-3">
+            <a class="text-decoration-none" href="<?= BASE_URL ?>/admin/managers">
+                <div class="stat-card">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="card-title">Managers</h6>
+                            <h2 class="mt-3 mb-2" style="font-size: 1.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?= (int)($counts['managers'] ?? 0) ?></h2>
+                            <p class="mb-0 text-muted">View all managers</p>
+                        </div>
+                        <div class="stats-icon">
+                            <i class="bi bi-person-workspace fs-1 text-success opacity-25"></i>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-12 col-md-3">
+            <a class="text-decoration-none" href="<?= BASE_URL ?>/admin/landlords">
+                <div class="stat-card">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="card-title">Landlords</h6>
+                            <h2 class="mt-3 mb-2" style="font-size: 1.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?= (int)($counts['landlords'] ?? 0) ?></h2>
+                            <p class="mb-0 text-muted">View all landlords</p>
+                        </div>
+                        <div class="stats-icon">
+                            <i class="bi bi-person-badge fs-1 text-warning opacity-25"></i>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-12 col-md-3">
+            <a class="text-decoration-none" href="<?= BASE_URL ?>/admin/realtors">
+                <div class="stat-card">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="card-title">Realtors</h6>
+                            <h2 class="mt-3 mb-2" style="font-size: 1.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?= (int)($counts['realtors'] ?? 0) ?></h2>
+                            <p class="mb-0 text-muted">View all realtors</p>
+                        </div>
+                        <div class="stats-icon">
+                            <i class="bi bi-building fs-1 text-primary opacity-25"></i>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <div class="col-12 col-md-3">
+            <a class="text-decoration-none" href="<?= BASE_URL ?>/admin/agents">
+                <div class="stat-card">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="card-title">Agents</h6>
+                            <h2 class="mt-3 mb-2" style="font-size: 1.5rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"><?= (int)($counts['agents'] ?? 0) ?></h2>
+                            <p class="mb-0 text-muted">View all agents</p>
+                        </div>
+                        <div class="stats-icon">
+                            <i class="bi bi-people fs-1 text-info opacity-25"></i>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+
 
     <div class="card">
         <div class="card-body">
