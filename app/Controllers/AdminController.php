@@ -210,10 +210,83 @@ class AdminController
             } catch (\Throwable $e) {
             }
 
+            // Calculate financial metrics
+            $financials = [
+                'total_revenue_collected' => 0,
+                'expected_revenue' => 0,
+                'outstanding_balance' => 0,
+                'monthly_revenue' => 0,
+                'pending_payments' => 0,
+            ];
+
+            try {
+                $db = $this->user->getDb();
+                
+                // Total revenue collected (completed payments only)
+                $stmtTotalRevenue = $db->query(
+                    "SELECT COALESCE(SUM(amount), 0) AS total 
+                     FROM subscription_payments 
+                     WHERE status IN ('completed', 'verified')"
+                );
+                $financials['total_revenue_collected'] = (float)($stmtTotalRevenue->fetch(\PDO::FETCH_ASSOC)['total'] ?? 0);
+                
+                // Expected revenue from current active subscriptions
+                $stmtExpectedRevenue = $db->query(
+                    "SELECT COALESCE(SUM(sp.price), 0) AS expected
+                     FROM subscriptions s
+                     JOIN subscription_plans sp ON s.plan_id = sp.id
+                     WHERE s.status = 'active'
+                     AND s.user_id IN (
+                         SELECT user_id FROM (
+                             SELECT user_id, MAX(created_at) as latest
+                             FROM subscriptions 
+                             GROUP BY user_id
+                         ) latest_subs WHERE latest_subs.latest = s.created_at
+                     )"
+                );
+                $financials['expected_revenue'] = (float)($stmtExpectedRevenue->fetch(\PDO::FETCH_ASSOC)['expected'] ?? 0);
+                
+                // Outstanding balance from rent payments
+                $stmtOutstanding = $db->query(
+                    "SELECT COALESCE(SUM(amount_due - COALESCE(amount_paid, 0)), 0) AS outstanding
+                     FROM payments 
+                     WHERE status != 'completed' 
+                     AND amount_due > COALESCE(amount_paid, 0)"
+                );
+                $financials['outstanding_balance'] = (float)($stmtOutstanding->fetch(\PDO::FETCH_ASSOC)['outstanding'] ?? 0);
+                
+                // This month's revenue
+                $stmtMonthlyRevenue = $db->prepare(
+                    "SELECT COALESCE(SUM(amount), 0) AS monthly
+                     FROM subscription_payments 
+                     WHERE status IN ('completed', 'verified')
+                     AND MONTH(created_at) = MONTH(CURRENT_DATE)
+                     AND YEAR(created_at) = YEAR(CURRENT_DATE)"
+                );
+                $stmtMonthlyRevenue->execute();
+                $financials['monthly_revenue'] = (float)($stmtMonthlyRevenue->fetch(\PDO::FETCH_ASSOC)['monthly'] ?? 0);
+                
+                // Pending payments
+                $stmtPending = $db->query(
+                    "SELECT COUNT(*) AS count, COALESCE(SUM(amount_due), 0) AS total
+                     FROM payments 
+                     WHERE status IN ('pending', 'processing')"
+                );
+                $pendingData = $stmtPending->fetch(\PDO::FETCH_ASSOC);
+                $financials['pending_payments'] = [
+                    'count' => (int)($pendingData['count'] ?? 0),
+                    'total' => (float)($pendingData['total'] ?? 0)
+                ];
+                
+            } catch (\Throwable $e) {
+                error_log("Error calculating financial metrics: " . $e->getMessage());
+            }
+
             echo view('admin/dashboard', [
                 'title' => 'Admin Dashboard - RentSmart',
                 'counts' => $counts,
                 'charts' => $charts,
+                'financials' => $financials,
             ]);
         } catch (Exception $e) {
             error_log($e->getMessage());

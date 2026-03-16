@@ -145,6 +145,112 @@ ob_start();
         </div>
     </div>
 
+    <!-- Financial Summary Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-md-3">
+            <div class="stat-card">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="card-title">Total Revenue Collected</h6>
+                        <h2 class="mt-3 mb-2">Ksh <?= number_format($financials['total_revenue_collected'] ?? 0, 2) ?></h2>
+                        <p class="mb-0 text-muted">All time revenue</p>
+                    </div>
+                    <div class="stats-icon">
+                        <i class="bi bi-cash-stack fs-1 text-success opacity-25"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-3">
+            <div class="stat-card">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="card-title">Expected Revenue</h6>
+                        <h2 class="mt-3 mb-2">Ksh <?= number_format($financials['expected_revenue'] ?? 0, 2) ?></h2>
+                        <p class="mb-0 text-muted">From active subscriptions</p>
+                    </div>
+                    <div class="stats-icon">
+                        <i class="bi bi-graph-up-arrow fs-1 text-primary opacity-25"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-3">
+            <div class="stat-card">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="card-title">Outstanding Balance</h6>
+                        <h2 class="mt-3 mb-2">Ksh <?= number_format($financials['outstanding_balance'] ?? 0, 2) ?></h2>
+                        <p class="mb-0 text-muted">Unpaid rent</p>
+                    </div>
+                    <div class="stats-icon">
+                        <i class="bi bi-exclamation-triangle fs-1 text-warning opacity-25"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-3">
+            <div class="stat-card">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="card-title">Monthly Revenue</h6>
+                        <h2 class="mt-3 mb-2">Ksh <?= number_format($financials['monthly_revenue'] ?? 0, 2) ?></h2>
+                        <p class="mb-0 text-muted">This month</p>
+                    </div>
+                    <div class="stats-icon">
+                        <i class="bi bi-calendar-month fs-1 text-info opacity-25"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Additional Financial Metrics -->
+    <div class="row g-3 mb-4">
+        <div class="col-12 col-md-6">
+            <div class="stat-card">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="card-title">Pending Payments</h6>
+                        <h2 class="mt-3 mb-2"><?= ($financials['pending_payments']['count'] ?? 0) ?> payments</h2>
+                        <p class="mb-0 text-muted">Ksh <?= number_format($financials['pending_payments']['total'] ?? 0, 2) ?> total</p>
+                    </div>
+                    <div class="stats-icon">
+                        <i class="bi bi-clock fs-1 text-warning opacity-25"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-6">
+            <div class="stat-card">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="card-title">Revenue Growth</h6>
+                        <h2 class="mt-3 mb-2">
+                            <?php
+                            $monthlyRevenue = $financials['monthly_revenue'] ?? 0;
+                            $lastMonthRevenue = 0;
+                            if (!empty($charts['subscription_revenue_amounts']) && count($charts['subscription_revenue_amounts']) >= 2) {
+                                $lastMonthRevenue = $charts['subscription_revenue_amounts'][count($charts['subscription_revenue_amounts']) - 2];
+                            }
+                            $growth = $lastMonthRevenue > 0 ? (($monthlyRevenue - $lastMonthRevenue) / $lastMonthRevenue) * 100 : 0;
+                            echo $growth >= 0 ? '+' : '' . number_format($growth, 1) . '%';
+                            ?>
+                        </h2>
+                        <p class="mb-0 text-muted">vs last month</p>
+                    </div>
+                    <div class="stats-icon">
+                        <i class="bi bi-graph-up fs-1 <?= ($growth >= 0) ? 'text-success' : 'text-danger' ?> opacity-25"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <div class="card">
         <div class="card-body">
             <style>
