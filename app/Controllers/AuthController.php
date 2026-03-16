@@ -811,7 +811,14 @@ class AuthController
             }
 
             // Redirect to dashboard
-            $redirectPath = (strtolower((string)($user['role'] ?? '')) === 'realtor') ? '/realtor/dashboard' : '/dashboard';
+            $roleLower = strtolower((string)($user['role'] ?? ''));
+            if (in_array($roleLower, ['admin', 'administrator'], true)) {
+                $redirectPath = '/admin/dashboard';
+            } elseif ($roleLower === 'realtor') {
+                $redirectPath = '/realtor/dashboard';
+            } else {
+                $redirectPath = '/dashboard';
+            }
             header('Location: ' . BASE_URL . $redirectPath);
             exit;
         } catch (Exception $e) {
