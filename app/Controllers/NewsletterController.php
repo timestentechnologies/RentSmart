@@ -568,7 +568,7 @@ class NewsletterController
                         <h1>' . htmlspecialchars($siteName) . '</h1>
                     </div>
                     <div class="email-body">
-                        ' . $content . '
+                        {CONTENT}
                     </div>
                     <div class="email-footer">
                         <p>&copy; ' . date('Y') . ' ' . htmlspecialchars($siteName) . '. All rights reserved.</p>
@@ -599,8 +599,15 @@ class NewsletterController
             $mail->addAddress($toEmail, $toName);
             $mail->Subject = $subject;
 
-            $mail->Body = $emailTemplate;
-            $mail->AltBody = strip_tags($content);
+            // Replace dynamic variables in content
+            $displayName = !empty($toName) && $toName !== $toEmail ? $toName : $toEmail;
+            $processedContent = str_replace(['{name}', '{email}'], [$displayName, $toEmail], $content);
+            
+            // Create final email template with processed content
+            $finalEmailTemplate = str_replace('{CONTENT}', $processedContent, $emailTemplate);
+            
+            $mail->Body = $finalEmailTemplate;
+            $mail->AltBody = strip_tags($processedContent);
 
             $sent = $mail->send();
 
