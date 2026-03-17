@@ -990,6 +990,19 @@ class NewsletterController
     public function subscribers()
     {
         try {
+            // Auto-sync users as subscribers
+            $syncedCount = $this->syncUsersAsSubscribers();
+            
+            // Handle AJAX request for sync
+            if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
+                if ($syncedCount > 0) {
+                    echo json_encode(['success' => true, 'message' => "Successfully synced {$syncedCount} users as newsletter subscribers"]);
+                } else {
+                    echo json_encode(['success' => true, 'message' => 'All users are already synced as subscribers']);
+                }
+                exit;
+            }
+            
             $subscriber = new NewsletterSubscriber();
             $page = filter_input(INPUT_GET, 'page', FILTER_VALIDATE_INT) ?: 1;
             $limit = 20;
@@ -1181,5 +1194,43 @@ class NewsletterController
         }
 
         \redirect('/admin/newsletters/subscribers');
+    }
+
+    /**
+     * Sync all users (except admins) as newsletter subscribers
+     */
+    private function syncUsersAsSubscribers()
+    {
+        try {
+            // Get all users except admins
+            $usersStmt = $this->db->prepare("SELECT id, name, email FROM users WHERE role NOT IN ('admin', 'administrator')");
+            $usersStmt->execute();
+            $users = $usersStmt->fetchAll(\PDO::FETCH_ASSOC);
+
+            $subscriber = new NewsletterSubscriber();
+            $syncedCount = 0;
+
+            foreach ($users as $user) {
+                // Check if user is already a subscriber
+                $existing = $subscriber->getByEmail($user['email']);
+                
+                if (!$existing) {
+                    // Add user as subscriber
+                    if ($subscriber->create($user['email'], $user['name'])) {
+                        $syncedCount++;
+                    }
+                }
+            }
+
+            // Log sync activity if any users were synced
+            if ($syncedCount > 0) {
+                error_log("Synced {$syncedCount} users as newsletter subscribers");
+            }
+
+            return $syncedCount;
+        } catch (\Exception $e) {
+            error_log("Error syncing users as subscribers: " . $e->getMessage());
+            return 0;
+        }
     }
 }

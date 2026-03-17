@@ -1,58 +1,167 @@
 <?php ob_start(); ?>
 
+<style>
+.bg-purple-faded {
+    background-color: #8b5cf6 !important;
+    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%) !important;
+}
+
+.bg-orange-faded {
+    background-color: #f97316 !important;
+    background: linear-gradient(135deg, #f97316 0%, #ea580c 100%) !important;
+}
+
+.bg-green-faded {
+    background-color: #10b981 !important;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+}
+
+.card {
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+}
+
+.recent-subscriptions .d-flex {
+    transition: background-color 0.2s ease-in-out;
+}
+
+.recent-subscriptions .d-flex:hover {
+    background-color: rgba(255,255,255,0.2) !important;
+}
+
+.fs-1 {
+    font-size: 2.5rem !important;
+}
+
+.card-title {
+    line-height: 1.2;
+}
+
+.opacity-75 {
+    opacity: 0.75 !important;
+}
+
+.opacity-50 {
+    opacity: 0.5 !important;
+}
+
+.avatar-sm {
+    width: 36px;
+    height: 36px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.table-hover tbody tr:hover {
+    background-color: rgba(0,0,0,0.02);
+}
+
+.badge {
+    font-weight: 500;
+}
+
+.btn-group .btn {
+    border-radius: 0.375rem !important;
+}
+
+.card-header {
+    background-color: #f8f9fa !important;
+    border-bottom: 1px solid #dee2e6 !important;
+}
+</style>
+
 <div class="container-fluid">
     <div class="row">
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h3>Newsletter Subscribers</h3>
-                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addSubscriberModal">
-                    <i class="bi bi-plus-circle me-2"></i>Add Subscriber
-                </button>
+                <div>
+                    <button type="button" class="btn btn-outline-success me-2" onclick="syncUsers()">
+                        <i class="bi bi-arrow-repeat me-2"></i>Sync Users
+                    </button>
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addSubscriberModal">
+                        <i class="bi bi-plus-circle me-2"></i>Add Subscriber
+                    </button>
+                </div>
             </div>
 
             <!-- Statistics Cards -->
             <div class="row mb-4">
                 <div class="col-md-3">
-                    <div class="card bg-success text-white">
+                    <div class="card bg-purple-faded text-white border-0 shadow-sm">
                         <div class="card-body">
-                            <div class="d-flex justify-content-between">
+                            <div class="d-flex justify-content-between align-items-center">
                                 <div>
-                                    <h4 class="card-title"><?= $stats['total_active'] ?></h4>
-                                    <p class="card-text">Active Subscribers</p>
+                                    <h2 class="card-title mb-1 fw-bold"><?= $stats['total_active'] ?></h2>
+                                    <p class="card-text mb-0 opacity-75">Active Subscribers</p>
                                 </div>
-                                <div class="align-self-center">
-                                    <i class="bi bi-person-check fs-1"></i>
+                                <div class="text-white opacity-50">
+                                    <i class="bi bi-person-check-fill fs-1"></i>
                                 </div>
+                            </div>
+                            <div class="mt-3">
+                                <small class="opacity-75">
+                                    <i class="bi bi-graph-up me-1"></i>
+                                    <?= count($stats['recent_subscriptions']) ?> new this week
+                                </small>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-3">
-                    <div class="card bg-warning text-white">
+                    <div class="card bg-orange-faded text-white border-0 shadow-sm">
                         <div class="card-body">
-                            <div class="d-flex justify-content-between">
+                            <div class="d-flex justify-content-between align-items-center">
                                 <div>
-                                    <h4 class="card-title"><?= $stats['total_unsubscribed'] ?></h4>
-                                    <p class="card-text">Unsubscribed</p>
+                                    <h2 class="card-title mb-1 fw-bold"><?= $stats['total_unsubscribed'] ?></h2>
+                                    <p class="card-text mb-0 opacity-75">Unsubscribed</p>
                                 </div>
-                                <div class="align-self-center">
-                                    <i class="bi bi-person-x fs-1"></i>
+                                <div class="text-white opacity-50">
+                                    <i class="bi bi-person-x-fill fs-1"></i>
                                 </div>
+                            </div>
+                            <div class="mt-3">
+                                <small class="opacity-75">
+                                    <i class="bi bi-graph-down me-1"></i>
+                                    Churn rate tracking
+                                </small>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div class="col-md-6">
-                    <div class="card bg-info text-white">
+                    <div class="card bg-green-faded text-white border-0 shadow-sm">
                         <div class="card-body">
-                            <h5 class="card-title">Recent Subscriptions</h5>
-                            <div class="small">
-                                <?php foreach ($stats['recent_subscriptions'] as $recent): ?>
-                                    <div class="mb-1">
-                                        <strong><?= htmlspecialchars($recent['name'] ?? $recent['email']) ?></strong>
-                                        <small class="d-block"><?= date('M j, Y', strtotime($recent['subscribed_at'])) ?></small>
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div>
+                                    <h5 class="card-title mb-1 fw-bold">Recent Subscriptions</h5>
+                                    <p class="card-text mb-0 opacity-75 small">Latest newsletter signups</p>
+                                </div>
+                                <div class="text-white opacity-50">
+                                    <i class="bi bi-clock-history fs-4"></i>
+                                </div>
+                            </div>
+                            <div class="recent-subscriptions">
+                                <?php if (!empty($stats['recent_subscriptions'])): ?>
+                                    <?php foreach ($stats['recent_subscriptions'] as $recent): ?>
+                                        <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-white bg-opacity-10 rounded">
+                                            <div>
+                                                <strong class="d-block"><?= htmlspecialchars($recent['name'] ?? $recent['email']) ?></strong>
+                                                <small class="opacity-75"><?= date('M j, Y', strtotime($recent['subscribed_at'])) ?></small>
+                                            </div>
+                                            <i class="bi bi-person-plus-fill opacity-50"></i>
+                                        </div>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
+                                    <div class="text-center py-3 opacity-75">
+                                        <i class="bi bi-inbox fs-3 d-block mb-2"></i>
+                                        <small>No recent subscriptions</small>
                                     </div>
-                                <?php endforeach; ?>
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>
@@ -83,47 +192,85 @@
             </div>
 
             <!-- Subscribers Table -->
-            <div class="card">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white border-bottom">
+                    <h5 class="mb-0">Subscriber List</h5>
+                </div>
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table table-striped">
-                            <thead>
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light">
                                 <tr>
-                                    <th>Name</th>
-                                    <th>Email</th>
-                                    <th>Status</th>
-                                    <th>Subscribed At</th>
-                                    <th>Actions</th>
+                                    <th class="border-0">
+                                        <i class="bi bi-person me-2"></i>Name
+                                    </th>
+                                    <th class="border-0">
+                                        <i class="bi bi-envelope me-2"></i>Email
+                                    </th>
+                                    <th class="border-0">
+                                        <i class="bi bi-flag me-2"></i>Status
+                                    </th>
+                                    <th class="border-0">
+                                        <i class="bi bi-calendar me-2"></i>Subscribed At
+                                    </th>
+                                    <th class="border-0 text-center">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <?php foreach ($subscribers as $subscriber): ?>
-                                    <tr>
-                                        <td><?= htmlspecialchars($subscriber['name'] ?? 'N/A') ?></td>
-                                        <td><?= htmlspecialchars($subscriber['email']) ?></td>
+                                    <tr class="border-bottom">
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3">
+                                                    <?= strtoupper(substr($subscriber['name'] ?? $subscriber['email'], 0, 1)) ?>
+                                                </div>
+                                                <div>
+                                                    <div class="fw-medium"><?= htmlspecialchars($subscriber['name'] ?? 'N/A') ?></div>
+                                                    <small class="text-muted">ID: #<?= $subscriber['id'] ?></small>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="d-flex align-items-center">
+                                                <i class="bi bi-envelope-fill text-muted me-2"></i>
+                                                <?= htmlspecialchars($subscriber['email']) ?>
+                                            </div>
+                                        </td>
                                         <td>
                                             <?php if ($subscriber['status'] === 'active'): ?>
-                                                <span class="badge bg-success">Active</span>
+                                                <span class="badge bg-success-subtle text-success px-3 py-2">
+                                                    <i class="bi bi-check-circle-fill me-1"></i>Active
+                                                </span>
                                             <?php else: ?>
-                                                <span class="badge bg-warning">Unsubscribed</span>
+                                                <span class="badge bg-warning-subtle text-warning px-3 py-2">
+                                                    <i class="bi bi-x-circle-fill me-1"></i>Unsubscribed
+                                                </span>
                                             <?php endif; ?>
                                         </td>
-                                        <td><?= date('M j, Y H:i', strtotime($subscriber['subscribed_at'])) ?></td>
                                         <td>
-                                            <div class="btn-group btn-group-sm">
-                                                <button type="button" class="btn btn-outline-primary" onclick="editSubscriber(<?= $subscriber['id'] ?>, '<?= htmlspecialchars($subscriber['name'] ?? '') ?>', '<?= htmlspecialchars($subscriber['email']) ?>')">
+                                            <div class="d-flex align-items-center">
+                                                <i class="bi bi-clock text-muted me-2"></i>
+                                                <div>
+                                                    <div><?= date('M j, Y', strtotime($subscriber['subscribed_at'])) ?></div>
+                                                    <small class="text-muted"><?= date('H:i', strtotime($subscriber['subscribed_at'])) ?></small>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="btn-group btn-group-sm" role="group">
+                                                <button type="button" class="btn btn-outline-primary" onclick="editSubscriber(<?= $subscriber['id'] ?>, '<?= htmlspecialchars($subscriber['name'] ?? '') ?>', '<?= htmlspecialchars($subscriber['email']) ?>')" title="Edit">
                                                     <i class="bi bi-pencil"></i>
                                                 </button>
                                                 <?php if ($subscriber['status'] === 'active'): ?>
-                                                    <a href="/admin/newsletters/subscribers/unsubscribe/<?= $subscriber['id'] ?>" class="btn btn-outline-warning" onclick="return confirm('Are you sure you want to unsubscribe this user?')">
+                                                    <a href="/admin/newsletters/subscribers/unsubscribe/<?= $subscriber['id'] ?>" class="btn btn-outline-warning" title="Unsubscribe" onclick="return confirm('Are you sure you want to unsubscribe this user?')">
                                                         <i class="bi bi-person-x"></i>
                                                     </a>
                                                 <?php else: ?>
-                                                    <a href="/admin/newsletters/subscribers/resubscribe/<?= $subscriber['id'] ?>" class="btn btn-outline-success">
+                                                    <a href="/admin/newsletters/subscribers/resubscribe/<?= $subscriber['id'] ?>" class="btn btn-outline-success" title="Resubscribe">
                                                         <i class="bi bi-person-check"></i>
                                                     </a>
                                                 <?php endif; ?>
-                                                <a href="/admin/newsletters/subscribers/delete/<?= $subscriber['id'] ?>" class="btn btn-outline-danger" onclick="return confirm('Are you sure you want to delete this subscriber?')">
+                                                <a href="/admin/newsletters/subscribers/delete/<?= $subscriber['id'] ?>" class="btn btn-outline-danger" title="Delete" onclick="return confirm('Are you sure you want to delete this subscriber?')">
                                                     <i class="bi bi-trash"></i>
                                                 </a>
                                             </div>
@@ -216,6 +363,68 @@ function editSubscriber(id, name, email) {
     document.getElementById('editSubscriberEmail').value = email;
     document.getElementById('editSubscriberForm').action = '/admin/newsletters/subscribers/update/' + id;
     new bootstrap.Modal(document.getElementById('editSubscriberModal')).show();
+}
+
+function syncUsers() {
+    const btn = event.target;
+    const originalContent = btn.innerHTML;
+    
+    // Show loading state
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Syncing...';
+    
+    fetch('/admin/newsletters/subscribers', {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Show success message
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-success alert-dismissible fade show';
+            alert.innerHTML = `
+                <i class="bi bi-check-circle me-2"></i>
+                ${data.message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.querySelector('.container-fluid').insertBefore(alert, document.querySelector('.row'));
+            
+            // Reload page after 2 seconds
+            setTimeout(() => {
+                window.location.reload();
+            }, 2000);
+        } else {
+            // Show error message
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-danger alert-dismissible fade show';
+            alert.innerHTML = `
+                <i class="bi bi-exclamation-circle me-2"></i>
+                ${data.message || 'Error syncing users'}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            document.querySelector('.container-fluid').insertBefore(alert, document.querySelector('.row'));
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        // Show error message
+        const alert = document.createElement('div');
+        alert.className = 'alert alert-danger alert-dismissible fade show';
+        alert.innerHTML = `
+            <i class="bi bi-exclamation-circle me-2"></i>
+            Error syncing users. Please try again.
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        document.querySelector('.container-fluid').insertBefore(alert, document.querySelector('.row'));
+    })
+    .finally(() => {
+        // Restore button state
+        btn.disabled = false;
+        btn.innerHTML = originalContent;
+    });
 }
 </script>
 
