@@ -143,7 +143,7 @@ ob_start();
 
 <!-- Send Test Email Modal -->
 <div class="modal fade" id="testEmailModal" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Send Test Email</h5>
@@ -153,8 +153,21 @@ ob_start();
                 <form id="testEmailForm">
                     <input type="hidden" id="testCampaignId">
                     <div class="mb-3">
-                        <label for="testEmail" class="form-label">Test Email Address</label>
-                        <input type="email" class="form-control" id="testEmail" required>
+                        <label class="form-label">Test Email Addresses</label>
+                        <div id="emailList">
+                            <div class="email-input-group mb-2">
+                                <div class="input-group">
+                                    <input type="email" class="form-control test-email-input" required placeholder="Enter email address">
+                                    <button type="button" class="btn btn-outline-danger" onclick="removeEmailField(this)" title="Remove">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-outline-secondary btn-sm mt-2" onclick="addEmailField()">
+                            <i class="bi bi-plus-circle me-1"></i>Add Another Email
+                        </button>
+                        <small class="text-muted d-block mt-2">You can add multiple email addresses to send the test email to multiple recipients.</small>
                     </div>
                 </form>
             </div>
@@ -243,10 +256,19 @@ function sendTestEmail(campaignId) {
 
 function sendTestEmailSubmit() {
     const campaignId = document.getElementById('testCampaignId').value;
-    const testEmail = document.getElementById('testEmail').value;
+    const emailInputs = document.querySelectorAll('.test-email-input');
+    const emails = [];
     
-    if (!testEmail) {
-        showMessage('Error', 'Please enter a test email address', 'danger');
+    // Collect all email addresses
+    emailInputs.forEach(input => {
+        const email = input.value.trim();
+        if (email && validateEmail(email)) {
+            emails.push(email);
+        }
+    });
+    
+    if (emails.length === 0) {
+        showMessage('Error', 'Please enter at least one valid email address', 'danger');
         return;
     }
     
@@ -256,28 +278,48 @@ function sendTestEmailSubmit() {
     submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Sending...';
     submitBtn.disabled = true;
     
-    fetch('<?= BASE_URL ?>/admin/newsletters/send-test', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-            campaign_id: campaignId,
-            test_email: testEmail
+    // Send to each email
+    const promises = emails.map(email => {
+        return fetch('<?= BASE_URL ?>/admin/newsletters/send-test', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: new URLSearchParams({
+                campaign_id: campaignId,
+                test_email: email
+            })
         })
-    })
-    .then(response => response.json())
-    .then(data => {
+        .then(response => response.json());
+    });
+    
+    Promise.all(promises)
+    .then(results => {
         // Reset button
         submitBtn.textContent = originalText;
         submitBtn.disabled = false;
         
-        if (data.success) {
+        const successCount = results.filter(r => r.success).length;
+        const failureCount = results.length - successCount;
+        
+        if (successCount === results.length) {
             bootstrap.Modal.getInstance(document.getElementById('testEmailModal')).hide();
-            showMessage('Success', 'Test email sent successfully!', 'success');
-            document.getElementById('testEmail').value = '';
+            showMessage('Success', `Test email sent successfully to ${successCount} recipient${successCount > 1 ? 's' : ''}!`, 'success');
+            // Clear all email fields
+            document.getElementById('emailList').innerHTML = `
+                <div class="email-input-group mb-2">
+                    <div class="input-group">
+                        <input type="email" class="form-control test-email-input" required placeholder="Enter email address">
+                        <button type="button" class="btn btn-outline-danger" onclick="removeEmailField(this)" title="Remove">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+        } else if (successCount > 0) {
+            showMessage('Warning', `Test email sent to ${successCount} recipient${successCount > 1 ? 's' : ''}, but failed to send to ${failureCount} recipient${failureCount > 1 ? 's' : ''}.`, 'warning');
         } else {
-            showMessage('Error', data.message || 'Failed to send test email', 'danger');
+            showMessage('Error', 'Failed to send test email to all recipients', 'danger');
         }
     })
     .catch(error => {
@@ -286,6 +328,35 @@ function sendTestEmailSubmit() {
         submitBtn.disabled = false;
         showMessage('Error', 'Error sending test email', 'danger');
     });
+}
+
+function addEmailField() {
+    const emailList = document.getElementById('emailList');
+    const newField = document.createElement('div');
+    newField.className = 'email-input-group mb-2';
+    newField.innerHTML = `
+        <div class="input-group">
+            <input type="email" class="form-control test-email-input" required placeholder="Enter email address">
+            <button type="button" class="btn btn-outline-danger" onclick="removeEmailField(this)" title="Remove">
+                <i class="bi bi-trash"></i>
+            </button>
+        </div>
+    `;
+    emailList.appendChild(newField);
+}
+
+function removeEmailField(button) {
+    const emailGroups = document.querySelectorAll('.email-input-group');
+    if (emailGroups.length > 1) {
+        button.closest('.email-input-group').remove();
+    } else {
+        showMessage('Warning', 'You must have at least one email address', 'warning');
+    }
+}
+
+function validateEmail(email) {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
 }
 
 function sendCampaign(campaignId) {
