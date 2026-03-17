@@ -2557,7 +2557,8 @@ ob_clean();
     });
     </script>
 
-    <!-- Footer -->
+    <?php if (!isset($_SESSION['user_id'])): ?>
+    <!-- Footer for non-logged-in users only -->
     <footer class="bg-dark text-light py-5 mt-5">
         <div class="container">
             <div class="row">
@@ -2656,5 +2657,6 @@ ob_clean();
         });
     });
     </script>
+    <?php endif; ?>
 </body>
 </html>
