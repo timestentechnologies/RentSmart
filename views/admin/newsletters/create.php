@@ -192,7 +192,7 @@ ob_start();
                         <div id="emailList">
                             <div class="email-input-group mb-2">
                                 <div class="input-group">
-                                    <input type="email" name="test_email[]" class="form-control test-email-input" required placeholder="Enter email address">
+                                    <input type="email" name="test_email[]" class="form-control test-email-input" placeholder="Enter email address">
                                     <button type="button" class="btn btn-outline-danger" onclick="removeEmailField(this)" title="Remove">
                                         <i class="bi bi-trash"></i>
                                     </button>
@@ -394,7 +394,7 @@ function sendTestEmailSubmit() {
             document.getElementById('emailList').innerHTML = `
                 <div class="email-input-group mb-2">
                     <div class="input-group">
-                        <input type="email" name="test_email[]" class="form-control test-email-input" required placeholder="Enter email address">
+                        <input type="email" name="test_email[]" class="form-control test-email-input" placeholder="Enter email address">
                         <button type="button" class="btn btn-outline-danger" onclick="removeEmailField(this)" title="Remove">
                             <i class="bi bi-trash"></i>
                         </button>
@@ -421,7 +421,7 @@ function addEmailField() {
     newField.className = 'email-input-group mb-2';
     newField.innerHTML = `
         <div class="input-group">
-            <input type="email" name="test_email[]" class="form-control test-email-input" required placeholder="Enter email address">
+            <input type="email" name="test_email[]" class="form-control test-email-input" placeholder="Enter email address">
             <button type="button" class="btn btn-outline-danger" onclick="removeEmailField(this)" title="Remove">
                 <i class="bi bi-trash"></i>
             </button>
