@@ -75,6 +75,10 @@ class NewsletterController
         // Get system settings for dynamic content
         $settings = (new Setting())->getAllAsAssoc();
         $siteUrl = BASE_URL;
+        // Ensure we have a full URL for email clients
+        if (empty($siteUrl)) {
+            $siteUrl = 'https://' . $_SERVER['HTTP_HOST'];
+        }
         $logoUrl = isset($settings['site_logo']) && $settings['site_logo'] ? ($siteUrl . '/public/assets/images/' . $settings['site_logo']) : ($siteUrl . '/public/assets/images/logo.png');
         $siteName = $settings['site_name'] ?? 'RentSmart';
 
@@ -165,6 +169,10 @@ class NewsletterController
             // Get system settings for dynamic content
             $settings = (new Setting())->getAllAsAssoc();
             $siteUrl = BASE_URL;
+            // Ensure we have a full URL for email clients
+            if (empty($siteUrl)) {
+                $siteUrl = 'https://' . $_SERVER['HTTP_HOST'];
+            }
             $logoUrl = isset($settings['site_logo']) && $settings['site_logo'] ? ($siteUrl . '/public/assets/images/' . $settings['site_logo']) : ($siteUrl . '/public/assets/images/logo.png');
             $siteName = $settings['site_name'] ?? 'RentSmart';
 
@@ -514,6 +522,10 @@ class NewsletterController
             }
 
             $siteUrl = BASE_URL;
+            // Ensure we have a full URL for email clients
+            if (empty($siteUrl)) {
+                $siteUrl = 'https://' . $_SERVER['HTTP_HOST'];
+            }
             $logoUrl = isset($settings['site_logo']) && $settings['site_logo'] ? ($siteUrl . '/public/assets/images/' . $settings['site_logo']) : ($siteUrl . '/public/assets/images/logo.png');
             $siteName = $settings['site_name'] ?? 'RentSmart';
             
