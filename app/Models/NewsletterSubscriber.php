@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Core\Database\Connection;
+use App\Database\Connection;
 
 class NewsletterSubscriber
 {

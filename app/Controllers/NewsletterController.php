@@ -2,7 +2,7 @@
 
 namespace App\Controllers;
 
-use App\Core\Database\Connection;
+use App\Database\Connection;
 use App\Models\NewsletterSubscriber;
 use App\Models\Setting;
 use PHPMailer\PHPMailer\PHPMailer;
@@ -13,6 +13,7 @@ class NewsletterController
 
     public function __construct()
     {
+        // Check authentication first
         if (!isset($_SESSION['user_id'])) {
             $_SESSION['flash_message'] = 'Please login to continue';
             $_SESSION['flash_type'] = 'danger';
@@ -25,11 +26,13 @@ class NewsletterController
             $_SESSION['flash_type'] = 'danger';
             \redirect('/dashboard');
         }
+
+        // Initialize database connection after authentication
+        $this->db = Connection::getInstance()->getConnection();
     }
 
     public function index()
     {
-        $db = Connection::getInstance()->getConnection();
         $page = filter_input(INPUT_GET, 'page', FILTER_VALIDATE_INT) ?: 1;
         $limit = 10;
         $offset = ($page - 1) * $limit;
@@ -44,11 +47,11 @@ class NewsletterController
                 $params[] = "%$search%";
             }
 
-            $stmt = $db->prepare("SELECT * FROM email_campaigns $where ORDER BY created_at DESC LIMIT $limit OFFSET $offset");
+            $stmt = $this->db->prepare("SELECT * FROM email_campaigns $where ORDER BY created_at DESC LIMIT $limit OFFSET $offset");
             $stmt->execute($params);
             $campaigns = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
-            $countStmt = $db->prepare("SELECT COUNT(*) as total FROM email_campaigns $where");
+            $countStmt = $this->db->prepare("SELECT COUNT(*) as total FROM email_campaigns $where");
             $countStmt->execute($params);
             $total = $countStmt->fetch(\PDO::FETCH_ASSOC)['total'];
             $totalPages = ceil($total / $limit);
