@@ -6,12 +6,29 @@ use App\Database\Connection;
 use App\Models\Setting;
 use PHPMailer\PHPMailer\PHPMailer;
 
+// Namespaced wrappers for global helper functions.
+// Prevents fatals like "Call to undefined function App\Controllers\require_auth()"
+// if opcache or older code paths call helpers without leading backslash.
+if (!function_exists(__NAMESPACE__ . '\\require_auth')) {
+    function require_auth(...$args)
+    {
+        return \require_auth(...$args);
+    }
+}
+
+if (!function_exists(__NAMESPACE__ . '\\is_admin')) {
+    function is_admin(...$args)
+    {
+        return \is_admin(...$args);
+    }
+}
+
 class NewsletterController
 {
     public function index()
     {
-        \require_auth();
-        if (!\is_admin()) {
+        require_auth();
+        if (!is_admin()) {
             $_SESSION['flash_message'] = 'Access denied';
             $_SESSION['flash_type'] = 'danger';
             header('Location: ' . BASE_URL . '/dashboard');
