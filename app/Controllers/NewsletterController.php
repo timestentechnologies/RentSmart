@@ -369,6 +369,89 @@ class NewsletterController
         }
     }
 
+    public function toggleSchedule($id)
+    {
+        try {
+            $db = Connection::getInstance()->getConnection();
+            
+            $status = $_POST['status'] ?? '0';
+            
+            $stmt = $db->prepare("UPDATE follow_up_schedules SET is_active = ? WHERE id = ?");
+            $stmt->execute([$status, $id]);
+            
+            echo json_encode(['success' => true, 'message' => 'Schedule updated successfully']);
+        } catch (\Exception $e) {
+            error_log("Toggle schedule error: " . $e->getMessage());
+            echo json_encode(['success' => false, 'message' => 'Error updating schedule']);
+        }
+    }
+
+    public function getSchedule($id)
+    {
+        try {
+            $db = Connection::getInstance()->getConnection();
+            
+            $stmt = $db->prepare("SELECT * FROM follow_up_schedules WHERE id = ?");
+            $stmt->execute([$id]);
+            $schedule = $stmt->fetch(\PDO::FETCH_ASSOC);
+            
+            if ($schedule) {
+                echo json_encode(['success' => true, 'schedule' => $schedule]);
+            } else {
+                echo json_encode(['success' => false, 'message' => 'Schedule not found']);
+            }
+        } catch (\Exception $e) {
+            error_log("Get schedule error: " . $e->getMessage());
+            echo json_encode(['success' => false, 'message' => 'Error loading schedule']);
+        }
+    }
+
+    public function updateSchedule($id)
+    {
+        try {
+            $db = Connection::getInstance()->getConnection();
+            
+            $name = $_POST['name'] ?? '';
+            $days = $_POST['days_after_registration'] ?? 0;
+            $subject = $_POST['subject'] ?? '';
+            $content = $_POST['content'] ?? '';
+            
+            $stmt = $db->prepare("UPDATE follow_up_schedules SET name = ?, days_after_registration = ?, subject = ?, content = ? WHERE id = ?");
+            $stmt->execute([$name, $days, $subject, $content, $id]);
+            
+            echo json_encode(['success' => true, 'message' => 'Schedule updated successfully']);
+        } catch (\Exception $e) {
+            error_log("Update schedule error: " . $e->getMessage());
+            echo json_encode(['success' => false, 'message' => 'Error updating schedule']);
+        }
+    }
+
+    public function exportSchedules()
+    {
+        try {
+            $db = Connection::getInstance()->getConnection();
+            
+            $stmt = $db->prepare("SELECT * FROM follow_up_schedules ORDER BY created_at DESC");
+            $stmt->execute();
+            $schedules = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+            
+            // Generate CSV
+            $csv = "Name,Days After Registration,Subject,Status,Created\n";
+            foreach ($schedules as $schedule) {
+                $status = $schedule['is_active'] ? 'Active' : 'Inactive';
+                $csv .= '"' . $schedule['name'] . '",' . $schedule['days_after_registration'] . ',"' . $schedule['subject'] . '",' . $status . ',' . $schedule['created_at'] . "\n";
+            }
+            
+            header('Content-Type: text/csv');
+            header('Content-Disposition: attachment; filename="follow-up-schedules.csv"');
+            echo $csv;
+            exit;
+        } catch (\Exception $e) {
+            error_log("Export schedules error: " . $e->getMessage());
+            echo json_encode(['success' => false, 'message' => 'Error exporting schedules']);
+        }
+    }
+
     private function sendEmail($toEmail, $toName, $subject, $content, $campaignId = null, $userId = null)
     {
         try {

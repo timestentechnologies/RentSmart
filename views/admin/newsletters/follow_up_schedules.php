@@ -20,8 +20,11 @@ ob_start();
     <div class="row">
         <div class="col-lg-8">
             <div class="card">
-                <div class="card-header">
+                <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="card-title mb-0">Active Follow-up Schedules</h5>
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="exportSchedules()">
+                        <i class="bi bi-download me-2"></i>Export Schedules
+                    </button>
                 </div>
                 <div class="card-body">
                     <?php if (empty($schedules)): ?>
@@ -185,6 +188,61 @@ ob_start();
     </div>
 </div>
 
+// Success/Error Modal -->
+<div class="modal fade" id="messageModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="messageModalTitle">Message</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p id="messageModalContent"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Schedule Modal -->
+<div class="modal fade" id="editScheduleModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Follow-up Schedule</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editScheduleForm">
+                    <input type="hidden" id="editScheduleId">
+                    <div class="mb-3">
+                        <label for="editScheduleName" class="form-label">Schedule Name</label>
+                        <input type="text" class="form-control" id="editScheduleName" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editScheduleDays" class="form-label">Days After Registration</label>
+                        <input type="number" class="form-control" id="editScheduleDays" min="1" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editScheduleSubject" class="form-label">Email Subject</label>
+                        <input type="text" class="form-control" id="editScheduleSubject" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editScheduleContent" class="form-label">Email Content</label>
+                        <textarea class="form-control" id="editScheduleContent" rows="6" required></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" onclick="updateSchedule()">Update Schedule</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 // Create schedule form submission
 document.getElementById('createScheduleForm').addEventListener('submit', function(e) {
@@ -203,30 +261,91 @@ document.getElementById('createScheduleForm').addEventListener('submit', functio
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            alert('Follow-up schedule created successfully!');
+            showMessage('Success', 'Follow-up schedule created successfully!', 'success');
             bootstrap.Modal.getInstance(document.getElementById('createScheduleModal')).hide();
             location.reload();
         } else {
-            alert('Error: ' + data.message);
+            showMessage('Error', data.message, 'danger');
         }
     })
     .catch(error => {
-        alert('Error creating schedule');
+        showMessage('Error', 'Error creating schedule', 'danger');
     });
 });
 
 // Toggle schedule activation
 function toggleSchedule(id, status) {
     if (confirm('Are you sure you want to ' + (status ? 'activate' : 'deactivate') + ' this schedule?')) {
-        // This would be implemented with AJAX
-        alert('Toggle functionality would be implemented here');
+        fetch('<?= BASE_URL ?>/admin/newsletters/toggle-schedule/' + id, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: 'status=' + (status ? '1' : '0')
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showMessage('Success', 'Schedule ' + (status ? 'activated' : 'deactivated') + ' successfully!', 'success');
+                location.reload();
+            } else {
+                showMessage('Error', data.message, 'danger');
+            }
+        })
+        .catch(error => {
+            showMessage('Error', 'Error updating schedule', 'danger');
+        });
     }
 }
 
 // Edit schedule
 function editSchedule(id) {
-    // This would open an edit modal with current data
-    alert('Edit functionality would be implemented here');
+    // Load schedule data and open edit modal
+    fetch('<?= BASE_URL ?>/admin/newsletters/get-schedule/' + id)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.getElementById('editScheduleId').value = data.schedule.id;
+                document.getElementById('editScheduleName').value = data.schedule.name;
+                document.getElementById('editScheduleDays').value = data.schedule.days_after_registration;
+                document.getElementById('editScheduleSubject').value = data.schedule.subject;
+                document.getElementById('editScheduleContent').value = data.schedule.content;
+                new bootstrap.Modal(document.getElementById('editScheduleModal')).show();
+            } else {
+                showMessage('Error', data.message, 'danger');
+            }
+        })
+        .catch(error => {
+            showMessage('Error', 'Error loading schedule data', 'danger');
+        });
+}
+
+// Update schedule
+function updateSchedule() {
+    const form = document.getElementById('editScheduleForm');
+    const formData = new FormData(form);
+    const data = new URLSearchParams(formData);
+    
+    fetch('<?= BASE_URL ?>/admin/newsletters/update-schedule/' + document.getElementById('editScheduleId').value, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: data
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showMessage('Success', 'Schedule updated successfully!', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('editScheduleModal')).hide();
+            location.reload();
+        } else {
+            showMessage('Error', data.message, 'danger');
+        }
+    })
+    .catch(error => {
+        showMessage('Error', 'Error updating schedule', 'danger');
+    });
 }
 
 // Preview schedule
