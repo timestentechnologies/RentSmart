@@ -1011,7 +1011,7 @@ class NewsletterController
             $status = filter_input(INPUT_GET, 'status', FILTER_SANITIZE_STRING) ?: 'active';
 
             // Get subscribers with pagination
-            $where = "WHERE status = ?";
+            $where = "WHERE status = ? AND email NOT LIKE '%demo%' AND email NOT LIKE '%test%'";
             $params = [$status];
             
             if ($search) {
@@ -1197,13 +1197,13 @@ class NewsletterController
     }
 
     /**
-     * Sync all users (except admins) as newsletter subscribers
+     * Sync all users (except admins and demo users) as newsletter subscribers
      */
     private function syncUsersAsSubscribers()
     {
         try {
-            // Get all users except admins
-            $usersStmt = $this->db->prepare("SELECT id, name, email FROM users WHERE role NOT IN ('admin', 'administrator')");
+            // Get all users except admins and demo users
+            $usersStmt = $this->db->prepare("SELECT id, name, email FROM users WHERE role NOT IN ('admin', 'administrator') AND email NOT LIKE '%demo%' AND email NOT LIKE '%test%'");
             $usersStmt->execute();
             $users = $usersStmt->fetchAll(\PDO::FETCH_ASSOC);
 

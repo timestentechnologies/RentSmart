@@ -74,15 +74,15 @@ class NewsletterSubscriber
 
     public function getTotalCount($status = 'active')
     {
-        $stmt = $this->db->prepare("SELECT COUNT(*) as total FROM newsletter_subscribers WHERE status = ?");
+        $stmt = $this->db->prepare("SELECT COUNT(*) as total FROM newsletter_subscribers WHERE status = ? AND email NOT LIKE '%demo%' AND email NOT LIKE '%test%'");
         $stmt->execute([$status]);
         $result = $stmt->fetch(\PDO::FETCH_ASSOC);
         return $result['total'];
     }
 
-    public function getRecentSubscribers($limit = 10, $status = 'active')
+    public function getRecentSubscribers($limit = 5, $status = 'active')
     {
-        $stmt = $this->db->prepare("SELECT * FROM newsletter_subscribers WHERE status = ? ORDER BY subscribed_at DESC LIMIT ?");
+        $stmt = $this->db->prepare("SELECT * FROM newsletter_subscribers WHERE status = ? AND email NOT LIKE '%demo%' AND email NOT LIKE '%test%' ORDER BY subscribed_at DESC LIMIT ?");
         $stmt->execute([$status, $limit]);
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
