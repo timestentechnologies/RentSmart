@@ -462,8 +462,109 @@ class NewsletterController
             }
 
             $siteUrl = BASE_URL;
-            $logoUrl = isset($settings['site_logo']) && $settings['site_logo'] ? ($siteUrl . '/public/assets/images/' . $settings['site_logo']) : '';
-            $footer = '<div style="margin-top:30px;font-size:12px;color:#888;text-align:center;">Powered by <a href="https://timestentechnologies.co.ke" target="_blank" style="color:#888;text-decoration:none;">Timesten Technologies</a></div>';
+            $logoUrl = isset($settings['site_logo']) && $settings['site_logo'] ? ($siteUrl . '/public/assets/images/' . $settings['site_logo']) : ($siteUrl . '/public/assets/images/logo.png');
+            $siteName = $settings['site_name'] ?? 'RentSmart';
+            
+            // Create professional email template
+            $emailTemplate = '
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>' . htmlspecialchars($subject) . '</title>
+                <style>
+                    body {
+                        font-family: Arial, sans-serif;
+                        line-height: 1.6;
+                        color: #333;
+                        margin: 0;
+                        padding: 0;
+                        background-color: #f4f4f4;
+                    }
+                    .email-container {
+                        max-width: 600px;
+                        margin: 0 auto;
+                        background-color: #ffffff;
+                        border-radius: 8px;
+                        overflow: hidden;
+                        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                    }
+                    .email-header {
+                        background-color: #2c3e50;
+                        padding: 30px 20px;
+                        text-align: center;
+                    }
+                    .email-header img {
+                        max-width: 200px;
+                        max-height: 80px;
+                        margin-bottom: 10px;
+                    }
+                    .email-header h1 {
+                        color: white;
+                        margin: 0;
+                        font-size: 24px;
+                        font-weight: 300;
+                    }
+                    .email-body {
+                        padding: 40px 30px;
+                        background-color: #ffffff;
+                    }
+                    .email-body h1, .email-body h2, .email-body h3 {
+                        color: #2c3e50;
+                        margin-top: 0;
+                    }
+                    .email-body a {
+                        color: #3498db;
+                        text-decoration: none;
+                    }
+                    .email-body a:hover {
+                        text-decoration: underline;
+                    }
+                    .email-footer {
+                        background-color: #ecf0f1;
+                        padding: 20px;
+                        text-align: center;
+                        font-size: 12px;
+                        color: #7f8c8d;
+                    }
+                    .email-footer a {
+                        color: #7f8c8d;
+                        text-decoration: none;
+                    }
+                    @media only screen and (max-width: 600px) {
+                        .email-container {
+                            width: 100%;
+                            border-radius: 0;
+                        }
+                        .email-body {
+                            padding: 20px 15px;
+                        }
+                    }
+                </style>
+            </head>
+            <body>
+                <div class="email-container">
+                    <div class="email-header">
+                        <img src="' . $logoUrl . '" alt="' . htmlspecialchars($siteName) . ' Logo" onerror="this.style.display=\'none\'">
+                        <h1>' . htmlspecialchars($siteName) . '</h1>
+                    </div>
+                    <div class="email-body">
+                        ' . $content . '
+                    </div>
+                    <div class="email-footer">
+                        <p>&copy; ' . date('Y') . ' ' . htmlspecialchars($siteName) . '. All rights reserved.</p>
+                        <p>Powered by <a href="https://timestentechnologies.co.ke" target="_blank">Timesten Technologies</a></p>
+                    </div>
+                </div>';
+
+            // Add tracking pixel
+            $trackingPixel = '';
+            if ($campaignId && $userId) {
+                $trackingPixel = '<img src="' . BASE_URL . '/newsletter/track/' . $campaignId . '/' . $userId . '" width="1" height="1" style="display:none;">';
+            }
+            
+            $emailTemplate .= $trackingPixel . '</body></html>';
 
             $mail = new PHPMailer(true);
             $mail->isSMTP();
@@ -480,19 +581,7 @@ class NewsletterController
             $mail->addAddress($toEmail, $toName);
             $mail->Subject = $subject;
 
-            // Add tracking pixel
-            $trackingPixel = '';
-            if ($campaignId && $userId) {
-                $trackingPixel = '<img src="' . BASE_URL . '/newsletter/track/' . $campaignId . '/' . $userId . '" width="1" height="1" style="display:none;">';
-            }
-
-            // Add logo header if not already in content
-            $logoHeader = '';
-            if ($logoUrl && strpos($content, '<img') === false) {
-                $logoHeader = '<div style="text-align:center;margin-bottom:30px;"><img src="' . $logoUrl . '" alt="RentSmart Logo" style="max-width:200px;max-height:80px;"></div>';
-            }
-
-            $mail->Body = $logoHeader . $content . $trackingPixel . $footer;
+            $mail->Body = $emailTemplate;
             $mail->AltBody = strip_tags($content);
 
             $sent = $mail->send();

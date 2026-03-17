@@ -46,10 +46,15 @@ ob_start();
                         <div class="mb-3">
                             <label class="form-label">Quick HTML Templates</label>
                             <div class="btn-group" role="group">
-                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="insertTemplate('logo')">RentSmart Logo</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="insertTemplate('logo')">Logo</button>
                                 <button type="button" class="btn btn-outline-secondary btn-sm" onclick="insertTemplate('header')">Header</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="insertTemplate('subheader')">Subheader</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="insertTemplate('paragraph')">Paragraph</button>
                                 <button type="button" class="btn btn-outline-secondary btn-sm" onclick="insertTemplate('button')">Button</button>
                                 <button type="button" class="btn btn-outline-secondary btn-sm" onclick="insertTemplate('image')">Image</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="insertTemplate('list')">List</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="insertTemplate('quote')">Quote</button>
+                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="insertTemplate('signature')">Signature</button>
                                 <button type="button" class="btn btn-outline-secondary btn-sm" onclick="insertTemplate('divider')">Divider</button>
                             </div>
                         </div>
@@ -246,11 +251,16 @@ document.getElementById('content').addEventListener('input', function() {
 function insertTemplate(type) {
     const textarea = document.getElementById('content');
     const templates = {
-        logo: '<div style="text-align:center;margin-bottom:30px;"><img src="<?= BASE_URL ?>/public/assets/images/rentsmart-logo.png" alt="RentSmart Logo" style="max-width:200px;max-height:80px;"></div>',
-        header: '<h2 style="color: #333; margin-bottom: 20px;">Your Header Text</h2>',
-        button: '<div style="text-align: center; margin: 20px 0;"><a href="#" style="background: #667eea; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block;">Click Here</a></div>',
-        image: '<div style="text-align: center; margin: 20px 0;"><img src="https://via.placeholder.com/600x300" alt="Image" style="max-width: 100%; height: auto;"></div>',
-        divider: '<hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">'
+        logo: '<div style="text-align:center;margin-bottom:30px;"><img src="<?= BASE_URL ?>/public/assets/images/logo.png" alt="RentSmart Logo" style="max-width:200px;max-height:80px;"></div>',
+        header: '<h1 style="color: #2c3e50; margin-bottom: 20px; text-align: center;">Your Header Text</h1>',
+        subheader: '<h2 style="color: #34495e; margin-bottom: 15px;">Your Subheader Text</h2>',
+        paragraph: '<p style="margin-bottom: 15px; line-height: 1.6;">Your paragraph text goes here. This is a well-formatted paragraph that will look great in the email.</p>',
+        button: '<div style="text-align: center; margin: 25px 0;"><a href="#" style="background: #3498db; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">Click Here</a></div>',
+        image: '<div style="text-align: center; margin: 25px 0;"><img src="https://via.placeholder.com/600x300/3498db/ffffff?text=Your+Image+Here" alt="Image" style="max-width: 100%; height: auto; border-radius: 5px;"></div>',
+        divider: '<hr style="border: none; border-top: 2px solid #ecf0f1; margin: 30px 0;">',
+        list: '<ul style="margin-bottom: 20px; padding-left: 20px;"><li style="margin-bottom: 8px;">List item 1</li><li style="margin-bottom: 8px;">List item 2</li><li style="margin-bottom: 8px;">List item 3</li></ul>',
+        quote: '<blockquote style="border-left: 4px solid #3498db; margin: 20px 0; padding-left: 20px; font-style: italic; color: #555;">"Your quote text here - this will stand out nicely in the email."</blockquote>',
+        signature: '<div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ecf0f1;"><p style="margin: 0; color: #7f8c8d;">Best regards,<br><strong>Your Name</strong><br>Your Position<br>RentSmart Team</p></div>'
     };
     
     const cursorPos = textarea.selectionStart;
@@ -261,7 +271,7 @@ function insertTemplate(type) {
     textarea.setSelectionRange(cursorPos + templates[type].length, cursorPos + templates[type].length);
     
     // Update preview
-    document.getElementById('emailPreview').innerHTML = textarea.value;
+    document.getElementById('emailPreview').innerHTML = textarea.value || '<p class="text-muted">Preview will appear here as you type...</p>';
 }
 
 // Add survey question

@@ -243,6 +243,25 @@ ob_start();
     </div>
 </div>
 
+<!-- Toggle Schedule Confirmation Modal -->
+<div class="modal fade" id="toggleScheduleModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="toggleScheduleModalTitle">Confirm Action</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p id="toggleScheduleMessage">Are you sure you want to perform this action?</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-warning" id="confirmToggleBtn">Confirm</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 // Create schedule form submission
 document.getElementById('createScheduleForm').addEventListener('submit', function(e) {
@@ -275,18 +294,37 @@ document.getElementById('createScheduleForm').addEventListener('submit', functio
 
 // Toggle schedule activation
 function toggleSchedule(id, status) {
-    if (confirm('Are you sure you want to ' + (status ? 'activate' : 'deactivate') + ' this schedule?')) {
+    const isActivating = status === 1;
+    const title = isActivating ? 'Activate Schedule' : 'Deactivate Schedule';
+    const message = isActivating ? 
+        'Are you sure you want to activate this follow-up schedule? It will start sending emails based on the configured schedule.' :
+        'Are you sure you want to deactivate this follow-up schedule? It will stop sending new emails.';
+    const buttonText = isActivating ? 'Activate' : 'Deactivate';
+    const buttonClass = isActivating ? 'btn-success' : 'btn-warning';
+    
+    // Set modal content
+    document.getElementById('toggleScheduleModalTitle').textContent = title;
+    document.getElementById('toggleScheduleMessage').textContent = message;
+    
+    const confirmBtn = document.getElementById('confirmToggleBtn');
+    confirmBtn.textContent = buttonText;
+    confirmBtn.className = 'btn ' + buttonClass;
+    
+    // Set up confirm button click handler
+    confirmBtn.onclick = function() {
         fetch('<?= BASE_URL ?>/admin/newsletters/toggle-schedule/' + id, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
             },
-            body: 'status=' + (status ? '1' : '0')
+            body: 'status=' + status
         })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                showMessage('Success', 'Schedule ' + (status ? 'activated' : 'deactivated') + ' successfully!', 'success');
+                const action = isActivating ? 'activated' : 'deactivated';
+                showMessage('Success', 'Schedule ' + action + ' successfully!', 'success');
+                bootstrap.Modal.getInstance(document.getElementById('toggleScheduleModal')).hide();
                 location.reload();
             } else {
                 showMessage('Error', data.message, 'danger');
@@ -295,7 +333,10 @@ function toggleSchedule(id, status) {
         .catch(error => {
             showMessage('Error', 'Error updating schedule', 'danger');
         });
-    }
+    };
+    
+    // Show modal
+    new bootstrap.Modal(document.getElementById('toggleScheduleModal')).show();
 }
 
 // Edit schedule
