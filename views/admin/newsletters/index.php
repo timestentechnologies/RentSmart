@@ -190,6 +190,51 @@ ob_start();
     </div>
 </div>
 
+<!-- Message Modal -->
+<div class="modal fade" id="messageModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="messageModalTitle">Message</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p id="messageModalContent"></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Send Campaign Confirmation Modal -->
+<div class="modal fade" id="sendCampaignModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Send Campaign</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to send this campaign to all subscribers? This action cannot be undone.</p>
+                <div id="sendCampaignProgress" style="display: none;">
+                    <div class="d-flex align-items-center">
+                        <div class="spinner-border text-primary me-3" role="status">
+                            <span class="visually-hidden">Sending...</span>
+                        </div>
+                        <span>Sending campaign...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-success" id="confirmSendCampaignBtn">Send Campaign</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 function sendTestEmail(campaignId) {
     document.getElementById('testCampaignId').value = campaignId;
@@ -201,35 +246,96 @@ function sendTestEmailSubmit() {
     const testEmail = document.getElementById('testEmail').value;
     
     if (!testEmail) {
-        alert('Please enter a test email address');
+        showMessage('Error', 'Please enter a test email address', 'danger');
         return;
     }
+    
+    // Show loading spinner
+    const submitBtn = document.querySelector('#testEmailModal .btn-primary');
+    const originalText = submitBtn.textContent;
+    submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Sending...';
+    submitBtn.disabled = true;
     
     fetch('<?= BASE_URL ?>/admin/newsletters/send-test', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: `campaign_id=${campaignId}&test_email=${encodeURIComponent(testEmail)}`
+        body: new URLSearchParams({
+            campaign_id: campaignId,
+            test_email: testEmail
+        })
     })
     .then(response => response.json())
     .then(data => {
+        // Reset button
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+        
         if (data.success) {
-            alert('Test email sent successfully!');
             bootstrap.Modal.getInstance(document.getElementById('testEmailModal')).hide();
+            showMessage('Success', 'Test email sent successfully!', 'success');
+            document.getElementById('testEmail').value = '';
         } else {
-            alert('Error: ' + data.message);
+            showMessage('Error', data.message || 'Failed to send test email', 'danger');
         }
     })
     .catch(error => {
-        alert('Error sending test email');
+        // Reset button
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+        showMessage('Error', 'Error sending test email', 'danger');
     });
 }
 
 function sendCampaign(campaignId) {
-    if (confirm('Are you sure you want to send this campaign to all subscribers? This action cannot be undone.')) {
-        window.location.href = '<?= BASE_URL ?>/admin/newsletters/send/' + campaignId;
-    }
+    const modal = new bootstrap.Modal(document.getElementById('sendCampaignModal'));
+    
+    // Set up confirm button click handler
+    document.getElementById('confirmSendCampaignBtn').onclick = function() {
+        // Show loading spinner
+        document.getElementById('sendCampaignProgress').style.display = 'block';
+        this.disabled = true;
+        this.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Sending...';
+        
+        // Send campaign via AJAX
+        fetch('<?= BASE_URL ?>/admin/newsletters/send/' + campaignId, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                modal.hide();
+                showMessage('Success', 'Campaign sent successfully!', 'success');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 2000);
+            } else {
+                showMessage('Error', data.message || 'Failed to send campaign', 'danger');
+                // Reset modal
+                document.getElementById('sendCampaignProgress').style.display = 'none';
+                this.disabled = false;
+                this.textContent = 'Send Campaign';
+            }
+        })
+        .catch(error => {
+            showMessage('Error', 'Error sending campaign', 'danger');
+            // Reset modal
+            document.getElementById('sendCampaignProgress').style.display = 'none';
+            this.disabled = false;
+            this.textContent = 'Send Campaign';
+        });
+    };
+    
+    // Reset modal state
+    document.getElementById('sendCampaignProgress').style.display = 'none';
+    document.getElementById('confirmSendCampaignBtn').disabled = false;
+    document.getElementById('confirmSendCampaignBtn').textContent = 'Send Campaign';
+    
+    modal.show();
 }
 
 function showStats(campaignId) {
@@ -261,6 +367,15 @@ function showStats(campaignId) {
                 </div>
             `;
         });
+}
+
+// Show message modal
+function showMessage(title, message, type) {
+    document.getElementById('messageModalTitle').textContent = title;
+    document.getElementById('messageModalContent').textContent = message;
+    
+    const modal = new bootstrap.Modal(document.getElementById('messageModal'));
+    modal.show();
 }
 </script>
 

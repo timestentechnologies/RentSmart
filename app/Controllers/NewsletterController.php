@@ -270,6 +270,8 @@ class NewsletterController
 
     public function sendCampaign($id)
     {
+        $isAjax = $_SERVER['REQUEST_METHOD'] === 'POST';
+        
         try {
             $db = Connection::getInstance()->getConnection();
             $stmt = $db->prepare("SELECT * FROM email_campaigns WHERE id = ? AND status IN ('draft', 'scheduled')");
@@ -277,10 +279,15 @@ class NewsletterController
             $campaign = $stmt->fetch(\PDO::FETCH_ASSOC);
 
             if (!$campaign) {
-                $_SESSION['flash_message'] = 'Campaign not found or already sent';
-                $_SESSION['flash_type'] = 'danger';
-                header('Location: ' . BASE_URL . '/admin/newsletters');
-                exit;
+                if ($isAjax) {
+                    echo json_encode(['success' => false, 'message' => 'Campaign not found or already sent']);
+                    exit;
+                } else {
+                    $_SESSION['flash_message'] = 'Campaign not found or already sent';
+                    $_SESSION['flash_type'] = 'danger';
+                    header('Location: ' . BASE_URL . '/admin/newsletters');
+                    exit;
+                }
             }
 
             // Get all subscribed users
@@ -299,14 +306,25 @@ class NewsletterController
             $updateStmt = $db->prepare("UPDATE email_campaigns SET status = 'sent', sent_at = NOW(), sent_count = ?, total_recipients = ? WHERE id = ?");
             $updateStmt->execute([$sentCount, count($users), $id]);
 
-            $_SESSION['flash_message'] = "Campaign sent to $sentCount recipients";
-            $_SESSION['flash_type'] = 'success';
-            \redirect('/admin/newsletters');
+            if ($isAjax) {
+                echo json_encode(['success' => true, 'message' => "Campaign sent to $sentCount recipients"]);
+                exit;
+            } else {
+                $_SESSION['flash_message'] = "Campaign sent to $sentCount recipients";
+                $_SESSION['flash_type'] = 'success';
+                \redirect('/admin/newsletters');
+            }
         } catch (\Exception $e) {
             error_log("Send campaign error: " . $e->getMessage());
-            $_SESSION['flash_message'] = 'Error sending campaign';
-            $_SESSION['flash_type'] = 'danger';
-            \redirect('/admin/newsletters');
+            
+            if ($isAjax) {
+                echo json_encode(['success' => false, 'message' => 'Error sending campaign']);
+                exit;
+            } else {
+                $_SESSION['flash_message'] = 'Error sending campaign';
+                $_SESSION['flash_type'] = 'danger';
+                \redirect('/admin/newsletters');
+            }
         }
     }
 
