@@ -584,6 +584,24 @@ class NewsletterController
                     .email-body h1, .email-body h2, .email-body h3 {
                         color: #2c3e50;
                         margin-top: 0;
+                        margin-bottom: 20px;
+                        line-height: 1.4;
+                    }
+                    .email-body h1 {
+                        font-size: 24px;
+                        font-weight: 600;
+                    }
+                    .email-body h2 {
+                        font-size: 20px;
+                        font-weight: 500;
+                    }
+                    .email-body h3 {
+                        font-size: 18px;
+                        font-weight: 500;
+                    }
+                    .email-body p {
+                        margin-bottom: 16px;
+                        line-height: 1.6;
                     }
                     .email-body a {
                         color: #3498db;
