@@ -2556,5 +2556,105 @@ ob_clean();
       <?php endif; ?>
     });
     </script>
+
+    <!-- Footer -->
+    <footer class="bg-dark text-light py-5 mt-5">
+        <div class="container">
+            <div class="row">
+                <!-- Newsletter Subscription -->
+                <div class="col-lg-4 mb-4">
+                    <h5>Newsletter Subscription</h5>
+                    <p class="text-muted">Subscribe to our newsletter for the latest updates and offers.</p>
+                    <form id="newsletterSubscribeForm" class="mt-3">
+                        <div class="input-group">
+                            <input type="email" name="email" class="form-control" placeholder="Enter your email" required>
+                            <input type="text" name="name" class="form-control d-none" placeholder="Your name (optional)">
+                            <button type="submit" class="btn btn-primary" type="button">
+                                <i class="bi bi-send"></i>
+                            </button>
+                        </div>
+                        <div id="newsletterMessage" class="mt-2 small"></div>
+                    </form>
+                </div>
+
+                <!-- Quick Links -->
+                <div class="col-lg-4 mb-4">
+                    <h5>Quick Links</h5>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><a href="<?= BASE_URL ?>/home" class="text-light text-decoration-none">Home</a></li>
+                        <li class="mb-2"><a href="<?= BASE_URL ?>/about" class="text-light text-decoration-none">About Us</a></li>
+                        <li class="mb-2"><a href="<?= BASE_URL ?>/contact" class="text-light text-decoration-none">Contact</a></li>
+                        <li class="mb-2"><a href="<?= BASE_URL ?>/privacy" class="text-light text-decoration-none">Privacy Policy</a></li>
+                        <li class="mb-2"><a href="<?= BASE_URL ?>/terms" class="text-light text-decoration-none">Terms of Service</a></li>
+                    </ul>
+                </div>
+
+                <!-- Contact Info -->
+                <div class="col-lg-4 mb-4">
+                    <h5>Contact Info</h5>
+                    <p class="text-muted">
+                        <i class="bi bi-geo-alt me-2"></i> Nairobi, Kenya<br>
+                        <i class="bi bi-envelope me-2"></i> info@rentsmart.co.ke<br>
+                        <i class="bi bi-phone me-2"></i> +254 700 000 000
+                    </p>
+                    <div class="mt-3">
+                        <a href="#" class="text-light me-3"><i class="bi bi-facebook fs-5"></i></a>
+                        <a href="#" class="text-light me-3"><i class="bi bi-twitter fs-5"></i></a>
+                        <a href="#" class="text-light me-3"><i class="bi bi-linkedin fs-5"></i></a>
+                        <a href="#" class="text-light"><i class="bi bi-instagram fs-5"></i></a>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="bg-secondary my-4">
+
+            <div class="row">
+                <div class="col-md-6">
+                    <p class="text-muted mb-0">&copy; <?= date('Y') ?> RentSmart. All rights reserved.</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <p class="text-muted mb-0">Powered by <a href="https://timestentechnologies.co.ke" target="_blank" class="text-light text-decoration-none">Timesten Technologies</a></p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+    // Newsletter Subscription
+    document.getElementById('newsletterSubscribeForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const messageDiv = document.getElementById('newsletterMessage');
+        const submitBtn = this.querySelector('button[type="submit"]');
+        
+        // Show loading state
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Subscribing...';
+        messageDiv.innerHTML = '';
+        
+        fetch('<?= BASE_URL ?>/newsletter/subscribe', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                messageDiv.innerHTML = '<div class="text-success"><i class="bi bi-check-circle me-1"></i>' + data.message + '</div>';
+                this.reset();
+            } else {
+                messageDiv.innerHTML = '<div class="text-danger"><i class="bi bi-exclamation-circle me-1"></i>' + data.message + '</div>';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            messageDiv.innerHTML = '<div class="text-danger"><i class="bi bi-exclamation-circle me-1"></i>Error subscribing. Please try again.</div>';
+        })
+        .finally(() => {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="bi bi-send"></i>';
+        });
+    });
+    </script>
 </body>
 </html>

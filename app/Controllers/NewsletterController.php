@@ -2,12 +2,15 @@
 
 namespace App\Controllers;
 
-use App\Database\Connection;
+use App\Core\Database\Connection;
+use App\Models\NewsletterSubscriber;
 use App\Models\Setting;
 use PHPMailer\PHPMailer\PHPMailer;
 
 class NewsletterController
 {
+    private $db;
+
     public function __construct()
     {
         if (!isset($_SESSION['user_id'])) {
@@ -314,21 +317,106 @@ class NewsletterController
                 }
             }
 
-            // Get all subscribed users
-            $usersStmt = $db->prepare("SELECT id, name, email FROM users WHERE is_subscribed = 1");
-            $usersStmt->execute();
-            $users = $usersStmt->fetchAll(\PDO::FETCH_ASSOC);
+            // Get recipients based on selection
+            $sendTo = $_POST['send_to'] ?? 'subscribers';
+            $selectedRoles = $_POST['roles'] ?? [];
+            $recipients = [];
+
+            switch ($sendTo) {
+                case 'subscribers':
+                    // Get newsletter subscribers
+                    $subscriber = new NewsletterSubscriber();
+                    $subscribers = $subscriber->getAll('active');
+                    foreach ($subscribers as $sub) {
+                        $recipients[] = [
+                            'email' => $sub['email'],
+                            'name' => $sub['name'] ?? 'Subscriber',
+                            'id' => null,
+                            'type' => 'subscriber'
+                        ];
+                    }
+                    break;
+
+                case 'users':
+                    // Get all users except admins
+                    $usersStmt = $db->prepare("SELECT id, name, email FROM users WHERE role NOT IN ('admin', 'administrator') AND is_subscribed = 1");
+                    $usersStmt->execute();
+                    $users = $usersStmt->fetchAll(\PDO::FETCH_ASSOC);
+                    foreach ($users as $user) {
+                        $recipients[] = [
+                            'email' => $user['email'],
+                            'name' => $user['name'],
+                            'id' => $user['id'],
+                            'type' => 'user'
+                        ];
+                    }
+                    break;
+
+                case 'roles':
+                    // Get users by specific roles
+                    if (!empty($selectedRoles)) {
+                        $placeholders = str_repeat('?,', count($selectedRoles) - 1) . '?';
+                        $rolesStmt = $db->prepare("SELECT id, name, email FROM users WHERE role IN ($placeholders) AND is_subscribed = 1");
+                        $rolesStmt->execute($selectedRoles);
+                        $roleUsers = $rolesStmt->fetchAll(\PDO::FETCH_ASSOC);
+                        foreach ($roleUsers as $user) {
+                            $recipients[] = [
+                                'email' => $user['email'],
+                                'name' => $user['name'],
+                                'id' => $user['id'],
+                                'type' => 'user'
+                            ];
+                        }
+                    }
+                    break;
+
+                case 'all':
+                    // Get both subscribers and users (excluding admins)
+                    $subscriber = new NewsletterSubscriber();
+                    $subscribers = $subscriber->getAll('active');
+                    foreach ($subscribers as $sub) {
+                        $recipients[] = [
+                            'email' => $sub['email'],
+                            'name' => $sub['name'] ?? 'Subscriber',
+                            'id' => null,
+                            'type' => 'subscriber'
+                        ];
+                    }
+
+                    $usersStmt = $db->prepare("SELECT id, name, email FROM users WHERE role NOT IN ('admin', 'administrator') AND is_subscribed = 1");
+                    $usersStmt->execute();
+                    $users = $usersStmt->fetchAll(\PDO::FETCH_ASSOC);
+                    foreach ($users as $user) {
+                        $recipients[] = [
+                            'email' => $user['email'],
+                            'name' => $user['name'],
+                            'id' => $user['id'],
+                            'type' => 'user'
+                        ];
+                    }
+                    break;
+            }
+
+            // Remove duplicates by email
+            $uniqueRecipients = [];
+            $seenEmails = [];
+            foreach ($recipients as $recipient) {
+                if (!in_array($recipient['email'], $seenEmails)) {
+                    $uniqueRecipients[] = $recipient;
+                    $seenEmails[] = $recipient['email'];
+                }
+            }
 
             $sentCount = 0;
-            foreach ($users as $user) {
-                if ($this->sendEmail($user['email'], $user['name'], $campaign['subject'], $campaign['content'], $campaign['id'], $user['id'])) {
+            foreach ($uniqueRecipients as $recipient) {
+                if ($this->sendEmail($recipient['email'], $recipient['name'], $campaign['subject'], $campaign['content'], $campaign['id'], $recipient['id'])) {
                     $sentCount++;
                 }
             }
 
             // Update campaign status
             $updateStmt = $db->prepare("UPDATE email_campaigns SET status = 'sent', sent_at = NOW(), sent_count = ?, total_recipients = ? WHERE id = ?");
-            $updateStmt->execute([$sentCount, count($users), $id]);
+            $updateStmt->execute([$sentCount, count($uniqueRecipients), $id]);
 
             if ($isAjax) {
                 echo json_encode(['success' => true, 'message' => "Campaign sent to $sentCount recipients"]);
@@ -860,5 +948,235 @@ class NewsletterController
             error_log("Process follow-ups error: " . $e->getMessage());
             echo "Error processing follow-ups: " . $e->getMessage() . "\n";
         }
+    }
+
+    // Newsletter Subscription Methods
+    public function subscribe()
+    {
+        // This method handles footer subscription (no login required)
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $email = filter_input(INPUT_POST, 'email', FILTER_VALIDATE_EMAIL);
+            $name = filter_input(INPUT_POST, 'name', FILTER_SANITIZE_STRING);
+
+            if (!$email) {
+                echo json_encode(['success' => false, 'message' => 'Please enter a valid email address']);
+                exit;
+            }
+
+            try {
+                $subscriber = new NewsletterSubscriber();
+                
+                // Check if already subscribed
+                if ($subscriber->getByEmail($email)) {
+                    echo json_encode(['success' => false, 'message' => 'This email is already subscribed']);
+                    exit;
+                }
+
+                if ($subscriber->create($email, $name)) {
+                    echo json_encode(['success' => true, 'message' => 'Successfully subscribed to newsletter!']);
+                } else {
+                    echo json_encode(['success' => false, 'message' => 'Failed to subscribe. Please try again.']);
+                }
+            } catch (\Exception $e) {
+                error_log("Subscribe error: " . $e->getMessage());
+                echo json_encode(['success' => false, 'message' => 'Error subscribing to newsletter']);
+            }
+        }
+    }
+
+    public function subscribers()
+    {
+        try {
+            $subscriber = new NewsletterSubscriber();
+            $page = filter_input(INPUT_GET, 'page', FILTER_VALIDATE_INT) ?: 1;
+            $limit = 20;
+            $offset = ($page - 1) * $limit;
+            $search = filter_input(INPUT_GET, 'search', FILTER_SANITIZE_STRING);
+            $status = filter_input(INPUT_GET, 'status', FILTER_SANITIZE_STRING) ?: 'active';
+
+            // Get subscribers with pagination
+            $where = "WHERE status = ?";
+            $params = [$status];
+            
+            if ($search) {
+                $where .= " AND (email LIKE ? OR name LIKE ?)";
+                $params[] = "%$search%";
+                $params[] = "%$search%";
+            }
+
+            $stmt = $this->db->prepare("SELECT * FROM newsletter_subscribers $where ORDER BY subscribed_at DESC LIMIT $limit OFFSET $offset");
+            $stmt->execute($params);
+            $subscribers = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+            // Get total count
+            $countStmt = $this->db->prepare("SELECT COUNT(*) as total FROM newsletter_subscribers $where");
+            $countStmt->execute($params);
+            $total = $countStmt->fetch(\PDO::FETCH_ASSOC)['total'];
+            $totalPages = ceil($total / $limit);
+
+            // Get statistics
+            $stats = [
+                'total_active' => $subscriber->getTotalCount('active'),
+                'total_unsubscribed' => $subscriber->getTotalCount('unsubscribed'),
+                'recent_subscriptions' => $subscriber->getRecentSubscribers(5)
+            ];
+
+            echo \view('admin/newsletters/subscribers', [
+                'title' => 'Newsletter Subscribers',
+                'subscribers' => $subscribers,
+                'stats' => $stats,
+                'page' => $page,
+                'totalPages' => $totalPages,
+                'total' => $total,
+                'search' => $search,
+                'status' => $status
+            ]);
+        } catch (\Exception $e) {
+            error_log("Subscribers index error: " . $e->getMessage());
+            $_SESSION['flash_message'] = 'Error loading subscribers';
+            $_SESSION['flash_type'] = 'danger';
+            \redirect('/admin/newsletters');
+        }
+    }
+
+    public function addSubscriber()
+    {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $email = filter_input(INPUT_POST, 'email', FILTER_VALIDATE_EMAIL);
+            $name = filter_input(INPUT_POST, 'name', FILTER_SANITIZE_STRING);
+
+            if (!$email) {
+                $_SESSION['flash_message'] = 'Please enter a valid email address';
+                $_SESSION['flash_type'] = 'danger';
+                \redirect('/admin/newsletters/subscribers');
+                return;
+            }
+
+            try {
+                $subscriber = new NewsletterSubscriber();
+                
+                if ($subscriber->getByEmail($email)) {
+                    $_SESSION['flash_message'] = 'This email is already subscribed';
+                    $_SESSION['flash_type'] = 'warning';
+                    \redirect('/admin/newsletters/subscribers');
+                    return;
+                }
+
+                if ($subscriber->create($email, $name)) {
+                    $_SESSION['flash_message'] = 'Subscriber added successfully';
+                    $_SESSION['flash_type'] = 'success';
+                } else {
+                    $_SESSION['flash_message'] = 'Failed to add subscriber';
+                    $_SESSION['flash_type'] = 'danger';
+                }
+            } catch (\Exception $e) {
+                error_log("Add subscriber error: " . $e->getMessage());
+                $_SESSION['flash_message'] = 'Error adding subscriber';
+                $_SESSION['flash_type'] = 'danger';
+            }
+        }
+
+        \redirect('/admin/newsletters/subscribers');
+    }
+
+    public function updateSubscriber($id)
+    {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $email = filter_input(INPUT_POST, 'email', FILTER_VALIDATE_EMAIL);
+            $name = filter_input(INPUT_POST, 'name', FILTER_SANITIZE_STRING);
+
+            if (!$email) {
+                $_SESSION['flash_message'] = 'Please enter a valid email address';
+                $_SESSION['flash_type'] = 'danger';
+                \redirect('/admin/newsletters/subscribers');
+                return;
+            }
+
+            try {
+                $subscriber = new NewsletterSubscriber();
+                $existing = $subscriber->getByEmail($email);
+                
+                if ($existing && $existing['id'] != $id) {
+                    $_SESSION['flash_message'] = 'This email is already subscribed by another user';
+                    $_SESSION['flash_type'] = 'warning';
+                    \redirect('/admin/newsletters/subscribers');
+                    return;
+                }
+
+                if ($subscriber->update($id, $email, $name)) {
+                    $_SESSION['flash_message'] = 'Subscriber updated successfully';
+                    $_SESSION['flash_type'] = 'success';
+                } else {
+                    $_SESSION['flash_message'] = 'Failed to update subscriber';
+                    $_SESSION['flash_type'] = 'danger';
+                }
+            } catch (\Exception $e) {
+                error_log("Update subscriber error: " . $e->getMessage());
+                $_SESSION['flash_message'] = 'Error updating subscriber';
+                $_SESSION['flash_type'] = 'danger';
+            }
+        }
+
+        \redirect('/admin/newsletters/subscribers');
+    }
+
+    public function unsubscribeSubscriber($id)
+    {
+        try {
+            $subscriber = new NewsletterSubscriber();
+            if ($subscriber->unsubscribe($id)) {
+                $_SESSION['flash_message'] = 'Subscriber unsubscribed successfully';
+                $_SESSION['flash_type'] = 'success';
+            } else {
+                $_SESSION['flash_message'] = 'Failed to unsubscribe subscriber';
+                $_SESSION['flash_type'] = 'danger';
+            }
+        } catch (\Exception $e) {
+            error_log("Unsubscribe subscriber error: " . $e->getMessage());
+            $_SESSION['flash_message'] = 'Error unsubscribing subscriber';
+            $_SESSION['flash_type'] = 'danger';
+        }
+
+        \redirect('/admin/newsletters/subscribers');
+    }
+
+    public function resubscribeSubscriber($id)
+    {
+        try {
+            $subscriber = new NewsletterSubscriber();
+            if ($subscriber->resubscribe($id)) {
+                $_SESSION['flash_message'] = 'Subscriber resubscribed successfully';
+                $_SESSION['flash_type'] = 'success';
+            } else {
+                $_SESSION['flash_message'] = 'Failed to resubscribe subscriber';
+                $_SESSION['flash_type'] = 'danger';
+            }
+        } catch (\Exception $e) {
+            error_log("Resubscribe subscriber error: " . $e->getMessage());
+            $_SESSION['flash_message'] = 'Error resubscribing subscriber';
+            $_SESSION['flash_type'] = 'danger';
+        }
+
+        \redirect('/admin/newsletters/subscribers');
+    }
+
+    public function deleteSubscriber($id)
+    {
+        try {
+            $subscriber = new NewsletterSubscriber();
+            if ($subscriber->delete($id)) {
+                $_SESSION['flash_message'] = 'Subscriber deleted successfully';
+                $_SESSION['flash_type'] = 'success';
+            } else {
+                $_SESSION['flash_message'] = 'Failed to delete subscriber';
+                $_SESSION['flash_type'] = 'danger';
+            }
+        } catch (\Exception $e) {
+            error_log("Delete subscriber error: " . $e->getMessage());
+            $_SESSION['flash_message'] = 'Error deleting subscriber';
+            $_SESSION['flash_type'] = 'danger';
+        }
+
+        \redirect('/admin/newsletters/subscribers');
     }
 }

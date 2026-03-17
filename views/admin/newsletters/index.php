@@ -5,6 +5,9 @@ ob_start();
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h3 mb-0">Newsletter Management</h1>
         <div>
+            <a href="<?= BASE_URL ?>/admin/newsletters/subscribers" class="btn btn-outline-primary me-2">
+                <i class="bi bi-people me-2"></i>Manage Subscribers
+            </a>
             <a href="<?= BASE_URL ?>/admin/newsletters/create" class="btn btn-primary">
                 <i class="bi bi-plus-circle me-2"></i>Create Newsletter
             </a>
@@ -223,22 +226,100 @@ ob_start();
 
 <!-- Send Campaign Confirmation Modal -->
 <div class="modal fade" id="sendCampaignModal" tabindex="-1">
-    <div class="modal-dialog">
+    <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">Send Campaign</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <p>Are you sure you want to send this campaign to all subscribers? This action cannot be undone.</p>
-                <div id="sendCampaignProgress" style="display: none;">
-                    <div class="d-flex align-items-center">
-                        <div class="spinner-border text-primary me-3" role="status">
-                            <span class="visually-hidden">Sending...</span>
+                <form id="sendCampaignForm">
+                    <input type="hidden" id="sendCampaignId" name="campaign_id">
+                    
+                    <div class="mb-4">
+                        <label class="form-label">Send To</label>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="send_to" id="sendToSubscribers" value="subscribers" checked>
+                            <label class="form-check-label" for="sendToSubscribers">
+                                Newsletter Subscribers Only
+                            </label>
                         </div>
-                        <span>Sending campaign...</span>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="send_to" id="sendToUsers" value="users">
+                            <label class="form-check-label" for="sendToUsers">
+                                All Users (except admins)
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="send_to" id="sendToRoles" value="roles">
+                            <label class="form-check-label" for="sendToRoles">
+                                Specific Roles
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="send_to" id="sendToAll" value="all">
+                            <label class="form-check-label" for="sendToAll">
+                                All (Subscribers + Users)
+                            </label>
+                        </div>
                     </div>
-                </div>
+
+                    <div id="roleSelection" class="mb-4" style="display: none;">
+                        <label class="form-label">Select Roles</label>
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="roles[]" value="tenant" id="roleTenant">
+                                    <label class="form-check-label" for="roleTenant">Tenants</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="roles[]" value="landlord" id="roleLandlord">
+                                    <label class="form-check-label" for="roleLandlord">Landlords</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="roles[]" value="agent" id="roleAgent">
+                                    <label class="form-check-label" for="roleAgent">Agents</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="roles[]" value="caretaker" id="roleCaretaker">
+                                    <label class="form-check-label" for="roleCaretaker">Caretakers</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="roles[]" value="manager" id="roleManager">
+                                    <label class="form-check-label" for="roleManager">Managers</label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="roles[]" value="owner" id="roleOwner">
+                                    <label class="form-check-label" for="roleOwner">Owners</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <strong>Warning:</strong> This action cannot be undone. Once sent, the campaign will be delivered to all selected recipients.
+                    </div>
+
+                    <div id="sendCampaignProgress" style="display: none;">
+                        <div class="d-flex align-items-center">
+                            <div class="spinner-border text-primary me-3" role="status">
+                                <span class="visually-hidden">Sending...</span>
+                            </div>
+                            <span>Sending campaign...</span>
+                        </div>
+                    </div>
+                </form>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
@@ -360,10 +441,36 @@ function validateEmail(email) {
 }
 
 function sendCampaign(campaignId) {
+    document.getElementById('sendCampaignId').value = campaignId;
     const modal = new bootstrap.Modal(document.getElementById('sendCampaignModal'));
+    modal.show();
+    
+    // Handle role selection visibility
+    document.querySelectorAll('input[name="send_to"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            const roleSelection = document.getElementById('roleSelection');
+            if (this.value === 'roles') {
+                roleSelection.style.display = 'block';
+            } else {
+                roleSelection.style.display = 'none';
+            }
+        });
+    });
     
     // Set up confirm button click handler
     document.getElementById('confirmSendCampaignBtn').onclick = function() {
+        const formData = new FormData(document.getElementById('sendCampaignForm'));
+        
+        // Validate if roles are selected when "Specific Roles" is chosen
+        const sendTo = formData.get('send_to');
+        if (sendTo === 'roles') {
+            const selectedRoles = formData.getAll('roles[]');
+            if (selectedRoles.length === 0) {
+                showMessage('Error', 'Please select at least one role', 'danger');
+                return;
+            }
+        }
+        
         // Show loading spinner
         document.getElementById('sendCampaignProgress').style.display = 'block';
         this.disabled = true;
@@ -372,32 +479,30 @@ function sendCampaign(campaignId) {
         // Send campaign via AJAX
         fetch('<?= BASE_URL ?>/admin/newsletters/send/' + campaignId, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            }
+            body: formData
         })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                modal.hide();
-                showMessage('Success', 'Campaign sent successfully!', 'success');
+                bootstrap.Modal.getInstance(document.getElementById('sendCampaignModal')).hide();
+                showMessage('Success', data.message, 'success');
+                // Reload page after 2 seconds
                 setTimeout(() => {
                     window.location.reload();
                 }, 2000);
             } else {
-                showMessage('Error', data.message || 'Failed to send campaign', 'danger');
-                // Reset modal
-                document.getElementById('sendCampaignProgress').style.display = 'none';
-                this.disabled = false;
-                this.textContent = 'Send Campaign';
+                showMessage('Error', data.message, 'danger');
             }
         })
         .catch(error => {
+            console.error('Error:', error);
             showMessage('Error', 'Error sending campaign', 'danger');
-            // Reset modal
+        })
+        .finally(() => {
+            // Hide loading spinner
             document.getElementById('sendCampaignProgress').style.display = 'none';
             this.disabled = false;
-            this.textContent = 'Send Campaign';
+            this.innerHTML = 'Send Campaign';
         });
     };
     
