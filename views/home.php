@@ -1893,7 +1893,7 @@ document.addEventListener('DOMContentLoaded', function(){
 <div class="modal fade" id="newsletterModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header bg-primary text-white">
+            <div class="modal-header text-white" style="background-color: #8a5cf681;">
                 <h5 class="modal-title">
                     <i class="bi bi-envelope-heart me-2"></i>Subscribe to Our Newsletter
                 </h5>
@@ -1922,7 +1922,7 @@ document.addEventListener('DOMContentLoaded', function(){
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Maybe Later</button>
-                <button type="button" class="btn btn-primary" id="subscribeBtn">
+                <button type="button" class="btn btn-warning text-white" id="subscribeBtn">
                     <i class="bi bi-send me-2"></i>Subscribe Now
                 </button>
             </div>

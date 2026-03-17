@@ -2570,7 +2570,7 @@ ob_clean();
                         <div class="input-group">
                             <input type="email" name="email" class="form-control" placeholder="Enter your email" required>
                             <input type="text" name="name" class="form-control d-none" placeholder="Your name (optional)">
-                            <button type="submit" class="btn btn-primary" type="button">
+                            <button type="submit" class="btn btn-warning text-white" type="button">
                                 <i class="bi bi-send"></i>
                             </button>
                         </div>
