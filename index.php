@@ -222,6 +222,7 @@ $routes = [
     'admin/newsletters/send-test' => ['controller' => 'NewsletterController', 'action' => 'sendTest'],
     'admin/newsletters/send/(\d+)' => ['controller' => 'NewsletterController', 'action' => 'sendCampaign'],
     'admin/newsletters/stats/(\d+)' => ['controller' => 'NewsletterController', 'action' => 'viewStats'],
+    'admin/newsletters/stats-ajax/(\d+)' => ['controller' => 'NewsletterController', 'action' => 'viewStatsAjax'],
     'admin/newsletters/follow-up-schedules' => ['controller' => 'NewsletterController', 'action' => 'followUpSchedules'],
     'admin/newsletters/create-follow-up' => ['controller' => 'NewsletterController', 'action' => 'createFollowUpSchedule'],
     'newsletter/track/(\d+)/(\d+)' => ['controller' => 'NewsletterController', 'action' => 'trackEmail'],

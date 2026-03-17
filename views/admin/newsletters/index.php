@@ -103,9 +103,9 @@ ob_start();
                                             <a href="<?= BASE_URL ?>/admin/newsletters/edit/<?= $campaign['id'] ?>" class="btn btn-outline-primary" title="Edit">
                                                 <i class="bi bi-pencil"></i>
                                             </a>
-                                            <a href="<?= BASE_URL ?>/admin/newsletters/stats/<?= $campaign['id'] ?>" class="btn btn-outline-info" title="Statistics">
+                                            <button type="button" class="btn btn-outline-info" onclick="showStats(<?= $campaign['id'] ?>)" title="Statistics">
                                                 <i class="bi bi-bar-chart"></i>
-                                            </a>
+                                            </button>
                                             <?php if ($campaign['status'] === 'draft' || $campaign['status'] === 'scheduled'): ?>
                                                 <button type="button" class="btn btn-outline-success" onclick="sendTestEmail(<?= $campaign['id'] ?>)" title="Send Test">
                                                     <i class="bi bi-send"></i>
@@ -166,6 +166,30 @@ ob_start();
     </div>
 </div>
 
+<!-- Statistics Modal -->
+<div class="modal fade" id="statsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Campaign Statistics</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="statsContent">
+                    <div class="text-center">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 function sendTestEmail(campaignId) {
     document.getElementById('testCampaignId').value = campaignId;
@@ -206,6 +230,37 @@ function sendCampaign(campaignId) {
     if (confirm('Are you sure you want to send this campaign to all subscribers? This action cannot be undone.')) {
         window.location.href = '<?= BASE_URL ?>/admin/newsletters/send/' + campaignId;
     }
+}
+
+function showStats(campaignId) {
+    // Show modal with loading spinner
+    const statsModal = new bootstrap.Modal(document.getElementById('statsModal'));
+    const statsContent = document.getElementById('statsContent');
+    
+    // Reset to loading state
+    statsContent.innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+        </div>
+    `;
+    
+    statsModal.show();
+    
+    // Load stats via AJAX
+    fetch(`<?= BASE_URL ?>/admin/newsletters/stats-ajax/${campaignId}`)
+        .then(response => response.text())
+        .then(html => {
+            statsContent.innerHTML = html;
+        })
+        .catch(error => {
+            statsContent.innerHTML = `
+                <div class="alert alert-danger">
+                    Error loading statistics: ${error.message}
+                </div>
+            `;
+        });
 }
 </script>
 

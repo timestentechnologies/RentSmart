@@ -332,6 +332,43 @@ class NewsletterController
         }
     }
 
+    public function viewStatsAjax($id)
+    {
+        try {
+            $db = Connection::getInstance()->getConnection();
+            
+            // Get campaign details
+            $stmt = $db->prepare("SELECT * FROM email_campaigns WHERE id = ?");
+            $stmt->execute([$id]);
+            $campaign = $stmt->fetch(\PDO::FETCH_ASSOC);
+
+            if (!$campaign) {
+                echo '<div class="alert alert-danger">Campaign not found</div>';
+                return;
+            }
+
+            // Get tracking stats
+            $trackingStmt = $db->prepare("SELECT COUNT(*) as total, SUM(CASE WHEN opened_at IS NOT NULL THEN 1 ELSE 0 END) as opened, SUM(CASE WHEN clicked_at IS NOT NULL THEN 1 ELSE 0 END) as clicked FROM email_tracking WHERE campaign_id = ?");
+            $trackingStmt->execute([$id]);
+            $stats = $trackingStmt->fetch(\PDO::FETCH_ASSOC);
+
+            // Get survey responses if any
+            $surveyStmt = $db->prepare("SELECT q.question_text, COUNT(r.id) as response_count FROM survey_questions q LEFT JOIN survey_responses r ON q.id = r.question_id WHERE q.campaign_id = ? GROUP BY q.id, q.question_text");
+            $surveyStmt->execute([$id]);
+            $surveyStats = $surveyStmt->fetchAll(\PDO::FETCH_ASSOC);
+
+            // Load the stats view content directly without layout
+            ob_start();
+            include __DIR__ . '/../../views/admin/newsletters/stats_content.php';
+            $content = ob_get_clean();
+            
+            echo $content;
+        } catch (\Exception $e) {
+            error_log("View stats AJAX error: " . $e->getMessage());
+            echo '<div class="alert alert-danger">Error loading statistics</div>';
+        }
+    }
+
     private function sendEmail($toEmail, $toName, $subject, $content, $campaignId = null, $userId = null)
     {
         try {
