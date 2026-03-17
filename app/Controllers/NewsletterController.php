@@ -74,12 +74,12 @@ class NewsletterController
 
     public function storeCampaign()
     {
-        $title = filter_input(INPUT_POST, 'title', FILTER_SANITIZE_STRING);
-        $subject = filter_input(INPUT_POST, 'subject', FILTER_SANITIZE_STRING);
+        $title = filter_input(INPUT_POST, 'title', FILTER_UNSAFE_RAW);
+        $subject = filter_input(INPUT_POST, 'subject', FILTER_UNSAFE_RAW);
         $content = $_POST['content'] ?? '';
-        $type = filter_input(INPUT_POST, 'type', FILTER_SANITIZE_STRING) ?: 'newsletter';
-        $scheduleDate = filter_input(INPUT_POST, 'schedule_date', FILTER_SANITIZE_STRING);
-        $scheduleTime = filter_input(INPUT_POST, 'schedule_time', FILTER_SANITIZE_STRING);
+        $type = filter_input(INPUT_POST, 'type', FILTER_UNSAFE_RAW) ?: 'newsletter';
+        $scheduleDate = filter_input(INPUT_POST, 'schedule_date', FILTER_UNSAFE_RAW);
+        $scheduleTime = filter_input(INPUT_POST, 'schedule_time', FILTER_UNSAFE_RAW);
 
         if (!$title || !$subject || !$content) {
             $_SESSION['flash_message'] = 'Please fill in all required fields';
@@ -184,13 +184,13 @@ class NewsletterController
             exit;
         }
 
-        $title = filter_input(INPUT_POST, 'title', FILTER_SANITIZE_STRING);
-        $subject = filter_input(INPUT_POST, 'subject', FILTER_SANITIZE_STRING);
+        $title = filter_input(INPUT_POST, 'title', FILTER_UNSAFE_RAW);
+        $subject = filter_input(INPUT_POST, 'subject', FILTER_UNSAFE_RAW);
         $content = $_POST['content'] ?? '';
-        $type = filter_input(INPUT_POST, 'type', FILTER_SANITIZE_STRING) ?: 'newsletter';
-        $status = filter_input(INPUT_POST, 'status', FILTER_SANITIZE_STRING) ?: 'draft';
-        $scheduleDate = filter_input(INPUT_POST, 'schedule_date', FILTER_SANITIZE_STRING);
-        $scheduleTime = filter_input(INPUT_POST, 'schedule_time', FILTER_SANITIZE_STRING);
+        $type = filter_input(INPUT_POST, 'type', FILTER_UNSAFE_RAW) ?: 'newsletter';
+        $status = filter_input(INPUT_POST, 'status', FILTER_UNSAFE_RAW) ?: 'draft';
+        $scheduleDate = filter_input(INPUT_POST, 'schedule_date', FILTER_UNSAFE_RAW);
+        $scheduleTime = filter_input(INPUT_POST, 'schedule_time', FILTER_UNSAFE_RAW);
 
         if (!$title || !$subject || !$content) {
             $_SESSION['flash_message'] = 'Please fill in all required fields';
@@ -541,9 +541,9 @@ class NewsletterController
             exit;
         }
 
-        $name = filter_input(INPUT_POST, 'name', FILTER_SANITIZE_STRING);
+        $name = filter_input(INPUT_POST, 'name', FILTER_UNSAFE_RAW);
         $daysAfter = filter_input(INPUT_POST, 'days_after', FILTER_VALIDATE_INT);
-        $subject = filter_input(INPUT_POST, 'subject', FILTER_SANITIZE_STRING);
+        $subject = filter_input(INPUT_POST, 'subject', FILTER_UNSAFE_RAW);
         $content = $_POST['content'] ?? '';
 
         if (!$name || !$daysAfter || !$subject || !$content) {
