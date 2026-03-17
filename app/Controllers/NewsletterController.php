@@ -10,8 +10,8 @@ class NewsletterController
 {
     public function index()
     {
-        require_auth();
-        if (!is_admin()) {
+        \require_auth();
+        if (!\is_admin()) {
             $_SESSION['flash_message'] = 'Access denied';
             $_SESSION['flash_type'] = 'danger';
             header('Location: ' . BASE_URL . '/dashboard');
@@ -42,7 +42,7 @@ class NewsletterController
             $total = $countStmt->fetch(\PDO::FETCH_ASSOC)['total'];
             $totalPages = ceil($total / $limit);
 
-            echo view('admin/newsletters/index', [
+            echo \view('admin/newsletters/index', [
                 'title' => 'Newsletter Management',
                 'campaigns' => $campaigns,
                 'currentPage' => $page,
@@ -60,8 +60,8 @@ class NewsletterController
 
     public function create()
     {
-        require_auth();
-        if (!is_admin()) {
+        \require_auth();
+        if (!\is_admin()) {
             $_SESSION['flash_message'] = 'Access denied';
             $_SESSION['flash_type'] = 'danger';
             header('Location: ' . BASE_URL . '/dashboard');
@@ -73,7 +73,7 @@ class NewsletterController
             return;
         }
 
-        echo view('admin/newsletters/create', [
+        echo \view('admin/newsletters/create', [
             'title' => 'Create Newsletter'
         ]);
     }
@@ -134,8 +134,8 @@ class NewsletterController
 
     public function edit($id)
     {
-        require_auth();
-        if (!is_admin()) {
+        \require_auth();
+        if (!\is_admin()) {
             $_SESSION['flash_message'] = 'Access denied';
             $_SESSION['flash_type'] = 'danger';
             header('Location: ' . BASE_URL . '/dashboard');
@@ -165,7 +165,7 @@ class NewsletterController
             $surveyStmt->execute([$id]);
             $surveyQuestions = $surveyStmt->fetchAll(\PDO::FETCH_ASSOC);
 
-            echo view('admin/newsletters/edit', [
+            echo \view('admin/newsletters/edit', [
                 'title' => 'Edit Newsletter',
                 'campaign' => $campaign,
                 'attachments' => $attachments,
@@ -242,9 +242,9 @@ class NewsletterController
 
     public function sendTest()
     {
-        require_auth();
-        if (!is_admin()) {
-            echo json_encode(['success' => false, 'message' => 'Access denied']);
+        \require_auth();
+        if (!\is_admin()) {
+            echo \json_encode(['success' => false, 'message' => 'Access denied']);
             exit;
         }
 
@@ -252,7 +252,7 @@ class NewsletterController
         $testEmail = filter_input(INPUT_POST, 'test_email', FILTER_VALIDATE_EMAIL);
 
         if (!$campaignId || !$testEmail) {
-            echo json_encode(['success' => false, 'message' => 'Invalid parameters']);
+            echo \json_encode(['success' => false, 'message' => 'Invalid parameters']);
             exit;
         }
 
@@ -263,27 +263,27 @@ class NewsletterController
             $campaign = $stmt->fetch(\PDO::FETCH_ASSOC);
 
             if (!$campaign) {
-                echo json_encode(['success' => false, 'message' => 'Campaign not found']);
+                echo \json_encode(['success' => false, 'message' => 'Campaign not found']);
                 exit;
             }
 
             $sent = $this->sendEmail($testEmail, 'Test User', $campaign['subject'], $campaign['content'], $campaign['id']);
 
             if ($sent) {
-                echo json_encode(['success' => true, 'message' => 'Test email sent successfully']);
+                echo \json_encode(['success' => true, 'message' => 'Test email sent successfully']);
             } else {
-                echo json_encode(['success' => false, 'message' => 'Failed to send test email']);
+                echo \json_encode(['success' => false, 'message' => 'Failed to send test email']);
             }
         } catch (\Exception $e) {
             error_log("Send test error: " . $e->getMessage());
-            echo json_encode(['success' => false, 'message' => 'Error sending test email']);
+            echo \json_encode(['success' => false, 'message' => 'Error sending test email']);
         }
     }
 
     public function sendCampaign($id)
     {
-        require_auth();
-        if (!is_admin()) {
+        \require_auth();
+        if (!\is_admin()) {
             $_SESSION['flash_message'] = 'Access denied';
             $_SESSION['flash_type'] = 'danger';
             header('Location: ' . BASE_URL . '/admin/newsletters');
@@ -334,8 +334,8 @@ class NewsletterController
 
     public function viewStats($id)
     {
-        require_auth();
-        if (!is_admin()) {
+        \require_auth();
+        if (!\is_admin()) {
             $_SESSION['flash_message'] = 'Access denied';
             $_SESSION['flash_type'] = 'danger';
             header('Location: ' . BASE_URL . '/dashboard');
@@ -367,7 +367,7 @@ class NewsletterController
             $surveyStmt->execute([$id]);
             $surveyStats = $surveyStmt->fetchAll(\PDO::FETCH_ASSOC);
 
-            echo view('admin/newsletters/stats', [
+            echo \view('admin/newsletters/stats', [
                 'title' => 'Campaign Statistics',
                 'campaign' => $campaign,
                 'stats' => $stats,
@@ -521,8 +521,8 @@ class NewsletterController
 
     public function followUpSchedules()
     {
-        require_auth();
-        if (!is_admin()) {
+        \require_auth();
+        if (!\is_admin()) {
             $_SESSION['flash_message'] = 'Access denied';
             $_SESSION['flash_type'] = 'danger';
             header('Location: ' . BASE_URL . '/dashboard');
@@ -533,7 +533,7 @@ class NewsletterController
         $stmt = $db->query("SELECT * FROM follow_up_schedules ORDER BY days_after_registration");
         $schedules = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
-        echo view('admin/newsletters/follow_up_schedules', [
+        echo \view('admin/newsletters/follow_up_schedules', [
             'title' => 'Follow-up Schedules',
             'schedules' => $schedules
         ]);
@@ -541,9 +541,9 @@ class NewsletterController
 
     public function createFollowUpSchedule()
     {
-        require_auth();
-        if (!is_admin()) {
-            echo json_encode(['success' => false, 'message' => 'Access denied']);
+        \require_auth();
+        if (!\is_admin()) {
+            echo \json_encode(['success' => false, 'message' => 'Access denied']);
             exit;
         }
 
@@ -553,7 +553,7 @@ class NewsletterController
         $content = $_POST['content'] ?? '';
 
         if (!$name || !$daysAfter || !$subject || !$content) {
-            echo json_encode(['success' => false, 'message' => 'Please fill in all fields']);
+            echo \json_encode(['success' => false, 'message' => 'Please fill in all fields']);
             exit;
         }
 
@@ -562,10 +562,10 @@ class NewsletterController
             $stmt = $db->prepare("INSERT INTO follow_up_schedules (name, days_after_registration, subject, content) VALUES (?, ?, ?, ?)");
             $stmt->execute([$name, $daysAfter, $subject, $content]);
 
-            echo json_encode(['success' => true, 'message' => 'Follow-up schedule created successfully']);
+            echo \json_encode(['success' => true, 'message' => 'Follow-up schedule created successfully']);
         } catch (\Exception $e) {
             error_log("Create follow-up schedule error: " . $e->getMessage());
-            echo json_encode(['success' => false, 'message' => 'Error creating schedule']);
+            echo \json_encode(['success' => false, 'message' => 'Error creating schedule']);
         }
     }
 
