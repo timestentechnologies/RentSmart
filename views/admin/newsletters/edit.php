@@ -45,18 +45,41 @@ ob_start();
                         <!-- Rich Text Editor Toolbar -->
                         <div class="mb-3">
                             <label class="form-label">Quick HTML Templates</label>
-                            <div class="btn-group" role="group">
-                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="insertTemplate('logo')">Logo</button>
-                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="insertTemplate('header')">Header</button>
-                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="insertTemplate('subheader')">Subheader</button>
-                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="insertTemplate('paragraph')">Paragraph</button>
-                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="insertTemplate('button')">Button</button>
-                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="insertTemplate('image')">Image</button>
-                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="insertTemplate('list')">List</button>
-                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="insertTemplate('quote')">Quote</button>
-                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="insertTemplate('signature')">Signature</button>
-                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="insertTemplate('divider')">Divider</button>
+                            <div class="row g-2 mb-2">
+                                <div class="col-12">
+                                    <div class="btn-group" role="group">
+                                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="insertTemplate('logo')">Logo</button>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="insertTemplate('header')">Header</button>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="insertTemplate('subheader')">Subheader</button>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="insertTemplate('paragraph')">Paragraph</button>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="insertTemplate('button')">Button</button>
+                                    </div>
+                                </div>
                             </div>
+                            <div class="row g-2 mb-2">
+                                <div class="col-12">
+                                    <div class="btn-group" role="group">
+                                        <button type="button" class="btn btn-outline-info btn-sm" onclick="insertTemplate('greeting')">Greeting</button>
+                                        <button type="button" class="btn btn-outline-info btn-sm" onclick="insertTemplate('userName')">User Name</button>
+                                        <button type="button" class="btn btn-outline-info btn-sm" onclick="insertTemplate('userEmail')">User Email</button>
+                                        <button type="button" class="btn btn-outline-info btn-sm" onclick="insertTemplate('personalMessage')">Personal Message</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row g-2">
+                                <div class="col-12">
+                                    <div class="btn-group" role="group">
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="insertTemplate('image')">Image</button>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="insertTemplate('list')">List</button>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="insertTemplate('quote')">Quote</button>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="insertTemplate('signature')">Signature</button>
+                                        <button type="button" class="btn btn-outline-secondary btn-sm" onclick="insertTemplate('divider')">Divider</button>
+                                    </div>
+                                </div>
+                            </div>
+                            <small class="text-muted">
+                                <strong>Dynamic Variables:</strong> {name} - User's full name | {email} - User's email address
+                            </small>
                         </div>
                     </div>
                 </div>
@@ -251,7 +274,7 @@ document.getElementById('content').addEventListener('input', function() {
 function insertTemplate(type) {
     const textarea = document.getElementById('content');
     const templates = {
-        logo: '<div style="text-align:center;margin-bottom:30px;"><img src="<?= BASE_URL ?>/public/assets/images/logo.png" alt="RentSmart Logo" style="max-width:200px;max-height:80px;"></div>',
+        logo: '<div style="text-align:center;margin-bottom:30px;"><img src="<?= htmlspecialchars($logoUrl) ?>" alt="<?= htmlspecialchars($siteName) ?> Logo" style="max-width:200px;max-height:80px;"></div>',
         header: '<h1 style="color: #2c3e50; margin-bottom: 20px; text-align: center;">Your Header Text</h1>',
         subheader: '<h2 style="color: #34495e; margin-bottom: 15px;">Your Subheader Text</h2>',
         paragraph: '<p style="margin-bottom: 15px; line-height: 1.6;">Your paragraph text goes here. This is a well-formatted paragraph that will look great in the email.</p>',
@@ -260,7 +283,11 @@ function insertTemplate(type) {
         divider: '<hr style="border: none; border-top: 2px solid #ecf0f1; margin: 30px 0;">',
         list: '<ul style="margin-bottom: 20px; padding-left: 20px;"><li style="margin-bottom: 8px;">List item 1</li><li style="margin-bottom: 8px;">List item 2</li><li style="margin-bottom: 8px;">List item 3</li></ul>',
         quote: '<blockquote style="border-left: 4px solid #3498db; margin: 20px 0; padding-left: 20px; font-style: italic; color: #555;">"Your quote text here - this will stand out nicely in the email."</blockquote>',
-        signature: '<div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ecf0f1;"><p style="margin: 0; color: #7f8c8d;">Best regards,<br><strong>Your Name</strong><br>Your Position<br>RentSmart Team</p></div>'
+        signature: '<div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #ecf0f1;"><p style="margin: 0; color: #7f8c8d;">Best regards,<br><strong>Your Name</strong><br>Your Position<br><?= htmlspecialchars($siteName) ?> Team</p></div>',
+        greeting: '<h2 style="color: #2c3e50; margin-bottom: 20px;">Hello {name},</h2>',
+        userName: '<strong>{name}</strong>',
+        userEmail: '<span style="color: #7f8c8d;">{email}</span>',
+        personalMessage: '<p style="margin-bottom: 15px; line-height: 1.6;">Hi {name},</p><p style="margin-bottom: 15px; line-height: 1.6;">We hope you\'re enjoying your experience with <?= htmlspecialchars($siteName) ?>!</p>'
     };
     
     const cursorPos = textarea.selectionStart;

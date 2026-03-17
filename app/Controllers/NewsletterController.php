@@ -72,8 +72,17 @@ class NewsletterController
             return;
         }
 
+        // Get system settings for dynamic content
+        $settings = (new Setting())->getAllAsAssoc();
+        $siteUrl = BASE_URL;
+        $logoUrl = isset($settings['site_logo']) && $settings['site_logo'] ? ($siteUrl . '/public/assets/images/' . $settings['site_logo']) : ($siteUrl . '/public/assets/images/logo.png');
+        $siteName = $settings['site_name'] ?? 'RentSmart';
+
         echo \view('admin/newsletters/create', [
-            'title' => 'Create Newsletter'
+            'title' => 'Create Newsletter',
+            'settings' => $settings,
+            'logoUrl' => $logoUrl,
+            'siteName' => $siteName
         ]);
     }
 
@@ -153,11 +162,20 @@ class NewsletterController
             $surveyStmt->execute([$id]);
             $surveyQuestions = $surveyStmt->fetchAll(\PDO::FETCH_ASSOC);
 
+            // Get system settings for dynamic content
+            $settings = (new Setting())->getAllAsAssoc();
+            $siteUrl = BASE_URL;
+            $logoUrl = isset($settings['site_logo']) && $settings['site_logo'] ? ($siteUrl . '/public/assets/images/' . $settings['site_logo']) : ($siteUrl . '/public/assets/images/logo.png');
+            $siteName = $settings['site_name'] ?? 'RentSmart';
+
             echo \view('admin/newsletters/edit', [
                 'title' => 'Edit Newsletter',
                 'campaign' => $campaign,
                 'attachments' => $attachments,
-                'surveyQuestions' => $surveyQuestions
+                'surveyQuestions' => $surveyQuestions,
+                'settings' => $settings,
+                'logoUrl' => $logoUrl,
+                'siteName' => $siteName
             ]);
         } catch (\Exception $e) {
             error_log("Edit newsletter error: " . $e->getMessage());

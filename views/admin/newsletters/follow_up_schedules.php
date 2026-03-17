@@ -188,7 +188,7 @@ ob_start();
     </div>
 </div>
 
-// Success/Error Modal -->
+<!-- // Success/Error Modal --> 
 <div class="modal fade" id="messageModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
