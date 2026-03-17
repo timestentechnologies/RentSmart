@@ -238,24 +238,40 @@ class NewsletterController
     {
         $campaignId = filter_input(INPUT_POST, 'campaign_id', FILTER_VALIDATE_INT);
         $testEmail = filter_input(INPUT_POST, 'test_email', FILTER_VALIDATE_EMAIL);
+        
+        // Get form data for direct test (from create page)
+        $title = filter_input(INPUT_POST, 'title', FILTER_SANITIZE_STRING);
+        $subject = filter_input(INPUT_POST, 'subject', FILTER_SANITIZE_STRING);
+        $content = $_POST['content'] ?? '';
 
-        if (!$campaignId || !$testEmail) {
-            echo json_encode(['success' => false, 'message' => 'Invalid parameters']);
+        if (!$testEmail) {
+            echo json_encode(['success' => false, 'message' => 'Invalid email address']);
+            exit;
+        }
+
+        if (!$campaignId && (!$title || !$subject || !$content)) {
+            echo json_encode(['success' => false, 'message' => 'Missing campaign data']);
             exit;
         }
 
         try {
-            $db = Connection::getInstance()->getConnection();
-            $stmt = $db->prepare("SELECT * FROM email_campaigns WHERE id = ?");
-            $stmt->execute([$campaignId]);
-            $campaign = $stmt->fetch(\PDO::FETCH_ASSOC);
+            if ($campaignId) {
+                // Test existing campaign
+                $db = Connection::getInstance()->getConnection();
+                $stmt = $db->prepare("SELECT * FROM email_campaigns WHERE id = ?");
+                $stmt->execute([$campaignId]);
+                $campaign = $stmt->fetch(\PDO::FETCH_ASSOC);
 
-            if (!$campaign) {
-                echo json_encode(['success' => false, 'message' => 'Campaign not found']);
-                exit;
+                if (!$campaign) {
+                    echo json_encode(['success' => false, 'message' => 'Campaign not found']);
+                    exit;
+                }
+
+                $sent = $this->sendEmail($testEmail, 'Test User', $campaign['subject'], $campaign['content'], $campaign['id']);
+            } else {
+                // Test with direct form data (from create page)
+                $sent = $this->sendEmail($testEmail, 'Test User', $subject, $content, null);
             }
-
-            $sent = $this->sendEmail($testEmail, 'Test User', $campaign['subject'], $campaign['content'], $campaign['id']);
 
             if ($sent) {
                 echo json_encode(['success' => true, 'message' => 'Test email sent successfully']);
