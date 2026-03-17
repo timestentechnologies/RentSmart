@@ -1,5 +1,11 @@
 <?php
 
+namespace App\Controllers;
+
+use App\Database\Connection;
+use App\Models\Setting;
+use PHPMailer\PHPMailer\PHPMailer;
+
 class NewsletterController
 {
     public function index()
@@ -12,11 +18,11 @@ class NewsletterController
             exit;
         }
 
-        $db = getDB();
+        $db = Connection::getInstance()->getConnection();
         $page = filter_input(INPUT_GET, 'page', FILTER_VALIDATE_INT) ?: 1;
         $limit = 10;
         $offset = ($page - 1) * $limit;
-        $search = filter_input(INPUT_GET, 'search', FILTER_UNSAFE_RAW);
+        $search = filter_input(INPUT_GET, 'search', FILTER_SANITIZE_STRING);
 
         try {
             $where = '';
@@ -74,12 +80,12 @@ class NewsletterController
 
     public function storeCampaign()
     {
-        $title = filter_input(INPUT_POST, 'title', FILTER_UNSAFE_RAW);
-        $subject = filter_input(INPUT_POST, 'subject', FILTER_UNSAFE_RAW);
+        $title = filter_input(INPUT_POST, 'title', FILTER_SANITIZE_STRING);
+        $subject = filter_input(INPUT_POST, 'subject', FILTER_SANITIZE_STRING);
         $content = $_POST['content'] ?? '';
-        $type = filter_input(INPUT_POST, 'type', FILTER_UNSAFE_RAW) ?: 'newsletter';
-        $scheduleDate = filter_input(INPUT_POST, 'schedule_date', FILTER_UNSAFE_RAW);
-        $scheduleTime = filter_input(INPUT_POST, 'schedule_time', FILTER_UNSAFE_RAW);
+        $type = filter_input(INPUT_POST, 'type', FILTER_SANITIZE_STRING) ?: 'newsletter';
+        $scheduleDate = filter_input(INPUT_POST, 'schedule_date', FILTER_SANITIZE_STRING);
+        $scheduleTime = filter_input(INPUT_POST, 'schedule_time', FILTER_SANITIZE_STRING);
 
         if (!$title || !$subject || !$content) {
             $_SESSION['flash_message'] = 'Please fill in all required fields';
@@ -89,7 +95,7 @@ class NewsletterController
         }
 
         try {
-            $db = getDB();
+            $db = Connection::getInstance()->getConnection();
             $scheduledAt = null;
             $status = 'draft';
 
@@ -137,7 +143,7 @@ class NewsletterController
         }
 
         try {
-            $db = getDB();
+            $db = Connection::getInstance()->getConnection();
             $stmt = $db->prepare("SELECT * FROM email_campaigns WHERE id = ?");
             $stmt->execute([$id]);
             $campaign = $stmt->fetch(\PDO::FETCH_ASSOC);
@@ -184,13 +190,13 @@ class NewsletterController
             exit;
         }
 
-        $title = filter_input(INPUT_POST, 'title', FILTER_UNSAFE_RAW);
-        $subject = filter_input(INPUT_POST, 'subject', FILTER_UNSAFE_RAW);
+        $title = filter_input(INPUT_POST, 'title', FILTER_SANITIZE_STRING);
+        $subject = filter_input(INPUT_POST, 'subject', FILTER_SANITIZE_STRING);
         $content = $_POST['content'] ?? '';
-        $type = filter_input(INPUT_POST, 'type', FILTER_UNSAFE_RAW) ?: 'newsletter';
-        $status = filter_input(INPUT_POST, 'status', FILTER_UNSAFE_RAW) ?: 'draft';
-        $scheduleDate = filter_input(INPUT_POST, 'schedule_date', FILTER_UNSAFE_RAW);
-        $scheduleTime = filter_input(INPUT_POST, 'schedule_time', FILTER_UNSAFE_RAW);
+        $type = filter_input(INPUT_POST, 'type', FILTER_SANITIZE_STRING) ?: 'newsletter';
+        $status = filter_input(INPUT_POST, 'status', FILTER_SANITIZE_STRING) ?: 'draft';
+        $scheduleDate = filter_input(INPUT_POST, 'schedule_date', FILTER_SANITIZE_STRING);
+        $scheduleTime = filter_input(INPUT_POST, 'schedule_time', FILTER_SANITIZE_STRING);
 
         if (!$title || !$subject || !$content) {
             $_SESSION['flash_message'] = 'Please fill in all required fields';
@@ -251,7 +257,7 @@ class NewsletterController
         }
 
         try {
-            $db = getDB();
+            $db = Connection::getInstance()->getConnection();
             $stmt = $db->prepare("SELECT * FROM email_campaigns WHERE id = ?");
             $stmt->execute([$campaignId]);
             $campaign = $stmt->fetch(\PDO::FETCH_ASSOC);
@@ -285,7 +291,7 @@ class NewsletterController
         }
 
         try {
-            $db = getDB();
+            $db = Connection::getInstance()->getConnection();
             $stmt = $db->prepare("SELECT * FROM email_campaigns WHERE id = ? AND status IN ('draft', 'scheduled')");
             $stmt->execute([$id]);
             $campaign = $stmt->fetch(\PDO::FETCH_ASSOC);
@@ -337,7 +343,7 @@ class NewsletterController
         }
 
         try {
-            $db = getDB();
+            $db = Connection::getInstance()->getConnection();
             
             // Get campaign details
             $stmt = $db->prepare("SELECT * FROM email_campaigns WHERE id = ?");
@@ -379,7 +385,7 @@ class NewsletterController
     private function sendEmail($toEmail, $toName, $subject, $content, $campaignId = null, $userId = null)
     {
         try {
-            $settings = getSettings();
+            $settings = (new Setting())->getAllAsAssoc();
             if (empty($settings['smtp_host'])) {
                 error_log('SMTP not configured');
                 return false;
@@ -423,7 +429,7 @@ class NewsletterController
 
             if ($sent && $campaignId && $userId) {
                 // Log email sent
-                $db = getDB();
+                $db = Connection::getInstance()->getConnection();
                 $logStmt = $db->prepare("INSERT INTO email_tracking (campaign_id, user_id, email, sent_at) VALUES (?, ?, ?, NOW()) ON DUPLICATE KEY UPDATE sent_at = NOW()");
                 $logStmt->execute([$campaignId, $userId, $toEmail]);
             }
@@ -446,7 +452,7 @@ class NewsletterController
             mkdir($uploadDir, 0755, true);
         }
 
-        $db = getDB();
+        $db = Connection::getInstance()->getConnection();
         $stmt = $db->prepare("INSERT INTO campaign_attachments (campaign_id, filename, original_name, file_path, file_size, mime_type) VALUES (?, ?, ?, ?, ?, ?)");
 
         foreach ($_FILES['attachments']['name'] as $key => $name) {
@@ -475,7 +481,7 @@ class NewsletterController
         $options = $_POST['survey_options'];
         $required = $_POST['survey_required'] ?? [];
 
-        $db = getDB();
+        $db = Connection::getInstance()->getConnection();
         $stmt = $db->prepare("INSERT INTO survey_questions (campaign_id, question_text, question_type, options, required, order_index) VALUES (?, ?, ?, ?, ?, ?)");
 
         foreach ($questions as $index => $question) {
@@ -501,7 +507,7 @@ class NewsletterController
     public function trackEmail($campaignId, $userId)
     {
         try {
-            $db = getDB();
+            $db = Connection::getInstance()->getConnection();
             $stmt = $db->prepare("UPDATE email_tracking SET opened_at = NOW() WHERE campaign_id = ? AND user_id = ? AND opened_at IS NULL");
             $stmt->execute([$campaignId, $userId]);
 
@@ -523,7 +529,7 @@ class NewsletterController
             exit;
         }
 
-        $db = getDB();
+        $db = Connection::getInstance()->getConnection();
         $stmt = $db->query("SELECT * FROM follow_up_schedules ORDER BY days_after_registration");
         $schedules = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
@@ -541,9 +547,9 @@ class NewsletterController
             exit;
         }
 
-        $name = filter_input(INPUT_POST, 'name', FILTER_UNSAFE_RAW);
+        $name = filter_input(INPUT_POST, 'name', FILTER_SANITIZE_STRING);
         $daysAfter = filter_input(INPUT_POST, 'days_after', FILTER_VALIDATE_INT);
-        $subject = filter_input(INPUT_POST, 'subject', FILTER_UNSAFE_RAW);
+        $subject = filter_input(INPUT_POST, 'subject', FILTER_SANITIZE_STRING);
         $content = $_POST['content'] ?? '';
 
         if (!$name || !$daysAfter || !$subject || !$content) {
@@ -552,7 +558,7 @@ class NewsletterController
         }
 
         try {
-            $db = getDB();
+            $db = Connection::getInstance()->getConnection();
             $stmt = $db->prepare("INSERT INTO follow_up_schedules (name, days_after_registration, subject, content) VALUES (?, ?, ?, ?)");
             $stmt->execute([$name, $daysAfter, $subject, $content]);
 
@@ -567,7 +573,7 @@ class NewsletterController
     {
         // This method should be called by a cron job daily
         try {
-            $db = getDB();
+            $db = Connection::getInstance()->getConnection();
             
             // Get active schedules
             $scheduleStmt = $db->query("SELECT * FROM follow_up_schedules WHERE is_active = 1");
