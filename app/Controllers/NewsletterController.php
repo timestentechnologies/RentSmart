@@ -559,10 +559,10 @@ class NewsletterController
                         box-shadow: 0 2px 10px rgba(0,0,0,0.1);
                     }
                     .email-header {
-                        background-color: #e8f5f2;
+                        background-color: #f5f4e8;
                         padding: 30px 20px;
                         text-align: center;
-                        border-bottom: 3px solid #4db6ac;
+                        border-bottom: 3px solid #f4a909;
                     }
                     .email-header img {
                         max-width: 200px;
