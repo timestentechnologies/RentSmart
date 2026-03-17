@@ -412,6 +412,15 @@ function previewSchedule(id) {
         `;
     }, 500);
 }
+
+// Show message modal
+function showMessage(title, message, type) {
+    document.getElementById('messageModalTitle').textContent = title;
+    document.getElementById('messageModalContent').textContent = message;
+    
+    const modal = new bootstrap.Modal(document.getElementById('messageModal'));
+    modal.show();
+}
 </script>
 
 <?php
