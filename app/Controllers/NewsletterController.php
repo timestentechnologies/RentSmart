@@ -517,6 +517,10 @@ class NewsletterController
             $logoUrl = isset($settings['site_logo']) && $settings['site_logo'] ? ($siteUrl . '/public/assets/images/' . $settings['site_logo']) : ($siteUrl . '/public/assets/images/logo.png');
             $siteName = $settings['site_name'] ?? 'RentSmart';
             
+            // Log logo URL for debugging
+            error_log("Newsletter logo URL: " . $logoUrl);
+            error_log("Newsletter site name: " . $siteName);
+            
             // Create professional email template
             $emailTemplate = '
             <!DOCTYPE html>
