@@ -16,12 +16,12 @@ try {
         'follow_up_sent_log'
     ];
     
+    // Get all tables first
+    $stmt = $pdo->query("SHOW TABLES");
+    $existingTables = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    
     foreach ($tables as $table) {
-        $stmt = $pdo->prepare("SHOW TABLES LIKE ?");
-        $stmt->execute([$table]);
-        $exists = $stmt->fetchColumn();
-        
-        if ($exists) {
+        if (in_array($table, $existingTables)) {
             echo "✓ $table table exists\n";
         } else {
             echo "✗ $table table MISSING\n";
