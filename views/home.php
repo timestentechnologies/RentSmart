@@ -1292,6 +1292,19 @@
                         <a href="https://www.linkedin.com/posts/timestentechnologies_proptech-propertymanagement-rentsmart-activity-7413190378020925440-JRdI?utm_source=share&utm_medium=member_desktop&rcm=ACoAADXDMdEBsC18bIJ4cOHS2WbzS9hlKU1YxY4" target="_blank" class="text-white mx-2" aria-label="LinkedIn"><i class="bi bi-linkedin"></i></a>
                         <a href="https://www.instagram.com/rentsmartke" target="_blank" class="text-white mx-2" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
                     </div>
+                    
+                    <!-- Newsletter Signup Section -->
+                    <div class="newsletter-signup mt-4">
+                        <h6 class="text-white mb-3">Stay Updated</h6>
+                        <p class="text-white-50 small mb-3">Get property management tips and exclusive offers</p>
+                        <form id="footerNewsletterForm" class="d-flex gap-2">
+                            <input type="email" name="email" class="form-control form-control-sm" placeholder="Your email" required>
+                            <button type="submit" class="btn btn-primary btn-sm">
+                                <i class="bi bi-send"></i>
+                            </button>
+                        </form>
+                        <div id="footerNewsletterMessage" class="small mt-2"></div>
+                    </div>
                 </div>
                 <div class="col-md-3">
                     <h5 class="mb-3">Features</h5>
@@ -1873,6 +1886,156 @@ document.addEventListener('DOMContentLoaded', function(){
   closeBtn && closeBtn.addEventListener('click', ()=> togglePanel(false));
   sendBtn && sendBtn.addEventListener('click', send);
   input && input.addEventListener('keydown', (e)=>{ if(e.key==='Enter'&&!e.shiftKey){ e.preventDefault(); send(); }});
+});
+</script>
+
+<!-- Newsletter Subscription Modal -->
+<div class="modal fade" id="newsletterModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-envelope-heart me-2"></i>Subscribe to Our Newsletter
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-4">Get the latest property management tips, updates, and exclusive offers delivered to your inbox!</p>
+                
+                <form id="homepageNewsletterForm">
+                    <div class="mb-3">
+                        <label for="subscriberName" class="form-label">Your Name</label>
+                        <input type="text" name="name" id="subscriberName" class="form-control" placeholder="Enter your name">
+                    </div>
+                    <div class="mb-3">
+                        <label for="subscriberEmail" class="form-label">Email Address *</label>
+                        <input type="email" name="email" id="subscriberEmail" class="form-control" placeholder="Enter your email address" required>
+                    </div>
+                    <div class="form-check mb-3">
+                        <input type="checkbox" name="agree" id="agreeTerms" class="form-check-input" required>
+                        <label class="form-check-label" for="agreeTerms">
+                            I agree to receive newsletters and marketing communications
+                        </label>
+                    </div>
+                    <div id="newsletterMessage" class="small"></div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Maybe Later</button>
+                <button type="button" class="btn btn-primary" id="subscribeBtn">
+                    <i class="bi bi-send me-2"></i>Subscribe Now
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Newsletter subscription functionality
+document.addEventListener('DOMContentLoaded', function() {
+    // Show newsletter modal after 5 seconds
+    setTimeout(function() {
+        // Check if user hasn't subscribed yet
+        if (!localStorage.getItem('newsletterSubscribed')) {
+            const modal = new bootstrap.Modal(document.getElementById('newsletterModal'));
+            modal.show();
+        }
+    }, 5000);
+
+    // Handle newsletter subscription
+    const subscribeBtn = document.getElementById('subscribeBtn');
+    const newsletterForm = document.getElementById('homepageNewsletterForm');
+    
+    if (subscribeBtn && newsletterForm) {
+        subscribeBtn.addEventListener('click', function() {
+            const formData = new FormData(newsletterForm);
+            const messageDiv = document.getElementById('newsletterMessage');
+            
+            // Validate form
+            if (!formData.get('email')) {
+                messageDiv.innerHTML = '<div class="text-danger"><i class="bi bi-exclamation-circle me-1"></i>Please enter your email address</div>';
+                return;
+            }
+            
+            if (!formData.get('agree')) {
+                messageDiv.innerHTML = '<div class="text-danger"><i class="bi bi-exclamation-circle me-1"></i>Please agree to receive newsletters</div>';
+                return;
+            }
+            
+            // Show loading state
+            subscribeBtn.disabled = true;
+            subscribeBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Subscribing...';
+            messageDiv.innerHTML = '';
+            
+            fetch('<?= BASE_URL ?>/newsletter/subscribe', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    messageDiv.innerHTML = '<div class="text-success"><i class="bi bi-check-circle me-1"></i>' + data.message + '</div>';
+                    localStorage.setItem('newsletterSubscribed', 'true');
+                    
+                    // Close modal after 2 seconds
+                    setTimeout(() => {
+                        bootstrap.Modal.getInstance(document.getElementById('newsletterModal')).hide();
+                        newsletterForm.reset();
+                    }, 2000);
+                } else {
+                    messageDiv.innerHTML = '<div class="text-danger"><i class="bi bi-exclamation-circle me-1"></i>' + data.message + '</div>';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                messageDiv.innerHTML = '<div class="text-danger"><i class="bi bi-exclamation-circle me-1"></i>Error subscribing. Please try again.</div>';
+            })
+            .finally(() => {
+                subscribeBtn.disabled = false;
+                subscribeBtn.innerHTML = '<i class="bi bi-send me-2"></i>Subscribe Now';
+            });
+        });
+    }
+
+    // Handle footer newsletter subscription
+    const footerNewsletterForm = document.getElementById('footerNewsletterForm');
+    if (footerNewsletterForm) {
+        footerNewsletterForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const messageDiv = document.getElementById('footerNewsletterMessage');
+            const submitBtn = this.querySelector('button[type="submit"]');
+            
+            // Show loading state
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+            messageDiv.innerHTML = '';
+            
+            fetch('<?= BASE_URL ?>/newsletter/subscribe', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    messageDiv.innerHTML = '<div class="text-success"><i class="bi bi-check-circle me-1"></i>' + data.message + '</div>';
+                    this.reset();
+                    localStorage.setItem('newsletterSubscribed', 'true');
+                } else {
+                    messageDiv.innerHTML = '<div class="text-danger"><i class="bi bi-exclamation-circle me-1"></i>' + data.message + '</div>';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                messageDiv.innerHTML = '<div class="text-danger"><i class="bi bi-exclamation-circle me-1"></i>Error subscribing. Please try again.</div>';
+            })
+            .finally(() => {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = '<i class="bi bi-send"></i>';
+            });
+        });
+    }
 });
 </script>
 
