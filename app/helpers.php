@@ -300,7 +300,7 @@ if (!function_exists('demo_cleanup_user_data')) {
 
 if (!function_exists('redirect')) {
     /**
-     * Redirect to a given URL
+     * Redirect to the given path
      * 
      * @param string $path The path to redirect to
      * @return void
@@ -328,8 +328,27 @@ if (!function_exists('redirect')) {
         $path = trim($path, '/');
         $location = BASE_URL . '/' . $path;
         
-        header("Location: {$location}");
+        header('Location: ' . $location);
         exit;
+    }
+}
+
+if (!function_exists('is_admin')) {
+    function is_admin(): bool
+    {
+        $role = strtolower((string)($_SESSION['user_role'] ?? ''));
+        return in_array($role, ['admin', 'administrator'], true);
+    }
+}
+
+if (!function_exists('require_auth')) {
+    function require_auth(): void
+    {
+        if (!isset($_SESSION['user_id'])) {
+            $_SESSION['flash_message'] = 'Please login to continue';
+            $_SESSION['flash_type'] = 'danger';
+            redirect('/home');
+        }
     }
 }
 

@@ -6,35 +6,26 @@ use App\Database\Connection;
 use App\Models\Setting;
 use PHPMailer\PHPMailer\PHPMailer;
 
-// Namespaced wrappers for global helper functions.
-// Prevents fatals like "Call to undefined function App\Controllers\require_auth()"
-// if opcache or older code paths call helpers without leading backslash.
-if (!function_exists(__NAMESPACE__ . '\\require_auth')) {
-    function require_auth(...$args)
-    {
-        return \require_auth(...$args);
-    }
-}
-
-if (!function_exists(__NAMESPACE__ . '\\is_admin')) {
-    function is_admin(...$args)
-    {
-        return \is_admin(...$args);
-    }
-}
-
 class NewsletterController
 {
-    public function index()
+    public function __construct()
     {
-        require_auth();
-        if (!is_admin()) {
-            $_SESSION['flash_message'] = 'Access denied';
+        if (!isset($_SESSION['user_id'])) {
+            $_SESSION['flash_message'] = 'Please login to continue';
             $_SESSION['flash_type'] = 'danger';
-            header('Location: ' . BASE_URL . '/dashboard');
-            exit;
+            \redirect('/home');
         }
 
+        $role = strtolower((string)($_SESSION['user_role'] ?? ''));
+        if (!in_array($role, ['admin', 'administrator'], true)) {
+            $_SESSION['flash_message'] = 'Access denied';
+            $_SESSION['flash_type'] = 'danger';
+            \redirect('/dashboard');
+        }
+    }
+
+    public function index()
+    {
         $db = Connection::getInstance()->getConnection();
         $page = filter_input(INPUT_GET, 'page', FILTER_VALIDATE_INT) ?: 1;
         $limit = 10;
@@ -70,21 +61,12 @@ class NewsletterController
             error_log("Newsletter index error: " . $e->getMessage());
             $_SESSION['flash_message'] = 'Error loading newsletters';
             $_SESSION['flash_type'] = 'danger';
-            header('Location: ' . BASE_URL . '/admin/dashboard');
-            exit;
+            \redirect('/admin/dashboard');
         }
     }
 
     public function create()
     {
-        \require_auth();
-        if (!\is_admin()) {
-            $_SESSION['flash_message'] = 'Access denied';
-            $_SESSION['flash_type'] = 'danger';
-            header('Location: ' . BASE_URL . '/dashboard');
-            exit;
-        }
-
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $this->storeCampaign();
             return;
@@ -138,27 +120,17 @@ class NewsletterController
 
             $_SESSION['flash_message'] = 'Newsletter created successfully';
             $_SESSION['flash_type'] = 'success';
-            header('Location: ' . BASE_URL . '/admin/newsletters');
-            exit;
+            \redirect('/admin/newsletters');
         } catch (\Exception $e) {
             error_log("Store campaign error: " . $e->getMessage());
             $_SESSION['flash_message'] = 'Error creating newsletter';
             $_SESSION['flash_type'] = 'danger';
-            header('Location: ' . BASE_URL . '/admin/newsletters/create');
-            exit;
+            \redirect('/admin/newsletters/create');
         }
     }
 
     public function edit($id)
     {
-        \require_auth();
-        if (!\is_admin()) {
-            $_SESSION['flash_message'] = 'Access denied';
-            $_SESSION['flash_type'] = 'danger';
-            header('Location: ' . BASE_URL . '/dashboard');
-            exit;
-        }
-
         try {
             $db = Connection::getInstance()->getConnection();
             $stmt = $db->prepare("SELECT * FROM email_campaigns WHERE id = ?");
@@ -168,8 +140,7 @@ class NewsletterController
             if (!$campaign) {
                 $_SESSION['flash_message'] = 'Newsletter not found';
                 $_SESSION['flash_type'] = 'danger';
-                header('Location: ' . BASE_URL . '/admin/newsletters');
-                exit;
+                \redirect('/admin/newsletters');
             }
 
             // Get attachments
@@ -192,21 +163,12 @@ class NewsletterController
             error_log("Edit newsletter error: " . $e->getMessage());
             $_SESSION['flash_message'] = 'Error loading newsletter';
             $_SESSION['flash_type'] = 'danger';
-            header('Location: ' . BASE_URL . '/admin/newsletters');
-            exit;
+            \redirect('/admin/newsletters');
         }
     }
 
     public function updateCampaign($id)
     {
-        require_auth();
-        if (!is_admin()) {
-            $_SESSION['flash_message'] = 'Access denied';
-            $_SESSION['flash_type'] = 'danger';
-            header('Location: ' . BASE_URL . '/dashboard');
-            exit;
-        }
-
         $title = filter_input(INPUT_POST, 'title', FILTER_SANITIZE_STRING);
         $subject = filter_input(INPUT_POST, 'subject', FILTER_SANITIZE_STRING);
         $content = $_POST['content'] ?? '';
@@ -218,12 +180,11 @@ class NewsletterController
         if (!$title || !$subject || !$content) {
             $_SESSION['flash_message'] = 'Please fill in all required fields';
             $_SESSION['flash_type'] = 'danger';
-            header('Location: ' . BASE_URL . '/admin/newsletters/edit/' . $id);
-            exit;
+            \redirect('/admin/newsletters/edit/' . $id);
         }
 
         try {
-            $db = getDB();
+            $db = Connection::getInstance()->getConnection();
             $scheduledAt = null;
 
             if ($status === 'scheduled' && $scheduleDate && $scheduleTime) {
@@ -246,30 +207,22 @@ class NewsletterController
 
             $_SESSION['flash_message'] = 'Newsletter updated successfully';
             $_SESSION['flash_type'] = 'success';
-            header('Location: ' . BASE_URL . '/admin/newsletters');
-            exit;
+            \redirect('/admin/newsletters');
         } catch (\Exception $e) {
             error_log("Update campaign error: " . $e->getMessage());
             $_SESSION['flash_message'] = 'Error updating newsletter';
             $_SESSION['flash_type'] = 'danger';
-            header('Location: ' . BASE_URL . '/admin/newsletters/edit/' . $id);
-            exit;
+            \redirect('/admin/newsletters/edit/' . $id);
         }
     }
 
     public function sendTest()
     {
-        \require_auth();
-        if (!\is_admin()) {
-            echo \json_encode(['success' => false, 'message' => 'Access denied']);
-            exit;
-        }
-
         $campaignId = filter_input(INPUT_POST, 'campaign_id', FILTER_VALIDATE_INT);
         $testEmail = filter_input(INPUT_POST, 'test_email', FILTER_VALIDATE_EMAIL);
 
         if (!$campaignId || !$testEmail) {
-            echo \json_encode(['success' => false, 'message' => 'Invalid parameters']);
+            echo json_encode(['success' => false, 'message' => 'Invalid parameters']);
             exit;
         }
 
@@ -280,33 +233,25 @@ class NewsletterController
             $campaign = $stmt->fetch(\PDO::FETCH_ASSOC);
 
             if (!$campaign) {
-                echo \json_encode(['success' => false, 'message' => 'Campaign not found']);
+                echo json_encode(['success' => false, 'message' => 'Campaign not found']);
                 exit;
             }
 
             $sent = $this->sendEmail($testEmail, 'Test User', $campaign['subject'], $campaign['content'], $campaign['id']);
 
             if ($sent) {
-                echo \json_encode(['success' => true, 'message' => 'Test email sent successfully']);
+                echo json_encode(['success' => true, 'message' => 'Test email sent successfully']);
             } else {
-                echo \json_encode(['success' => false, 'message' => 'Failed to send test email']);
+                echo json_encode(['success' => false, 'message' => 'Failed to send test email']);
             }
         } catch (\Exception $e) {
             error_log("Send test error: " . $e->getMessage());
-            echo \json_encode(['success' => false, 'message' => 'Error sending test email']);
+            echo json_encode(['success' => false, 'message' => 'Error sending test email']);
         }
     }
 
     public function sendCampaign($id)
     {
-        \require_auth();
-        if (!\is_admin()) {
-            $_SESSION['flash_message'] = 'Access denied';
-            $_SESSION['flash_type'] = 'danger';
-            header('Location: ' . BASE_URL . '/admin/newsletters');
-            exit;
-        }
-
         try {
             $db = Connection::getInstance()->getConnection();
             $stmt = $db->prepare("SELECT * FROM email_campaigns WHERE id = ? AND status IN ('draft', 'scheduled')");
@@ -338,27 +283,17 @@ class NewsletterController
 
             $_SESSION['flash_message'] = "Campaign sent to $sentCount recipients";
             $_SESSION['flash_type'] = 'success';
-            header('Location: ' . BASE_URL . '/admin/newsletters');
-            exit;
+            \redirect('/admin/newsletters');
         } catch (\Exception $e) {
             error_log("Send campaign error: " . $e->getMessage());
             $_SESSION['flash_message'] = 'Error sending campaign';
             $_SESSION['flash_type'] = 'danger';
-            header('Location: ' . BASE_URL . '/admin/newsletters');
-            exit;
+            \redirect('/admin/newsletters');
         }
     }
 
     public function viewStats($id)
     {
-        \require_auth();
-        if (!\is_admin()) {
-            $_SESSION['flash_message'] = 'Access denied';
-            $_SESSION['flash_type'] = 'danger';
-            header('Location: ' . BASE_URL . '/dashboard');
-            exit;
-        }
-
         try {
             $db = Connection::getInstance()->getConnection();
             
@@ -370,8 +305,7 @@ class NewsletterController
             if (!$campaign) {
                 $_SESSION['flash_message'] = 'Campaign not found';
                 $_SESSION['flash_type'] = 'danger';
-                header('Location: ' . BASE_URL . '/admin/newsletters');
-                exit;
+                \redirect('/admin/newsletters');
             }
 
             // Get tracking stats
@@ -394,8 +328,7 @@ class NewsletterController
             error_log("View stats error: " . $e->getMessage());
             $_SESSION['flash_message'] = 'Error loading statistics';
             $_SESSION['flash_type'] = 'danger';
-            header('Location: ' . BASE_URL . '/admin/newsletters');
-            exit;
+            \redirect('/admin/newsletters');
         }
     }
 
@@ -538,14 +471,6 @@ class NewsletterController
 
     public function followUpSchedules()
     {
-        \require_auth();
-        if (!\is_admin()) {
-            $_SESSION['flash_message'] = 'Access denied';
-            $_SESSION['flash_type'] = 'danger';
-            header('Location: ' . BASE_URL . '/dashboard');
-            exit;
-        }
-
         $db = Connection::getInstance()->getConnection();
         $stmt = $db->query("SELECT * FROM follow_up_schedules ORDER BY days_after_registration");
         $schedules = $stmt->fetchAll(\PDO::FETCH_ASSOC);
@@ -558,19 +483,13 @@ class NewsletterController
 
     public function createFollowUpSchedule()
     {
-        \require_auth();
-        if (!\is_admin()) {
-            echo \json_encode(['success' => false, 'message' => 'Access denied']);
-            exit;
-        }
-
         $name = filter_input(INPUT_POST, 'name', FILTER_SANITIZE_STRING);
         $daysAfter = filter_input(INPUT_POST, 'days_after', FILTER_VALIDATE_INT);
         $subject = filter_input(INPUT_POST, 'subject', FILTER_SANITIZE_STRING);
         $content = $_POST['content'] ?? '';
 
         if (!$name || !$daysAfter || !$subject || !$content) {
-            echo \json_encode(['success' => false, 'message' => 'Please fill in all fields']);
+            echo json_encode(['success' => false, 'message' => 'Please fill in all fields']);
             exit;
         }
 
@@ -579,10 +498,10 @@ class NewsletterController
             $stmt = $db->prepare("INSERT INTO follow_up_schedules (name, days_after_registration, subject, content) VALUES (?, ?, ?, ?)");
             $stmt->execute([$name, $daysAfter, $subject, $content]);
 
-            echo \json_encode(['success' => true, 'message' => 'Follow-up schedule created successfully']);
+            echo json_encode(['success' => true, 'message' => 'Follow-up schedule created successfully']);
         } catch (\Exception $e) {
             error_log("Create follow-up schedule error: " . $e->getMessage());
-            echo \json_encode(['success' => false, 'message' => 'Error creating schedule']);
+            echo json_encode(['success' => false, 'message' => 'Error creating schedule']);
         }
     }
 
