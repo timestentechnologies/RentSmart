@@ -1394,7 +1394,7 @@ ob_clean();
                     </li>
                     <li class="nav-item">
                         <a class="nav-link <?= (strpos($current_uri, 'admin/newsletters') === 0) ? 'active' : '' ?>" href="<?= BASE_URL ?>/admin/newsletters">
-                            <i class="bi bi-envelope me-2"></i> Newsletter Management
+                            <i class="bi bi-envelope me-2"></i> Newsletter
                         </a>
                     </li>
                     <li class="nav-item">
