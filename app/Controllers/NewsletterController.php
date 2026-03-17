@@ -656,9 +656,20 @@ class NewsletterController
             $displayName = !empty($toName) && $toName !== $toEmail ? $toName : $toEmail;
             $processedContent = str_replace(['{name}', '{email}'], [$displayName, $toEmail], $content);
             
+            // Log content for debugging
+            error_log("Original content: " . $content);
+            error_log("Processed content: " . $processedContent);
+            
             // Create final email template with processed content
             $finalEmailTemplate = str_replace('{CONTENT}', $processedContent, $emailTemplate);
             
+            // Log final template for debugging
+            error_log("Final email template length: " . strlen($finalEmailTemplate));
+            error_log("Final email template (first 500 chars): " . substr($finalEmailTemplate, 0, 500));
+            
+            // Set email encoding and ensure proper HTML handling
+            $mail->CharSet = 'UTF-8';
+            $mail->Encoding = 'base64';
             $mail->Body = $finalEmailTemplate;
             $mail->AltBody = strip_tags($processedContent);
 
