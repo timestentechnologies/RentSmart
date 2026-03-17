@@ -1,3 +1,6 @@
+<?php
+ob_start();
+?>
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h3 mb-0">Edit Newsletter</h1>
@@ -341,3 +344,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+
+<?php
+$content = ob_get_clean();
+require_once __DIR__ . '/../../layouts/main.php';
+?>

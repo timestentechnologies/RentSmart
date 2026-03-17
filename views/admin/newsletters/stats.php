@@ -1,3 +1,6 @@
+<?php
+ob_start();
+?>
 <div class="container-fluid">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h1 class="h3 mb-0">Campaign Statistics</h1>
@@ -232,5 +235,7 @@ function duplicateCampaign() {
 }
 </script>
 
-<!-- Include Chart.js -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<?php
+$content = ob_get_clean();
+require_once __DIR__ . '/../../layouts/main.php';
+?>
