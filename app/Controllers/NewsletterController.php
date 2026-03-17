@@ -16,7 +16,7 @@ class NewsletterController
         $page = filter_input(INPUT_GET, 'page', FILTER_VALIDATE_INT) ?: 1;
         $limit = 10;
         $offset = ($page - 1) * $limit;
-        $search = filter_input(INPUT_GET, 'search', FILTER_SANITIZE_STRING);
+        $search = filter_input(INPUT_GET, 'search', FILTER_UNSAFE_RAW);
 
         try {
             $where = '';
