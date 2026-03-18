@@ -365,12 +365,53 @@ if (empty($settings)) {
             <div class="modal-body">
                 <div class="d-grid gap-2">
                     <a href="<?= BASE_URL ?>/settings/backup" class="btn btn-primary">
-                        <i class="bi bi-download me-1"></i> Download Backup
+                        <i class="bi bi-download me-1"></i> Create & Download Backup
                     </a>
+
+                    <div class="border rounded p-3 bg-light">
+                        <h6 class="mb-2">Available Backups</h6>
+                        <?php if (!empty($backups)): ?>
+                            <div class="list-group">
+                                <?php foreach ($backups as $b): ?>
+                                    <div class="list-group-item d-flex justify-content-between align-items-start gap-2">
+                                        <div class="me-auto">
+                                            <div class="fw-semibold"><?= htmlspecialchars($b['name']) ?></div>
+                                            <small class="text-muted">
+                                                <?= date('M j, Y H:i', (int)$b['modified']) ?>
+                                                | <?= number_format(((int)$b['size']) / 1024, 1) ?> KB
+                                            </small>
+                                        </div>
+                                        <div class="btn-group btn-group-sm" role="group">
+                                            <a class="btn btn-outline-primary" href="<?= BASE_URL ?>/settings/backups/download/<?= urlencode($b['name']) ?>" title="Download">
+                                                <i class="bi bi-download"></i>
+                                            </a>
+                                            <form method="POST" action="<?= BASE_URL ?>/settings/backups/restore/<?= urlencode($b['name']) ?>" onsubmit="return confirm('Are you sure you want to restore? This will overwrite existing data.')">
+                                                <?= csrf_field() ?>
+                                                <button type="submit" class="btn btn-outline-warning" title="Restore">
+                                                    <i class="bi bi-arrow-counterclockwise"></i>
+                                                </button>
+                                            </form>
+                                            <form method="POST" action="<?= BASE_URL ?>/settings/backups/delete/<?= urlencode($b['name']) ?>" onsubmit="return confirm('Delete this backup file?')">
+                                                <?= csrf_field() ?>
+                                                <button type="submit" class="btn btn-outline-danger" title="Delete">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                <?php endforeach; ?>
+                            </div>
+                        <?php else: ?>
+                            <div class="text-muted small">No saved backups yet.</div>
+                        <?php endif; ?>
+                    </div>
+
                     <hr>
+
                     <form method="POST" action="<?= BASE_URL ?>/settings/restore" enctype="multipart/form-data">
+                        <?= csrf_field() ?>
                         <div class="mb-3">
-                            <label for="backup_file" class="form-label">Restore from Backup</label>
+                            <label for="backup_file" class="form-label">Restore from Uploaded Backup</label>
                             <input type="file" class="form-control" id="backup_file" name="backup_file" accept=".sql" required>
                             <div class="form-text">Select a SQL backup file to restore</div>
                         </div>

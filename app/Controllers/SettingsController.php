@@ -13,6 +13,91 @@ class SettingsController
     private $settings;
     private $db;
 
+    private function getBackupDir(): string
+    {
+        $dir = __DIR__ . '/../../storage/backups';
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0775, true);
+        }
+        return $dir;
+    }
+
+    private function getBackupFiles(): array
+    {
+        $dir = $this->getBackupDir();
+        $files = glob($dir . '/*.sql') ?: [];
+        rsort($files);
+        $out = [];
+        foreach ($files as $path) {
+            $out[] = [
+                'name' => basename($path),
+                'path' => $path,
+                'size' => @filesize($path) ?: 0,
+                'modified' => @filemtime($path) ?: 0,
+            ];
+        }
+        return $out;
+    }
+
+    private function generateBackupSql(): string
+    {
+        $tables = [];
+        $return = '';
+
+        $stmt = $this->db->query("SHOW TABLES");
+        while ($row = $stmt->fetch(PDO::FETCH_NUM)) {
+            $tables[] = $row[0];
+        }
+
+        foreach ($tables as $table) {
+            $stmt = $this->db->query("SHOW CREATE TABLE `$table`");
+            $row = $stmt->fetch(PDO::FETCH_NUM);
+
+            $return .= "DROP TABLE IF EXISTS `$table`\n\n";
+            $return .= $row[1] . ";\n\n";
+
+            $stmt = $this->db->query("SELECT * FROM `$table`");
+            while ($row = $stmt->fetch(PDO::FETCH_NUM)) {
+                $return .= "INSERT INTO `$table` VALUES(";
+                foreach ($row as $value) {
+                    $value = addslashes($value);
+                    $value = str_replace("\n", "\\n", $value);
+                    $return .= $value === null ? "NULL," : "'$value',";
+                }
+                $return = rtrim($return, ",");
+                $return .= ");\n";
+            }
+            $return .= "\n\n";
+        }
+
+        return $return;
+    }
+
+    private function createBackupFile(): array
+    {
+        $sql = $this->generateBackupSql();
+        $filename = 'backup-' . date('Y-m-d-H-i-s') . '.sql';
+        $path = $this->getBackupDir() . '/' . $filename;
+        @file_put_contents($path, $sql);
+        $this->settings->updateByKey('last_db_backup_at', date('c'));
+
+        return ['filename' => $filename, 'path' => $path, 'sql' => $sql];
+    }
+
+    private function autoBackupIfDue(): void
+    {
+        try {
+            $last = $this->settings->get('last_db_backup_at');
+            $lastTs = $last ? strtotime((string)$last) : 0;
+            $twoDaysAgo = time() - (2 * 24 * 60 * 60);
+            if ($lastTs <= 0 || $lastTs < $twoDaysAgo) {
+                $this->createBackupFile();
+            }
+        } catch (Exception $e) {
+            error_log('Auto backup error: ' . $e->getMessage());
+        }
+    }
+
     public function __construct() {
         try {
             $this->db = Connection::getInstance()->getConnection();
@@ -155,9 +240,13 @@ class SettingsController
             // Debug output
             error_log('Settings loaded for view: ' . print_r($settings, true));
             
+            $this->autoBackupIfDue();
+            $backups = $this->getBackupFiles();
+
             echo view('settings/index', [
                 'title' => 'System Settings - RentSmart',
-                'settings' => $settings
+                'settings' => $settings,
+                'backups' => $backups
             ]);
         } catch (Exception $e) {
             error_log("Error loading settings: " . $e->getMessage());
@@ -274,6 +363,87 @@ class SettingsController
             $_SESSION['flash_type'] = 'danger';
         }
         
+        redirect('/settings');
+    }
+
+    public function downloadBackup($filename)
+    {
+        try {
+            $safe = basename((string)$filename);
+            $path = $this->getBackupDir() . '/' . $safe;
+            if (!is_file($path)) {
+                $_SESSION['flash_message'] = 'Backup file not found';
+                $_SESSION['flash_type'] = 'danger';
+                redirect('/settings');
+            }
+
+            header('Content-Type: application/octet-stream');
+            header('Content-Disposition: attachment; filename=' . $safe);
+            header('Content-Length: ' . filesize($path));
+            readfile($path);
+            exit;
+        } catch (Exception $e) {
+            $_SESSION['flash_message'] = 'Error downloading backup: ' . $e->getMessage();
+            $_SESSION['flash_type'] = 'danger';
+            redirect('/settings');
+        }
+    }
+
+    public function restoreBackup($filename)
+    {
+        if (function_exists('verify_csrf_token') && !verify_csrf_token()) {
+            $_SESSION['flash_message'] = 'Invalid security token';
+            $_SESSION['flash_type'] = 'danger';
+            redirect('/settings');
+        }
+
+        try {
+            $safe = basename((string)$filename);
+            $path = $this->getBackupDir() . '/' . $safe;
+            if (!is_file($path)) {
+                $_SESSION['flash_message'] = 'Backup file not found';
+                $_SESSION['flash_type'] = 'danger';
+                redirect('/settings');
+            }
+
+            $sql = file_get_contents($path);
+            $this->db->exec($sql);
+
+            $_SESSION['flash_message'] = 'Database restored successfully!';
+            $_SESSION['flash_type'] = 'success';
+        } catch (Exception $e) {
+            $_SESSION['flash_message'] = 'Error restoring database: ' . $e->getMessage();
+            $_SESSION['flash_type'] = 'danger';
+        }
+
+        redirect('/settings');
+    }
+
+    public function deleteBackup($filename)
+    {
+        if (function_exists('verify_csrf_token') && !verify_csrf_token()) {
+            $_SESSION['flash_message'] = 'Invalid security token';
+            $_SESSION['flash_type'] = 'danger';
+            redirect('/settings');
+        }
+
+        try {
+            $safe = basename((string)$filename);
+            $path = $this->getBackupDir() . '/' . $safe;
+            if (!is_file($path)) {
+                $_SESSION['flash_message'] = 'Backup file not found';
+                $_SESSION['flash_type'] = 'danger';
+                redirect('/settings');
+            }
+
+            @unlink($path);
+            $_SESSION['flash_message'] = 'Backup deleted successfully';
+            $_SESSION['flash_type'] = 'success';
+        } catch (Exception $e) {
+            $_SESSION['flash_message'] = 'Error deleting backup: ' . $e->getMessage();
+            $_SESSION['flash_type'] = 'danger';
+        }
+
         redirect('/settings');
     }
 
@@ -434,38 +604,9 @@ class SettingsController
 
     public function backup() {
         try {
-            $tables = [];
-            $return = '';
-            
-            // Get all tables
-            $stmt = $this->db->query("SHOW TABLES");
-            while ($row = $stmt->fetch(PDO::FETCH_NUM)) {
-                $tables[] = $row[0];
-            }
-            
-            // Generate backup
-            foreach ($tables as $table) {
-                $stmt = $this->db->query("SHOW CREATE TABLE `$table`");
-                $row = $stmt->fetch(PDO::FETCH_NUM);
-                
-                $return .= "DROP TABLE IF EXISTS `$table`;\n\n";
-                $return .= $row[1] . ";\n\n";
-                
-                $stmt = $this->db->query("SELECT * FROM `$table`");
-                while ($row = $stmt->fetch(PDO::FETCH_NUM)) {
-                    $return .= "INSERT INTO `$table` VALUES(";
-                    foreach ($row as $value) {
-                        $value = addslashes($value);
-                        $value = str_replace("\n", "\\n", $value);
-                        $return .= $value === null ? "NULL," : "'$value',";
-                    }
-                    $return = rtrim($return, ",");
-                    $return .= ");\n";
-                }
-                $return .= "\n\n";
-            }
-            
-            $filename = 'backup-' . date('Y-m-d-H-i-s') . '.sql';
+            $created = $this->createBackupFile();
+            $filename = $created['filename'];
+            $return = $created['sql'];
             header('Content-Type: application/octet-stream');
             header('Content-Disposition: attachment; filename=' . $filename);
             header('Content-Length: ' . strlen($return));
@@ -482,6 +623,12 @@ class SettingsController
     public function restore() {
         if (!isset($_FILES['backup_file']) || $_FILES['backup_file']['error'] !== UPLOAD_ERR_OK) {
             $_SESSION['flash_message'] = 'No backup file uploaded or upload failed.';
+            $_SESSION['flash_type'] = 'danger';
+            redirect('/settings');
+        }
+
+        if (function_exists('verify_csrf_token') && !verify_csrf_token()) {
+            $_SESSION['flash_message'] = 'Invalid security token';
             $_SESSION['flash_type'] = 'danger';
             redirect('/settings');
         }
