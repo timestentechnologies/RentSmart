@@ -334,6 +334,7 @@ $routes = [
     'settings/testEmail' => ['controller' => 'SettingsController', 'action' => 'testEmail'],
     'settings/testSMS' => ['controller' => 'SettingsController', 'action' => 'testSMS'],
     'settings/backup' => ['controller' => 'SettingsController', 'action' => 'backup'],
+    'settings/backup/auto' => ['controller' => 'SettingsController', 'action' => 'autoBackupCron'],
     'settings/restore' => ['controller' => 'SettingsController', 'action' => 'restore'],
     'settings/backups/download/(.+)' => ['controller' => 'SettingsController', 'action' => 'downloadBackup'],
     'settings/backups/restore/(.+)' => ['controller' => 'SettingsController', 'action' => 'restoreBackup'],

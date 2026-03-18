@@ -98,6 +98,33 @@ class SettingsController
         }
     }
 
+    private function getAutoBackupToken(): string
+    {
+        $token = $this->settings->get('auto_backup_token');
+        if (!$token) {
+            $token = bin2hex(random_bytes(16));
+            $this->settings->updateByKey('auto_backup_token', $token);
+        }
+        return $token;
+    }
+
+    public function autoBackupCron()
+    {
+        if (!isset($_GET['token']) || $_GET['token'] !== $this->getAutoBackupToken()) {
+            http_response_code(403);
+            echo 'Forbidden: invalid token';
+            exit;
+        }
+
+        try {
+            $this->autoBackupIfDue();
+            echo 'Auto backup check completed. Last backup: ' . ($this->settings->get('last_db_backup_at') ?? 'never');
+        } catch (Exception $e) {
+            http_response_code(500);
+            echo 'Backup error: ' . $e->getMessage();
+        }
+    }
+
     public function __construct() {
         try {
             $this->db = Connection::getInstance()->getConnection();
@@ -242,11 +269,14 @@ class SettingsController
             
             $this->autoBackupIfDue();
             $backups = $this->getBackupFiles();
+            $cronToken = $this->getAutoBackupToken();
+            $cronUrl = BASE_URL . '/settings/backup/auto?token=' . $cronToken;
 
             echo view('settings/index', [
                 'title' => 'System Settings - RentSmart',
                 'settings' => $settings,
-                'backups' => $backups
+                'backups' => $backups,
+                'cron_url' => $cronUrl
             ]);
         } catch (Exception $e) {
             error_log("Error loading settings: " . $e->getMessage());

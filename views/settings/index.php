@@ -406,6 +406,19 @@ if (empty($settings)) {
                         <?php endif; ?>
                     </div>
 
+                    <div class="border rounded p-3 bg-info bg-opacity-10">
+                        <h6 class="mb-2">⏰ Auto-Backup (cPanel Cron)</h6>
+                        <p class="small mb-2">To schedule automatic backups every 2 days in cPanel, add this cron job:</p>
+                        <div class="bg-white border rounded p-2 font-monospace small mb-2" style="word-break: break-all;">
+                            wget -q -O /dev/null "<?= htmlspecialchars($cron_url ?? '') ?>"
+                        </div>
+                        <p class="small mb-0 text-muted">
+                            <strong>cPanel > Cron Jobs > Add New Cron Job:</strong><br>
+                            • <em>Common Settings:</em> Every 2 days<br>
+                            • <em>Command:</em> paste the line above
+                        </p>
+                    </div>
+
                     <hr>
 
                     <form method="POST" action="<?= BASE_URL ?>/settings/restore" enctype="multipart/form-data">
