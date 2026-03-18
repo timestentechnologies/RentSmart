@@ -1299,7 +1299,7 @@
                         <p class="text-white-50 small mb-3">Get property management tips and exclusive offers</p>
                         <form id="footerNewsletterForm" class="d-flex gap-2">
                             <input type="email" name="email" class="form-control form-control-sm" placeholder="Your email" required>
-                            <button type="submit" class="btn btn-primary btn-sm">
+                            <button type="submit" class="btn btn-warning text-white btn-sm" style="background-color: #f97316; border-color: #f97316;">
                                 <i class="bi bi-send"></i>
                             </button>
                         </form>
@@ -1893,7 +1893,7 @@ document.addEventListener('DOMContentLoaded', function(){
 <div class="modal fade" id="newsletterModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header text-white" style="background-color: #8a5cf681;">
+            <div class="modal-header text-white" style="background-color: #3018375d;">
                 <h5 class="modal-title">
                     <i class="bi bi-envelope-heart me-2"></i>Subscribe to Our Newsletter
                 </h5>
@@ -1933,11 +1933,19 @@ document.addEventListener('DOMContentLoaded', function(){
 <script>
 // Newsletter subscription functionality
 document.addEventListener('DOMContentLoaded', function() {
-    // Show newsletter modal after 5 seconds
+    const newsletterModalEl = document.getElementById('newsletterModal');
+
+    // Mark the prompt as dismissed whenever the modal is closed (Maybe Later / X / programmatic hide)
+    if (newsletterModalEl) {
+        newsletterModalEl.addEventListener('hidden.bs.modal', function() {
+            localStorage.setItem('newsletterPromptDismissed', 'true');
+        });
+    }
+
+    // Show newsletter modal after 5 seconds (only if not already dismissed or subscribed)
     setTimeout(function() {
-        // Check if user hasn't subscribed yet
-        if (!localStorage.getItem('newsletterSubscribed')) {
-            const modal = new bootstrap.Modal(document.getElementById('newsletterModal'));
+        if (!localStorage.getItem('newsletterSubscribed') && !localStorage.getItem('newsletterPromptDismissed')) {
+            const modal = new bootstrap.Modal(newsletterModalEl);
             modal.show();
         }
     }, 5000);
@@ -1976,6 +1984,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (data.success) {
                     messageDiv.innerHTML = '<div class="text-success"><i class="bi bi-check-circle me-1"></i>' + data.message + '</div>';
                     localStorage.setItem('newsletterSubscribed', 'true');
+                    localStorage.setItem('newsletterPromptDismissed', 'true');
                     
                     // Close modal after 2 seconds
                     setTimeout(() => {

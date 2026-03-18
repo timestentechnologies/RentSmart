@@ -13,21 +13,28 @@ class NewsletterController
 
     public function __construct()
     {
-        // Check authentication first
-        if (!isset($_SESSION['user_id'])) {
-            $_SESSION['flash_message'] = 'Please login to continue';
-            $_SESSION['flash_type'] = 'danger';
-            \redirect('/home');
+        $requestUri = (string)($_SERVER['REQUEST_URI'] ?? '');
+
+        // Public endpoints (no login required)
+        $isPublicEndpoint = preg_match('#^/?newsletter/(subscribe|track|process-follow-ups)#i', $requestUri) === 1;
+
+        if (!$isPublicEndpoint) {
+            // Check authentication first
+            if (!isset($_SESSION['user_id'])) {
+                $_SESSION['flash_message'] = 'Please login to continue';
+                $_SESSION['flash_type'] = 'danger';
+                \redirect('/home');
+            }
+
+            $role = strtolower((string)($_SESSION['user_role'] ?? ''));
+            if (!in_array($role, ['admin', 'administrator'], true)) {
+                $_SESSION['flash_message'] = 'Access denied';
+                $_SESSION['flash_type'] = 'danger';
+                \redirect('/dashboard');
+            }
         }
 
-        $role = strtolower((string)($_SESSION['user_role'] ?? ''));
-        if (!in_array($role, ['admin', 'administrator'], true)) {
-            $_SESSION['flash_message'] = 'Access denied';
-            $_SESSION['flash_type'] = 'danger';
-            \redirect('/dashboard');
-        }
-
-        // Initialize database connection after authentication
+        // Initialize database connection
         $this->db = Connection::getInstance()->getConnection();
     }
 
@@ -957,6 +964,8 @@ class NewsletterController
     public function subscribe()
     {
         // This method handles footer subscription (no login required)
+        header('Content-Type: application/json');
+
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $email = filter_input(INPUT_POST, 'email', FILTER_VALIDATE_EMAIL);
             $name = filter_input(INPUT_POST, 'name', FILTER_SANITIZE_STRING);
@@ -984,7 +993,11 @@ class NewsletterController
                 error_log("Subscribe error: " . $e->getMessage());
                 echo json_encode(['success' => false, 'message' => 'Error subscribing to newsletter']);
             }
+            exit;
         }
+
+        echo json_encode(['success' => false, 'message' => 'Invalid request method']);
+        exit;
     }
 
     public function subscribers()
