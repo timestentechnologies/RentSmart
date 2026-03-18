@@ -1047,7 +1047,7 @@ class NewsletterController
             $stats = [
                 'total_active' => $subscriber->getTotalCount('active'),
                 'total_unsubscribed' => $subscriber->getTotalCount('unsubscribed'),
-                'recent_subscriptions' => $subscriber->getRecentSubscribers(5)
+                'recent_subscriptions' => $subscriber->getRecentSubscribers(3)
             ];
 
             echo \view('admin/newsletters/subscribers', [

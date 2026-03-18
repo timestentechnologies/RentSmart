@@ -1,19 +1,44 @@
 <?php ob_start(); ?>
 
 <style>
-.bg-purple-faded {
-    background-color: #8b5cf6 !important;
-    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%) !important;
+
+.stat-card {
+    background-color: #ffffff;
+    border: 1px solid rgba(0, 0, 0, 0.08) !important;
+    border-left-width: 6px !important;
 }
 
-.bg-orange-faded {
-    background-color: #f97316 !important;
-    background: linear-gradient(135deg, #f97316 0%, #ea580c 100%) !important;
+.stat-card-purple {
+    border-left-color: #8b5cf6 !important;
 }
 
-.bg-green-faded {
-    background-color: #10b981 !important;
-    background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+.stat-card-orange {
+    border-left-color: #f97316 !important;
+}
+
+.stat-card-green {
+    border-left-color: #10b981 !important;
+}
+
+.stat-card .stat-icon {
+    opacity: 0.25;
+}
+
+.stat-card-purple .stat-icon {
+    color: #8b5cf6;
+}
+
+.stat-card-orange .stat-icon {
+    color: #f97316;
+}
+
+.stat-card-green .stat-icon {
+    color: #10b981;
+}
+
+.recent-subscriptions .recent-item {
+    background-color: rgba(16, 185, 129, 0.08);
+    border: 1px solid rgba(16, 185, 129, 0.15);
 }
 
 .card {
@@ -92,19 +117,19 @@
             <!-- Statistics Cards -->
             <div class="row mb-4">
                 <div class="col-md-3">
-                    <div class="card bg-purple-faded text-white border-0 shadow-sm">
+                    <div class="card stat-card stat-card-purple border-0 shadow-sm">
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-center">
                                 <div>
-                                    <h2 class="card-title mb-1 fw-bold"><?= $stats['total_active'] ?></h2>
-                                    <p class="card-text mb-0 opacity-75">Active Subscribers</p>
+                                    <h2 class="card-title mb-1 fw-bold text-dark"><?= $stats['total_active'] ?></h2>
+                                    <p class="card-text mb-0 text-muted">Active Subscribers</p>
                                 </div>
-                                <div class="text-white opacity-50">
+                                <div class="stat-icon">
                                     <i class="bi bi-person-check-fill fs-1"></i>
                                 </div>
                             </div>
                             <div class="mt-3">
-                                <small class="opacity-75">
+                                <small class="text-muted">
                                     <i class="bi bi-graph-up me-1"></i>
                                     <?= count($stats['recent_subscriptions']) ?> new this week
                                 </small>
@@ -113,19 +138,19 @@
                     </div>
                 </div>
                 <div class="col-md-3">
-                    <div class="card bg-orange-faded text-white border-0 shadow-sm">
+                    <div class="card stat-card stat-card-orange border-0 shadow-sm">
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-center">
                                 <div>
-                                    <h2 class="card-title mb-1 fw-bold"><?= $stats['total_unsubscribed'] ?></h2>
-                                    <p class="card-text mb-0 opacity-75">Unsubscribed</p>
+                                    <h2 class="card-title mb-1 fw-bold text-dark"><?= $stats['total_unsubscribed'] ?></h2>
+                                    <p class="card-text mb-0 text-muted">Unsubscribed</p>
                                 </div>
-                                <div class="text-white opacity-50">
+                                <div class="stat-icon">
                                     <i class="bi bi-person-x-fill fs-1"></i>
                                 </div>
                             </div>
                             <div class="mt-3">
-                                <small class="opacity-75">
+                                <small class="text-muted">
                                     <i class="bi bi-graph-down me-1"></i>
                                     Churn rate tracking
                                 </small>
@@ -134,30 +159,32 @@
                     </div>
                 </div>
                 <div class="col-md-6">
-                    <div class="card bg-green-faded text-white border-0 shadow-sm">
+                    <div class="card stat-card stat-card-green border-0 shadow-sm">
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-start mb-3">
                                 <div>
-                                    <h5 class="card-title mb-1 fw-bold">Recent Subscriptions</h5>
-                                    <p class="card-text mb-0 opacity-75 small">Latest newsletter signups</p>
+                                    <h5 class="card-title mb-1 fw-bold text-dark">Recent Subscriptions</h5>
+                                    <p class="card-text mb-0 text-muted small">Latest newsletter signups</p>
                                 </div>
-                                <div class="text-white opacity-50">
+                                <div class="stat-icon">
                                     <i class="bi bi-clock-history fs-4"></i>
                                 </div>
                             </div>
                             <div class="recent-subscriptions">
                                 <?php if (!empty($stats['recent_subscriptions'])): ?>
                                     <?php foreach ($stats['recent_subscriptions'] as $recent): ?>
-                                        <div class="d-flex justify-content-between align-items-center mb-2 p-2 bg-white bg-opacity-10 rounded">
+                                        <?php $recentName = trim((string)($recent['name'] ?? '')); ?>
+                                        <?php $recentDisplay = $recentName !== '' ? $recentName : (string)$recent['email']; ?>
+                                        <div class="recent-item d-flex justify-content-between align-items-center mb-2 p-2 rounded">
                                             <div>
-                                                <strong class="d-block"><?= htmlspecialchars($recent['name'] ?? $recent['email']) ?></strong>
-                                                <small class="opacity-75"><?= date('M j, Y', strtotime($recent['subscribed_at'])) ?></small>
+                                                <strong class="d-block text-dark"><?= htmlspecialchars($recentDisplay) ?></strong>
+                                                <small class="text-muted"><?= date('M j, Y', strtotime($recent['subscribed_at'])) ?></small>
                                             </div>
-                                            <i class="bi bi-person-plus-fill opacity-50"></i>
+                                            <i class="bi bi-person-plus-fill text-muted"></i>
                                         </div>
                                     <?php endforeach; ?>
                                 <?php else: ?>
-                                    <div class="text-center py-3 opacity-75">
+                                    <div class="text-center py-3 text-muted">
                                         <i class="bi bi-inbox fs-3 d-block mb-2"></i>
                                         <small>No recent subscriptions</small>
                                     </div>
@@ -218,14 +245,16 @@
                             </thead>
                             <tbody>
                                 <?php foreach ($subscribers as $subscriber): ?>
+                                    <?php $subName = trim((string)($subscriber['name'] ?? '')); ?>
+                                    <?php $subDisplayName = $subName !== '' ? $subName : (string)$subscriber['email']; ?>
                                     <tr class="border-bottom">
                                         <td>
                                             <div class="d-flex align-items-center">
                                                 <div class="avatar-sm bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3">
-                                                    <?= strtoupper(substr($subscriber['name'] ?? $subscriber['email'], 0, 1)) ?>
+                                                    <?= strtoupper(substr($subDisplayName, 0, 1)) ?>
                                                 </div>
                                                 <div>
-                                                    <div class="fw-medium"><?= htmlspecialchars($subscriber['name'] ?? 'N/A') ?></div>
+                                                    <div class="fw-medium"><?= htmlspecialchars($subDisplayName) ?></div>
                                                     <small class="text-muted">ID: #<?= $subscriber['id'] ?></small>
                                                 </div>
                                             </div>
