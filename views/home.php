@@ -1893,7 +1893,7 @@ document.addEventListener('DOMContentLoaded', function(){
 <div class="modal fade" id="newsletterModal" tabindex="-1" data-bs-backdrop="static" data-bs-keyboard="false">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content">
-            <div class="modal-header text-white" style="background-color: #3018375d;">
+            <div class="modal-header text-white" style="background-color: #17011e;">
                 <h5 class="modal-title">
                     <i class="bi bi-envelope-heart me-2"></i>Subscribe to Our Newsletter
                 </h5>
