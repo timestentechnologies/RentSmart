@@ -881,7 +881,7 @@
                         </a>
                         <?php if (site_setting('demo_enabled', '0') === '1'): ?>
                        
-                            <a href="#" class="btn btn-light btn-lg" data-bs-toggle="modal" data-bs-target="#demoModal">
+                            <a style="display:none;" href="#" class="btn btn-light btn-lg" data-bs-toggle="modal" data-bs-target="#demoModal">
                                 <i class="bi bi-play-circle me-2"></i>Try Demo
                             </a>
                         
