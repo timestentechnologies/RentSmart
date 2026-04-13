@@ -137,7 +137,7 @@ ob_start();
                 $colorClass = (string)($stage['color_class'] ?? 'secondary');
                 $accent = $accentToHex($colorClass);
             ?>
-            <div class="crm-col" data-status="<?= htmlspecialchars($key) ?>" data-color="<?= htmlspecialchars($colorClass) ?>" data-is-won="<?= (int)($stage['is_won'] ?? 0) ?>">
+            <div class="crm-col" data-status="<?= htmlspecialchars($key) ?>" data-color="<?= htmlspecialchars($colorClass) ?>" data-is-won="<?= (int)($stage['is_won'] ?? 0) ?>" style="border-top: 4px solid <?= htmlspecialchars($accent) ?>;">
                 <div class="crm-col-header">
                     <div>
                         <span class="crm-accent" style="background: <?= htmlspecialchars($accent) ?>;"></span>

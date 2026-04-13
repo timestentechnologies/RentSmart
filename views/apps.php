@@ -10,6 +10,7 @@ $role = $_SESSION['user_role'] ?? 'User';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Apps - <?= htmlspecialchars($siteName) ?></title>
+    <link rel="icon" type="image/png" href="<?= htmlspecialchars($favicon ?? BASE_URL . '/public/assets/images/site_favicon_1750832003.png') ?>">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
     <style>

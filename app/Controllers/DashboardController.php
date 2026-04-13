@@ -557,6 +557,11 @@ class DashboardController
                 ? (BASE_URL . '/public/assets/images/' . $appsLogoFile)
                 : ($siteLogoFile ? (BASE_URL . '/public/assets/images/' . $siteLogoFile) : (BASE_URL . '/public/assets/images/logo.svg'));
 
+            // Get favicon URL
+            $favicon = !empty($settings['site_favicon'])
+                ? (BASE_URL . '/public/assets/images/' . $settings['site_favicon'])
+                : (BASE_URL . '/public/assets/images/site_favicon_1750832003.png');
+
             $role = strtolower((string)$user['role']);
             $apps = [];
 

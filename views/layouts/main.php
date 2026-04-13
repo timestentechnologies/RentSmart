@@ -2279,8 +2279,11 @@ ob_clean();
                 <i class="bi bi-list"></i>
             </button>
             <a href="<?= BASE_URL ?>/" class="header-logo">
-                <img src="<?= htmlspecialchars($siteLogo) ?>" alt="<?= htmlspecialchars($siteName) ?> Logo">
-                <span><?= htmlspecialchars($siteName) ?></span>
+                <?php if (!empty($settings['site_logo'])): ?>
+                    <img src="<?= htmlspecialchars($siteLogo) ?>" alt="<?= htmlspecialchars($siteName) ?> Logo">
+                <?php else: ?>
+                    <span><?= htmlspecialchars($siteName) ?></span>
+                <?php endif; ?>
             </a>
         </div>
         <div class="top-header-right">

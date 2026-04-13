@@ -62,7 +62,7 @@ class SubscriptionController
             $user = $this->user->find($userId);
 
             $siteName = $settings['site_name'] ?? 'RentSmart';
-            $logoFilename = $settings['site_logo'] ?? '';
+            $logoFilename = $settings['apps_page_logo'] ?? $settings['site_logo'] ?? '';
 
             $role = strtolower((string)($_SESSION['user_role'] ?? ''));
             $uid = (int)($_SESSION['user_id'] ?? 0);
@@ -196,8 +196,9 @@ class SubscriptionController
             $settings = $settingModel->getAllAsAssoc();
 
             $logoDataUri = null;
-            if (!empty($settings['site_logo'])) {
-                $logoPath = __DIR__ . '/../../public/assets/images/' . $settings['site_logo'];
+            $appsLogo = $settings['apps_page_logo'] ?? $settings['site_logo'] ?? '';
+            if (!empty($appsLogo)) {
+                $logoPath = __DIR__ . '/../../public/assets/images/' . $appsLogo;
                 if (file_exists($logoPath)) {
                     $imageData = file_get_contents($logoPath);
                     $logoDataUri = 'data:image/png;base64,' . base64_encode($imageData);

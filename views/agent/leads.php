@@ -94,7 +94,7 @@ ob_start();
                 $accent = $accentToHex($colorClass);
                 $isWonStage = (int)($stage['is_won'] ?? 0) === 1;
             ?>
-            <div class="crm-col" data-stage="<?= htmlspecialchars($key) ?>" data-color="<?= htmlspecialchars($colorClass) ?>" data-is-won="<?= $isWonStage ? 1 : 0 ?>">
+            <div class="crm-col" data-stage="<?= htmlspecialchars($key) ?>" data-color="<?= htmlspecialchars($colorClass) ?>" data-is-won="<?= $isWonStage ? 1 : 0 ?>" style="border-top: 4px solid <?= htmlspecialchars($accent) ?>;">
                 <div class="crm-col-header">
                     <div>
                         <span class="crm-accent" style="background: <?= htmlspecialchars($accent) ?>;"></span>
