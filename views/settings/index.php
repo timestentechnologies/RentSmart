@@ -208,6 +208,21 @@ if (empty($settings)) {
                                     <div id="faviconPreview" class="mt-2"></div>
                                 </div>
                             </div>
+
+                            <div class="row g-3 mt-2">
+                                <div class="col-md-6">
+                                    <label for="apps_page_logo" class="form-label">Apps Page Logo</label>
+                                    <input type="file" class="form-control" id="apps_page_logo" name="apps_page_logo" accept="image/*" data-preview="appsLogoPreview">
+                                    <div class="form-text">Logo used on the Apps page</div>
+                                    <?php if (!empty($settings['apps_page_logo'])): ?>
+                                        <div class="mt-2">
+                                            <img src="<?= getImageUrl($settings['apps_page_logo']) ?>" alt="Current Apps Logo" class="img-thumbnail" style="max-height: 50px;">
+                                            <div class="form-text">Current apps page logo</div>
+                                        </div>
+                                    <?php endif; ?>
+                                    <div id="appsLogoPreview" class="mt-2"></div>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- SEO Settings -->
@@ -478,6 +493,7 @@ function handleFileSelect(event) {
 
 document.getElementById('site_logo').addEventListener('change', handleFileSelect);
 document.getElementById('site_favicon').addEventListener('change', handleFileSelect);
+document.getElementById('apps_page_logo').addEventListener('change', handleFileSelect);
 
 // Initialize tooltips
 var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))

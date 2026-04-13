@@ -35,6 +35,7 @@ ob_start();
             <form id="editSubscriptionForm" action="<?= BASE_URL ?>/admin/subscriptions/update" method="POST">
                 <?= csrf_field() ?>
                 <input type="hidden" name="subscription_id" id="editSubId">
+                <input type="hidden" name="active_tab" value="<?= htmlspecialchars($activeTab ?? '') ?>">
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">User</label>
@@ -328,6 +329,7 @@ ob_start();
             <form id="editPlanForm" action="<?= BASE_URL ?>/admin/subscriptions/update-plan" method="POST">
                 <?= csrf_field() ?>
                 <input type="hidden" name="plan_id" id="editPlanId">
+                <input type="hidden" name="active_tab" value="<?= htmlspecialchars($activeTab ?? '') ?>">
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label">Plan Name</label>

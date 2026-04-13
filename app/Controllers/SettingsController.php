@@ -349,7 +349,8 @@ class SettingsController
             // Handle file uploads
             $fileFields = [
                 'site_logo' => ['dir' => 'images', 'allowed' => ['jpg', 'jpeg', 'png', 'gif']],
-                'site_favicon' => ['dir' => 'images', 'allowed' => ['ico', 'png']]
+                'site_favicon' => ['dir' => 'images', 'allowed' => ['ico', 'png']],
+                'apps_page_logo' => ['dir' => 'images', 'allowed' => ['jpg', 'jpeg', 'png', 'gif']]
             ];
 
             foreach ($fileFields as $field => $config) {

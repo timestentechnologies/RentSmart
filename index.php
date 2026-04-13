@@ -96,9 +96,9 @@ $uri = trim($uri, '/');
 $uri = rtrim($uri, '/');
 
 if (empty($uri)) {
-    // If user is logged in, redirect to dashboard
+    // If user is logged in, redirect to apps launcher
     if (isset($_SESSION['user_id'])) {
-        $uri = 'dashboard';
+        $uri = 'apps';
     } else {
         $uri = 'home';
     }
@@ -147,6 +147,7 @@ $routes = [
     
     'privacy-policy' => ['controller' => 'HomeController', 'action' => 'privacy'],
     'terms' => ['controller' => 'HomeController', 'action' => 'terms'],
+    'apps' => ['controller' => 'DashboardController', 'action' => 'apps'],
     'dashboard' => ['controller' => 'DashboardController', 'action' => 'index'],
     'login' => [
         'GET' => ['controller' => 'AuthController', 'action' => 'showLogin'],
@@ -616,6 +617,7 @@ $protectedRoutes = [
     'integrations/odoo/sync-expenses',
     'integrations/odoo/config',
 
+    'apps',
     'dashboard',
     'properties',
     'properties/create',

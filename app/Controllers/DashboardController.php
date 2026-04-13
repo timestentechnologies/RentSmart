@@ -117,6 +117,9 @@ class DashboardController
             // Get monthly revenue data for trend
             $monthlyRevenue = $this->payment->getMonthlyRevenue($userId);
             
+            // Get daily revenue data (for charts with less data)
+            $dailyRevenue = $this->payment->getDailyRevenue($userId, 60);
+            
             // Calculate revenue growth
             $currentMonth = date('Y-m');
             $lastMonth = date('Y-m', strtotime('-1 month'));
@@ -526,6 +529,204 @@ class DashboardController
             error_log("Error in DashboardController::index: " . $e->getMessage());
             $_SESSION['flash_message'] = 'Error loading dashboard';
             $_SESSION['flash_type'] = 'danger';
+            require 'views/errors/500.php';
+        }
+    }
+    public function apps()
+    {
+        try {
+            $userId = $_SESSION['user_id'] ?? null;
+            if (!$userId) {
+                header('Location: ' . BASE_URL . '/');
+                exit;
+            }
+
+            $user = $this->user->find($userId);
+            if (!$user) {
+                header('Location: ' . BASE_URL . '/');
+                exit;
+            }
+
+            // Get site settings for brand logo and name
+            $settingsModel = new \App\Models\Setting();
+            $settings = $settingsModel->getAllAsAssoc();
+            $siteName = $settings['site_name'] ?? 'RentSmart';
+            $appsLogoFile = $settings['apps_page_logo'] ?? '';
+            $siteLogoFile = $settings['site_logo'] ?? '';
+            $siteLogo = $appsLogoFile
+                ? (BASE_URL . '/public/assets/images/' . $appsLogoFile)
+                : ($siteLogoFile ? (BASE_URL . '/public/assets/images/' . $siteLogoFile) : (BASE_URL . '/public/assets/images/logo.svg'));
+
+            $role = strtolower((string)$user['role']);
+            $apps = [];
+
+            // ── Brand Color Palette ──────────────────────────────────────────
+            $purple  = '#6B3E99'; // brand purple
+            $orange  = '#fd7e14'; // brand orange
+            $blue    = '#4e73df';
+            $green   = '#1cc88a';
+            $teal    = '#36b9cc';
+            $yellow  = '#f6c23e';
+            $red     = '#e74a3b';
+            $gray    = '#858796';
+            $indigo  = '#5a5c69';
+            $rose    = '#e91e8c';
+            $navy    = '#2c3e80';
+            $olive   = '#6c8c3c';
+            $brown   = '#7e5c3c';
+
+            // ════════════════════════════════════════════════════════════════
+            //  ADMIN / ADMINISTRATOR
+            // ════════════════════════════════════════════════════════════════
+            if (in_array($role, ['admin', 'administrator'], true)) {
+                $apps = [
+                    // Dashboard
+                    ['name' => 'Dashboard',        'icon' => 'bi-shield-lock',       'url' => '/admin/dashboard',                'color' => $purple],
+                    // PEOPLE
+                    ['name' => 'Managers',          'icon' => 'bi-person-workspace',  'url' => '/admin/managers',                 'color' => $orange],
+                    ['name' => 'Landlords',         'icon' => 'bi-person-badge',      'url' => '/admin/landlords',                'color' => $blue],
+                    ['name' => 'Realtors',          'icon' => 'bi-building',          'url' => '/admin/realtors',                 'color' => $green],
+                    ['name' => 'Agents',            'icon' => 'bi-people',            'url' => '/admin/agents',                   'color' => $teal],
+                    // ADMINISTRATION
+                    ['name' => 'Users',             'icon' => 'bi-people-fill',       'url' => '/admin/users',                    'color' => $yellow],
+                    ['name' => 'Sub. Plans',        'icon' => 'bi-award',             'url' => '/admin/subscriptions/plans',      'color' => $red],
+                    ['name' => 'Active Subs',       'icon' => 'bi-check-circle',      'url' => '/admin/subscriptions/active',     'color' => $gray],
+                    ['name' => 'Payments',          'icon' => 'bi-cash-coin',         'url' => '/admin/payments',                 'color' => $purple],
+                    ['name' => 'Overdue Pay.',      'icon' => 'bi-exclamation-circle','url' => '/admin/payments/overdue',         'color' => $rose],
+                    ['name' => 'Newsletter',        'icon' => 'bi-envelope',          'url' => '/admin/newsletters',              'color' => $orange],
+                    ['name' => 'Pay. Methods',      'icon' => 'bi-credit-card',       'url' => '/payment-methods',               'color' => $navy],
+                    ['name' => 'Messages',          'icon' => 'bi-inbox',             'url' => '/admin/contact-messages',         'color' => $blue],
+                    // SYSTEM
+                    ['name' => 'Settings',          'icon' => 'bi-gear',              'url' => '/settings',                       'color' => $indigo],
+                ];
+
+            // ════════════════════════════════════════════════════════════════
+            //  REALTOR
+            // ════════════════════════════════════════════════════════════════
+            } elseif ($role === 'realtor') {
+                $apps = [
+                    ['name' => 'Dashboard',        'icon' => 'bi-speedometer2',       'url' => '/realtor/dashboard',             'color' => $purple],
+                    // REALTOR
+                    ['name' => 'CRM Leads',        'icon' => 'bi-kanban',             'url' => '/realtor/leads',                 'color' => $orange],
+                    ['name' => 'Listings',         'icon' => 'bi-building',           'url' => '/realtor/listings',              'color' => $green],
+                    ['name' => 'Clients',          'icon' => 'bi-people',             'url' => '/realtor/clients',               'color' => $teal],
+                    ['name' => 'Contracts',        'icon' => 'bi-file-text',          'url' => '/realtor/contracts',             'color' => $blue],
+                    ['name' => 'Employees',        'icon' => 'bi-person-badge',       'url' => '/employees',                     'color' => $yellow],
+                    // FINANCIAL
+                    ['name' => 'Payments',         'icon' => 'bi-cash-stack',         'url' => '/payments',                      'color' => $green],
+                    ['name' => 'Expenses',         'icon' => 'bi-receipt',            'url' => '/expenses',                      'color' => $red],
+                    ['name' => 'Invoices',         'icon' => 'bi-receipt-cutoff',     'url' => '/invoices',                      'color' => $olive],
+                    // REPORTS
+                    ['name' => 'Reports',          'icon' => 'bi-graph-up',           'url' => '/reports',                       'color' => $teal],
+                    // ADD-ONS
+                    ['name' => 'Files',            'icon' => 'bi-folder2-open',       'url' => '/files',                         'color' => $gray],
+                    ['name' => 'E-Signatures',     'icon' => 'bi-pen',                'url' => '/esign',                         'color' => $navy],
+                    // COMMUNICATION
+                    ['name' => 'Inquiries',        'icon' => 'bi-envelope-open',      'url' => '/admin/inquiries',               'color' => $rose],
+                    // BILLING
+                    ['name' => 'Billing',          'icon' => 'bi-credit-card-2-back', 'url' => '/subscription/renew',            'color' => $orange],
+                    // OTHERS
+                    ['name' => 'Vacant Units',     'icon' => 'bi-house-door',         'url' => '/vacant-units',                  'color' => $blue],
+                    ['name' => 'Post to Jiji',     'icon' => 'bi-megaphone-fill',     'url' => '/jiji',                          'color' => $yellow],
+                    ['name' => 'Integrations',     'icon' => 'bi-plugin',             'url' => '/integrations/marketplaces',     'color' => $indigo],
+                    // SETTINGS
+                    ['name' => 'Company Branding', 'icon' => 'bi-building',           'url' => '/branding',                      'color' => $brown],
+                    ['name' => 'Contact Us',       'icon' => 'bi-life-preserver',     'url' => '/contact',                       'color' => $purple],
+                    ['name' => 'Settings',         'icon' => 'bi-gear',               'url' => '/settings',                      'color' => $indigo],
+                ];
+
+            // ════════════════════════════════════════════════════════════════
+            //  AGENT
+            // ════════════════════════════════════════════════════════════════
+            } elseif ($role === 'agent') {
+                $apps = [
+                    ['name' => 'Dashboard',        'icon' => 'bi-speedometer2',       'url' => '/dashboard',                     'color' => $purple],
+                    // CLIENT MANAGEMENT
+                    ['name' => 'CRM',              'icon' => 'bi-kanban',             'url' => '/agent/leads',                   'color' => $orange],
+                    ['name' => 'Clients',          'icon' => 'bi-people',             'url' => '/agent/clients',                 'color' => $teal],
+                    ['name' => 'Contracts',        'icon' => 'bi-file-text',          'url' => '/agent/contracts',               'color' => $blue],
+                    // PROPERTY MANAGEMENT
+                    ['name' => 'Properties',       'icon' => 'bi-building',           'url' => '/properties',                    'color' => $green],
+                    ['name' => 'Units',            'icon' => 'bi-door-open',          'url' => '/units',                         'color' => $teal],
+                    ['name' => 'Tenants',          'icon' => 'bi-people',             'url' => '/tenants',                       'color' => $yellow],
+                    ['name' => 'Leases',           'icon' => 'bi-file-text',          'url' => '/leases',                        'color' => $blue],
+                    ['name' => 'Utilities',        'icon' => 'bi-lightning-charge',   'url' => '/utilities',                     'color' => $orange],
+                    ['name' => 'Maintenance',      'icon' => 'bi-tools',              'url' => '/maintenance',                   'color' => $red],
+                    // FINANCIAL
+                    ['name' => 'Pay. Methods',     'icon' => 'bi-credit-card',        'url' => '/payment-methods',               'color' => $navy],
+                    ['name' => 'Payments',         'icon' => 'bi-cash-stack',         'url' => '/payments',                      'color' => $green],
+                    ['name' => 'M-Pesa Verify',    'icon' => 'bi-shield-check',       'url' => '/mpesa-verification',            'color' => $teal],
+                    ['name' => 'Expenses',         'icon' => 'bi-receipt',            'url' => '/expenses',                      'color' => $red],
+                    ['name' => 'Invoices',         'icon' => 'bi-receipt-cutoff',     'url' => '/invoices',                      'color' => $olive],
+                    ['name' => 'Accounting',       'icon' => 'bi-calculator',         'url' => '/accounting',                    'color' => $purple],
+                    // REPORTS
+                    ['name' => 'Reports',          'icon' => 'bi-graph-up',           'url' => '/reports',                       'color' => $teal],
+                    ['name' => 'Tenant Balances',  'icon' => 'bi-calendar-check',     'url' => '/reports/tenant-balances',       'color' => $gray],
+                    // HR & PAYROLL
+                    ['name' => 'Employees',        'icon' => 'bi-person-badge',       'url' => '/employees',                     'color' => $yellow],
+                    ['name' => 'Files',            'icon' => 'bi-folder2-open',       'url' => '/files',                         'color' => $gray],
+                    ['name' => 'E-Signatures',     'icon' => 'bi-pen',                'url' => '/esign',                         'color' => $navy],
+                    // COMMUNICATION
+                    ['name' => 'Inquiries',        'icon' => 'bi-envelope-open',      'url' => '/admin/inquiries',               'color' => $rose],
+                    ['name' => 'Messaging',        'icon' => 'bi-chat-dots',          'url' => '/messaging',                     'color' => $blue],
+                    ['name' => 'Notices',          'icon' => 'bi-megaphone',          'url' => '/notices',                       'color' => $orange],
+                    // SETTINGS
+                    ['name' => 'Company Branding', 'icon' => 'bi-building',           'url' => '/branding',                      'color' => $brown],
+                    ['name' => 'Billing',          'icon' => 'bi-credit-card-2-back', 'url' => '/subscription/renew',            'color' => $purple],
+                    // OTHERS
+                    ['name' => 'Vacant Units',     'icon' => 'bi-house-door',         'url' => '/vacant-units',                  'color' => $blue],
+                    ['name' => 'Post to Jiji',     'icon' => 'bi-megaphone-fill',     'url' => '/jiji',                          'color' => $yellow],
+                    ['name' => 'Integrations',     'icon' => 'bi-plugin',             'url' => '/integrations/marketplaces',     'color' => $indigo],
+                    ['name' => 'Contact Us',       'icon' => 'bi-life-preserver',     'url' => '/contact',                       'color' => $purple],
+                    ['name' => 'Settings',         'icon' => 'bi-gear',               'url' => '/settings',                      'color' => $indigo],
+                ];
+
+            // ════════════════════════════════════════════════════════════════
+            //  MANAGER / LANDLORD / CARETAKER and other roles
+            // ════════════════════════════════════════════════════════════════
+            } else {
+                $apps = [
+                    ['name' => 'Dashboard',        'icon' => 'bi-speedometer2',       'url' => '/dashboard',                     'color' => $purple],
+                    // PROPERTY MANAGEMENT
+                    ['name' => 'Properties',       'icon' => 'bi-building',           'url' => '/properties',                    'color' => $green],
+                    ['name' => 'Units',            'icon' => 'bi-door-open',          'url' => '/units',                         'color' => $teal],
+                    ['name' => 'Tenants',          'icon' => 'bi-people',             'url' => '/tenants',                       'color' => $yellow],
+                    ['name' => 'Leases',           'icon' => 'bi-file-text',          'url' => '/leases',                        'color' => $blue],
+                    ['name' => 'Utilities',        'icon' => 'bi-lightning-charge',   'url' => '/utilities',                     'color' => $orange],
+                    ['name' => 'Maintenance',      'icon' => 'bi-tools',              'url' => '/maintenance',                   'color' => $red],
+                    // FINANCIAL
+                    ['name' => 'Pay. Methods',     'icon' => 'bi-credit-card',        'url' => '/payment-methods',               'color' => $navy],
+                    ['name' => 'Payments',         'icon' => 'bi-cash-stack',         'url' => '/payments',                      'color' => $green],
+                    ['name' => 'M-Pesa Verify',    'icon' => 'bi-shield-check',       'url' => '/mpesa-verification',            'color' => $teal],
+                    ['name' => 'Expenses',         'icon' => 'bi-receipt',            'url' => '/expenses',                      'color' => $red],
+                    ['name' => 'Invoices',         'icon' => 'bi-receipt-cutoff',     'url' => '/invoices',                      'color' => $olive],
+                    ['name' => 'Accounting',       'icon' => 'bi-calculator',         'url' => '/accounting',                    'color' => $purple],
+                    // REPORTS
+                    ['name' => 'Reports',          'icon' => 'bi-graph-up',           'url' => '/reports',                       'color' => $teal],
+                    ['name' => 'Tenant Balances',  'icon' => 'bi-calendar-check',     'url' => '/reports/tenant-balances',       'color' => $gray],
+                    // HR & PAYROLL
+                    ['name' => 'Employees',        'icon' => 'bi-person-badge',       'url' => '/employees',                     'color' => $yellow],
+                    ['name' => 'Files',            'icon' => 'bi-folder2-open',       'url' => '/files',                         'color' => $gray],
+                    ['name' => 'E-Signatures',     'icon' => 'bi-pen',                'url' => '/esign',                         'color' => $navy],
+                    // COMMUNICATION
+                    ['name' => 'Inquiries',        'icon' => 'bi-envelope-open',      'url' => '/admin/inquiries',               'color' => $rose],
+                    ['name' => 'Messaging',        'icon' => 'bi-chat-dots',          'url' => '/messaging',                     'color' => $blue],
+                    ['name' => 'Notices',          'icon' => 'bi-megaphone',          'url' => '/notices',                       'color' => $orange],
+                    // SETTINGS
+                    ['name' => 'Company Branding', 'icon' => 'bi-building',           'url' => '/branding',                      'color' => $brown],
+                    ['name' => 'Billing',          'icon' => 'bi-credit-card-2-back', 'url' => '/subscription/renew',            'color' => $purple],
+                    // OTHERS
+                    ['name' => 'Vacant Units',     'icon' => 'bi-house-door',         'url' => '/vacant-units',                  'color' => $blue],
+                    ['name' => 'Post to Jiji',     'icon' => 'bi-megaphone-fill',     'url' => '/jiji',                          'color' => $yellow],
+                    ['name' => 'Integrations',     'icon' => 'bi-plugin',             'url' => '/integrations/marketplaces',     'color' => $indigo],
+                    ['name' => 'Contact Us',       'icon' => 'bi-life-preserver',     'url' => '/contact',                       'color' => $purple],
+                    ['name' => 'Settings',         'icon' => 'bi-gear',               'url' => '/settings',                      'color' => $indigo],
+                ];
+            }
+
+            require 'views/apps.php';
+        } catch (\Exception $e) {
+            error_log("Error in DashboardController::apps: " . $e->getMessage());
             require 'views/errors/500.php';
         }
     }

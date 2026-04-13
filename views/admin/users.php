@@ -7,9 +7,9 @@ ob_start();
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
                 <div>
                     <h1 class="h3 mb-0">
-                        <i class="bi bi-people-fill text-primary me-2"></i>User Management
+                        <i class="bi bi-people-fill text-primary me-2"></i><?= htmlspecialchars($pageHeading ?? 'User Management') ?>
                     </h1>
-                    <p class="text-muted mb-0 mt-1">Manage system users and their roles</p>
+                    <p class="text-muted mb-0 mt-1">Manage <?= strtolower(htmlspecialchars($pageHeading ?? 'system users')) ?> and their details</p>
                 </div>
                 <div class="d-flex flex-wrap gap-2 align-items-center">
                   

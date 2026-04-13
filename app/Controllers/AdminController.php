@@ -518,8 +518,12 @@ class AdminController
                 return strtolower((string)($u['role'] ?? '')) === $roleLower;
             }));
 
+            // Extract page heading from title (e.g., "Managers - RentSmart" -> "Managers")
+            $pageHeading = explode(' - ', $title)[0] ?? 'User Management';
+            
             echo view('admin/users', [
                 'title' => $title,
+                'pageHeading' => $pageHeading,
                 'users' => $users
             ]);
         } catch (Exception $e) {
@@ -553,11 +557,14 @@ class AdminController
     public function updateSubscription()
     {
         try {
+            $activeTab = $_POST['active_tab'] ?? '';
+            $redirectPath = '/admin/subscriptions' . ($activeTab === 'active' ? '/active' : ($activeTab === 'plans' ? '/plans' : ''));
+
             // Verify CSRF token
             if (!verify_csrf_token()) {
                 $_SESSION['flash_message'] = 'Invalid security token';
                 $_SESSION['flash_type'] = 'danger';
-                redirect('/admin/subscriptions');
+                redirect($redirectPath);
             }
 
             $subscriptionId = filter_input(INPUT_POST, 'subscription_id', FILTER_SANITIZE_NUMBER_INT);
@@ -571,7 +578,7 @@ class AdminController
             if (!$subscriptionId || !$newUserId || !$planId || !$status || !$startAtRaw || !$endAtRaw) {
                 $_SESSION['flash_message'] = 'All fields are required';
                 $_SESSION['flash_type'] = 'danger';
-                redirect('/admin/subscriptions');
+                redirect($redirectPath);
             }
 
             // Normalize datetime-local inputs to Y-m-d H:i:s
@@ -584,7 +591,7 @@ class AdminController
             if (!$plan) {
                 $_SESSION['flash_message'] = 'Invalid plan selected';
                 $_SESSION['flash_type'] = 'danger';
-                redirect('/admin/subscriptions');
+                redirect($redirectPath);
             }
 
             // Validate target user
@@ -592,7 +599,7 @@ class AdminController
             if (!$targetUser) {
                 $_SESSION['flash_message'] = 'Selected user was not found';
                 $_SESSION['flash_type'] = 'danger';
-                redirect('/admin/subscriptions');
+                redirect($redirectPath);
             }
 
             $payload = [
@@ -637,14 +644,19 @@ class AdminController
             $agent = $_SERVER['HTTP_USER_AGENT'] ?? null;
             $this->activityLog->add($_SESSION['user_id'] ?? null, $_SESSION['user_role'] ?? null, 'subscription.update', 'subscription', (int)$subscriptionId, null, json_encode(['changes' => $changes]), $ip, $agent);
 
+            $activeTab = $_POST['active_tab'] ?? '';
+            $redirectPath = '/admin/subscriptions' . ($activeTab === 'active' ? '/active' : ($activeTab === 'plans' ? '/plans' : ''));
+
             $_SESSION['flash_message'] = 'Subscription updated successfully';
             $_SESSION['flash_type'] = 'success';
-            redirect('/admin/subscriptions');
+            redirect($redirectPath);
         } catch (Exception $e) {
             error_log($e->getMessage());
+            $activeTab = $_POST['active_tab'] ?? '';
+            $redirectPath = '/admin/subscriptions' . ($activeTab === 'active' ? '/active' : ($activeTab === 'plans' ? '/plans' : ''));
             $_SESSION['flash_message'] = 'Failed to update subscription';
             $_SESSION['flash_type'] = 'danger';
-            redirect('/admin/subscriptions');
+            redirect($redirectPath);
         }
     }
 
@@ -677,6 +689,7 @@ class AdminController
             
             echo view('admin/users', [
                 'title' => 'User Management - RentSmart',
+                'pageHeading' => 'User Management',
                 'users' => $users
             ]);
         } catch (Exception $e) {
@@ -1264,11 +1277,14 @@ class AdminController
     public function updatePlan()
     {
         try {
+            $activeTab = $_POST['active_tab'] ?? '';
+            $redirectPath = '/admin/subscriptions' . ($activeTab === 'plans' ? '/plans' : ($activeTab === 'active' ? '/active' : ''));
+
             // Verify CSRF token
             if (!verify_csrf_token()) {
                 $_SESSION['flash_message'] = 'Invalid security token';
                 $_SESSION['flash_type'] = 'danger';
-                redirect('/admin/subscriptions');
+                redirect($redirectPath);
             }
 
             $planId = filter_input(INPUT_POST, 'plan_id', FILTER_SANITIZE_NUMBER_INT);
@@ -1290,7 +1306,7 @@ class AdminController
             if (!$planId || !$name || $price === false || !$description || !$features) {
                 $_SESSION['flash_message'] = 'All fields are required';
                 $_SESSION['flash_type'] = 'danger';
-                redirect('/admin/subscriptions');
+                redirect($redirectPath);
             }
 
             $payload = [
@@ -1326,14 +1342,19 @@ class AdminController
                 $agent
             );
 
+            $activeTab = $_POST['active_tab'] ?? '';
+            $redirectPath = '/admin/subscriptions' . ($activeTab === 'plans' ? '/plans' : ($activeTab === 'active' ? '/active' : ''));
+
             $_SESSION['flash_message'] = 'Plan updated successfully';
             $_SESSION['flash_type'] = 'success';
-            redirect('/admin/subscriptions');
+            redirect($redirectPath);
         } catch (Exception $e) {
             error_log($e->getMessage());
+            $activeTab = $_POST['active_tab'] ?? '';
+            $redirectPath = '/admin/subscriptions' . ($activeTab === 'plans' ? '/plans' : ($activeTab === 'active' ? '/active' : ''));
             $_SESSION['flash_message'] = 'Failed to update plan';
             $_SESSION['flash_type'] = 'danger';
-            redirect('/admin/subscriptions');
+            redirect($redirectPath);
         }
     }
 

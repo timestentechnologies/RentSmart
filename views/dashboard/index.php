@@ -369,26 +369,58 @@ document.addEventListener('DOMContentLoaded', function() {
     const revenueCanvas = document.getElementById('revenueTrendChart');
     if (revenueCanvas && revenueCanvas.getContext) {
     const revenueTrendCtx = revenueCanvas.getContext('2d');
-    const revenueLabels = <?= json_encode(array_map(function($month) {
-                return date('M Y', strtotime($month['month']));
-            }, $monthlyRevenue)) ?>;
-    const revenueData = <?= json_encode(array_map(function($month) {
-                    return $month['total_amount'];
-                }, $monthlyRevenue)) ?>;
-    if (!Array.isArray(revenueLabels) || !revenueLabels.length) {
+
+    // Raw data from PHP
+    const rawMonthlyData = <?= json_encode($monthlyRevenue ?? []) ?>;
+    const rawDailyData = <?= json_encode($dailyRevenue ?? []) ?>;
+
+    // Always use monthly view for cleaner trend
+    const useDaily = false;
+
+    // Generate continuous date range
+    const today = new Date();
+    const labels = [];
+    const data = [];
+    const dataMap = {};
+
+    // Build map of existing monthly data
+    rawMonthlyData.forEach(month => {
+        dataMap[month.month] = parseFloat(month.total_amount) || 0;
+    });
+
+    // Generate last 6 months
+    for (let i = 5; i >= 0; i--) {
+        const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const monthKey = `${year}-${month}`;
+        const label = d.toLocaleString('default', { month: 'short' }) + ' ' + year;
+        labels.push(label);
+        data.push(dataMap[monthKey] || 0);
+    }
+
+    const chartLabel = useDaily ? 'Daily Revenue (Last 60 Days)' : 'Monthly Revenue (Last 6 Months)';
+
+    if (!labels.length) {
         const parent = revenueCanvas.closest('.chart-container');
         if (parent) parent.innerHTML = '<div class="text-muted small">No revenue data available.</div>';
     } else {
     new Chart(revenueTrendCtx, {
         type: 'line',
         data: {
-            labels: revenueLabels,
+            labels: labels,
             datasets: [{
-                label: 'Monthly Revenue',
-                data: revenueData,
-                borderColor: 'rgb(25, 135, 84)',
-                tension: 0.1,
-                fill: false
+                label: chartLabel,
+                data: data,
+                borderColor: '#ff8a1f',
+                backgroundColor: 'rgba(255, 138, 31, 0.1)',
+                pointBackgroundColor: '#ff8a1f',
+                pointBorderColor: '#2b0a3d',
+                pointRadius: 4,
+                pointHoverRadius: 6,
+                tension: 0.3,
+                fill: true,
+                spanGaps: true
             }]
         },
         options: {
@@ -396,10 +428,28 @@ document.addEventListener('DOMContentLoaded', function() {
             maintainAspectRatio: false,
             plugins: {
                 legend: {
-                    display: false
+                    display: true,
+                    position: 'top',
+                    labels: {
+                        color: '#2b0a3d'
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return 'Ksh' + context.parsed.y.toLocaleString();
+                        }
+                    }
                 }
             },
             scales: {
+                x: {
+                    ticks: {
+                        maxRotation: useDaily ? 45 : 0,
+                        autoSkip: true,
+                        maxTicksLimit: useDaily ? 10 : 6
+                    }
+                },
                 y: {
                     beginAtZero: true,
                     ticks: {

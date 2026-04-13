@@ -349,48 +349,41 @@ ob_clean();
         /* Sidebar */
         .sidebar {
             position: fixed;
-            top: 0;
+            top: 60px;
             left: 0;
             width: var(--sidebar-width);
-            height: 100vh;
-            background: var(--bg-secondary);
-            border-right: 1px solid var(--border-color);
+            height: calc(100vh - 60px);
+            background: #2b0a3d;
+            border-right: 1px solid rgba(255, 255, 255, 0.1);
             z-index: 1040;
             transition: transform 0.3s ease, background-color 0.3s ease;
             overflow-y: auto;
         }
 
-        .sidebar-logo {
-            padding: 1.5rem;
-            border-bottom: 1px solid var(--border-color);
+        .sidebar-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
             display: flex;
-            justify-content: space-between;
+            justify-content: flex-end;
             align-items: center;
+            min-height: 60px;
         }
 
-        .sidebar-logo a {
+        .sidebar-header .sidebar-close {
+            background: transparent;
+            border: none;
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.5rem;
             display: flex;
-            flex-direction: column;
             align-items: center;
-            flex: 1;
+            justify-content: center;
+            transition: color 0.2s ease;
         }
 
-        .sidebar-logo img {
-            height: 70px;
-            width: auto;
-            object-fit: contain;
-            max-width: auto;
-        }
-
-        .sidebar-logo span {
-            font-weight: 600;
-            color: var(--primary-color);
-            margin-left: 0;
-            margin-top: 0.5rem;
-            text-align: center;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+        .sidebar-header .sidebar-close:hover {
+            color: #ffffff;
         }
 
         .sidebar-close {
@@ -445,20 +438,26 @@ ob_clean();
             transition: all 0.2s;
         }
 
-        .nav-link:hover {
-            color: rgb(60, 4, 68);
-            background: white;
+        .sidebar .nav-link {
+            color: rgba(255, 255, 255, 0.85);
+        }
+
+        .sidebar .nav-link:hover {
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.08);
         }
 
         /* Active link styled like a button */
         .nav-link.active {
-            background: var(--primary-color);
+            background: #ff8a1f;
             color: #ffffff;
             box-shadow: 0 4px 10px rgba(0,0,0,0.12);
             border: 1px solid rgba(0,0,0,0.05);
         }
-        .nav-link.active i { color: #ffffff; }
-        .nav-link.active:hover { color: #ffffff; background: var(--primary-color); }
+        .nav-link.active { font-weight: 700; }
+        .nav-link.active i { color: #ffffff !important; }
+        .nav-link.active span { color: #ffffff !important; font-weight: 700; }
+        .nav-link.active:hover { color: #ffffff; background: #ff8a1f; }
 
         .nav-link i {
             margin-right: 0.75rem;
@@ -534,28 +533,6 @@ ob_clean();
         
         [data-theme="dark"] .stat-card .text-muted {
             color: #9ca3af !important;
-        }
-
-        .stat-card::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 0;
-            bottom: 0;
-            width: 4px;
-            border-radius: 4px 0 0 4px;
-        }
-
-        .stat-card.revenue::before {
-            background: linear-gradient(45deg, var(--success-color), #28a745);
-        }
-
-        .stat-card.occupancy::before {
-            background: linear-gradient(45deg, var(--primary-color), #0a58ca);
-        }
-
-        .stat-card.outstanding::before {
-            background: linear-gradient(45deg, var(--warning-color), #e6a800);
         }
 
         .stat-card h2 {
@@ -697,12 +674,9 @@ ob_clean();
                 font-size: 1.5rem;
             }
 
-            .sidebar-logo span {
-                display: block;
-            }
-
-            .sidebar-logo img {
-                height: 40px;
+            .sidebar-header {
+                min-height: 56px;
+                padding: 0.75rem 1rem;
             }
         }
 
@@ -989,6 +963,212 @@ ob_clean();
         .theme-toggle:hover i {
             transform: rotate(20deg);
         }
+
+        /* Top Header Bar */
+        .top-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: #2b0a3d;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 1035;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 1.5rem;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        .top-header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .header-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+        }
+
+        .header-logo img {
+            height: 36px;
+            width: auto;
+        }
+
+        .header-logo span {
+            color: #ffffff;
+            font-weight: 600;
+            font-size: 1.1rem;
+            white-space: nowrap;
+        }
+
+        .top-header-right {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        /* Header Icon Button */
+        
+        .header-icon-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: none;
+            background: transparent;
+            color: rgba(255, 255, 255, 0.85);
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+            text-decoration: none;
+        }
+        
+        .header-icon-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            transform: translateY(-1px);
+        }
+        
+        .header-icon-btn .badge {
+            position: absolute;
+            top: -2px;
+            right: -2px;
+            font-size: 0.65rem;
+            padding: 0.25em 0.4em;
+            background: #ff6b00;
+            color: white;
+            border: 2px solid #2b0a3d;
+        }
+        
+        .header-icon-btn.logout-btn:hover {
+            background: rgba(220, 53, 69, 0.2);
+            color: #ff6b6b;
+        }
+        
+        /* Install App Button - Orange with pulse */
+        .header-icon-btn.install-app-btn {
+            color: #ff8a1f;
+            position: relative;
+        }
+
+        .header-icon-btn.install-app-btn i {
+            animation: pulse-zoom 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse-zoom {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.2);
+                opacity: 0.8;
+            }
+        }
+
+        .header-icon-btn.install-app-btn:hover {
+            background: rgba(255, 138, 31, 0.2);
+            color: #ff8a1f;
+        }
+
+        .header-icon-btn.install-app-btn::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 2px solid #ff8a1f;
+            transform: translate(-50%, -50%) scale(0.8);
+            opacity: 0;
+            animation: signal-ring 2s ease-out infinite;
+        }
+
+        @keyframes signal-ring {
+            0% {
+                transform: translate(-50%, -50%) scale(0.8);
+                opacity: 0.6;
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(1.5);
+                opacity: 0;
+            }
+        }
+        
+        /* Theme Toggle in Header */
+        .theme-toggle-header {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            border: none;
+            background: #212529;
+            color: white;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        [data-theme="dark"] .theme-toggle-header {
+            background: #ff8c00;
+        }
+        
+        .theme-toggle-header:hover {
+            transform: scale(1.05);
+        }
+        
+        .theme-toggle-header i {
+            transition: transform 0.3s ease;
+        }
+        
+        .theme-toggle-header:hover i {
+            transform: rotate(20deg);
+        }
+        
+        /* Adjust main content for header */
+        .main-content {
+            margin-top: 60px;
+        }
+        
+        /* Mobile adjustments */
+        @media (max-width: 991px) {
+            .top-header {
+                left: 0;
+            }
+            
+            .top-header-left .sidebar-toggle {
+                display: flex;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .top-header {
+                padding: 0 1rem;
+                height: 56px;
+            }
+            
+            .header-icon-btn {
+                width: 36px;
+                height: 36px;
+                font-size: 1rem;
+            }
+            
+            .theme-toggle-header {
+                width: 36px;
+                height: 36px;
+            }
+        }
         
         /* WhatsApp Floating Button */
         .whatsapp-fab {
@@ -1060,15 +1240,12 @@ ob_clean();
         /* Additional dark mode styles */
         /* Navigation section headers */
         .nav-header {
-            color:rgb(51, 3, 59) !important;
+            color: #ff8a1f !important;
             font-weight: bold !important;
             font-size: 0.75rem;
             letter-spacing: 0.5px;
             margin-bottom: 0.5rem;
-        }
-        
-        [data-theme="dark"] .nav-header {
-            color: #ff8c00 !important;
+            background: transparent;
         }
         
         [data-theme="dark"] .badge {
@@ -1290,20 +1467,296 @@ ob_clean();
                 max-width: 180px;
             }
         }
+
+        /* ============================================
+           GLOBAL BRAND COLOR STYLES - Warm Orange #ff8a1f
+           ============================================ */
+
+        /* Primary Buttons - Warm Orange Brand Color */
+        .btn-primary {
+            background-color: #ff8a1f !important;
+            border-color: #ff8a1f !important;
+            color: #ffffff !important;
+        }
+
+        .btn-primary:hover,
+        .btn-primary:focus,
+        .btn-primary:active,
+        .btn-primary.active {
+            background-color: #e67d1c !important;
+            border-color: #e67d1c !important;
+            color: #ffffff !important;
+        }
+
+        .btn-primary:disabled,
+        .btn-primary.disabled {
+            background-color: #ffb366 !important;
+            border-color: #ffb366 !important;
+            color: #ffffff !important;
+        }
+
+        /* Outline Primary Buttons */
+        .btn-outline-primary {
+            color: #ff8a1f !important;
+            border-color: #ff8a1f !important;
+            background-color: transparent !important;
+        }
+
+        .btn-outline-primary:hover,
+        .btn-outline-primary:focus,
+        .btn-outline-primary:active,
+        .btn-outline-primary.active {
+            background-color: #ff8a1f !important;
+            border-color: #ff8a1f !important;
+            color: #ffffff !important;
+        }
+
+        /* Page Header Icons - Warm Orange */
+        .page-header h1 i,
+        .page-header h2 i,
+        .page-header h3 i {
+            color: #ff8a1f !important;
+        }
+
+        /* Table Icons - Warm Orange */
+        table tbody tr td i.bi-person-circle,
+        table tbody tr td i.bi-person,
+        table tbody tr td i.bi-people,
+        table tbody tr td i.bi-people-fill {
+            color: #ff8a1f !important;
+        }
+
+        /* Avatar Circles - Warm Orange */
+        .avatar-circle {
+            background-color: rgba(255, 138, 31, 0.15) !important;
+            color: #ff8a1f !important;
+        }
+
+        /* Stat Cards - Colored Left Borders (No Gradients) */
+        .stat-card {
+            border-left: 4px solid #ff8a1f;
+        }
+
+        /* Different colors for stat cards using nth-child */
+        .row .col-12:nth-child(1) .stat-card,
+        .row .col-md-4:nth-child(1) .stat-card {
+            border-left-color: #ff8a1f; /* Warm Orange */
+        }
+
+        .row .col-12:nth-child(2) .stat-card,
+        .row .col-md-4:nth-child(2) .stat-card {
+            border-left-color: #28a745; /* Green */
+        }
+
+        .row .col-12:nth-child(3) .stat-card,
+        .row .col-md-4:nth-child(3) .stat-card {
+            border-left-color: #17a2b8; /* Info Blue */
+        }
+
+        .row .col-12:nth-child(4) .stat-card,
+        .row .col-md-4:nth-child(4) .stat-card {
+            border-left-color: #6f42c1; /* Purple */
+        }
+
+        .row .col-12:nth-child(5) .stat-card,
+        .row .col-md-4:nth-child(5) .stat-card {
+            border-left-color: #dc3545; /* Red */
+        }
+
+        .row .col-12:nth-child(6) .stat-card,
+        .row .col-md-4:nth-child(6) .stat-card {
+            border-left-color: #fd7e14; /* Orange */
+        }
+
+        /* Stats Icon Colors - Match Border Colors */
+        .row .col-12:nth-child(1) .stat-card .stats-icon i,
+        .row .col-md-4:nth-child(1) .stat-card .stats-icon i {
+            color: #ff8a1f !important;
+            opacity: 0.6;
+        }
+
+        .row .col-12:nth-child(2) .stat-card .stats-icon i,
+        .row .col-md-4:nth-child(2) .stat-card .stats-icon i {
+            color: #28a745 !important;
+            opacity: 0.6;
+        }
+
+        .row .col-12:nth-child(3) .stat-card .stats-icon i,
+        .row .col-md-4:nth-child(3) .stat-card .stats-icon i {
+            color: #17a2b8 !important;
+            opacity: 0.6;
+        }
+
+        .row .col-12:nth-child(4) .stat-card .stats-icon i,
+        .row .col-md-4:nth-child(4) .stat-card .stats-icon i {
+            color: #6f42c1 !important;
+            opacity: 0.6;
+        }
+
+        .row .col-12:nth-child(5) .stat-card .stats-icon i,
+        .row .col-md-4:nth-child(5) .stat-card .stats-icon i {
+            color: #dc3545 !important;
+            opacity: 0.6;
+        }
+
+        .row .col-12:nth-child(6) .stat-card .stats-icon i,
+        .row .col-md-4:nth-child(6) .stat-card .stats-icon i {
+            color: #fd7e14 !important;
+            opacity: 0.6;
+        }
+
+        /* Link Colors - Warm Orange */
+        a:not(.btn):not(.nav-link):not(.dropdown-item):not(.header-logo):not(.header-icon-btn):not(.whatsapp-fab) {
+            color: #ff8a1f;
+        }
+
+        a:not(.btn):not(.nav-link):not(.dropdown-item):not(.header-logo):not(.header-icon-btn):not(.whatsapp-fab):hover {
+            color: #e67d1c;
+        }
+
+        /* Active Sidebar Navigation - Keep warm orange */
+        .nav-link.active {
+            background: #ff8a1f !important;
+            color: #ffffff !important;
+        }
+
+        /* Form Focus States - Warm Orange */
+        .form-control:focus,
+        .form-select:focus {
+            border-color: #ff8a1f;
+            box-shadow: 0 0 0 0.2rem rgba(255, 138, 31, 0.25);
+        }
+
+        /* Pagination Active - Warm Orange */
+        .page-item.active .page-link {
+            background-color: #ff8a1f !important;
+            border-color: #ff8a1f !important;
+            color: #ffffff !important;
+        }
+
+        /* Badge Primary - Warm Orange */
+        .badge.bg-primary {
+            background-color: #ff8a1f !important;
+        }
+
+        /* Progress Bar - Warm Orange */
+        .progress-bar {
+            background-color: #ff8a1f !important;
+        }
+
+        /* ============================================
+           GLOBAL TABLE STYLES - Dark Purple Headers & Rounded Corners
+           ============================================ */
+
+        /* Table Container - Rounded Corners */
+        .table-responsive {
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(0, 0, 0, 0.08);
+        }
+
+        /* Card with Table - Rounded Corners */
+        .card:has(.table-responsive) {
+            border-radius: 12px;
+            overflow: hidden;
+        }
+
+        /* Table Base Styles */
+        .table {
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 0;
+        }
+
+        /* Table Header - Faded Dark Purple */
+        .table thead {
+            background: rgba(43, 10, 61, 0.85) !important;
+        }
+
+        .table thead tr {
+            background: rgba(43, 10, 61, 0.85) !important;
+        }
+
+        .table thead tr th {
+            background: rgba(43, 10, 61, 0.85) !important;
+            color: #ffffff !important;
+            font-weight: 600;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 1rem 0.75rem;
+            border-bottom: none !important;
+            border-top: none !important;
+        }
+
+        /* First and Last Header Cell Rounded Corners */
+        .table thead tr th:first-child {
+            border-top-left-radius: 12px;
+        }
+
+        .table thead tr th:last-child {
+            border-top-right-radius: 12px;
+        }
+
+        /* Table Body */
+        .table tbody tr {
+            border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+        }
+
+        .table tbody tr:last-child {
+            border-bottom: none;
+        }
+
+        .table tbody tr:last-child td:first-child {
+            border-bottom-left-radius: 12px;
+        }
+
+        .table tbody tr:last-child td:last-child {
+            border-bottom-right-radius: 12px;
+        }
+
+        /* Table Cells */
+        .table tbody tr td {
+            padding: 0.875rem 0.75rem;
+            vertical-align: middle;
+        }
+
+        /* Hover Effect */
+        .table tbody tr:hover {
+            background-color: rgba(43, 10, 61, 0.04);
+        }
+
+        /* Dark Mode Table Header */
+        [data-theme="dark"] .table thead {
+            background: rgba(43, 10, 61, 0.95) !important;
+        }
+
+        [data-theme="dark"] .table thead tr {
+            background: rgba(43, 10, 61, 0.95) !important;
+        }
+
+        [data-theme="dark"] .table thead tr th {
+            background: rgba(43, 10, 61, 0.95) !important;
+            color: #ffffff !important;
+        }
+
+        [data-theme="dark"] .table-responsive {
+            border-color: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Striped Table Override */
+        .table-striped > tbody > tr:nth-of-type(odd) > * {
+            --bs-table-accent-bg: rgba(43, 10, 61, 0.02);
+        }
+
+        [data-theme="dark"] .table-striped > tbody > tr:nth-of-type(odd) > * {
+            --bs-table-accent-bg: rgba(255, 255, 255, 0.03);
+        }
     </style>
 </head>
 <body>
     <!-- Sidebar -->
     <div class="sidebar">
-        <div class="sidebar-logo">
-            <a href="<?= BASE_URL ?>/" class="d-flex align-items-center text-decoration-none">
-                <img src="<?= htmlspecialchars($siteLogo) ?>" alt="<?= htmlspecialchars($siteName) ?> Logo" class="img-fluid">
-                <span><?= htmlspecialchars($siteName) ?></span>
-            </a>
-            <button class="sidebar-close" id="sidebarClose">
-                <i class="bi bi-x-lg"></i>
-            </button>
-        </div>
         <nav class="sidebar-nav">
             <ul class="nav flex-column">
                 <?php $isRealtor = isset($_SESSION['user_role']) && strtolower((string)$_SESSION['user_role']) === 'realtor'; ?>
@@ -1311,6 +1764,13 @@ ob_clean();
                 <?php $isAgentSide = !$isRealtor && in_array($userRole, ['agent'], true); ?>
                 <?php $isAdmin = in_array($userRole, ['admin','administrator'], true); ?>
                 <?php $isImpersonating = !empty($_SESSION['impersonating']) && !empty($_SESSION['original_user']); ?>
+
+                <li class="nav-item">
+                    <a class="nav-link <?= ($current_uri === 'apps') ? 'active' : '' ?>" href="<?= BASE_URL ?>/apps">
+                        <i class="bi bi-grid-fill me-2" style="color: var(--brand-purple);"></i>
+                        <span class="fw-bold" style="color: var(--brand-purple);">Apps</span>
+                    </a>
+                </li>
 
                 <?php if ($isImpersonating): ?>
                     <li class="nav-item px-3">
@@ -1807,41 +2267,55 @@ ob_clean();
                     </a>
                 </li>
                 <?php endif; ?>
-
                 <?php endif; ?>
-
-            
-
-                <!-- Logout -->
-                <li class="nav-item mt-4">
-                    <a href="<?= BASE_URL ?>/logout" class="nav-link text-danger">
-                        <i class="bi bi-box-arrow-right me-2"></i> Logout
-                    </a>
-                </li>
             </ul>
-            <!-- Profile Button at Bottom -->
-            <div class="sidebar-profile mt-auto px-3 pb-3">
-                <button class="btn btn-outline-secondary w-100 d-flex align-items-center justify-content-start" id="openProfileModalBtn" type="button">
-                    <i class="bi bi-person-circle me-2 fs-4"></i>
-                    <span><?= htmlspecialchars($_SESSION['user_name'] ?? 'Profile') ?></span>
-                </button>
-            </div>
         </nav>
     </div>
 
-    <div class="sidebar-overlay" id="sidebarOverlay"></div>
-
-    <!-- Theme Toggle Button -->
-    <button class="theme-toggle" id="themeToggle" title="Toggle Dark Mode">
-        <i class="bi bi-moon-fill" id="themeIcon"></i>
-    </button>
-
-    <div id="notifContainer" style="position:fixed; right:18px; top:18px; z-index:3000; pointer-events:auto;">
-        <button id="notifBellBtn" type="button" class="btn rounded-circle position-relative" data-bs-toggle="modal" data-bs-target="#notificationsModal" style="width:48px; height:48px; background:#6B3E99; border-color:#6B3E99; color:#fff; pointer-events:auto;">
-            <i class="bi bi-bell"></i>
-            <span id="notifBadge" class="position-absolute top-0 start-100 translate-middle badge rounded-pill d-none" style="background:#ff6b00;">0</span>
-        </button>
-    </div>
+    <!-- Top Header Bar -->
+    <header class="top-header">
+        <div class="top-header-left">
+            <button class="header-icon-btn d-lg-none" id="sidebarToggle" title="Toggle Menu">
+                <i class="bi bi-list"></i>
+            </button>
+            <a href="<?= BASE_URL ?>/" class="header-logo">
+                <img src="<?= htmlspecialchars($siteLogo) ?>" alt="<?= htmlspecialchars($siteName) ?> Logo">
+                <span><?= htmlspecialchars($siteName) ?></span>
+            </a>
+        </div>
+        <div class="top-header-right">
+            <!-- Theme Toggle -->
+            <button class="theme-toggle-header" id="themeToggle" title="Toggle Dark Mode">
+                <i class="bi bi-moon-fill" id="themeIcon"></i>
+            </button>
+            
+            <!-- Notifications -->
+            <button class="header-icon-btn" id="notifBellBtn" type="button" data-bs-toggle="modal" data-bs-target="#notificationsModal" title="Notifications">
+                <i class="bi bi-bell"></i>
+                <span id="notifBadge" class="badge rounded-pill d-none">0</span>
+            </button>
+            
+            <!-- Settings -->
+            <a href="<?= BASE_URL ?>/settings" class="header-icon-btn" title="Settings">
+                <i class="bi bi-gear"></i>
+            </a>
+            
+            <!-- Profile -->
+            <button class="header-icon-btn" id="openProfileModalBtn" type="button" title="Profile">
+                <i class="bi bi-person-circle"></i>
+            </button>
+            
+            <!-- Install App -->
+            <button class="header-icon-btn install-app-btn" id="installAppBtn" title="Install App">
+                <i class="bi bi-download"></i>
+            </button>
+            
+            <!-- Logout -->
+            <a href="<?= BASE_URL ?>/logout" class="header-icon-btn logout-btn" title="Logout">
+                <i class="bi bi-box-arrow-right"></i>
+            </a>
+        </div>
+    </header>
 
     <div class="modal fade" id="notificationsModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="false">
         <div class="modal-dialog modal-dialog-scrollable">
@@ -1948,17 +2422,6 @@ ob_clean();
 
     <!-- Main Content -->
     <div class="main-content">
-        <!-- PWA Install Banner -->
-        <div id="pwaInstallBanner" class="alert alert-info d-none d-print-none" role="alert" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
-            <div class="d-flex align-items-center gap-2">
-                <i class="bi bi-download"></i>
-                <span>Add RentSmart to your device for a faster, app-like experience.</span>
-            </div>
-            <div class="d-flex align-items-center gap-2">
-                <button class="btn btn-sm btn-primary" onclick="handlePwaInstallClick()">Install App</button>
-                <button class="btn btn-sm btn-outline-secondary" onclick="dismissPwaBanner()">Not now</button>
-            </div>
-        </div>
         <!-- Mobile Toggle Button -->
         <button class="btn btn-primary d-md-none mb-3 toggle-sidebar" type="button">
             <i class="bi bi-list"></i>
@@ -2658,5 +3121,70 @@ ob_clean();
     });
     </script>
     <?php endif; ?>
+
+    <!-- PWA Install Handler -->
+    <script>
+    (function() {
+        let deferredPrompt = null;
+        const installBtn = document.getElementById('installAppBtn');
+        const installHelpModal = document.getElementById('pwaInstallHelpModal');
+        
+        // Listen for beforeinstallprompt event
+        window.addEventListener('beforeinstallprompt', function(e) {
+            // Prevent the mini-infobar from appearing on mobile
+            e.preventDefault();
+            // Store the event for later use
+            deferredPrompt = e;
+            // Show the install button in header
+            if (installBtn) {
+                installBtn.style.display = 'flex';
+            }
+        });
+        
+        // Handle install button click
+        if (installBtn) {
+            installBtn.addEventListener('click', async function() {
+                if (!deferredPrompt) {
+                    // No install prompt available, show help modal
+                    if (installHelpModal) {
+                        const modal = new bootstrap.Modal(installHelpModal);
+                        modal.show();
+                    }
+                    return;
+                }
+                
+                // Show the native install prompt
+                deferredPrompt.prompt();
+                
+                // Wait for user choice
+                const { outcome } = await deferredPrompt.userChoice;
+                
+                if (outcome === 'accepted') {
+                    // User accepted, hide the button
+                    installBtn.style.display = 'none';
+                }
+                
+                // Clear the deferred prompt
+                deferredPrompt = null;
+            });
+        }
+        
+        // Hide install button if app is already installed
+        window.addEventListener('appinstalled', function() {
+            if (installBtn) {
+                installBtn.style.display = 'none';
+            }
+            deferredPrompt = null;
+        });
+        
+        // Check if app is already installed (display-mode: standalone)
+        if (window.matchMedia('(display-mode: standalone)').matches || 
+            window.navigator.standalone === true) {
+            if (installBtn) {
+                installBtn.style.display = 'none';
+            }
+        }
+    })();
+    </script>
 </body>
 </html>

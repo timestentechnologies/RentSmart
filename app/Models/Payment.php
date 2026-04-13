@@ -1108,6 +1108,52 @@ class Payment extends Model
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
 
+    public function getDailyRevenue($userId = null, $days = 30)
+    {
+        $user = new User();
+        $user->find($userId);
+        
+        $sql = "SELECT 
+                DATE(p.payment_date) as date,
+                SUM(p.amount) as total_amount,
+                COUNT(*) as payment_count
+                FROM payments p
+                JOIN leases l ON p.lease_id = l.id
+                JOIN units u ON l.unit_id = u.id
+                JOIN properties pr ON u.property_id = pr.id
+                WHERE p.payment_date >= DATE_SUB(CURDATE(), INTERVAL ? DAY)";
+
+        $params = [$days];
+        
+        // Add role-based conditions
+        if (!$user->isAdmin()) {
+            $sql .= " AND (1=0";
+            if ($user->isLandlord()) {
+                $sql .= " OR pr.owner_id = ?";
+                $params[] = $userId;
+            }
+            if ($user->isManager()) {
+                $sql .= " OR pr.manager_id = ?";
+                $params[] = $userId;
+            }
+            if ($user->isAgent()) {
+                $sql .= " OR pr.agent_id = ?";
+                $params[] = $userId;
+            }
+            // Caretaker assigned to property
+            $sql .= " OR pr.caretaker_user_id = ?";
+            $params[] = $userId;
+            $sql .= ")";
+        }
+        
+        $sql .= " GROUP BY DATE(p.payment_date)
+                  ORDER BY date ASC";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+    }
+
     public function getPaymentsByProperty($userId = null)
     {
         $user = new User();

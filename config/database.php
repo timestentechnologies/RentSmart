@@ -1,20 +1,40 @@
 <?php
 
-// Default database configuration
-$config = [
-    'host' => 'localhost',
-    'database' => 'opulentl_rentsmart',
-    'username' => 'opulentl_timesten',
-    'password' => 'Moonlight#911',
-    'charset' => 'utf8mb4',
-    'options' => [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-        PDO::ATTR_EMULATE_PREPARES => false,
-    ],
-];
+// Environment Detection
+$httpHost = $_SERVER['HTTP_HOST'] ?? '';
+$isProduction = (strpos($httpHost, 'rentsmart.timestentechnologies.co.ke') !== false);
 
-// Override with environment variables if they exist
+if ($isProduction) {
+    // Production database configuration
+    $config = [
+        'host' => 'localhost',
+        'database' => 'opulentl_rentsmart',
+        'username' => 'opulentl_timesten',
+        'password' => 'Moonlight#911',
+        'charset' => 'utf8mb4',
+        'options' => [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES => false,
+        ],
+    ];
+} else {
+    // Local database configuration
+    $config = [
+        'host' => 'localhost',
+        'database' => 'rentsmart',
+        'username' => 'root',
+        'password' => '',
+        'charset' => 'utf8mb4',
+        'options' => [
+            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+            PDO::ATTR_EMULATE_PREPARES => false,
+        ],
+    ];
+}
+
+// Override with environment variables if they exist (.env support)
 if (getenv('DB_HOST')) $config['host'] = getenv('DB_HOST');
 if (getenv('DB_NAME')) $config['database'] = getenv('DB_NAME');
 if (getenv('DB_USER')) $config['username'] = getenv('DB_USER');

@@ -103,7 +103,7 @@ class AuthController
             } catch (\Throwable $e) {
             }
 
-            $redirectPath = ($targetRole === 'realtor') ? '/realtor/dashboard' : '/dashboard';
+            $redirectPath = '/apps';
             header('Location: ' . BASE_URL . $redirectPath);
             exit;
         } catch (Exception $e) {
@@ -164,7 +164,7 @@ class AuthController
 
             $_SESSION['flash_message'] = 'Switched back to admin';
             $_SESSION['flash_type'] = 'success';
-            header('Location: ' . BASE_URL . '/admin/dashboard');
+            header('Location: ' . BASE_URL . '/apps');
             exit;
         } catch (Exception $e) {
             error_log($e->getMessage());
@@ -444,7 +444,7 @@ class AuthController
             // Redirect to dashboard
             $_SESSION['flash_message'] = 'Welcome to RentSmart! Your 7-day trial has started.';
             $_SESSION['flash_type'] = 'success';
-            $redirectPath = ($role === 'realtor') ? '/realtor/dashboard' : '/dashboard';
+            $redirectPath = '/apps';
             header('Location: ' . BASE_URL . $redirectPath);
             exit;
         } catch (\Throwable $e) {
@@ -833,14 +833,7 @@ class AuthController
             } catch (\Exception $ex) { error_log('auth.login log failed: ' . $ex->getMessage()); }
 
             // Determine redirect path
-            $roleLower = strtolower((string)($user['role'] ?? ''));
-            if (in_array($roleLower, ['admin', 'administrator'], true)) {
-                $redirectPath = '/admin/dashboard';
-            } elseif ($roleLower === 'realtor') {
-                $redirectPath = '/realtor/dashboard';
-            } else {
-                $redirectPath = '/dashboard';
-            }
+            $redirectPath = '/apps';
 
             if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
                 header('Content-Type: application/json');

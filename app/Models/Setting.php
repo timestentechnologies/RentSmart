@@ -97,6 +97,7 @@ class Setting extends Model
             'site_email' => '',
             'site_logo' => '',
             'site_favicon' => '',
+            'apps_page_logo' => '',
             'site_footer_text' => '',
             'site_analytics_code' => '',
             'maintenance_mode' => '0',
