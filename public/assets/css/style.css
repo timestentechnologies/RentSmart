@@ -139,15 +139,6 @@ main {
     background: #555;
 }
 
-/* Table bottom border styling for desktop - orange edge */
-.table {
-    border-bottom: 2px solid #ff8a1f !important;
-}
-
-.table tbody tr:last-child td {
-    border-bottom: none !important;
-}
-
 /* Remove any dark borders from table containers */
 .table-responsive,
 .card > .table-responsive,
