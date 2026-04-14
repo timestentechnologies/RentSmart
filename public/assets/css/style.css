@@ -401,16 +401,16 @@ main {
         font-size: 0.7rem;
     }
 
-    /* Remove box shadow from all avatars */
-    .avatar-circle,
-    .rounded-circle,
-    .avatar,
-    .user-avatar,
-    .profile-avatar,
-    .tenants-table .rounded-circle,
-    .tenants-table .avatar-circle {
+    /* Remove box shadow from avatar icons in tables */
+    .table .avatar-circle,
+    .table .bi-person-circle,
+    .table .bi-person,
+    .table .bi-people,
+    .table .bi-people-fill,
+    .table td i.bi-person-circle,
+    .table td i.bi-person {
         box-shadow: none !important;
-        border: none !important;
+        background: transparent !important;
     }
 }
 
