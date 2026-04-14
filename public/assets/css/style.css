@@ -211,8 +211,13 @@ main {
         gap: 1rem;
     }
     .tenants-table th, .tenants-table td {
-        font-size: 0.85rem;
-        padding: 0.5rem 0.4rem;
+        font-size: 0.7rem;
+        padding: 0.35rem 0.3rem;
+    }
+    .tenants-table th {
+        font-size: 0.65rem;
+        letter-spacing: 0.2px;
+        font-weight: 600;
     }
 }
 
@@ -228,6 +233,21 @@ main {
         display: block !important;
         width: 100% !important;
         max-width: 100vw !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    /* Remove bottom borders from tables */
+    .table-responsive .table,
+    .table-responsive table,
+    .card-body .table,
+    .card-body table {
+        border-bottom: none !important;
+    }
+
+    .table-responsive .table tbody tr:last-child td,
+    .card-body .table tbody tr:last-child td {
+        border-bottom: none !important;
     }
 
     /* Force card-body to allow scrolling when it contains tables */
@@ -282,13 +302,15 @@ main {
     /* Table cell padding reduction */
     .table th,
     .table td {
-        padding: 0.5rem 0.5rem;
-        font-size: 0.8rem;
+        padding: 0.4rem 0.4rem;
+        font-size: 0.75rem;
         white-space: nowrap;
     }
 
     .table th {
-        font-size: 0.75rem;
+        font-size: 0.7rem;
+        letter-spacing: 0.3px;
+        font-weight: 600;
     }
 
     /* Badge and button size reduction */
