@@ -2,6 +2,7 @@
 if (!defined('BASE_URL')) { define('BASE_URL', ''); }
 $activePage = $activePage ?? '';
 $siteName = $siteName ?? 'RentSmart';
+$siteLogo = $siteLogo ?? (BASE_URL . '/public/assets/images/logo.svg');
 $faviconUrl = $faviconUrl ?? site_setting_image_url('site_favicon', BASE_URL . '/public/assets/images/site_favicon_1750832003.png');
 ?>
 <style>
@@ -42,7 +43,7 @@ $faviconUrl = $faviconUrl ?? site_setting_image_url('site_favicon', BASE_URL . '
 <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
   <div class="container">
     <a class="navbar-brand" href="<?= BASE_URL ?>/">
-      <img src="<?= asset('images/site_logo_1751627446.png') ?>" alt="<?= htmlspecialchars($siteName) ?> Logo" height="40">
+      <img src="<?= htmlspecialchars($siteLogo) ?>" alt="<?= htmlspecialchars($siteName) ?> Logo" height="40">
     </a>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
       <span class="navbar-toggler-icon"></span>
