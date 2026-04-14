@@ -1411,6 +1411,7 @@
                                 <option value="manager">Manager</option>
                                 <option value="agent">Agent</option>
                                 <option value="realtor">Realtor</option>
+                                <option value="airbnb_manager">Airbnb Manager</option>
                             </select>
                             <label for="registerRole">Your Role</label>
                         </div>
