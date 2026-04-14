@@ -2299,7 +2299,11 @@ ob_clean();
             </button>
             
             <!-- Settings -->
-            <a href="<?= BASE_URL ?>/settings" class="header-icon-btn" title="Settings">
+            <?php
+            $userRole = strtolower((string)($_SESSION['user_role'] ?? ''));
+            $settingsUrl = ($userRole === 'admin') ? '/settings' : '/branding';
+            ?>
+            <a href="<?= BASE_URL ?><?= $settingsUrl ?>" class="header-icon-btn" title="<?= ($userRole === 'admin') ? 'Settings' : 'Company Branding' ?>">
                 <i class="bi bi-gear"></i>
             </a>
             
