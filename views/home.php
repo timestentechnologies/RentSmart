@@ -1532,7 +1532,7 @@
                 if (result.success) {
                     showAlert('login', result.message, 'success');
                     setTimeout(() => {
-                        window.location.href = result.redirect || '<?= BASE_URL ?>/dashboard';
+                        window.location.href = result.redirect || '<?= BASE_URL ?>/apps';
                     }, 1000);
                 } else {
                     showAlert('login', result.message);
@@ -1621,7 +1621,7 @@
                 if (result.success) {
                     showAlert('register', result.message, 'success');
                     setTimeout(() => {
-                        window.location.href = result.redirect || '<?= BASE_URL ?>/dashboard';
+                        window.location.href = result.redirect || '<?= BASE_URL ?>/apps';
                     }, 1000);
                 } else {
                     showAlert('register', result.message);

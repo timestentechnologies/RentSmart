@@ -44,18 +44,7 @@ class DashboardController
         // Load user data
         $userData = $this->user->find($_SESSION['user_id']);
         $role = strtolower($userData['role']);
-
-        if ($role === 'realtor') {
-            header('Location: ' . BASE_URL . '/realtor/dashboard');
-            exit;
-        }
-
-        if ($role === 'airbnb_manager') {
-            header('Location: ' . BASE_URL . '/airbnb/dashboard');
-            exit;
-        }
-
-        if (!empty($_SESSION['demo_mode'])) {
+        if (isset($_SESSION['demo_mode'])) {
             return;
         }
 
@@ -85,6 +74,17 @@ class DashboardController
 
     public function index()
     {
+        // Role-based dashboard redirection
+        $role = strtolower($_SESSION['user_role'] ?? '');
+        if ($role === 'realtor') {
+            header('Location: ' . BASE_URL . '/realtor/dashboard');
+            exit;
+        }
+        if ($role === 'airbnb_manager') {
+            header('Location: ' . BASE_URL . '/airbnb/dashboard');
+            exit;
+        }
+
         try {
             // Get user-specific data
             $userId = $_SESSION['user_id'];

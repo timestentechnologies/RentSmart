@@ -314,7 +314,8 @@ ob_clean();
             --success-color: #198754;
             --warning-color: #ffc107;
             --danger-color: #dc3545;
-            --info-color: #0dcaf0;
+            --brand-purple: #6B3E99;
+            --brand-purple-light: rgba(107, 62, 153, 0.1);
             
             /* Light mode colors */
             --bg-primary: #f8f9fa;
@@ -1766,9 +1767,9 @@ ob_clean();
                 <?php $isImpersonating = !empty($_SESSION['impersonating']) && !empty($_SESSION['original_user']); ?>
 
                 <li class="nav-item">
-                    <a class="nav-link <?= ($current_uri === 'apps') ? 'active' : '' ?>" href="<?= BASE_URL ?>/apps">
-                        <i class="bi bi-grid-fill me-2" style="color: var(--brand-purple);"></i>
-                        <span class="fw-bold" style="color: var(--brand-purple);">Apps</span>
+                    <a class="nav-link <?= ($current_uri === 'apps') ? 'active' : '' ?>" href="<?= BASE_URL ?>/apps" style="z-index: 1050; position: relative; pointer-events: auto;">
+                        <i class="bi bi-grid-fill me-2" style="color: #FF8A00 !important;"></i>
+                        <span class="fw-bold" style="color: #ffffff !important;">Apps Launcher</span>
                     </a>
                 </li>
 
