@@ -124,6 +124,9 @@ ob_start();
                                         $roleBadge = 'warning';
                                     } elseif ($role === 'caretaker') {
                                         $roleBadge = 'secondary';
+                                    } elseif ($role === 'airbnb_manager') {
+                                        $roleBadge = 'dark';
+                                        $roleLabel = 'Airbnb Manager';
                                     }
                                 ?>
                                 <span class="badge bg-<?= $roleBadge ?>">
@@ -145,7 +148,7 @@ ob_start();
                                         $canImpersonate = isset($_SESSION['user_role'])
                                             && strtolower((string)$_SESSION['user_role']) === 'admin'
                                             && empty($_SESSION['impersonating'])
-                                            && in_array($rowRoleLower, ['manager','landlord','realtor','agent','caretaker'], true);
+                                            && in_array($rowRoleLower, ['manager','landlord','realtor','agent','caretaker','airbnb_manager'], true);
                                     ?>
                                     <?php if ($canImpersonate): ?>
                                         <form method="POST" action="<?= BASE_URL ?>/admin/impersonate/<?= (int)$user['id'] ?>" style="display:inline;">
@@ -205,6 +208,7 @@ ob_start();
                             <option value="landlord">Landlord</option>
                             <option value="caretaker">Caretaker</option>
                             <option value="realtor">Realtor</option>
+                            <option value="airbnb_manager">Airbnb Manager</option>
                         </select>
                     </div>
                 </div>
@@ -246,6 +250,7 @@ ob_start();
                             <option value="landlord">Landlord</option>
                             <option value="caretaker">Caretaker</option>
                             <option value="realtor">Realtor</option>
+                            <option value="airbnb_manager">Airbnb Manager</option>
                         </select>
                     </div>
                     <div class="mb-3">

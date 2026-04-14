@@ -687,6 +687,18 @@ class DashboardController
                 ];
 
             // ════════════════════════════════════════════════════════════════
+            //  AIRBNB MANAGER
+            // ════════════════════════════════════════════════════════════════
+            } elseif ($role === 'airbnb_manager') {
+                $apps = [
+                    ['name' => 'Airbnb Dashboard', 'icon' => 'bi-house-heart',        'url' => '/airbnb/dashboard',              'color' => $purple],
+                    ['name' => 'Bookings',         'icon' => 'bi-calendar-check',    'url' => '/airbnb/bookings',               'color' => $orange],
+                    ['name' => 'Walk-in Guests',   'icon' => 'bi-person-walking',    'url' => '/airbnb/walkin-guests',          'color' => $teal],
+                    ['name' => 'Property Settings','icon' => 'bi-gear',              'url' => '/airbnb/property-settings',      'color' => $indigo],
+                    ['name' => 'Public Listing',   'icon' => 'bi-globe',             'url' => '/airbnb',                        'color' => $blue],
+                ];
+
+            // ════════════════════════════════════════════════════════════════
             //  MANAGER / LANDLORD / CARETAKER and other roles
             // ════════════════════════════════════════════════════════════════
             } else {

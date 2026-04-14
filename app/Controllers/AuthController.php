@@ -61,8 +61,8 @@ class AuthController
             }
 
             $targetRole = strtolower((string)($target['role'] ?? ''));
-            if (!in_array($targetRole, ['manager', 'landlord', 'realtor', 'agent', 'caretaker'], true)) {
-                $_SESSION['flash_message'] = 'You can only impersonate managers, landlords, realtors, agents, or caretakers';
+            if (!in_array($targetRole, ['manager', 'landlord', 'realtor', 'agent', 'caretaker', 'airbnb_manager'], true)) {
+                $_SESSION['flash_message'] = 'You can only impersonate managers, landlords, realtors, agents, caretakers, or Airbnb managers';
                 $_SESSION['flash_type'] = 'warning';
                 header('Location: ' . BASE_URL . '/admin/users');
                 exit;
@@ -387,7 +387,7 @@ class AuthController
                     . '</div>'
                     . '<div style="background:#f8f9fa;padding:20px;text-align:center;border-top:1px solid #e0e0e0;">'
                     . '<p style="color:#888;font-size:12px;margin:0 0 10px 0;">Follow us on social media for tips and updates</p>'
-                    . '<p style="color:#888;font-size:11px;margin:0;">© ' . date('Y') . ' RentSmart. All rights reserved.</p>'
+                    . '<p style="color:#888;font-size:11px;margin:0;">&copy; ' . date('Y') . ' RentSmart. All rights reserved.</p>'
                     . $footer
                     . '</div>'
                     . '</div>';
@@ -834,6 +834,10 @@ class AuthController
 
             // Determine redirect path
             $redirectPath = '/apps';
+            $roleLower = strtolower((string)($user['role'] ?? ''));
+            if ($roleLower === 'airbnb_manager') {
+                $redirectPath = '/airbnb/dashboard';
+            }
 
             if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
                 header('Content-Type: application/json');
