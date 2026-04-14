@@ -300,7 +300,7 @@ ob_clean();
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
     <link href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css" rel="stylesheet">
-    <link href="<?= BASE_URL ?>/public/assets/css/style.css?v=5" rel="stylesheet">
+    <link href="<?= BASE_URL ?>/public/assets/css/style.css?v=6" rel="stylesheet">
     
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     
@@ -2275,8 +2275,8 @@ ob_clean();
     <!-- Top Header Bar -->
     <header class="top-header">
         <div class="top-header-left">
-            <button class="header-icon-btn d-lg-none" id="sidebarToggle" title="Toggle Menu">
-                <i class="bi bi-list"></i>
+            <button class="header-icon-btn d-lg-none toggle-sidebar" id="sidebarToggle" title="Toggle Menu" style="background: #ff8a1f; color: white; border: none; border-radius: 0.375rem;">
+                <i class="bi bi-list" style="font-size: 1.5rem;"></i>
             </button>
             <a href="<?= BASE_URL ?>/" class="header-logo">
                 <?php if (!empty($settings['site_logo'])): ?>
@@ -2425,12 +2425,6 @@ ob_clean();
 
     <!-- Main Content -->
     <div class="main-content">
-        <!-- Mobile Toggle Button -->
-        <button class="btn btn-primary d-md-none mb-3 toggle-sidebar" type="button">
-            <i class="bi bi-list"></i>
-        </button>
-
-        <!-- CSRF Token -->
         <?= csrf_field() ?>
 
         <?= $content ?? '' ?>
