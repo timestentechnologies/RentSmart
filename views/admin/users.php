@@ -14,8 +14,9 @@ ob_start();
                 <div class="d-flex flex-wrap gap-2 align-items-center">
                   
                     <div class="vr d-none d-md-block"></div>
+                    <?php $roleLabel = rtrim(htmlspecialchars($pageHeading ?? 'Users'), 's'); ?>
                     <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">
-                        <i class="bi bi-plus-circle me-1"></i>Add User
+                        <i class="bi bi-plus-circle me-1"></i>Add <?= $roleLabel ?>
                     </button>
                 </div>
             </div>
@@ -172,12 +173,12 @@ ob_start();
     </div>
 </div>
 
-<!-- Add User Modal -->
+<!-- Add <?= $roleLabel ?> Modal -->
 <div class="modal fade" id="addUserModal" tabindex="-1">
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">Add New User</h5>
+                <h5 class="modal-title">Add New <?= $roleLabel ?></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form action="<?= BASE_URL ?>/admin/users/store" method="POST">
@@ -209,7 +210,7 @@ ob_start();
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Add User</button>
+                    <button type="submit" class="btn btn-primary">Add <?= $roleLabel ?></button>
                 </div>
             </form>
         </div>
