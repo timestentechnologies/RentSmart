@@ -4,6 +4,7 @@ $stats = $stats ?? [];
 $occupancy = $stats['occupancy'] ?? ['occupancy_rate' => 0, 'occupied_units' => 0, 'total_units' => 0];
 $isAdmin = $isAdmin ?? false;
 $isRealtor = $isRealtor ?? false;
+$isAirbnbManager = $isAirbnbManager ?? false;
 $users = $users ?? [];
 ?>
 
@@ -67,6 +68,35 @@ $users = $users ?? [];
                 </div>
             </div>
         </div>
+        <?php elseif ($isAirbnbManager): ?>
+        <div class="col-12 col-md-4">
+            <div class="stat-card outstanding">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="card-title">Average Daily Rate (ADR)</h6>
+                        <h2 class="mt-3 mb-2">Ksh<?= number_format($stats['adr'] ?? 0, 2) ?></h2>
+                        <p class="mb-0 text-muted">Based on completed stays</p>
+                    </div>
+                    <div class="stats-icon">
+                        <i class="bi bi-tag fs-1 text-warning opacity-25"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-12 col-md-4">
+            <div class="stat-card occupancy">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="card-title">Total Bookings</h6>
+                        <h2 class="mt-3 mb-2"><?= number_format($stats['total_bookings'] ?? 0) ?></h2>
+                        <p class="mb-0 text-muted">Current month</p>
+                    </div>
+                    <div class="stats-icon">
+                        <i class="bi bi-calendar-check fs-1 text-primary opacity-25"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
         <?php else: ?>
         <div class="col-12 col-md-4">
             <div class="stat-card outstanding">
@@ -125,6 +155,10 @@ $users = $users ?? [];
                             <option value="realtor_financial">Financial Report</option>
                             <option value="realtor_listings">Listings Sold / Not Sold</option>
                             <option value="realtor_won_leads">Won Leads Report</option>
+                        <?php elseif ($isAirbnbManager): ?>
+                            <option value="airbnb">Airbnb Performance Report</option>
+                            <option value="financial">Financial Report</option>
+                            <option value="occupancy">Occupancy Report</option>
                         <?php else: ?>
                             <option value="financial">Financial Report</option>
                             <option value="occupancy">Occupancy Report</option>
@@ -184,7 +218,7 @@ $users = $users ?? [];
                         <table class="table table-hover">
                             <thead>
                                 <tr>
-                                    <th><?= $isRealtor ? 'Client' : 'Tenant' ?></th>
+                                    <th><?= $isRealtor ? 'Client' : ($isAirbnbManager ? 'Guest' : 'Tenant') ?></th>
                                     <th>Amount</th>
                                     <th>Date</th>
                                     <th>Status</th>
@@ -198,7 +232,7 @@ $users = $users ?? [];
                                 <?php else: ?>
                                     <?php foreach ($stats['recent_payments'] as $payment): ?>
                                         <tr>
-                                            <td><?= htmlspecialchars($isRealtor ? ($payment['client_name'] ?? 'N/A') : ($payment['tenant_name'] ?? 'N/A')) ?></td>
+                                            <td><?= htmlspecialchars($isRealtor ? ($payment['client_name'] ?? 'N/A') : ($isAirbnbManager ? ($payment['guest_name'] ?? 'N/A') : ($payment['tenant_name'] ?? 'N/A'))) ?></td>
                                             <td>Ksh<?= number_format($payment['amount'], 2) ?></td>
                                             <td><?= date('M j, Y', strtotime($payment['payment_date'])) ?></td>
                                             <td><span class="badge bg-success">Completed</span></td>

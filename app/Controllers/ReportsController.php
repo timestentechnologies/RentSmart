@@ -94,6 +94,40 @@ class ReportsController
             $role = strtolower((string)($this->currentUser['role'] ?? ($_SESSION['user_role'] ?? '')));
             $isRealtor = ($role === 'realtor');
 
+            if ($role === 'airbnb_manager') {
+                $start = date('Y-m-01');
+                $end = date('Y-m-t');
+
+                $bookingModel = new \App\Models\AirbnbBooking();
+                $propertyIds = $this->property->getAccessiblePropertyIds($userId);
+                $airbnbStats = $bookingModel->getBookingStats($propertyIds, $start, $end);
+                
+                // Calculate ADR (Average Daily Rate)
+                $adr = 0;
+                if (!empty($airbnbStats['total_nights']) && $airbnbStats['total_nights'] > 0) {
+                    $adr = $airbnbStats['total_revenue'] / $airbnbStats['total_nights'];
+                }
+
+                $stats = [
+                    'total_revenue' => $airbnbStats['total_revenue'] ?? 0,
+                    'total_bookings' => $airbnbStats['total_bookings'] ?? 0,
+                    'adr' => $adr,
+                    'occupancy_data' => $bookingModel->getOccupancyData($propertyIds),
+                    'recent_payments' => $this->payment->getRecent(5, $userId)
+                ];
+
+                echo view('reports/index', [
+                    'title' => 'Reports',
+                    'stats' => $stats,
+                    'propertyRevenue' => $this->payment->getPaymentsByProperty($userId),
+                    'users' => null,
+                    'isAdmin' => false,
+                    'isRealtor' => false,
+                    'isAirbnbManager' => true
+                ]);
+                return;
+            }
+
             if ($isRealtor) {
                 $start = date('Y-m-01');
                 $end = date('Y-m-t');
@@ -325,6 +359,9 @@ class ReportsController
                 case 'realtor_won_leads':
                     $data = $this->getRealtorWonLeadsReport($startDate, $endDate, $userId);
                     break;
+                case 'airbnb':
+                    $data = $this->getAirbnbPerformanceReport($startDate, $endDate, $userId);
+                    break;
                 default:
                     $_SESSION['flash_message'] = 'Invalid report type';
                     $_SESSION['flash_type'] = 'danger';
@@ -463,6 +500,37 @@ class ReportsController
             'endDate' => $endDate,
             'total_won' => count($won),
             'won' => $won,
+        ];
+    }
+
+    private function getAirbnbPerformanceReport($startDate, $endDate, $userId)
+    {
+        $bookingModel = new \App\Models\AirbnbBooking();
+        $propertyIds = $this->property->getAccessiblePropertyIds($userId);
+        
+        $stats = $bookingModel->getBookingStats($propertyIds, $startDate, $endDate);
+        $recentBookings = $bookingModel->getAllBookings([
+            'property_id' => $propertyIds,
+            'check_in_from' => $startDate,
+            'check_in_to' => $endDate
+        ]);
+
+        $adr = 0;
+        if (!empty($stats['total_nights']) && $stats['total_nights'] > 0) {
+            $adr = $stats['total_revenue'] / $stats['total_nights'];
+        }
+
+        return [
+            'startDate' => $startDate,
+            'endDate' => $endDate,
+            'total_revenue' => $stats['total_revenue'] ?? 0,
+            'total_bookings' => $stats['total_bookings'] ?? 0,
+            'completed_bookings' => $stats['completed_bookings'] ?? 0,
+            'cancelled_bookings' => $stats['cancelled_bookings'] ?? 0,
+            'total_nights' => $stats['total_nights'] ?? 0,
+            'adr' => $adr,
+            'bookings' => $recentBookings,
+            'propertyRevenue' => $this->payment->getPropertyRevenueForReport($startDate, $endDate, $userId)
         ];
     }
 

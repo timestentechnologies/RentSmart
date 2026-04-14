@@ -709,7 +709,6 @@ class DashboardController
                     ['name' => 'Accounting',       'icon' => 'bi-calculator',         'url' => '/accounting',                    'color' => $purple],
                     // REPORTS
                     ['name' => 'Reports',          'icon' => 'bi-graph-up',           'url' => '/reports',                       'color' => $teal],
-                    ['name' => 'Tenant Balances',  'icon' => 'bi-calendar-check',     'url' => '/reports/tenant-balances',       'color' => $gray],
                     // HR & PAYROLL
                     ['name' => 'Employees',        'icon' => 'bi-person-badge',       'url' => '/employees',                     'color' => $yellow],
                     ['name' => 'Files',            'icon' => 'bi-folder2-open',       'url' => '/files',                         'color' => $gray],

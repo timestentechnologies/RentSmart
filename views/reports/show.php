@@ -485,6 +485,139 @@ ob_start();
         </div>
         <?php break; ?>
 
+        <?php case 'airbnb': ?>
+        <!-- Airbnb Performance Report -->
+        <div class="row g-3 mt-4">
+            <!-- Summary Cards -->
+            <div class="col-md-3">
+                <div class="card h-100 border-start border-primary border-4">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted mb-2">Total Revenue</h6>
+                        <h3 class="mb-0">Ksh<?= number_format($data['total_revenue'], 2) ?></h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card h-100 border-start border-success border-4">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted mb-2">Nights Booked</h6>
+                        <h3 class="mb-0"><?= $data['total_nights'] ?></h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card h-100 border-start border-warning border-4">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted mb-2">ADR</h6>
+                        <h3 class="mb-0">Ksh<?= number_format($data['adr'], 2) ?></h3>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card h-100 border-start border-info border-4">
+                    <div class="card-body text-center">
+                        <h6 class="text-muted mb-2">Total Bookings</h6>
+                        <h3 class="mb-0"><?= $data['total_bookings'] ?></h3>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Booking Details -->
+            <div class="col-12 mt-4">
+                <div class="card">
+                    <div class="card-header border-top border-primary border-3">
+                        <h5 class="card-title mb-0">Booking Details</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Ref</th>
+                                        <th>Guest</th>
+                                        <th>Dates</th>
+                                        <th>Nights</th>
+                                        <th>Amount</th>
+                                        <th>Paid</th>
+                                        <th>Status</th>
+                                        <th>Source</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php if (empty($data['bookings'])): ?>
+                                        <tr><td colspan="8" class="text-center py-4">No bookings found for this period</td></tr>
+                                    <?php else: ?>
+                                        <?php foreach ($data['bookings'] as $booking): ?>
+                                            <tr>
+                                                <td><small class="text-muted"><?= htmlspecialchars($booking['booking_reference']) ?></small></td>
+                                                <td>
+                                                    <strong><?= htmlspecialchars($booking['guest_name']) ?></strong><br>
+                                                    <small class="text-muted"><?= htmlspecialchars($booking['property_name']) ?> - <?= htmlspecialchars($booking['unit_number']) ?></small>
+                                                </td>
+                                                <td>
+                                                    <?= date('M j', strtotime($booking['check_in_date'])) ?> - <?= date('M j', strtotime($booking['check_out_date'])) ?>, <?= date('Y', strtotime($booking['check_in_date'])) ?>
+                                                </td>
+                                                <td><?= $booking['nights'] ?></td>
+                                                <td>Ksh<?= number_format($booking['final_total'], 2) ?></td>
+                                                <td>Ksh<?= number_format($booking['amount_paid'], 2) ?></td>
+                                                <td>
+                                                    <?php 
+                                                        $badgeClass = 'bg-secondary';
+                                                        switch($booking['status']) {
+                                                            case 'confirmed': $badgeClass = 'bg-success'; break;
+                                                            case 'checked_in': $badgeClass = 'bg-primary'; break;
+                                                            case 'checked_out': $badgeClass = 'bg-info'; break;
+                                                            case 'cancelled': $badgeClass = 'bg-danger'; break;
+                                                        }
+                                                    ?>
+                                                    <span class="badge <?= $badgeClass ?>"><?= ucfirst($booking['status']) ?></span>
+                                                </td>
+                                                <td><small><?= ucfirst($booking['booking_source']) ?></small></td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Property Breakdown -->
+            <div class="col-12 mt-4">
+                <div class="card">
+                    <div class="card-header border-top border-success border-3">
+                        <h5 class="card-title mb-0">Revenue by Property</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Property</th>
+                                        <th>Revenue</th>
+                                        <th>Bookings</th>
+                                        <th>Contribution</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($data['propertyRevenue'] as $property): ?>
+                                    <tr>
+                                        <td><?= htmlspecialchars($property['name']) ?></td>
+                                        <td>Ksh<?= number_format($property['revenue'], 2) ?></td>
+                                        <td>-</td>
+                                        <td><?= $data['total_revenue'] > 0 ? number_format(($property['revenue'] / $data['total_revenue']) * 100, 1) : 0 ?>%</td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php break; ?>
+
     <?php endswitch; ?>
 </div>
 
