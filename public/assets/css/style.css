@@ -18,82 +18,6 @@ main {
     width: 100%;
 }
 
-/* Mobile Table Responsive Styles */
-.table-responsive {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    max-width: 100%;
-}
-
-.table-responsive table {
-    min-width: 600px;
-    width: 100%;
-}
-
-@media (max-width: 768px) {
-    .table-responsive {
-        overflow-x: scroll;
-        display: block;
-        width: 100%;
-    }
-
-    .table-responsive::-webkit-scrollbar {
-        height: 6px;
-    }
-
-    .table-responsive::-webkit-scrollbar-track {
-        background: #f1f1f1;
-        border-radius: 3px;
-    }
-
-    .table-responsive::-webkit-scrollbar-thumb {
-        background: #888;
-        border-radius: 3px;
-    }
-
-    /* Ensure cards don't constrain table width */
-    .card .table-responsive {
-        margin-left: -1rem;
-        margin-right: -1rem;
-        padding-left: 0.5rem;
-        padding-right: 0.5rem;
-    }
-
-    /* Make DataTables scrollable on mobile */
-    .dataTables_wrapper .row {
-        margin-left: 0;
-        margin-right: 0;
-    }
-
-    /* Reduce text size and padding for better column fit on mobile */
-    .table-responsive table {
-        font-size: 0.75rem;
-    }
-
-    .table-responsive th,
-    .table-responsive td {
-        padding: 0.4rem 0.5rem;
-        white-space: nowrap;
-    }
-
-    .table-responsive th {
-        font-size: 0.7rem;
-        text-transform: uppercase;
-        letter-spacing: 0.02em;
-    }
-
-    /* Shrink buttons and badges in tables */
-    .table-responsive .btn {
-        padding: 0.25rem 0.4rem;
-        font-size: 0.7rem;
-    }
-
-    .table-responsive .badge {
-        font-size: 0.65rem;
-        padding: 0.25em 0.4em;
-    }
-}
-
 /* Card Styles */
 .card {
     margin-bottom: 1.5rem;
@@ -287,7 +211,170 @@ main {
         gap: 1rem;
     }
     .tenants-table th, .tenants-table td {
-        font-size: 0.95rem;
+        font-size: 0.85rem;
         padding: 0.5rem 0.4rem;
     }
-} 
+}
+
+/* Mobile Table Responsiveness - Global */
+@media (max-width: 768px) {
+    /* Make all tables horizontally scrollable on mobile */
+    .card-body:has(> .table),
+    .card-body:has(> table),
+    .table-responsive-sm,
+    .table-responsive {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        display: block;
+        width: 100%;
+    }
+
+    /* Ensure tables within cards can scroll */
+    .card-body .table,
+    .card-body table,
+    .table-responsive .table,
+    .table-responsive table {
+        min-width: 600px;
+        width: 100%;
+        margin-bottom: 0;
+    }
+
+    /* Reduce font sizes globally on mobile */
+    body {
+        font-size: 0.875rem;
+    }
+
+    h1, .h1 {
+        font-size: 1.5rem;
+    }
+
+    h2, .h2 {
+        font-size: 1.25rem;
+    }
+
+    h3, .h3 {
+        font-size: 1.1rem;
+    }
+
+    h4, .h4 {
+        font-size: 1rem;
+    }
+
+    h5, .h5 {
+        font-size: 0.9rem;
+    }
+
+    .card-title {
+        font-size: 0.95rem;
+    }
+
+    /* Table cell padding reduction */
+    .table th,
+    .table td {
+        padding: 0.5rem 0.5rem;
+        font-size: 0.8rem;
+        white-space: nowrap;
+    }
+
+    .table th {
+        font-size: 0.75rem;
+    }
+
+    /* Badge and button size reduction */
+    .badge {
+        font-size: 0.7rem;
+        padding: 0.3em 0.5em;
+    }
+
+    .btn-sm {
+        padding: 0.25rem 0.4rem;
+        font-size: 0.75rem;
+    }
+
+    /* DataTables mobile adjustments */
+    .dataTables_wrapper {
+        font-size: 0.8rem;
+    }
+
+    .dataTables_wrapper .dataTables_info,
+    .dataTables_wrapper .dataTables_paginate {
+        font-size: 0.75rem;
+    }
+
+    .dataTables_wrapper .dataTables_paginate .paginate_button {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.75rem;
+    }
+
+    /* Form elements reduction */
+    .form-control,
+    .form-select {
+        font-size: 0.85rem;
+    }
+
+    .form-label {
+        font-size: 0.8rem;
+        margin-bottom: 0.25rem;
+    }
+
+    /* Navigation text reduction */
+    .nav-link {
+        font-size: 0.85rem;
+    }
+
+    .nav-link i {
+        font-size: 1rem;
+    }
+
+    /* Stats cards text reduction */
+    .stat-card h2 {
+        font-size: 1.25rem;
+    }
+
+    .stat-card .card-title {
+        font-size: 0.8rem;
+    }
+
+    /* Ensure horizontal scroll is visible */
+    .table-responsive::-webkit-scrollbar {
+        height: 6px;
+    }
+
+    .table-responsive::-webkit-scrollbar-thumb {
+        background-color: #888;
+        border-radius: 3px;
+    }
+
+    /* Card body padding reduction for mobile */
+    .card-body {
+        padding: 0.75rem;
+    }
+
+    .card-header {
+        padding: 0.75rem;
+    }
+
+    /* Tenant table specific - reduce avatars */
+    .tenants-table .rounded-circle {
+        width: 28px;
+        height: 28px;
+        font-size: 0.7rem;
+    }
+}
+
+/* Extra small devices */
+@media (max-width: 576px) {
+    .table th,
+    .table td {
+        padding: 0.4rem 0.35rem;
+        font-size: 0.75rem;
+    }
+
+    .btn {
+        font-size: 0.75rem;
+    }
+
+    body {
+        font-size: 0.8rem;
+    }
+}
