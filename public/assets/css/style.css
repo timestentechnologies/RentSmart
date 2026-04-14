@@ -400,6 +400,18 @@ main {
         height: 28px;
         font-size: 0.7rem;
     }
+
+    /* Remove box shadow from all avatars */
+    .avatar-circle,
+    .rounded-circle,
+    .avatar,
+    .user-avatar,
+    .profile-avatar,
+    .tenants-table .rounded-circle,
+    .tenants-table .avatar-circle {
+        box-shadow: none !important;
+        border: none !important;
+    }
 }
 
 /* Extra small devices */
