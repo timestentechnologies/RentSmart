@@ -18,7 +18,8 @@ class LedgerEntry extends Model
         // Scope to user's accessible properties OR entries posted directly to the user.
         // Note: journal_entries.property_id may be NULL for global/user-only entries.
         $joins[] = "LEFT JOIN properties pr ON je.property_id = pr.id";
-        $where[] = "(je.user_id = ? OR pr.owner_id = ? OR pr.manager_id = ? OR pr.agent_id = ? OR pr.caretaker_user_id = ?)";
+        $where[] = "(je.user_id = ? OR pr.owner_id = ? OR pr.manager_id = ? OR pr.agent_id = ? OR pr.caretaker_user_id = ? OR pr.airbnb_manager_id = ?)";
+        $params[] = $userId;
         $params[] = $userId;
         $params[] = $userId;
         $params[] = $userId;

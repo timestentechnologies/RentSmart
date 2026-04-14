@@ -788,7 +788,7 @@ class Payment extends Model
                 $sql .= " OR pr.agent_id = ?";
                 $params[] = $userId;
             }
-            if ($user->isRole('airbnb_manager')) {
+            if ($user->isAirbnbManager()) {
                 $sql .= " OR pr.airbnb_manager_id = ?";
                 $params[] = $userId;
             }
@@ -828,8 +828,8 @@ class Payment extends Model
             $params[] = $propertyId;
         }
         if (!$isAdmin) {
-            $sql .= " AND (pr.owner_id = ? OR pr.manager_id = ? OR pr.agent_id = ? OR pr.caretaker_user_id = ?)";
-            $params[] = $userId; $params[] = $userId; $params[] = $userId; $params[] = $userId;
+            $sql .= " AND (pr.owner_id = ? OR pr.manager_id = ? OR pr.agent_id = ? OR pr.caretaker_user_id = ? OR pr.airbnb_manager_id = ?)";
+            $params[] = $userId; $params[] = $userId; $params[] = $userId; $params[] = $userId; $params[] = $userId;
         }
         $sql .= " ORDER BY pr.name, u.unit_number";
 
@@ -1422,6 +1422,10 @@ class Payment extends Model
                     $conditions[] = "pr.caretaker_user_id = ?";
                     $params[] = $userId;
                 }
+                if ($userData['role'] === 'airbnb_manager') {
+                    $conditions[] = "pr.airbnb_manager_id = ?";
+                    $params[] = $userId;
+                }
                 
                 if (empty($conditions)) {
                     $conditions[] = "1=0"; // No access if role doesn't match
@@ -1549,6 +1553,10 @@ class Payment extends Model
                 $roleFilter[] = "pr.caretaker_user_id = ?";
                 $params[] = $userId;
             }
+            if (isset($userData['role']) && $userData['role'] === 'airbnb_manager') {
+                $roleFilter[] = "pr.airbnb_manager_id = ?";
+                $params[] = $userId;
+            }
             if (isset($userData['role']) && $userData['role'] === 'tenant') {
                 $tenantModel = new \App\Models\Tenant();
                 $tenant = $tenantModel->findByEmail($userData['email']);
@@ -1604,9 +1612,12 @@ class Payment extends Model
                 $roleFilter[] = "l.unit_id IN (SELECT id FROM units WHERE property_id IN (SELECT id FROM properties WHERE agent_id = ?))";
                 $params[] = $userId;
             }
-            // Caretaker assigned to property
-            if ($user->isCaretaker()) {
+            if ($user->isCaretaker() || (isset($userData['role']) && $userData['role'] === 'caretaker')) {
                 $roleFilter[] = "l.unit_id IN (SELECT id FROM units WHERE property_id IN (SELECT id FROM properties WHERE caretaker_user_id = ?))";
+                $params[] = $userId;
+            }
+            if (isset($userData['role']) && $userData['role'] === 'airbnb_manager') {
+                $roleFilter[] = "l.unit_id IN (SELECT id FROM units WHERE property_id IN (SELECT id FROM properties WHERE airbnb_manager_id = ?))";
                 $params[] = $userId;
             }
             if (isset($userData['role']) && $userData['role'] === 'tenant') {
@@ -1694,11 +1705,16 @@ class Payment extends Model
         return $this->query($sql, [$startDate, $endDate]);
     }
 
-    public function getTotalDelinquent()
+    public function getTotalDelinquent($userId = null)
     {
+        $userModel = new User();
+        $params = [];
+        
         $sql = "SELECT 
                     COALESCE(SUM(l.rent_amount - COALESCE(p.paid_amount, 0)), 0) as total_delinquent
                 FROM leases l
+                JOIN units u ON l.unit_id = u.id
+                JOIN properties pr ON u.property_id = pr.id
                 LEFT JOIN (
                     SELECT lease_id, SUM(amount) as paid_amount
                     FROM payments
@@ -1709,7 +1725,12 @@ class Payment extends Model
                 WHERE l.status = 'active'
                 AND (p.paid_amount IS NULL OR p.paid_amount < l.rent_amount)";
         
-        $result = $this->query($sql);
+        if ($userId && !$userModel->isAdmin($userId)) {
+            $sql .= " AND (pr.owner_id = ? OR pr.manager_id = ? OR pr.agent_id = ? OR pr.caretaker_user_id = ? OR pr.airbnb_manager_id = ?)";
+            $params = array_fill(0, 5, $userId);
+        }
+        
+        $result = $this->query($sql, $params);
         return $result[0]['total_delinquent'] ?? 0;
     }
 
@@ -2890,11 +2911,11 @@ class Payment extends Model
                     LEFT JOIN tenants t ON l.tenant_id = t.id
                     LEFT JOIN units u ON l.unit_id = u.id
                     LEFT JOIN properties pr ON u.property_id = pr.id
-                    WHERE (pr.owner_id = ? OR pr.manager_id = ? OR pr.agent_id = ? OR pr.caretaker_user_id = ?)
+                    WHERE (pr.owner_id = ? OR pr.manager_id = ? OR pr.agent_id = ? OR pr.caretaker_user_id = ? OR pr.airbnb_manager_id = ?)
                     ORDER BY p.payment_date DESC, p.id DESC
                     LIMIT ?";
             $stmt = $this->db->prepare($sql);
-            $stmt->execute([$userId, $userId, $userId, $userId, $limit]);
+            $stmt->execute([$userId, $userId, $userId, $userId, $userId, $limit]);
         }
         
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
@@ -2929,8 +2950,8 @@ class Payment extends Model
                 LEFT JOIN payments p ON l.id = p.lease_id";
         $params = [$startDate, $endDate];
         if (!$isAdmin) {
-            $sql .= " WHERE (pr.owner_id = ? OR pr.manager_id = ? OR pr.agent_id = ? OR pr.caretaker_user_id = ?)";
-            $params[] = $userId; $params[] = $userId; $params[] = $userId; $params[] = $userId;
+            $sql .= " WHERE (pr.owner_id = ? OR pr.manager_id = ? OR pr.agent_id = ? OR pr.caretaker_user_id = ? OR pr.airbnb_manager_id = ?)";
+            $params[] = $userId; $params[] = $userId; $params[] = $userId; $params[] = $userId; $params[] = $userId;
         }
         $sql .= " GROUP BY pr.id, pr.name ORDER BY revenue DESC";
 

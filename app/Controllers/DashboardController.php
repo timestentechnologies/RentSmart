@@ -699,8 +699,31 @@ class DashboardController
                     ['name' => 'Airbnb Dashboard', 'icon' => 'bi-house-heart',        'url' => '/airbnb/dashboard',              'color' => $purple],
                     ['name' => 'Bookings',         'icon' => 'bi-calendar-check',    'url' => '/airbnb/bookings',               'color' => $orange],
                     ['name' => 'Walk-in Guests',   'icon' => 'bi-person-walking',    'url' => '/airbnb/walkin-guests',          'color' => $teal],
-                    ['name' => 'Property Settings','icon' => 'bi-gear',              'url' => '/airbnb/property-settings',      'color' => $indigo],
+                    ['name' => 'My Properties',    'icon' => 'bi-building',           'url' => '/properties',                    'color' => $green],
+                    // FINANCIAL
+                    ['name' => 'Payments',         'icon' => 'bi-cash-stack',         'url' => '/payments',                      'color' => $green],
+                    ['name' => 'Pay. Methods',     'icon' => 'bi-credit-card',        'url' => '/payment-methods',               'color' => $navy],
+                    ['name' => 'M-Pesa Verify',    'icon' => 'bi-shield-check',       'url' => '/mpesa-verification',            'color' => $teal],
+                    ['name' => 'Expenses',         'icon' => 'bi-receipt',            'url' => '/expenses',                      'color' => $red],
+                    ['name' => 'Invoices',         'icon' => 'bi-receipt-cutoff',     'url' => '/invoices',                      'color' => $olive],
+                    ['name' => 'Accounting',       'icon' => 'bi-calculator',         'url' => '/accounting',                    'color' => $purple],
+                    // REPORTS
+                    ['name' => 'Reports',          'icon' => 'bi-graph-up',           'url' => '/reports',                       'color' => $teal],
+                    ['name' => 'Tenant Balances',  'icon' => 'bi-calendar-check',     'url' => '/reports/tenant-balances',       'color' => $gray],
+                    // HR & PAYROLL
+                    ['name' => 'Employees',        'icon' => 'bi-person-badge',       'url' => '/employees',                     'color' => $yellow],
+                    ['name' => 'Files',            'icon' => 'bi-folder2-open',       'url' => '/files',                         'color' => $gray],
+                    ['name' => 'E-Signatures',     'icon' => 'bi-pen',                'url' => '/esign',                         'color' => $navy],
+                    // COMMUNICATION
+                    ['name' => 'Inquiries',        'icon' => 'bi-envelope-open',      'url' => '/admin/inquiries',               'color' => $rose],
+                    ['name' => 'Messaging',        'icon' => 'bi-chat-dots',          'url' => '/messaging',                     'color' => $blue],
+                    ['name' => 'Notices',          'icon' => 'bi-megaphone',          'url' => '/notices',                       'color' => $orange],
+                    // OTHERS
                     ['name' => 'Public Listing',   'icon' => 'bi-globe',             'url' => '/airbnb',                        'color' => $blue],
+                    ['name' => 'Billing',          'icon' => 'bi-credit-card-2-back', 'url' => '/subscription/renew',            'color' => $orange],
+                    ['name' => 'Branding',         'icon' => 'bi-building',           'url' => '/branding',                      'color' => $brown],
+                    ['name' => 'Contact Us',       'icon' => 'bi-life-preserver',     'url' => '/contact',                       'color' => $purple],
+                    ['name' => 'Settings',         'icon' => 'bi-gear',               'url' => '/settings',                      'color' => $indigo],
                 ];
 
             // ════════════════════════════════════════════════════════════════

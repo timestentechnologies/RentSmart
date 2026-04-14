@@ -108,8 +108,9 @@ class MaintenanceRequest extends Model
                 $roleSql .= " OR p.agent_id = ?";
                 $params[] = $userId;
             }
-            // Caretaker assigned to property
-            $roleSql .= " OR p.caretaker_user_id = ?";
+            // Caretaker or Airbnb Manager assigned to property
+            $roleSql .= " OR p.caretaker_user_id = ? OR p.airbnb_manager_id = ?";
+            $params[] = $userId;
             $params[] = $userId;
             $roleSql .= ")";
             $where[] = $roleSql;
@@ -172,8 +173,9 @@ class MaintenanceRequest extends Model
                 $sql .= " OR p.agent_id = ?";
                 $params[] = $userId;
             }
-            // Caretaker assigned to property
-            $sql .= " OR p.caretaker_user_id = ?";
+            // Caretaker or Airbnb Manager assigned to property
+            $sql .= " OR p.caretaker_user_id = ? OR p.airbnb_manager_id = ?";
+            $params[] = $userId;
             $params[] = $userId;
             $sql .= ")";
         }
@@ -218,6 +220,10 @@ class MaintenanceRequest extends Model
                 $sql .= " OR p.agent_id = ?";
                 $params[] = $userId;
             }
+            // Caretaker or Airbnb Manager assigned to property
+            $sql .= " OR p.caretaker_user_id = ? OR p.airbnb_manager_id = ?";
+            $params[] = $userId;
+            $params[] = $userId;
             $sql .= ")";
         }
         
@@ -326,10 +332,9 @@ class MaintenanceRequest extends Model
                     LEFT JOIN leases l ON u.id = l.unit_id AND l.status = 'active'
                     LEFT JOIN tenants t ON l.tenant_id = t.id
                     WHERE m.created_at BETWEEN ? AND ?
-                    AND (p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ?)
-                    ORDER BY m.created_at DESC";
+                    AND (p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ? OR p.airbnb_manager_id = ?)";
             $stmt = $this->db->prepare($sql);
-            $stmt->execute([$startDate, $endDate, $userId, $userId, $userId, $userId]);
+            $stmt->execute([$startDate, $endDate, $userId, $userId, $userId, $userId, $userId]);
         }
         
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
@@ -379,11 +384,11 @@ class MaintenanceRequest extends Model
                     LEFT JOIN units u ON p.id = u.property_id
                     LEFT JOIN maintenance_requests m ON u.id = m.unit_id 
                         AND m.created_at BETWEEN ? AND ?
-                    WHERE (p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ?)
+                    WHERE (p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ? OR p.airbnb_manager_id = ?)
                     GROUP BY p.id, p.name
                     ORDER BY total_cost DESC";
             $stmt = $this->db->prepare($sql);
-            $stmt->execute([$startDate, $endDate, $userId, $userId, $userId, $userId]);
+            $stmt->execute([$startDate, $endDate, $userId, $userId, $userId, $userId, $userId]);
         }
         
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);

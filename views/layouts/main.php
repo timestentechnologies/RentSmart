@@ -2196,8 +2196,9 @@ ob_clean();
                         </a>
                     </li>
                 <?php endif; ?>
-                <li class="nav-item">
-                    <a class="nav-link dropdown-toggle <?= (strpos($current_uri, 'integrations') === 0) ? 'active' : '' ?>" 
+                <?php if ($userRole !== 'airbnb_manager'): ?>
+                    <li class="nav-item">
+                        <a class="nav-link dropdown-toggle <?= (strpos($current_uri, 'integrations') === 0) ? 'active' : '' ?>" 
                        href="#integrationsSubmenu" 
                        data-bs-toggle="collapse" 
                        role="button" 
@@ -2234,6 +2235,7 @@ ob_clean();
                         </ul>
                     </div>
                 </li>
+                <?php endif; ?>
 
                 
                 

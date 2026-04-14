@@ -41,8 +41,9 @@ class Lease extends Model
                 $sql .= " OR p.agent_id = ?";
                 $params[] = $userId;
             }
-            // Caretaker assigned to property
-            $sql .= " OR p.caretaker_user_id = ?";
+            // Caretaker or Airbnb Manager assigned to property
+            $sql .= " OR p.caretaker_user_id = ? OR p.airbnb_manager_id = ?";
+            $params[] = $userId;
             $params[] = $userId;
             $sql .= ")";
         }
@@ -88,8 +89,9 @@ class Lease extends Model
                 $sql .= " OR p.agent_id = ?";
                 $params[] = $userId;
             }
-            // Caretaker assigned to property
-            $sql .= " OR p.caretaker_user_id = ?";
+            // Caretaker or Airbnb Manager assigned to property
+            $sql .= " OR p.caretaker_user_id = ? OR p.airbnb_manager_id = ?";
+            $params[] = $userId;
             $params[] = $userId;
             $sql .= ")";
         }
@@ -132,8 +134,9 @@ class Lease extends Model
                 $sql .= " OR p.agent_id = ?";
                 $params[] = $userId;
             }
-            // Caretaker assigned to property
-            $sql .= " OR p.caretaker_user_id = ?";
+            // Caretaker or Airbnb Manager assigned to property
+            $sql .= " OR p.caretaker_user_id = ? OR p.airbnb_manager_id = ?";
+            $params[] = $userId;
             $params[] = $userId;
             $sql .= ")";
         }
@@ -176,9 +179,13 @@ class Lease extends Model
                 $params[] = $userId;
             }
             if ($user->isAgent()) {
-                $sql .= " OR p.manager_id = (SELECT manager_id FROM users WHERE id = ?)";
+                $sql .= " OR p.agent_id = ?";
                 $params[] = $userId;
             }
+            // Caretaker or Airbnb Manager assigned to property
+            $sql .= " OR p.caretaker_user_id = ? OR p.airbnb_manager_id = ?";
+            $params[] = $userId;
+            $params[] = $userId;
             $sql .= ")";
         }
         
@@ -226,9 +233,13 @@ class Lease extends Model
                 $params[] = $userId;
             }
             if ($user->isAgent()) {
-                $sql .= " OR p.manager_id = (SELECT manager_id FROM users WHERE id = ?)";
+                $sql .= " OR p.agent_id = ?";
                 $params[] = $userId;
             }
+            // Caretaker or Airbnb Manager assigned to property
+            $sql .= " OR p.caretaker_user_id = ? OR p.airbnb_manager_id = ?";
+            $params[] = $userId;
+            $params[] = $userId;
             $sql .= ")";
         }
         
@@ -281,9 +292,13 @@ class Lease extends Model
                 $params[] = $userId;
             }
             if ($user->isAgent()) {
-                $sql .= " OR p.manager_id = (SELECT manager_id FROM users WHERE id = ?)";
+                $sql .= " OR p.agent_id = ?";
                 $params[] = $userId;
             }
+            // Caretaker or Airbnb Manager assigned to property
+            $sql .= " OR p.caretaker_user_id = ? OR p.airbnb_manager_id = ?";
+            $params[] = $userId;
+            $params[] = $userId;
             $sql .= ")";
         }
         
@@ -335,9 +350,13 @@ class Lease extends Model
                 $params[] = $userId;
             }
             if ($user->isAgent()) {
-                $sql .= " OR p.manager_id = (SELECT manager_id FROM users WHERE id = ?)";
+                $sql .= " OR p.agent_id = ?";
                 $params[] = $userId;
             }
+            // Caretaker or Airbnb Manager assigned to property
+            $sql .= " OR p.caretaker_user_id = ? OR p.airbnb_manager_id = ?";
+            $params[] = $userId;
+            $params[] = $userId;
             $sql .= ")";
         }
         
@@ -402,9 +421,9 @@ class Lease extends Model
                     FROM leases l
                     INNER JOIN units u ON l.unit_id = u.id
                     INNER JOIN properties p ON u.property_id = p.id
-                    WHERE (p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ?)";
+                    WHERE (p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ? OR p.airbnb_manager_id = ?)";
             $stmt = $this->db->prepare($sql);
-            $stmt->execute([$userId, $userId, $userId, $userId]);
+            $stmt->execute([$userId, $userId, $userId, $userId, $userId]);
         }
         
         return $stmt->fetch(\PDO::FETCH_ASSOC);
@@ -451,10 +470,10 @@ class Lease extends Model
                     INNER JOIN tenants t ON l.tenant_id = t.id
                     INNER JOIN units u ON l.unit_id = u.id
                     INNER JOIN properties p ON u.property_id = p.id
-                    WHERE (p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ?)
+                    WHERE (p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ? OR p.airbnb_manager_id = ?)
                     ORDER BY l.start_date DESC";
             $stmt = $this->db->prepare($sql);
-            $stmt->execute([$userId, $userId, $userId, $userId]);
+            $stmt->execute([$userId, $userId, $userId, $userId, $userId]);
         }
         
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);

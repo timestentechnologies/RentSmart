@@ -207,8 +207,9 @@ class Property extends Model
                 $sql .= " OR p.agent_id = ?";
                 $params[] = $userId;
             }
-            // Caretaker assigned to property
-            $sql .= " OR p.caretaker_user_id = ?";
+            // Caretaker or Airbnb Manager assigned to property
+            $sql .= " OR p.caretaker_user_id = ? OR p.airbnb_manager_id = ?";
+            $params[] = $userId;
             $params[] = $userId;
             $sql .= ")";
         }
@@ -257,8 +258,9 @@ class Property extends Model
                 $sql .= " OR p.agent_id = ?";
                 $params[] = $userId;
             }
-            // Caretaker assigned to property
-            $sql .= " OR p.caretaker_user_id = ?";
+            // Caretaker or Airbnb Manager assigned to property
+            $sql .= " OR p.caretaker_user_id = ? OR p.airbnb_manager_id = ?";
+            $params[] = $userId;
             $params[] = $userId;
             $sql .= ")";
         }
@@ -380,8 +382,9 @@ class Property extends Model
                 $sql .= " OR p.agent_id = ?";
                 $params[] = $userId;
             }
-            // Caretaker assigned to property
-            $sql .= " OR p.caretaker_user_id = ?";
+            // Caretaker or Airbnb Manager assigned to property
+            $sql .= " OR p.caretaker_user_id = ? OR p.airbnb_manager_id = ?";
+            $params[] = $userId;
             $params[] = $userId;
             $sql .= ")";
         }
@@ -458,8 +461,9 @@ class Property extends Model
                 $sql .= " OR p.agent_id = ?";
                 $params[] = $userId;
             }
-            // Caretaker assigned to property
-            $sql .= " OR p.caretaker_user_id = ?";
+            // Caretaker or Airbnb Manager assigned to property
+            $sql .= " OR p.caretaker_user_id = ? OR p.airbnb_manager_id = ?";
+            $params[] = $userId;
             $params[] = $userId;
             $sql .= ")";
         }

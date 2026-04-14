@@ -132,7 +132,8 @@ class Inquiry extends Model
                 $sql .= " WHERE i.realtor_user_id = ? AND (i.source = 'vacant_units' OR i.source IS NULL OR i.source = '')";
                 $params[] = $userId;
             } else {
-                $sql .= " WHERE ((p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ?) OR (i.crm_user_id = ? AND i.source = 'agent_crm'))";
+                $sql .= " WHERE ((p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ? OR p.airbnb_manager_id = ?) OR (i.crm_user_id = ? AND i.source = 'agent_crm'))";
+                $params[] = $userId;
                 $params[] = $userId;
                 $params[] = $userId;
                 $params[] = $userId;
@@ -161,7 +162,8 @@ class Inquiry extends Model
                 $sql .= " AND i.realtor_user_id = ?";
                 $params[] = (int)$userId;
             } else {
-                $sql .= " AND ((p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ?) OR (i.crm_user_id = ? AND i.source = 'agent_crm'))";
+                $sql .= " AND ((p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ? OR p.airbnb_manager_id = ?) OR (i.crm_user_id = ? AND i.source = 'agent_crm'))";
+                $params[] = (int)$userId;
                 $params[] = (int)$userId;
                 $params[] = (int)$userId;
                 $params[] = (int)$userId;
@@ -196,7 +198,8 @@ class Inquiry extends Model
                 $sql .= " AND i.realtor_user_id = ?";
                 $params[] = (int)$userId;
             } else {
-                $sql .= " AND ((p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ?) OR (i.crm_user_id = ? AND i.source = 'agent_crm'))";
+                $sql .= " AND ((p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ? OR p.airbnb_manager_id = ?) OR (i.crm_user_id = ? AND i.source = 'agent_crm'))";
+                $params[] = (int)$userId;
                 $params[] = (int)$userId;
                 $params[] = (int)$userId;
                 $params[] = (int)$userId;
