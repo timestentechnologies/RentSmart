@@ -834,10 +834,6 @@ class AuthController
 
             // Determine redirect path
             $redirectPath = '/apps';
-            $roleLower = strtolower((string)($user['role'] ?? ''));
-            if ($roleLower === 'airbnb_manager') {
-                $redirectPath = '/airbnb/dashboard';
-            }
 
             if (isset($_SERVER['HTTP_X_REQUESTED_WITH']) && $_SERVER['HTTP_X_REQUESTED_WITH'] === 'XMLHttpRequest') {
                 header('Content-Type: application/json');
