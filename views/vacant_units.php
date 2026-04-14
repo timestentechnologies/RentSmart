@@ -7,10 +7,16 @@ if (!defined('BASE_URL')) { define('BASE_URL', ''); }
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= htmlspecialchars($siteName) ?> | Vacant Units</title>
+    <meta name="csrf-token" content="<?= htmlspecialchars(csrf_token()) ?>">
+    <title><?= htmlspecialchars($siteName) ?> | Vacant Units | Property Management Kenya</title>
+    <meta name="description" content="Browse available vacant units on <?= htmlspecialchars($siteName) ?>. Find apartments, houses, and commercial spaces for rent in Kenya.">
+    <meta name="keywords" content="vacant units, apartments for rent Kenya, houses for rent, real estate Kenya, <?= htmlspecialchars($siteName) ?>">
+    
     <?php $faviconUrl = site_setting_image_url('site_favicon', BASE_URL . '/public/assets/images/site_favicon_1750832003.png'); ?>
     <link rel="icon" type="image/png" sizes="32x32" href="<?= htmlspecialchars($faviconUrl) ?>">
     <link rel="icon" type="image/png" sizes="96x96" href="<?= htmlspecialchars($faviconUrl) ?>">
+    <link rel="icon" type="image/png" sizes="16x16" href="<?= htmlspecialchars($faviconUrl) ?>">
+    
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
     <style>
@@ -365,7 +371,8 @@ if (!defined('BASE_URL')) { define('BASE_URL', ''); }
             if (el && el.tagName === 'SELECT') el.addEventListener('change', applyFilters);
         });
     </script>
+    <?php require __DIR__ . '/partials/public_footer.php'; ?>
   </body>
- </html>
+</html>
 
 

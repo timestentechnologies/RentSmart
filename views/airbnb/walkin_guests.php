@@ -1,11 +1,16 @@
-<?php include 'views/layouts/header.php'; ?>
+<?php
+ob_start();
+?>
 
-<div class="container-fluid py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>Walk-in Guest Management</h2>
-        <a href="<?php echo BASE_URL; ?>/airbnb/walkin-guests/create" class="btn btn-primary">
-            <i class="fas fa-plus"></i> Add Walk-in Guest
-        </a>
+<div class="container-fluid pt-4">
+    <!-- Page Header -->
+    <div class="card page-header">
+        <div class="card-body d-flex justify-content-between align-items-center">
+            <h1 class="h3 mb-0">Walk-in Guest Management</h1>
+            <a href="<?= BASE_URL ?>/airbnb/walkin-guests/create" class="btn btn-primary">
+                <i class="bi bi-plus-lg"></i> Add Walk-in Guest
+            </a>
+        </div>
     </div>
 
     <!-- Filters -->
@@ -142,4 +147,7 @@
     </div>
 </div>
 
-<?php include 'views/layouts/footer.php'; ?>
+<?php
+$content = ob_get_clean();
+require __DIR__ . '/../layouts/main.php';
+?>

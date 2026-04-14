@@ -3,10 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Booking Confirmed - <?php echo htmlspecialchars($siteName); ?></title>
+    <meta name="csrf-token" content="<?= htmlspecialchars(csrf_token()) ?>">
+    <title>Booking Confirmed | <?= htmlspecialchars($siteName); ?> | Airbnb Kenya</title>
+    
+    <?php $faviconUrl = site_setting_image_url('site_favicon', BASE_URL . '/public/assets/images/site_favicon_1750832003.png'); ?>
+    <link rel="icon" type="image/png" sizes="32x32" href="<?= htmlspecialchars($faviconUrl) ?>">
+    <link rel="icon" type="image/png" sizes="96x96" href="<?= htmlspecialchars($faviconUrl) ?>">
+    <link rel="icon" type="image/png" sizes="16x16" href="<?= htmlspecialchars($faviconUrl) ?>">
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        :root {
+            --primary-color: #6B3E99;
+            --secondary-color: #8E5CC4;
+            --accent-color: #FF8A00;
+            --dark-color: #1f2937;
+            --light-color: #f3f4f6;
+        }
+        body { font-family: 'Inter', sans-serif; color: var(--dark-color); background-color: #fbfbff; }
         .confirmation-container {
             max-width: 800px;
             margin: 0 auto;
@@ -14,7 +30,7 @@
         .success-icon {
             width: 80px;
             height: 80px;
-            background: #28a745;
+            background: #22c55e;
             color: white;
             border-radius: 50%;
             display: flex;
@@ -22,6 +38,7 @@
             justify-content: center;
             font-size: 2.5rem;
             margin: 0 auto 1.5rem;
+            box-shadow: 0 10px 20px rgba(34, 197, 94, 0.2);
         }
         .booking-reference {
             background: #f8f9fa;
@@ -57,23 +74,9 @@
             color: #155724;
         }
     </style>
-    <?php if ($favicon): ?>
-    <link rel="icon" type="image/png" href="<?php echo BASE_URL . '/public/assets/images/' . $favicon; ?>">
-    <?php endif; ?>
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm mb-4">
-        <div class="container">
-            <a class="navbar-brand" href="<?php echo BASE_URL; ?>">
-                <?php if ($siteLogo): ?>
-                <img src="<?php echo $siteLogo; ?>" alt="<?php echo htmlspecialchars($siteName); ?>" height="40">
-                <?php else: ?>
-                <?php echo htmlspecialchars($siteName); ?>
-                <?php endif; ?>
-            </a>
-        </div>
-    </nav>
+    <?php require __DIR__ . '/../partials/public_header.php'; ?>
 
     <div class="container confirmation-container py-5">
         <div class="text-center mb-5">
@@ -191,12 +194,11 @@
             <?php endif; ?>
         </div>
 
-        <!-- Action Buttons -->
         <div class="text-center mt-5">
-            <a href="<?php echo BASE_URL; ?>/airbnb" class="btn btn-outline-primary me-2">
+            <a href="<?php echo BASE_URL; ?>/airbnb" class="btn btn-outline-brand me-2">
                 <i class="fas fa-arrow-left me-2"></i>Back to Listings
             </a>
-            <button class="btn btn-primary" onclick="window.print()">
+            <button class="btn btn-brand" onclick="window.print()">
                 <i class="fas fa-print me-2"></i>Print Confirmation
             </button>
         </div>
@@ -213,20 +215,7 @@
         </div>
     </div>
 
-    <!-- Footer -->
-    <footer class="bg-light py-4 mt-5">
-        <div class="container">
-            <div class="row">
-                <div class="col-md-6">
-                    <p class="text-muted mb-0">&copy; <?php echo date('Y'); ?> <?php echo htmlspecialchars($siteName); ?></p>
-                </div>
-                <div class="col-md-6 text-md-end">
-                    <a href="<?php echo BASE_URL; ?>/privacy-policy" class="text-muted small me-3">Privacy Policy</a>
-                    <a href="<?php echo BASE_URL; ?>/terms" class="text-muted small">Terms of Service</a>
-                </div>
-            </div>
-        </div>
-    </footer>
+    <?php require __DIR__ . '/../partials/public_footer.php'; ?>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>

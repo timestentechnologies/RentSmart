@@ -50,6 +50,11 @@ class DashboardController
             exit;
         }
 
+        if ($role === 'airbnb_manager') {
+            header('Location: ' . BASE_URL . '/airbnb/dashboard');
+            exit;
+        }
+
         if (!empty($_SESSION['demo_mode'])) {
             return;
         }

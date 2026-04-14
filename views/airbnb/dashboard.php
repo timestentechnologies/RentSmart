@@ -1,15 +1,20 @@
-<?php include 'views/layouts/header.php'; ?>
+<?php
+ob_start();
+?>
 
-<div class="container-fluid py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>Airbnb Management Dashboard</h2>
-        <div>
-            <a href="<?php echo BASE_URL; ?>/airbnb/bookings/create" class="btn btn-primary me-2">
-                <i class="fas fa-plus"></i> New Booking
-            </a>
-            <a href="<?php echo BASE_URL; ?>/airbnb/walkin-guests/create" class="btn btn-outline-primary">
-                <i class="fas fa-walking"></i> Add Walk-in
-            </a>
+<div class="container-fluid pt-4">
+    <!-- Page Header -->
+    <div class="card page-header">
+        <div class="card-body d-flex justify-content-between align-items-center">
+            <h1 class="h3 mb-0">Airbnb Management Dashboard</h1>
+            <div>
+                <a href="<?= BASE_URL ?>/airbnb/bookings/create" class="btn btn-primary me-2">
+                    <i class="bi bi-plus-lg"></i> New Booking
+                </a>
+                <a href="<?= BASE_URL ?>/airbnb/walkin-guests/create" class="btn btn-outline-primary">
+                    <i class="bi bi-person-plus"></i> Add Walk-in
+                </a>
+            </div>
         </div>
     </div>
 
@@ -310,4 +315,7 @@
     </div>
 </div>
 
-<?php include 'views/layouts/footer.php'; ?>
+<?php
+$content = ob_get_clean();
+require __DIR__ . '/../layouts/main.php';
+?>

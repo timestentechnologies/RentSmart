@@ -2,12 +2,12 @@
 if (!defined('BASE_URL')) { define('BASE_URL', ''); }
 $activePage = $activePage ?? '';
 $siteName = $siteName ?? 'RentSmart';
-$siteLogoFile = site_setting('site_logo', '');
+$siteLogoFile = site_setting('site_logo', 'logo.svg');
 $appsLogoFile = site_setting('apps_page_logo', '');
 $siteLogo = $siteLogo ?? (
     $appsLogoFile 
         ? (BASE_URL . '/public/assets/images/' . $appsLogoFile) 
-        : ($siteLogoFile ? (BASE_URL . '/public/assets/images/' . $siteLogoFile) : (BASE_URL . '/public/assets/images/logo.svg'))
+        : (BASE_URL . '/public/assets/images/' . $siteLogoFile)
 );
 $faviconUrl = $faviconUrl ?? site_setting_image_url('site_favicon', BASE_URL . '/public/assets/images/site_favicon_1750832003.png');
 ?>
@@ -191,6 +191,24 @@ $faviconUrl = $faviconUrl ?? site_setting_image_url('site_favicon', BASE_URL . '
       window.addEventListener('scroll', updateOnScroll, { passive: true });
       window.addEventListener('hashchange', updateOnScroll);
       updateOnScroll();
+      // Clear hash when modals are closed
+      document.addEventListener('DOMContentLoaded', function() {
+        var modalIds = ['loginModal', 'registerModal', 'tenantLoginModal'];
+        modalIds.forEach(function(id) {
+          var el = document.getElementById(id);
+          if (el) {
+            el.addEventListener('hidden.bs.modal', function () {
+              if (window.location.hash === '#' + id) {
+                if (history && history.pushState) {
+                  history.pushState(null, '', window.location.pathname + window.location.search);
+                } else {
+                  window.location.hash = '';
+                }
+              }
+            });
+          }
+        });
+      });
     } catch (e) {
     }
   })();

@@ -1,11 +1,16 @@
-<?php include 'views/layouts/header.php'; ?>
+<?php
+ob_start();
+?>
 
-<div class="container-fluid py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <h2>Airbnb Bookings</h2>
-        <a href="<?php echo BASE_URL; ?>/airbnb/bookings/create" class="btn btn-primary">
-            <i class="fas fa-plus"></i> New Booking
-        </a>
+<div class="container-fluid pt-4">
+    <!-- Page Header -->
+    <div class="card page-header">
+        <div class="card-body d-flex justify-content-between align-items-center">
+            <h1 class="h3 mb-0">Airbnb Bookings</h1>
+            <a href="<?= BASE_URL ?>/airbnb/bookings/create" class="btn btn-primary">
+                <i class="bi bi-plus-lg"></i> New Booking
+            </a>
+        </div>
     </div>
 
     <!-- Filters -->
@@ -160,4 +165,7 @@
     </div>
 </div>
 
-<?php include 'views/layouts/footer.php'; ?>
+<?php
+$content = ob_get_clean();
+require __DIR__ . '/../layouts/main.php';
+?>

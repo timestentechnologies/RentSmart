@@ -1879,8 +1879,13 @@ ob_clean();
 
                 <?php else: ?>
                 <!-- Dashboard -->
+                <?php 
+                    $dashboardUrl = '/dashboard';
+                    if ($isRealtor) $dashboardUrl = '/realtor/dashboard';
+                    elseif ($userRole === 'airbnb_manager') $dashboardUrl = '/airbnb/dashboard';
+                ?>
                 <li class="nav-item">
-                    <a class="nav-link <?= ($current_uri === 'dashboard' || strpos($current_uri, 'realtor/dashboard') === 0) ? 'active' : '' ?>" href="<?= BASE_URL . ($isRealtor ? '/realtor/dashboard' : '/dashboard') ?>">
+                    <a class="nav-link <?= ($current_uri === 'dashboard' || strpos($current_uri, 'realtor/dashboard') === 0 || strpos($current_uri, 'airbnb/dashboard') === 0) ? 'active' : '' ?>" href="<?= BASE_URL . $dashboardUrl ?>">
                         <i class="bi bi-speedometer2 me-2"></i> Dashboard
                     </a>
                 </li>
@@ -1915,6 +1920,26 @@ ob_clean();
                         </a>
                     </li>
                     
+                <?php elseif ($userRole === 'airbnb_manager'): ?>
+                    <li class="nav-item mt-3">
+                        <small class="nav-header text-uppercase px-3">AIRBNB MANAGEMENT</small>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link <?= (strpos($current_uri, 'airbnb/bookings') === 0) ? 'active' : '' ?>" href="<?= BASE_URL ?>/airbnb/bookings">
+                            <i class="bi bi-calendar-check me-2"></i> Bookings
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link <?= (strpos($current_uri, 'airbnb/walkin-guests') === 0) ? 'active' : '' ?>" href="<?= BASE_URL ?>/airbnb/walkin-guests">
+                            <i class="bi bi-person-walking me-2"></i> Walk-in Guests
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link <?= (strpos($current_uri, 'properties') === 0) ? 'active' : '' ?>" href="<?= BASE_URL ?>/properties">
+                            <i class="bi bi-building me-2"></i> My Properties
+                        </a>
+                    </li>
+
                 <?php else: ?>
                     <!-- PROPERTY MANAGEMENT Section -->
                     <li class="nav-item mt-3">

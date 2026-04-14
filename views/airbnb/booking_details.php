@@ -1,14 +1,17 @@
-<?php include 'views/layouts/header.php'; ?>
+<?php
+ob_start();
+?>
 
-<div class="container-fluid py-4">
-    <div class="d-flex justify-content-between align-items-center mb-4">
-        <div>
-            <h2>Booking #<?php echo htmlspecialchars($booking['booking_reference']); ?></h2>
-            <small class="text-muted">Created: <?php echo date('F d, Y H:i', strtotime($booking['created_at'])); ?></small>
-        </div>
-        <div>
-            <a href="<?php echo BASE_URL; ?>/airbnb/bookings" class="btn btn-outline-secondary">
-                <i class="fas fa-arrow-left"></i> Back to Bookings
+<div class="container-fluid pt-4">
+    <!-- Page Header -->
+    <div class="card page-header">
+        <div class="card-body d-flex justify-content-between align-items-center">
+            <div>
+                <h1 class="h3 mb-0">Booking #<?= htmlspecialchars($booking['booking_reference']) ?></h1>
+                <small class="text-muted">Created: <?= date('F d, Y H:i', strtotime($booking['created_at'])) ?></small>
+            </div>
+            <a href="<?= BASE_URL ?>/airbnb/bookings" class="btn btn-outline-secondary">
+                <i class="bi bi-arrow-left"></i> Back to Bookings
             </a>
         </div>
     </div>
@@ -365,4 +368,7 @@
     </div>
 </div>
 
-<?php include 'views/layouts/footer.php'; ?>
+<?php
+$content = ob_get_clean();
+require __DIR__ . '/../layouts/main.php';
+?>

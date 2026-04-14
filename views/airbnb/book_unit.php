@@ -3,10 +3,26 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Book <?php echo htmlspecialchars($unit['unit_number']); ?> - <?php echo htmlspecialchars($siteName); ?></title>
+    <meta name="csrf-token" content="<?= htmlspecialchars(csrf_token()) ?>">
+    <title>Book <?= htmlspecialchars($unit['unit_number']); ?> | <?= htmlspecialchars($siteName); ?> | Airbnb Kenya</title>
+    
+    <?php $faviconUrl = site_setting_image_url('site_favicon', BASE_URL . '/public/assets/images/site_favicon_1750832003.png'); ?>
+    <link rel="icon" type="image/png" sizes="32x32" href="<?= htmlspecialchars($faviconUrl) ?>">
+    <link rel="icon" type="image/png" sizes="96x96" href="<?= htmlspecialchars($faviconUrl) ?>">
+    <link rel="icon" type="image/png" sizes="16x16" href="<?= htmlspecialchars($faviconUrl) ?>">
+
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        :root {
+            --primary-color: #6B3E99;
+            --secondary-color: #8E5CC4;
+            --accent-color: #FF8A00;
+            --dark-color: #1f2937;
+            --light-color: #f3f4f6;
+        }
+        body { font-family: 'Inter', sans-serif; color: var(--dark-color); background-color: #fbfbff; }
         .booking-container {
             max-width: 1200px;
             margin: 0 auto;
@@ -14,7 +30,8 @@
         .unit-image {
             height: 400px;
             object-fit: cover;
-            border-radius: 12px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
         }
         .price-breakdown {
             background: #f8f9fa;
@@ -53,26 +70,10 @@
             border-radius: 12px;
         }
     </style>
-    <?php if ($favicon): ?>
-    <link rel="icon" type="image/png" href="<?php echo BASE_URL . '/public/assets/images/' . $favicon; ?>">
-    <?php endif; ?>
 </head>
 <body>
     <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm mb-4">
-        <div class="container">
-            <a class="navbar-brand" href="<?php echo BASE_URL; ?>">
-                <?php if ($siteLogo): ?>
-                <img src="<?php echo $siteLogo; ?>" alt="<?php echo htmlspecialchars($siteName); ?>" height="40">
-                <?php else: ?>
-                <?php echo htmlspecialchars($siteName); ?>
-                <?php endif; ?>
-            </a>
-            <a href="<?php echo BASE_URL; ?>/airbnb" class="btn btn-outline-secondary btn-sm">
-                <i class="fas fa-arrow-left"></i> Back to Listings
-            </a>
-        </div>
-    </nav>
+    <?php require __DIR__ . '/../partials/public_header.php'; ?>
 
     <div class="container booking-container py-4">
         <?php if (isset($_SESSION['airbnb_error'])): ?>
@@ -259,7 +260,7 @@
                             </div>
                             <?php endif; ?>
 
-                            <button type="submit" class="btn btn-primary w-100 py-3" 
+                            <button type="submit" class="btn btn-primary w-100 py-3" style="background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%); border: none;"
                                     <?php echo ($isAvailable !== null && !$isAvailable) ? 'disabled' : ''; ?>>
                                 <?php echo ($isAvailable !== null && !$isAvailable) ? 'Not Available' : 'Request to Book'; ?>
                             </button>
@@ -276,11 +277,7 @@
     </div>
 
     <!-- Footer -->
-    <footer class="bg-light py-4 mt-5">
-        <div class="container">
-            <p class="text-muted text-center mb-0">&copy; <?php echo date('Y'); ?> <?php echo htmlspecialchars($siteName); ?></p>
-        </div>
-    </footer>
+    <?php require __DIR__ . '/../partials/public_footer.php'; ?>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
