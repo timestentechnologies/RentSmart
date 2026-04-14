@@ -49,8 +49,11 @@ class HomeController
 
             $siteName = $settings['site_name'] ?? 'RentSmart';
             $favicon = $settings['site_favicon'] ?? '';
+            $siteLogo = isset($settings['site_logo']) && $settings['site_logo']
+                ? BASE_URL . '/public/assets/images/' . $settings['site_logo']
+                : BASE_URL . '/public/assets/images/logo.svg';
 
-            // Pass settings, siteName, favicon to the view
+            // Pass settings, siteName, favicon, siteLogo to the view
             require 'views/home.php';
         } catch (\Exception $e) {
             error_log($e->getMessage());

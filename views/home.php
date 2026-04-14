@@ -78,7 +78,7 @@
         "@type": "Organization",
         "name": "<?= htmlspecialchars($siteName) ?>",
         "url": "<?= BASE_URL ?>",
-        "logo": "<?= BASE_URL ?>/public/assets/images/site_logo_1751627446.png",
+        "logo": "<?= htmlspecialchars($siteLogo) ?>",
         "description": "Leading property and rental management software in Kenya",
         "address": {
             "@type": "PostalAddress",
@@ -1284,7 +1284,7 @@
         <div class="container">
             <div class="row g-4 mb-4">
                 <div class="col-md-3">
-                    <img src="<?= asset('images/site_logo_1751627446.png') ?>" alt="RentSmart Property Management Software Logo" class="mb-3" style="height: 40px;">
+                    <img src="<?= htmlspecialchars($siteLogo) ?>" alt="RentSmart Property Management Software Logo" class="mb-3" style="height: 40px;">
                     <p class="mb-3">Kenya's leading property and rental management software. Trusted by landlords, property managers, and real estate professionals.</p>
                     <div class="social-links">
                         <a href="https://www.facebook.com/RentSmartKE" target="_blank" class="text-white mx-2" aria-label="Facebook"><i class="bi bi-facebook"></i></a>
@@ -1374,7 +1374,7 @@
                 </div>
                 <div class="modal-body px-4 py-2">
                     <div class="text-center mb-4">
-                        <img src="<?= asset('images/site_logo_1751627446.png') ?>" alt="RentSmart Logo" class="logo" style="width: 200px;">
+                        <img src="<?= htmlspecialchars($siteLogo) ?>" alt="RentSmart Logo" class="logo" style="width: 200px;">
                         <h1 class="h3 mb-3 fw-normal">Welcome Back!</h1>
                     </div>
 
@@ -1432,7 +1432,7 @@
                 </div>
                 <div class="modal-body px-4 py-2">
                     <div class="text-center mb-4">
-                        <img src="<?= asset('images/site_logo_1751627446.png') ?>" alt="RentSmart Logo" class="logo" style="width: 200px;">
+                        <img src="<?= htmlspecialchars($siteLogo) ?>" alt="RentSmart Logo" class="logo" style="width: 200px;">
                         <h1 class="h3 mb-3 fw-normal">Create Your Account</h1>
                         <div class="badge bg-success">
                             <i class="bi bi-clock"></i> Includes 7-day free trial
@@ -1525,7 +1525,7 @@
                 </div>
                 <div class="modal-body px-4 py-2">
                     <div class="text-center mb-4">
-                        <img src="<?= asset('images/site_logo_1751627446.png') ?>" alt="RentSmart Logo" class="logo" style="width: 200px;">
+                        <img src="<?= htmlspecialchars($siteLogo) ?>" alt="RentSmart Logo" class="logo" style="width: 200px;">
                         <h1 class="h4 mb-3 fw-normal">Tenant Portal Login</h1>
                     </div>
                     <div id="tenantLoginAlert" class="alert d-none" role="alert"></div>
