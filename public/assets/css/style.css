@@ -156,6 +156,32 @@ main {
     box-shadow: none !important;
 }
 
+/* Remove box shadow from avatar icons in tables - ALL SCREENS */
+.table .avatar-circle,
+.table .bi-person-circle,
+.table .bi-person,
+.table .bi-people,
+.table .bi-people-fill,
+.table td i.bi-person-circle,
+.table td i.bi-person,
+.table td .d-flex.align-items-center i,
+.table td .avatar-circle i,
+.table td [class*="person"] {
+    box-shadow: none !important;
+    background: transparent !important;
+}
+
+/* Target parent containers that might have shadows - ALL SCREENS */
+.table td .d-flex.align-items-center,
+.table td .avatar-circle,
+.table td .rounded-circle,
+.table td div:has(> i.bi-person-circle),
+.table td div:has(> i.bi-person) {
+    box-shadow: none !important;
+    background: transparent !important;
+    border: none !important;
+}
+
 /* --- Tenants Page Custom Styles --- */
 .tenants-header {
     display: flex;
