@@ -774,6 +774,93 @@
         .badge.bg-success {
             background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%) !important;
         }
+
+        /* Custom Select Dropdown Styles for Register Modal */
+        .custom-select-wrapper {
+            position: relative;
+            display: inline-block;
+            width: 100%;
+        }
+        .custom-select-trigger {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.75rem 1rem;
+            background: #fff;
+            border: 1px solid #ced4da;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-size: 1rem;
+            color: #212529;
+            min-height: 46px;
+        }
+        .custom-select-trigger:hover {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(107, 62, 153, 0.15);
+        }
+        .custom-select-trigger.active {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(107, 62, 153, 0.25);
+        }
+        .custom-select-trigger .arrow {
+            margin-left: 8px;
+            transition: transform 0.2s;
+            color: var(--primary-color);
+        }
+        .custom-select-trigger.active .arrow {
+            transform: rotate(180deg);
+        }
+        .custom-select-dropdown {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: #fff;
+            border: 1px solid rgba(107, 62, 153, 0.3);
+            border-radius: 0.375rem;
+            margin-top: 4px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+            z-index: 9999;
+            max-height: 280px;
+            overflow-y: auto;
+            display: none;
+        }
+        .custom-select-dropdown.show {
+            display: block;
+        }
+        .custom-select-option {
+            padding: 12px 16px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            font-size: 1rem;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .custom-select-option:last-child {
+            border-bottom: none;
+        }
+        .custom-select-option:hover,
+        .custom-select-option.selected {
+            background: #ff6b35;
+            color: white;
+        }
+        .custom-select-option:first-child {
+            border-radius: 0.35rem 0.35rem 0 0;
+        }
+        .custom-select-option:last-child {
+            border-radius: 0 0 0.35rem 0.35rem;
+        }
+        select.js-enhanced {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+            height: 0;
+            width: 0;
+        }
+        /* Hide floating label when using custom dropdown */
+        .custom-select-wrapper + label {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -1404,7 +1491,8 @@
                             </button>
                         </div>
 
-                        <div class="form-floating mb-3">
+                        <div class="mb-3">
+                            <label class="form-label small fw-bold text-muted mb-1">Your Role</label>
                             <select class="form-select" id="registerRole" name="role" required>
                                 <option value="">Select Role</option>
                                 <option value="landlord">Landlord</option>
@@ -1413,7 +1501,6 @@
                                 <option value="realtor">Realtor</option>
                                 <option value="airbnb_manager">Airbnb Manager</option>
                             </select>
-                            <label for="registerRole">Your Role</label>
                         </div>
 
                         <input type="hidden" name="plan_id" value="1">
@@ -1861,8 +1948,106 @@ document.addEventListener('DOMContentLoaded', function(){
 </div>
 
 <script>
+// Custom Select Dropdown Functionality
+        function initCustomSelects() {
+            const selects = document.querySelectorAll('select.form-select:not(.js-enhanced)');
+            
+            selects.forEach(function(select) {
+                if (select.classList.contains('js-enhanced')) return;
+                
+                select.classList.add('js-enhanced');
+                
+                const wrapper = document.createElement('div');
+                wrapper.className = 'custom-select-wrapper';
+                select.parentNode.insertBefore(wrapper, select);
+                wrapper.appendChild(select);
+                
+                const trigger = document.createElement('div');
+                trigger.className = 'custom-select-trigger';
+                trigger.innerHTML = '<span class="selected-text">-- Select --</span><i class="bi bi-chevron-down arrow"></i>';
+                wrapper.appendChild(trigger);
+                
+                const dropdown = document.createElement('div');
+                dropdown.className = 'custom-select-dropdown';
+                wrapper.appendChild(dropdown);
+                
+                Array.from(select.options).forEach(function(option, index) {
+                    const opt = document.createElement('div');
+                    opt.className = 'custom-select-option';
+                    opt.textContent = option.text;
+                    opt.setAttribute('data-value', option.value);
+                    opt.setAttribute('data-index', index);
+                    
+                    if (option.selected) {
+                        opt.classList.add('selected');
+                        trigger.querySelector('.selected-text').textContent = option.text;
+                    }
+                    
+                    dropdown.appendChild(opt);
+                });
+                
+                trigger.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const isOpen = dropdown.classList.contains('show');
+                    
+                    document.querySelectorAll('.custom-select-dropdown.show').forEach(function(d) {
+                        d.classList.remove('show');
+                        d.closest('.custom-select-wrapper').querySelector('.custom-select-trigger').classList.remove('active');
+                    });
+                    
+                    if (!isOpen) {
+                        dropdown.classList.add('show');
+                        trigger.classList.add('active');
+                    }
+                });
+                
+                dropdown.querySelectorAll('.custom-select-option').forEach(function(opt) {
+                    opt.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        const index = parseInt(this.getAttribute('data-index'));
+                        const value = this.getAttribute('data-value');
+                        
+                        select.selectedIndex = index;
+                        select.value = value;
+                        
+                        const event = new Event('change', { bubbles: true });
+                        select.dispatchEvent(event);
+                        
+                        dropdown.querySelectorAll('.custom-select-option').forEach(function(o) {
+                            o.classList.remove('selected');
+                        });
+                        this.classList.add('selected');
+                        trigger.querySelector('.selected-text').textContent = this.textContent;
+                        
+                        dropdown.classList.remove('show');
+                        trigger.classList.remove('active');
+                    });
+                });
+                
+                select.addEventListener('change', function() {
+                    const selectedOption = this.options[this.selectedIndex];
+                    if (selectedOption) {
+                        trigger.querySelector('.selected-text').textContent = selectedOption.text;
+                        dropdown.querySelectorAll('.custom-select-option').forEach(function(opt, idx) {
+                            opt.classList.toggle('selected', idx === this.selectedIndex);
+                        }.bind(this));
+                    }
+                });
+            });
+        }
+        
+        document.addEventListener('click', function() {
+            document.querySelectorAll('.custom-select-dropdown.show').forEach(function(d) {
+                d.classList.remove('show');
+                d.closest('.custom-select-wrapper').querySelector('.custom-select-trigger').classList.remove('active');
+            });
+        });
+
 // Newsletter subscription functionality
 document.addEventListener('DOMContentLoaded', function() {
+    // Initialize custom selects
+    initCustomSelects();
+    
     const newsletterModalEl = document.getElementById('newsletterModal');
 
     // Mark the prompt as dismissed whenever the modal is closed (Maybe Later / X / programmatic hide)

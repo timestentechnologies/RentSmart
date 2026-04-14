@@ -1048,4 +1048,69 @@ class AirbnbController
             echo json_encode(['success' => false, 'message' => 'Error fetching calendar']);
         }
     }
+
+    /**
+     * List all Airbnb-eligible units with their rates and availability
+     */
+    public function units()
+    {
+        try {
+            $auth = $this->checkAirbnbAccess();
+            $propertyIds = $this->getAccessiblePropertyIds();
+
+            // Get properties for filter
+            $properties = [];
+            foreach ($propertyIds as $pid) {
+                $p = $this->property->find($pid);
+                if ($p) {
+                    $properties[] = $p;
+                }
+            }
+
+            // Get all units for accessible properties
+            $allUnits = [];
+            foreach ($propertyIds as $propertyId) {
+                $units = $this->unit->getByPropertyId($propertyId);
+                foreach ($units as $unit) {
+                    $unit['property'] = $this->property->find($propertyId);
+                    $unit['airbnb_rates'] = $this->unitRateModel->getByUnitId($unit['id']);
+                    $unit['property_settings'] = $this->propertyModel->getByPropertyId($propertyId);
+                    
+                    // Get upcoming bookings for this unit
+                    $unit['upcoming_bookings'] = $this->bookingModel->getAllBookings([
+                        'unit_id' => $unit['id'],
+                        'status' => 'confirmed,checked_in',
+                        'check_in_from' => date('Y-m-d')
+                    ]);
+                    
+                    $allUnits[] = $unit;
+                }
+            }
+
+            // Filter by property if requested
+            $filterPropertyId = $_GET['property_id'] ?? null;
+            if ($filterPropertyId) {
+                $allUnits = array_filter($allUnits, function($u) use ($filterPropertyId) {
+                    return $u['property_id'] == $filterPropertyId;
+                });
+            }
+
+            // Filter by eligibility if requested
+            $filterEligible = $_GET['eligible'] ?? null;
+            if ($filterEligible === 'yes') {
+                $allUnits = array_filter($allUnits, function($u) {
+                    return !empty($u['is_airbnb_eligible']);
+                });
+            } elseif ($filterEligible === 'no') {
+                $allUnits = array_filter($allUnits, function($u) {
+                    return empty($u['is_airbnb_eligible']);
+                });
+            }
+
+            require 'views/airbnb/units.php';
+        } catch (\Exception $e) {
+            error_log($e->getMessage());
+            require 'views/errors/500.php';
+        }
+    }
 }

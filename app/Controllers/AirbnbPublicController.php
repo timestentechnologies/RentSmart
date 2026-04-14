@@ -47,8 +47,11 @@ class AirbnbPublicController
                 ? (BASE_URL . '/public/assets/images/' . $appsLogoFile)
                 : ($siteLogoFile ? (BASE_URL . '/public/assets/images/' . $siteLogoFile) : (BASE_URL . '/public/assets/images/logo.svg'));
 
-            // Get all Airbnb-enabled properties with their units
-            $airbnbProperties = $this->getAvailableAirbnbListings();
+            // Get location filter from query params
+            $location = $_GET['location'] ?? null;
+            
+            // Get all Airbnb-enabled properties with their units (filtered by location if provided)
+            $airbnbProperties = $this->getAvailableAirbnbListings($location);
 
             // Set active page for header highlighting
             $activePage = 'airbnb';
@@ -61,11 +64,11 @@ class AirbnbPublicController
     }
 
     /**
-     * Get available Airbnb listings
+     * Get available Airbnb listings with optional location filter
      */
-    private function getAvailableAirbnbListings()
+    private function getAvailableAirbnbListings($location = null)
     {
-        $stmt = $this->db->query("
+        $sql = "
             SELECT 
                 u.id as unit_id,
                 u.unit_number,
@@ -100,9 +103,21 @@ class AirbnbPublicController
             AND (ap.is_airbnb_enabled = 1 OR ap.is_airbnb_enabled IS NULL)
             AND p.id IN (
                 SELECT DISTINCT property_id FROM airbnb_properties WHERE is_airbnb_enabled = 1
-            )
-            ORDER BY p.name, u.unit_number
-        ");
+            )";
+        
+        $params = [];
+        
+        // Add location filter if provided
+        if ($location && trim($location) !== '') {
+            $sql .= " AND (p.city LIKE ? OR p.state LIKE ? OR p.address LIKE ? OR p.name LIKE ?)";
+            $locationPattern = '%' . trim($location) . '%';
+            $params = [$locationPattern, $locationPattern, $locationPattern, $locationPattern];
+        }
+        
+        $sql .= " ORDER BY p.name, u.unit_number";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
         
         $units = $stmt->fetchAll(\PDO::FETCH_ASSOC);
         

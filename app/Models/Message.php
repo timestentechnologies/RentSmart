@@ -18,7 +18,7 @@ class Message extends Model
             id INT AUTO_INCREMENT PRIMARY KEY,
             sender_type ENUM('user','tenant') NOT NULL,
             sender_id INT NOT NULL,
-            receiver_type ENUM('user','tenant') NOT NULL,
+            receiver_type ENUM('user','tenant','booking','walkin') NOT NULL,
             receiver_id INT NOT NULL,
             body TEXT NOT NULL,
             read_at DATETIME NULL,
@@ -28,6 +28,13 @@ class Message extends Model
             INDEX idx_created_at (created_at)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;";
         $this->db->exec($sql);
+
+        // Alter existing table to add new ENUM values if table already exists
+        try {
+            $this->db->exec("ALTER TABLE messages MODIFY COLUMN receiver_type ENUM('user','tenant','booking','walkin') NOT NULL");
+        } catch (\Exception $e) {
+            // Ignore errors - column may already have the correct definition
+        }
     }
 
     public function insertMessage(array $data)

@@ -1,10 +1,15 @@
 <?php
 ob_start();
+$userRole = strtolower((string)($_SESSION['user_role'] ?? ''));
+$isAirbnbManager = ($userRole === 'airbnb_manager');
 ?>
 <div class="container-fluid pt-4">
     <div class="card mb-3">
         <div class="card-body d-flex justify-content-between align-items-center">
             <h1 class="h4 mb-0"><i class="bi bi-chat-dots text-primary me-2"></i>Messaging</h1>
+            <?php if ($isAirbnbManager): ?>
+                <span class="badge bg-info">Airbnb Mode</span>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -16,30 +21,80 @@ ob_start();
                 </div>
                 <div class="card-body p-0">
                     <div class="list-group list-group-flush" id="recipientList">
-                        <div class="list-group-item bg-light small text-muted">Broadcast</div>
-                        <a href="#" class="list-group-item list-group-item-action recipient-item" data-type="broadcast" data-id="all">
-                            <i class="bi bi-megaphone me-2"></i>
-                            All Tenants
-                            <div class="small text-muted">Send one message to every accessible tenant</div>
-                        </a>
-                        <a href="#" class="list-group-item list-group-item-action recipient-item" data-type="broadcast" data-id="due_current_month">
-                            <i class="bi bi-exclamation-circle me-2"></i>
-                            Tenants with Balance (Current Month)
-                            <div class="small text-muted">Only tenants owing rent for this month</div>
-                        </a>
-                        <a href="#" class="list-group-item list-group-item-action recipient-item" data-type="broadcast" data-id="due_previous_months">
-                            <i class="bi bi-exclamation-triangle me-2"></i>
-                            Tenants with Balance (Previous Months)
-                            <div class="small text-muted">Tenants owing rent including previous months</div>
-                        </a>
+                        <?php if ($isAirbnbManager): ?>
+                            <div class="list-group-item bg-light small text-muted">Broadcast</div>
+                            <a href="#" class="list-group-item list-group-item-action recipient-item" data-type="broadcast" data-id="all_bookings">
+                                <i class="bi bi-megaphone me-2"></i>
+                                All Booking Guests
+                                <div class="small text-muted">Send one message to all booking guests</div>
+                            </a>
+                            <a href="#" class="list-group-item list-group-item-action recipient-item" data-type="broadcast" data-id="upcoming_checkins">
+                                <i class="bi bi-calendar-check me-2"></i>
+                                Upcoming Check-ins
+                                <div class="small text-muted">Guests checking in within 7 days</div>
+                            </a>
+                            <a href="#" class="list-group-item list-group-item-action recipient-item" data-type="broadcast" data-id="active_walkins">
+                                <i class="bi bi-person-walking me-2"></i>
+                                Active Walk-in Inquiries
+                                <div class="small text-muted">Walk-in guests with inquiry/offered status</div>
+                            </a>
+                        <?php else: ?>
+                            <div class="list-group-item bg-light small text-muted">Broadcast</div>
+                            <a href="#" class="list-group-item list-group-item-action recipient-item" data-type="broadcast" data-id="all">
+                                <i class="bi bi-megaphone me-2"></i>
+                                All Tenants
+                                <div class="small text-muted">Send one message to every accessible tenant</div>
+                            </a>
+                            <a href="#" class="list-group-item list-group-item-action recipient-item" data-type="broadcast" data-id="due_current_month">
+                                <i class="bi bi-exclamation-circle me-2"></i>
+                                Tenants with Balance (Current Month)
+                                <div class="small text-muted">Only tenants owing rent for this month</div>
+                            </a>
+                            <a href="#" class="list-group-item list-group-item-action recipient-item" data-type="broadcast" data-id="due_previous_months">
+                                <i class="bi bi-exclamation-triangle me-2"></i>
+                                Tenants with Balance (Previous Months)
+                                <div class="small text-muted">Tenants owing rent including previous months</div>
+                            </a>
+                        <?php endif; ?>
 
-                        <?php if (!empty($recipients['tenants'])): ?>
+                        <?php if (!$isAirbnbManager && !empty($recipients['tenants'])): ?>
                             <div class="list-group-item bg-light small text-muted">Tenants</div>
                             <?php foreach ($recipients['tenants'] as $t): ?>
                                 <a href="#" class="list-group-item list-group-item-action recipient-item" data-type="tenant" data-id="<?= (int)$t['id'] ?>">
                                     <i class="bi bi-person me-2"></i>
                                     <?= htmlspecialchars($t['name']) ?>
                                     <div class="small text-muted"><?= htmlspecialchars(($t['property'] ?? '-') . ' • ' . ($t['unit'] ?? '-')) ?></div>
+                                </a>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+
+                        <?php if ($isAirbnbManager && !empty($recipients['bookings'])): ?>
+                            <div class="list-group-item bg-light small text-muted">Booking Guests</div>
+                            <?php foreach ($recipients['bookings'] as $b): ?>
+                                <a href="#" class="list-group-item list-group-item-action recipient-item" data-type="booking" data-id="<?= (int)$b['id'] ?>" data-email="<?= htmlspecialchars($b['email'] ?? '') ?>">
+                                    <i class="bi bi-calendar-check me-2"></i>
+                                    <?= htmlspecialchars($b['name']) ?>
+                                    <div class="small text-muted">
+                                        <?= htmlspecialchars(($b['property'] ?? '-') . ' • ' . ($b['unit'] ?? '-')) ?>
+                                        <?php if (!empty($b['check_in'])): ?>
+                                            <br><span class="badge bg-<?= $b['status'] === 'checked_in' ? 'success' : ($b['status'] === 'confirmed' ? 'primary' : 'secondary') ?>"><?= ucfirst($b['status']) ?></span>
+                                            <?= date('M d', strtotime($b['check_in'])) ?> - <?= date('M d', strtotime($b['check_out'])) ?>
+                                        <?php endif; ?>
+                                    </div>
+                                </a>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+
+                        <?php if ($isAirbnbManager && !empty($recipients['walkins'])): ?>
+                            <div class="list-group-item bg-light small text-muted">Walk-in Guests</div>
+                            <?php foreach ($recipients['walkins'] as $w): ?>
+                                <a href="#" class="list-group-item list-group-item-action recipient-item" data-type="walkin" data-id="<?= (int)$w['id'] ?>" data-email="<?= htmlspecialchars($w['email'] ?? '') ?>">
+                                    <i class="bi bi-person-walking me-2"></i>
+                                    <?= htmlspecialchars($w['name']) ?>
+                                    <div class="small text-muted">
+                                        <?= htmlspecialchars($w['property'] ?? '-') ?>
+                                        <span class="badge bg-<?= $w['status'] === 'converted' ? 'success' : ($w['status'] === 'inquiry' ? 'warning' : 'info') ?>"><?= ucfirst($w['status']) ?></span>
+                                    </div>
                                 </a>
                             <?php endforeach; ?>
                         <?php endif; ?>

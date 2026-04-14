@@ -501,3 +501,137 @@ main {
         font-size: 0.8rem;
     }
 }
+
+/* Custom Dropdown Styles - Orange Theme */
+.form-select,
+select.form-control,
+select {
+    cursor: pointer;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-select:hover,
+select.form-control:hover,
+select:hover {
+    border-color: #ff6b35;
+}
+
+.form-select:focus,
+select.form-control:focus,
+select:focus {
+    border-color: #ff6b35;
+    box-shadow: 0 0 0 0.2rem rgba(255, 107, 53, 0.25);
+}
+
+/* Style dropdown options - works in modern browsers */
+.form-select option,
+select.form-control option,
+select option {
+    padding: 8px 12px;
+    cursor: pointer;
+}
+
+.form-select option:hover,
+.form-select option:focus,
+.form-select option:active,
+.form-select option:checked,
+select.form-control option:hover,
+select.form-control option:focus,
+select.form-control option:active,
+select.form-control option:checked,
+select option:hover,
+select option:focus,
+select option:active,
+select option:checked {
+    background-color: #ff6b35 !important;
+    background: #ff6b35 !important;
+    color: white !important;
+}
+
+/* For Webkit browsers (Chrome, Safari, Edge) - custom scrollbar for dropdowns */
+.form-select::-webkit-scrollbar,
+select.form-control::-webkit-scrollbar,
+select::-webkit-scrollbar {
+    width: 8px;
+}
+
+.form-select::-webkit-scrollbar-track,
+select.form-control::-webkit-scrollbar-track,
+select::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+.form-select::-webkit-scrollbar-thumb,
+select.form-control::-webkit-scrollbar-thumb,
+select::-webkit-scrollbar-thumb {
+    background: #ff6b35;
+    border-radius: 4px;
+}
+
+/* Enhanced select wrapper for custom styling */
+.select-wrapper {
+    position: relative;
+}
+
+.select-wrapper::after {
+    content: '\f282';
+    font-family: 'bootstrap-icons';
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #ff6b35;
+    pointer-events: none;
+    font-size: 0.8rem;
+}
+
+/* Dropdown menu styles (for Bootstrap dropdowns) */
+.dropdown-menu {
+    border-radius: 8px;
+    border: 1px solid rgba(255, 107, 53, 0.2);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.dropdown-item {
+    padding: 8px 16px;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus,
+.dropdown-item:active {
+    background-color: #ff6b35 !important;
+    color: white !important;
+}
+
+/* Custom styled select with orange theme */
+.custom-select-orange {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23ff6b35' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 16px 12px;
+    padding-right: 2.5rem;
+}
+
+/* For Firefox - option styling */
+@-moz-document url-prefix() {
+    .form-select option,
+    select.form-control option,
+    select option {
+        background-color: white;
+        color: #333;
+    }
+
+    .form-select option:hover,
+    .form-select option:checked,
+    select.form-control option:hover,
+    select.form-control option:checked,
+    select option:hover,
+    select option:checked {
+        background-color: #ff6b35 !important;
+        color: white !important;
+    }
+}

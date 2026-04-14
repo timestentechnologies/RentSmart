@@ -65,10 +65,10 @@ try {
     $siteDescription = $settings['site_description'] ?? 'Property Management System';
     $siteLogo = $settings['site_logo'] ? BASE_URL . '/public/assets/images/' . $settings['site_logo'] : BASE_URL . '/public/assets/images/logo.svg';
 
-    // Per-user company branding override (manager/agent/landlord/realtor only)
+    // Per-user company branding override (manager/agent/landlord/realtor/airbnb_manager)
     $role = strtolower((string)($_SESSION['user_role'] ?? ''));
     $userId = (int)($_SESSION['user_id'] ?? 0);
-    if ($userId > 0 && in_array($role, ['manager', 'agent', 'landlord', 'realtor'], true)) {
+    if ($userId > 0 && in_array($role, ['manager', 'agent', 'landlord', 'realtor', 'airbnb_manager'], true)) {
         $companyNameKey = 'company_name_user_' . $userId;
         $companyLogoKey = 'company_logo_user_' . $userId;
         $companyName = trim((string)($settings[$companyNameKey] ?? ''));
@@ -300,7 +300,7 @@ ob_clean();
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
     <link href="https://cdn.datatables.net/1.13.7/css/dataTables.bootstrap5.min.css" rel="stylesheet">
-    <link href="<?= BASE_URL ?>/public/assets/css/style.css?v=13" rel="stylesheet">
+    <link href="<?= BASE_URL ?>/public/assets/css/style.css?v=14" rel="stylesheet">
     
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
     
@@ -1745,20 +1745,135 @@ ob_clean();
             border-color: rgba(255, 255, 255, 0.1);
         }
 
-        /* Striped Table Override */
-        .table-striped > tbody > tr:nth-of-type(odd) > * {
-            --bs-table-accent-bg: rgba(43, 10, 61, 0.02);
-        }
+            /* Striped Table Override */
+            .table-striped > tbody > tr:nth-of-type(odd) > * {
+                --bs-table-accent-bg: rgba(43, 10, 61, 0.02);
+            }
 
-        [data-theme="dark"] .table-striped > tbody > tr:nth-of-type(odd) > * {
-            --bs-table-accent-bg: rgba(255, 255, 255, 0.03);
-        }
-    </style>
-</head>
-<body>
-    <!-- Sidebar -->
-    <div class="sidebar">
-        <nav class="sidebar-nav">
+            [data-theme="dark"] .table-striped > tbody > tr:nth-of-type(odd) > * {
+                --bs-table-accent-bg: rgba(255, 255, 255, 0.03);
+            }
+
+            /* Custom Styled Select Dropdown - Full Control */
+            .custom-select-wrapper {
+                position: relative;
+                display: inline-block;
+                width: 100%;
+            }
+
+            .custom-select-trigger {
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+                padding: 0.5rem 0.75rem;
+                background: #fff;
+                border: 1px solid #dee2e6;
+                border-radius: 0.5rem;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                font-size: 0.875rem;
+                color: #212529;
+                min-height: 38px;
+            }
+
+            .custom-select-trigger:hover {
+                border-color: #ff6b35;
+                box-shadow: 0 0 0 0.2rem rgba(255, 107, 53, 0.15);
+            }
+
+            .custom-select-trigger.active {
+                border-color: #ff6b35;
+                box-shadow: 0 0 0 0.2rem rgba(255, 107, 53, 0.25);
+            }
+
+            .custom-select-trigger .arrow {
+                margin-left: 8px;
+                transition: transform 0.2s;
+                color: #ff6b35;
+            }
+
+            .custom-select-trigger.active .arrow {
+                transform: rotate(180deg);
+            }
+
+            .custom-select-dropdown {
+                position: absolute;
+                top: 100%;
+                left: 0;
+                right: 0;
+                background: #fff;
+                border: 1px solid rgba(255, 107, 53, 0.3);
+                border-radius: 0.5rem;
+                margin-top: 4px;
+                box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+                z-index: 9999;
+                max-height: 280px;
+                overflow-y: auto;
+                display: none;
+            }
+
+            .custom-select-dropdown.show {
+                display: block;
+            }
+
+            .custom-select-option {
+                padding: 10px 14px;
+                cursor: pointer;
+                transition: all 0.15s ease;
+                font-size: 0.875rem;
+                border-bottom: 1px solid #f0f0f0;
+            }
+
+            .custom-select-option:last-child {
+                border-bottom: none;
+            }
+
+            .custom-select-option:hover,
+            .custom-select-option.selected {
+                background: #ff6b35;
+                color: white;
+            }
+
+            .custom-select-option:first-child {
+                border-radius: 0.4rem 0.4rem 0 0;
+            }
+
+            .custom-select-option:last-child {
+                border-radius: 0 0 0.4rem 0.4rem;
+            }
+
+            /* Hide original select but keep it functional */
+            select.form-select.js-enhanced,
+            select.form-control.js-enhanced {
+                position: absolute;
+                opacity: 0;
+                pointer-events: none;
+                height: 0;
+                width: 0;
+            }
+
+            /* Dark mode support */
+            [data-theme="dark"] .custom-select-trigger {
+                background: #2b2f33;
+                border-color: #444;
+                color: #f8f9fa;
+            }
+
+            [data-theme="dark"] .custom-select-dropdown {
+                background: #2b2f33;
+                border-color: rgba(255, 107, 53, 0.4);
+            }
+
+            [data-theme="dark"] .custom-select-option {
+                border-bottom-color: #444;
+                color: #f8f9fa;
+            }
+        </style>
+    </head>
+    <body>
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <nav class="sidebar-nav">
             <ul class="nav flex-column">
                 <?php $isRealtor = isset($_SESSION['user_role']) && strtolower((string)$_SESSION['user_role']) === 'realtor'; ?>
                 <?php $userRole = strtolower((string)($_SESSION['user_role'] ?? '')); ?>
@@ -1933,6 +2048,16 @@ ob_clean();
                     <li class="nav-item">
                         <a class="nav-link <?= (strpos($current_uri, 'airbnb/walkin-guests') === 0) ? 'active' : '' ?>" href="<?= BASE_URL ?>/airbnb/walkin-guests">
                             <i class="bi bi-person-walking me-2"></i> Walk-in Guests
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link <?= (strpos($current_uri, 'airbnb/units') === 0) ? 'active' : '' ?>" href="<?= BASE_URL ?>/airbnb/units">
+                            <i class="bi bi-door-closed me-2"></i> Units
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link <?= (strpos($current_uri, 'airbnb/property-settings') === 0) ? 'active' : '' ?>" href="<?= BASE_URL ?>/airbnb/property-settings">
+                            <i class="bi bi-gear me-2"></i> Settings
                         </a>
                     </li>
                     <li class="nav-item">
@@ -3059,6 +3184,313 @@ ob_clean();
     </script>
 
     <?php if (!isset($_SESSION['user_id'])): ?>
+    <!-- Footer for non-logged-in users only -->
+    <footer class="bg-dark text-light py-5 mt-5">
+        <div class="container">
+            <div class="row">
+                <!-- Newsletter Subscription -->
+                <div class="col-lg-4 mb-4">
+                    <h5>Newsletter Subscription</h5>
+                    <p class="text-muted">Subscribe to our newsletter for the latest updates and offers.</p>
+                    <form id="newsletterSubscribeForm" class="mt-3">
+                        <div class="input-group">
+                            <input type="email" name="email" class="form-control" placeholder="Enter your email" required>
+                            <input type="text" name="name" class="form-control d-none" placeholder="Your name (optional)">
+                            <button type="submit" class="btn btn-warning text-white" type="button">
+                                <i class="bi bi-send"></i>
+                            </button>
+                        </div>
+                        <div id="newsletterMessage" class="mt-2 small"></div>
+                    </form>
+                </div>
+
+                <!-- Quick Links -->
+                <div class="col-lg-4 mb-4">
+                    <h5>Quick Links</h5>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><a href="<?= BASE_URL ?>/home" class="text-light text-decoration-none">Home</a></li>
+                        <li class="mb-2"><a href="<?= BASE_URL ?>/about" class="text-light text-decoration-none">About Us</a></li>
+                        <li class="mb-2"><a href="<?= BASE_URL ?>/contact" class="text-light text-decoration-none">Contact</a></li>
+                        <li class="mb-2"><a href="<?= BASE_URL ?>/privacy" class="text-light text-decoration-none">Privacy Policy</a></li>
+                        <li class="mb-2"><a href="<?= BASE_URL ?>/terms" class="text-light text-decoration-none">Terms of Service</a></li>
+                    </ul>
+                </div>
+
+                <!-- Contact Info -->
+                <div class="col-lg-4 mb-4">
+                    <h5>Contact Info</h5>
+                    <p class="text-muted">
+                        <i class="bi bi-geo-alt me-2"></i> Nairobi, Kenya<br>
+                        <i class="bi bi-envelope me-2"></i> info@rentsmart.co.ke<br>
+                        <i class="bi bi-phone me-2"></i> +254 700 000 000
+                    </p>
+                    <div class="mt-3">
+                        <a href="#" class="text-light me-3"><i class="bi bi-facebook fs-5"></i></a>
+                        <a href="#" class="text-light me-3"><i class="bi bi-twitter fs-5"></i></a>
+                        <a href="#" class="text-light me-3"><i class="bi bi-linkedin fs-5"></i></a>
+                        <a href="#" class="text-light"><i class="bi bi-instagram fs-5"></i></a>
+                    </div>
+                </div>
+            </div>
+
+            <hr class="bg-secondary my-4">
+
+            <div class="row">
+                <div class="col-md-6">
+                    <p class="text-muted mb-0">&copy; <?= date('Y') ?> RentSmart. All rights reserved.</p>
+                </div>
+                <div class="col-md-6 text-md-end">
+                    <p class="text-muted mb-0">Powered by <a href="https://timestentechnologies.co.ke" target="_blank" class="text-light text-decoration-none">Timesten Technologies</a></p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+    // Newsletter Subscription
+    document.getElementById('newsletterSubscribeForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const messageDiv = document.getElementById('newsletterMessage');
+        const submitBtn = this.querySelector('button[type="submit"]');
+        
+        // Show loading state
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Subscribing...';
+        messageDiv.innerHTML = '';
+        
+        fetch('<?= BASE_URL ?>/newsletter/subscribe', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                messageDiv.innerHTML = '<div class="text-success"><i class="bi bi-check-circle me-1"></i>' + data.message + '</div>';
+                this.reset();
+            } else {
+                messageDiv.innerHTML = '<div class="text-danger"><i class="bi bi-exclamation-circle me-1"></i>' + data.message + '</div>';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            messageDiv.innerHTML = '<div class="text-danger"><i class="bi bi-exclamation-circle me-1"></i>Error subscribing. Please try again.</div>';
+        })
+        .finally(() => {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<i class="bi bi-send"></i>';
+        });
+    });
+    </script>
+    <?php endif; ?>
+
+    <!-- PWA Install Handler -->
+    <script>
+    (function() {
+        let deferredPrompt = null;
+        const installBtn = document.getElementById('installAppBtn');
+        const installHelpModal = document.getElementById('pwaInstallHelpModal');
+        
+        // Listen for beforeinstallprompt event
+        window.addEventListener('beforeinstallprompt', function(e) {
+            // Prevent the mini-infobar from appearing on mobile
+            e.preventDefault();
+            // Store the event for later use
+            deferredPrompt = e;
+            // Show the install button in header
+            if (installBtn) {
+                installBtn.style.display = 'flex';
+            }
+        });
+        
+        // Handle install button click
+        if (installBtn) {
+            installBtn.addEventListener('click', async function() {
+                if (!deferredPrompt) {
+                    // No install prompt available, show help modal
+                    if (installHelpModal) {
+                        const modal = new bootstrap.Modal(installHelpModal);
+                        modal.show();
+                    }
+                    return;
+                }
+                
+                // Show the native install prompt
+                deferredPrompt.prompt();
+                
+                // Wait for user choice
+                const { outcome } = await deferredPrompt.userChoice;
+                
+                if (outcome === 'accepted') {
+                    // User accepted, hide the button
+                    installBtn.style.display = 'none';
+                }
+                
+                // Clear the deferred prompt
+                deferredPrompt = null;
+            });
+        }
+        
+        // Hide install button if app is already installed
+        window.addEventListener('appinstalled', function() {
+            if (installBtn) {
+                installBtn.style.display = 'none';
+            }
+            deferredPrompt = null;
+        });
+        
+        // Check if app is already installed (display-mode: standalone)
+        if (window.matchMedia('(display-mode: standalone)').matches || 
+            window.navigator.standalone === true) {
+            if (installBtn) {
+                installBtn.style.display = 'none';
+            }
+        }
+    })();
+
+    // Custom Styled Select Dropdown - Auto convert all selects
+    (function() {
+        function initCustomSelects() {
+            const selects = document.querySelectorAll('select.form-select:not(.js-enhanced), select.form-control:not(.js-enhanced)');
+            
+            selects.forEach(function(select) {
+                // Skip if already processed or if it's a special select (like DataTables length)
+                if (select.classList.contains('js-enhanced') || select.closest('.dataTables_wrapper')) {
+                    return;
+                }
+                
+                // Mark as enhanced
+                select.classList.add('js-enhanced');
+                
+                // Create wrapper
+                const wrapper = document.createElement('div');
+                wrapper.className = 'custom-select-wrapper';
+                select.parentNode.insertBefore(wrapper, select);
+                wrapper.appendChild(select);
+                
+                // Create trigger element
+                const trigger = document.createElement('div');
+                trigger.className = 'custom-select-trigger';
+                trigger.innerHTML = '<span class="selected-text">-- Select --</span><i class="bi bi-chevron-down arrow"></i>';
+                wrapper.appendChild(trigger);
+                
+                // Create dropdown
+                const dropdown = document.createElement('div');
+                dropdown.className = 'custom-select-dropdown';
+                wrapper.appendChild(dropdown);
+                
+                // Build options
+                Array.from(select.options).forEach(function(option, index) {
+                    const opt = document.createElement('div');
+                    opt.className = 'custom-select-option';
+                    opt.textContent = option.text;
+                    opt.setAttribute('data-value', option.value);
+                    opt.setAttribute('data-index', index);
+                    
+                    if (option.selected) {
+                        opt.classList.add('selected');
+                        trigger.querySelector('.selected-text').textContent = option.text;
+                    }
+                    
+                    dropdown.appendChild(opt);
+                });
+                
+                // Click handler for trigger
+                trigger.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const isOpen = dropdown.classList.contains('show');
+                    
+                    // Close all other dropdowns
+                    document.querySelectorAll('.custom-select-dropdown.show').forEach(function(d) {
+                        d.classList.remove('show');
+                        d.closest('.custom-select-wrapper').querySelector('.custom-select-trigger').classList.remove('active');
+                    });
+                    
+                    if (!isOpen) {
+                        dropdown.classList.add('show');
+                        trigger.classList.add('active');
+                    }
+                });
+                
+                // Click handler for options
+                dropdown.querySelectorAll('.custom-select-option').forEach(function(opt) {
+                    opt.addEventListener('click', function(e) {
+                        e.stopPropagation();
+                        const index = parseInt(this.getAttribute('data-index'));
+                        const value = this.getAttribute('data-value');
+                        
+                        // Update original select
+                        select.selectedIndex = index;
+                        select.value = value;
+                        
+                        // Trigger change event on original select
+                        const event = new Event('change', { bubbles: true });
+                        select.dispatchEvent(event);
+                        
+                        // Update visual state
+                        dropdown.querySelectorAll('.custom-select-option').forEach(function(o) {
+                            o.classList.remove('selected');
+                        });
+                        this.classList.add('selected');
+                        trigger.querySelector('.selected-text').textContent = this.textContent;
+                        
+                        // Close dropdown
+                        dropdown.classList.remove('show');
+                        trigger.classList.remove('active');
+                    });
+                });
+                
+                // Sync original select changes to custom dropdown
+                select.addEventListener('change', function() {
+                    const selectedOption = this.options[this.selectedIndex];
+                    if (selectedOption) {
+                        trigger.querySelector('.selected-text').textContent = selectedOption.text;
+                        dropdown.querySelectorAll('.custom-select-option').forEach(function(opt, idx) {
+                            opt.classList.toggle('selected', idx === this.selectedIndex);
+                        }.bind(this));
+                    }
+                });
+            });
+        }
+        
+        // Close dropdowns when clicking outside
+        document.addEventListener('click', function() {
+            document.querySelectorAll('.custom-select-dropdown.show').forEach(function(d) {
+                d.classList.remove('show');
+                d.closest('.custom-select-wrapper').querySelector('.custom-select-trigger').classList.remove('active');
+            });
+        });
+        
+        // Initialize on DOM ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initCustomSelects);
+        } else {
+            initCustomSelects();
+        }
+        
+        // Re-init on dynamic content (simple mutation observer)
+        const observer = new MutationObserver(function(mutations) {
+            let shouldReinit = false;
+            mutations.forEach(function(mutation) {
+                if (mutation.type === 'childList') {
+                    mutation.addedNodes.forEach(function(node) {
+                        if (node.nodeType === 1 && (node.matches && (node.matches('select.form-select') || node.matches('select.form-control') || node.querySelector('select.form-select, select.form-control')))) {
+                            shouldReinit = true;
+                        }
+                    });
+                }
+            });
+            if (shouldReinit) {
+                setTimeout(initCustomSelects, 10);
+            }
+        });
+        
+        observer.observe(document.body, { childList: true, subtree: true });
+    })();
+</script>
+
+<?php if (!isset($_SESSION['user_id'])): ?>
     <!-- Footer for non-logged-in users only -->
     <footer class="bg-dark text-light py-5 mt-5">
         <div class="container">
