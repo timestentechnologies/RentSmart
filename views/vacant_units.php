@@ -300,9 +300,6 @@ if (!defined('BASE_URL')) { define('BASE_URL', ''); }
                 </form>
             </div>
         </div>
-    </div>
-
-    <?php require __DIR__ . '/partials/public_footer.php'; ?>
     <script>
         function openInquiryModal(unitId, propertyName, unitNumber) {
             document.getElementById('inquiry_unit_id').value = unitId;
