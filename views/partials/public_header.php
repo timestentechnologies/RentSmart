@@ -2,22 +2,41 @@
 if (!defined('BASE_URL')) { define('BASE_URL', ''); }
 $activePage = $activePage ?? '';
 $siteName = $siteName ?? 'RentSmart';
-$siteLogo = $siteLogo ?? (BASE_URL . '/public/assets/images/logo.svg');
+$siteLogoFile = site_setting('site_logo', '');
+$appsLogoFile = site_setting('apps_page_logo', '');
+$siteLogo = $siteLogo ?? (
+    $appsLogoFile 
+        ? (BASE_URL . '/public/assets/images/' . $appsLogoFile) 
+        : ($siteLogoFile ? (BASE_URL . '/public/assets/images/' . $siteLogoFile) : (BASE_URL . '/public/assets/images/logo.svg'))
+);
 $faviconUrl = $faviconUrl ?? site_setting_image_url('site_favicon', BASE_URL . '/public/assets/images/site_favicon_1750832003.png');
 ?>
 <style>
-  :root { --primary-color:#6B3E99; --secondary-color:#8E5CC4; }
+  :root { 
+    --primary-color: #6B3E99; 
+    --secondary-color: #8E5CC4; 
+    --accent-color: #FF8A00;
+    --dark-color: #1f2937;
+    --light-color: #f3f4f6;
+  }
+  .navbar {
+    padding: 0.85rem 0;
+    background-color: #fff;
+    box-shadow: 0 2px 15px rgba(107, 62, 153, 0.1);
+    transition: box-shadow .2s ease;
+  }
   .navbar .navbar-nav {
     gap: .35rem;
   }
   .navbar .nav-link {
-    color: #111827;
+    color: #4a5568;
+    font-weight: 500;
     border-radius: .65rem;
     padding: .5rem .85rem;
     transition: background-color .15s ease, color .15s ease;
   }
   .navbar .nav-link:hover {
-    background: rgba(107, 62, 153, 0.10);
+    background: rgba(107, 62, 153, 0.08);
     color: var(--primary-color);
   }
   .navbar .nav-link.active {
@@ -39,11 +58,12 @@ $faviconUrl = $faviconUrl ?? site_setting_image_url('site_favicon', BASE_URL . '
     color: white;
   }
   .navbar .btn.btn-gradient { padding: .5rem .9rem; }
+  .navbar-brand img { height: 40px; }
 </style>
 <nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm sticky-top">
   <div class="container">
     <a class="navbar-brand" href="<?= BASE_URL ?>/">
-      <img src="<?= htmlspecialchars($siteLogo) ?>" alt="<?= htmlspecialchars($siteName) ?> Logo" height="40">
+      <img src="<?= htmlspecialchars((string)$siteLogo) ?>" alt="<?= htmlspecialchars((string)$siteName) ?> Logo">
     </a>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
       <span class="navbar-toggler-icon"></span>
@@ -52,7 +72,7 @@ $faviconUrl = $faviconUrl ?? site_setting_image_url('site_favicon', BASE_URL . '
       <ul class="navbar-nav ms-auto align-items-lg-center">
         <li class="nav-item"><a class="nav-link <?= $activePage === 'home' ? 'active' : '' ?>" href="<?= BASE_URL ?>/">Home</a></li>
         <li class="nav-item"><a class="nav-link <?= $activePage === 'vacant_units' ? 'active' : '' ?>" href="<?= BASE_URL ?>/vacant-units">Vacant Units</a></li>
-        <li class="nav-item"><a class="nav-link <?= $activePage === 'airbnb' ? 'active' : '' ?>" href="<?= BASE_URL ?>/airbnb">Airbnb</a></li>
+        <li class="nav-item"><a class="nav-link <?= $activePage === 'airbnb' ? 'active' : '' ?>" href="<?= BASE_URL ?>/airbnb">Airbnb Stays</a></li>
         <li class="nav-item"><a class="nav-link" data-public-section="features" href="<?= BASE_URL ?>/#features">Features</a></li>
         <li class="nav-item"><a class="nav-link" data-public-section="pricing" href="<?= BASE_URL ?>/#pricing">Pricing</a></li>
         <li class="nav-item"><a class="nav-link" data-public-section="testimonials" href="<?= BASE_URL ?>/#testimonials">Testimonials</a></li>

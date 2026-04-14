@@ -212,9 +212,12 @@ class HomeController
             $settings = $settingsModel->getAllAsAssoc();
             $siteName = $settings['site_name'] ?? 'RentSmart';
             $favicon = $settings['site_favicon'] ?? '';
-            $siteLogo = isset($settings['site_logo']) && $settings['site_logo']
-                ? BASE_URL . '/public/assets/images/' . $settings['site_logo']
-                : BASE_URL . '/public/assets/images/logo.png';
+
+            $siteLogoFile = $settings['site_logo'] ?? '';
+            $appsLogoFile = $settings['apps_page_logo'] ?? '';
+            $siteLogo = $appsLogoFile
+                ? (BASE_URL . '/public/assets/images/' . $appsLogoFile)
+                : ($siteLogoFile ? (BASE_URL . '/public/assets/images/' . $siteLogoFile) : (BASE_URL . '/public/assets/images/logo.svg'));
 
             $vacantUnits = $enhancedUnits;
             $publicRealtorListings = $realtorListings;
