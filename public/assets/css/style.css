@@ -18,6 +18,82 @@ main {
     width: 100%;
 }
 
+/* Mobile Table Responsive Styles */
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+}
+
+.table-responsive table {
+    min-width: 600px;
+    width: 100%;
+}
+
+@media (max-width: 768px) {
+    .table-responsive {
+        overflow-x: scroll;
+        display: block;
+        width: 100%;
+    }
+
+    .table-responsive::-webkit-scrollbar {
+        height: 6px;
+    }
+
+    .table-responsive::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 3px;
+    }
+
+    .table-responsive::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 3px;
+    }
+
+    /* Ensure cards don't constrain table width */
+    .card .table-responsive {
+        margin-left: -1rem;
+        margin-right: -1rem;
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+    }
+
+    /* Make DataTables scrollable on mobile */
+    .dataTables_wrapper .row {
+        margin-left: 0;
+        margin-right: 0;
+    }
+
+    /* Reduce text size and padding for better column fit on mobile */
+    .table-responsive table {
+        font-size: 0.75rem;
+    }
+
+    .table-responsive th,
+    .table-responsive td {
+        padding: 0.4rem 0.5rem;
+        white-space: nowrap;
+    }
+
+    .table-responsive th {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.02em;
+    }
+
+    /* Shrink buttons and badges in tables */
+    .table-responsive .btn {
+        padding: 0.25rem 0.4rem;
+        font-size: 0.7rem;
+    }
+
+    .table-responsive .badge {
+        font-size: 0.65rem;
+        padding: 0.25em 0.4em;
+    }
+}
+
 /* Card Styles */
 .card {
     margin-bottom: 1.5rem;
