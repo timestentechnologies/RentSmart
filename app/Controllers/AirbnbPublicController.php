@@ -48,6 +48,9 @@ class AirbnbPublicController
             // Get all Airbnb-enabled properties with their units
             $airbnbProperties = $this->getAvailableAirbnbListings();
 
+            // Set active page for header highlighting
+            $activePage = 'airbnb';
+
             require 'views/airbnb/public_listing.php';
         } catch (\Exception $e) {
             error_log($e->getMessage());

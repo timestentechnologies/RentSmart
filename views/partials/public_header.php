@@ -52,6 +52,7 @@ $faviconUrl = $faviconUrl ?? site_setting_image_url('site_favicon', BASE_URL . '
       <ul class="navbar-nav ms-auto align-items-lg-center">
         <li class="nav-item"><a class="nav-link <?= $activePage === 'home' ? 'active' : '' ?>" href="<?= BASE_URL ?>/">Home</a></li>
         <li class="nav-item"><a class="nav-link <?= $activePage === 'vacant_units' ? 'active' : '' ?>" href="<?= BASE_URL ?>/vacant-units">Vacant Units</a></li>
+        <li class="nav-item"><a class="nav-link <?= $activePage === 'airbnb' ? 'active' : '' ?>" href="<?= BASE_URL ?>/airbnb">Airbnb</a></li>
         <li class="nav-item"><a class="nav-link" data-public-section="features" href="<?= BASE_URL ?>/#features">Features</a></li>
         <li class="nav-item"><a class="nav-link" data-public-section="pricing" href="<?= BASE_URL ?>/#pricing">Pricing</a></li>
         <li class="nav-item"><a class="nav-link" data-public-section="testimonials" href="<?= BASE_URL ?>/#testimonials">Testimonials</a></li>
