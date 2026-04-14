@@ -147,6 +147,19 @@ main {
     box-shadow: none !important;
 }
 
+/* Remove dark bottom borders from all table rows */
+.table tbody tr td,
+.table tbody tr:last-child td,
+.table tbody tr:last-child th {
+    border-bottom: none !important;
+}
+
+/* Override Bootstrap table bordered styles */
+.table-bordered tbody tr:last-child td,
+.table-bordered tbody tr:last-child th {
+    border-bottom: none !important;
+}
+
 /* Remove box shadow from avatar icons in tables - ALL SCREENS */
 .table .avatar-circle,
 .table .bi-person-circle,
