@@ -1671,6 +1671,18 @@
                         window.bootstrap.Modal.getOrCreateInstance(el).show();
                     }
                 }
+                
+                // Clear hash when modal is hidden
+                ['loginModal', 'registerModal', 'tenantLoginModal'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) {
+                        el.addEventListener('hidden.bs.modal', function () {
+                            if (window.location.hash === '#' + id) {
+                                history.replaceState(null, null, window.location.pathname + window.location.search);
+                            }
+                        });
+                    }
+                });
             } catch (e) {}
         });
     </script>
