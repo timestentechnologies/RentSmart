@@ -517,6 +517,31 @@ $routes = [
     // Public inquiry
     'inquiries/store' => ['controller' => 'InquiryController', 'action' => 'store'],
 
+    // Airbnb Public Routes
+    'airbnb' => ['controller' => 'AirbnbPublicController', 'action' => 'index'],
+    'airbnb/book' => ['controller' => 'AirbnbPublicController', 'action' => 'bookUnit'],
+    'airbnb/submit-booking' => ['POST' => ['controller' => 'AirbnbPublicController', 'action' => 'submitBooking']],
+    'airbnb/booking-confirmation/([A-Za-z0-9]+)' => ['controller' => 'AirbnbPublicController', 'action' => 'bookingConfirmation'],
+    'airbnb/api/available-units' => ['controller' => 'AirbnbPublicController', 'action' => 'apiGetAvailableUnits'],
+    'airbnb/api/calculate-price' => ['controller' => 'AirbnbPublicController', 'action' => 'apiCalculatePrice'],
+    'airbnb/api/check-availability' => ['controller' => 'AirbnbPublicController', 'action' => 'apiCheckAvailability'],
+    // Airbnb Management Routes
+    'airbnb/dashboard' => ['controller' => 'AirbnbController', 'action' => 'dashboard'],
+    'airbnb/bookings' => ['controller' => 'AirbnbController', 'action' => 'bookings'],
+    'airbnb/bookings/create' => ['controller' => 'AirbnbController', 'action' => 'createBooking'],
+    'airbnb/bookings/store' => ['POST' => ['controller' => 'AirbnbController', 'action' => 'storeBooking']],
+    'airbnb/bookings/(\d+)' => ['controller' => 'AirbnbController', 'action' => 'bookingDetails'],
+    'airbnb/bookings/(\d+)/update' => ['POST' => ['controller' => 'AirbnbController', 'action' => 'updateBooking']],
+    'airbnb/bookings/(\d+)/checkin' => ['controller' => 'AirbnbController', 'action' => 'checkIn'],
+    'airbnb/bookings/(\d+)/checkout' => ['controller' => 'AirbnbController', 'action' => 'checkOut'],
+    'airbnb/bookings/(\d+)/cancel' => ['controller' => 'AirbnbController', 'action' => 'cancelBooking'],
+    'airbnb/bookings/(\d+)/payment' => ['POST' => ['controller' => 'AirbnbController', 'action' => 'addPayment']],
+    'airbnb/walkin-guests' => ['controller' => 'AirbnbController', 'action' => 'walkinGuests'],
+    'airbnb/walkin-guests/create' => ['controller' => 'AirbnbController', 'action' => 'createWalkinGuest'],
+    'airbnb/walkin-guests/(\d+)' => ['controller' => 'AirbnbController', 'action' => 'updateWalkinGuest'],
+    'airbnb/walkin-guests/(\d+)/convert' => ['controller' => 'AirbnbController', 'action' => 'convertWalkinToBooking'],
+    'airbnb/property-settings' => ['controller' => 'AirbnbController', 'action' => 'propertySettings'],
+    'airbnb/property-settings/(\d+)' => ['controller' => 'AirbnbController', 'action' => 'propertySettings'],
     // Realtor routes
     'realtor/dashboard' => ['controller' => 'RealtorDashboardController', 'action' => 'index'],
     'realtor/listings' => ['controller' => 'RealtorListingsController', 'action' => 'index'],
@@ -863,6 +888,23 @@ $protectedRoutes = [
     'agent/leads/stages/store',
     'agent/leads/stages/update/(\d+)',
     'agent/leads/stages/delete/(\d+)',
+
+    'airbnb/dashboard',
+    'airbnb/bookings',
+    'airbnb/bookings/create',
+    'airbnb/bookings/store',
+    'airbnb/bookings/(\d+)',
+    'airbnb/bookings/(\d+)/update',
+    'airbnb/bookings/(\d+)/checkin',
+    'airbnb/bookings/(\d+)/checkout',
+    'airbnb/bookings/(\d+)/cancel',
+    'airbnb/bookings/(\d+)/payment',
+    'airbnb/walkin-guests',
+    'airbnb/walkin-guests/create',
+    'airbnb/walkin-guests/(\d+)',
+    'airbnb/walkin-guests/(\d+)/convert',
+    'airbnb/property-settings',
+    'airbnb/property-settings/(\d+)',
 ];
 
 // Check if the current route requires authentication

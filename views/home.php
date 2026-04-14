@@ -1326,6 +1326,7 @@
                         <li class="mb-2"><a href="#" class="text-white-50">Residential Properties</a></li>
                         <li class="mb-2"><a href="#" class="text-white-50">Commercial Properties</a></li>
                         <li class="mb-2"><a href="<?= BASE_URL ?>/vacant-units" class="text-white-50">Find Vacant Units</a></li>
+                        <li class="mb-2"><a href="<?= BASE_URL ?>/airbnb" class="text-white-50">Airbnb Stays</a></li>
                     </ul>
                 </div>
                 <div class="col-md-3">
