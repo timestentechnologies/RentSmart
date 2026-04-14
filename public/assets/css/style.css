@@ -304,18 +304,20 @@ main {
     .table > thead > tr > th,
     .table th,
     .table td {
-        padding: 0.4rem 0.4rem !important;
-        font-size: 0.75rem !important;
+        padding: 0.5rem 0.5rem !important;
+        font-size: 0.85rem !important;
         white-space: nowrap !important;
     }
 
     .table > thead > tr > th,
     .table thead th,
     .table th {
-        font-size: 0.65rem !important;
+        font-size: 0.8rem !important;
         letter-spacing: 0.3px !important;
         font-weight: 600 !important;
         text-transform: uppercase !important;
+        text-align: center !important;
+        vertical-align: middle !important;
     }
 
     /* Badge and button size reduction */
@@ -406,15 +408,16 @@ main {
     .table > tbody > tr > td,
     .table th,
     .table td {
-        padding: 0.35rem 0.3rem !important;
-        font-size: 0.7rem !important;
+        padding: 0.4rem 0.4rem !important;
+        font-size: 0.8rem !important;
     }
 
     .table > thead > tr > th,
     .table thead th,
     .table th {
-        font-size: 0.6rem !important;
+        font-size: 0.75rem !important;
         letter-spacing: 0.2px !important;
+        text-align: center !important;
     }
 
     .btn {
