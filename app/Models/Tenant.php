@@ -48,10 +48,10 @@ class Tenant extends Model
                                   AND p3.payment_type = 'utility'
                                   AND p3.status IN ('completed','verified')
                                   AND (
-                                        (p3.applies_to_month IS NOT NULL AND p3.applies_to_month BETWEEN DATE_FORMAT(NOW() ,'%Y-%m-01') AND LAST_DAY(NOW()))
-                                     OR (p3.applies_to_month IS NULL AND p3.payment_date BETWEEN DATE_FORMAT(NOW() ,'%Y-%m-01') AND LAST_DAY(NOW()))
-                                  )
-                            ), 0)
+                                         (p3.applies_to_month IS NOT NULL AND p3.applies_to_month BETWEEN DATE_FORMAT(NOW() ,'%Y-%m-01') AND LAST_DAY(NOW()))
+                                      OR (p3.applies_to_month IS NULL AND p3.payment_date BETWEEN DATE_FORMAT(NOW() ,'%Y-%m-01') AND LAST_DAY(NOW()))
+                                   )
+                             ), 0)
                         , 0)
                     ), 0)
                     FROM utilities ut
@@ -130,6 +130,11 @@ class Tenant extends Model
                 $params[] = $userId;
                 $params[] = $userId;
             }
+            if ($user->isAirbnbManager()) {
+                $sql .= " OR p.airbnb_manager_id = ? OR p2.airbnb_manager_id = ?";
+                $params[] = $userId;
+                $params[] = $userId;
+            }
             $sql .= ")";
         }
         
@@ -181,6 +186,11 @@ class Tenant extends Model
             }
             if ($user->isCaretaker()) {
                 $sql .= " OR p.caretaker_user_id = ? OR p2.caretaker_user_id = ?";
+                $params[] = $userId;
+                $params[] = $userId;
+            }
+            if ($user->isAirbnbManager()) {
+                $sql .= " OR p.airbnb_manager_id = ? OR p2.airbnb_manager_id = ?";
                 $params[] = $userId;
                 $params[] = $userId;
             }
@@ -245,6 +255,10 @@ class Tenant extends Model
             }
             if ($user->isCaretaker()) {
                 $sql .= " OR p.caretaker_user_id = ?";
+                $params[] = $userId;
+            }
+            if ($user->isAirbnbManager()) {
+                $sql .= " OR p.airbnb_manager_id = ?";
                 $params[] = $userId;
             }
             $sql .= ")";
@@ -465,10 +479,10 @@ class Tenant extends Model
                     LEFT JOIN leases l ON t.id = l.tenant_id AND l.status = 'active'
                     LEFT JOIN units u ON l.unit_id = u.id
                     LEFT JOIN properties p ON u.property_id = p.id
-                    WHERE (p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ?)
+                    WHERE (p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ? OR p.airbnb_manager_id = ?)
                     ORDER BY t.name ASC";
             $stmt = $this->db->prepare($sql);
-            $stmt->execute([$userId, $userId, $userId, $userId]);
+            $stmt->execute([$userId, $userId, $userId, $userId, $userId]);
         }
         
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
@@ -527,12 +541,12 @@ class Tenant extends Model
                         AND pay.status IN ('completed', 'verified')
                         AND MONTH(pay.payment_date) = MONTH(CURRENT_DATE())
                         AND YEAR(pay.payment_date) = YEAR(CURRENT_DATE())
-                    WHERE (p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ?)
+                    WHERE (p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ? OR p.airbnb_manager_id = ?)
                     GROUP BY t.id, l.rent_amount, u.unit_number, p.name
                     HAVING balance_due > 0
                     ORDER BY balance_due DESC";
             $stmt = $this->db->prepare($sql);
-            $stmt->execute([$userId, $userId, $userId, $userId]);
+            $stmt->execute([$userId, $userId, $userId, $userId, $userId]);
         }
         
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
@@ -597,12 +611,12 @@ class Tenant extends Model
                         AND pay.status IN ('completed','verified')
                         AND pay.payment_type = 'rent'
                         AND pay.amount > 0
-                    WHERE (p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ?)
+                    WHERE (p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ? OR p.airbnb_manager_id = ?)
                     GROUP BY t.id, l.rent_amount, l.start_date
                     HAVING (l.rent_amount * (TIMESTAMPDIFF(MONTH, DATE_FORMAT(l.start_date, '%Y-%m-01'), DATE_FORMAT(CURRENT_DATE(), '%Y-%m-01')) + 1) - COALESCE(SUM(pay.amount), 0)) > 0
                     ORDER BY t.id ASC";
             $stmt = $this->db->prepare($sql);
-            $stmt->execute([(int)$userId, (int)$userId, (int)$userId, (int)$userId]);
+            $stmt->execute([(int)$userId, (int)$userId, (int)$userId, (int)$userId, (int)$userId]);
         }
 
         $rows = $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];

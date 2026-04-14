@@ -1941,63 +1941,65 @@ ob_clean();
                         </a>
                     </li>
 
-                <?php else: ?>
-                    <!-- PROPERTY MANAGEMENT Section -->
-                    <li class="nav-item mt-3">
-                        <small class="nav-header text-uppercase px-3">CLIENT MANAGEMENT</small>
-                    </li>
-                    <?php if ($isAgentSide): ?>
-                        <li class="nav-item">
-                            <a class="nav-link <?= (strpos($current_uri, 'agent/leads') === 0) ? 'active' : '' ?>" href="<?= BASE_URL ?>/agent/leads">
-                                <i class="bi bi-kanban me-2"></i> CRM
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a href="<?= BASE_URL ?>/agent/clients" class="nav-link <?= strpos($current_uri, 'agent/clients') === 0 ? 'active' : '' ?>">
-                                <i class="bi bi-people me-2"></i> Clients
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a href="<?= BASE_URL ?>/agent/contracts" class="nav-link <?= strpos($current_uri, 'agent/contracts') === 0 ? 'active' : '' ?>">
-                                <i class="bi bi-file-text me-2"></i> Contracts
-                            </a>
-                        </li>
-                    <li class="nav-item mt-3">
-                        <small class="nav-header text-uppercase px-3">PROPERTY MANAGEMENT</small>
-                    </li>
-                    <?php endif; ?>
-                    <li class="nav-item">
-                        <a class="nav-link <?= (strpos($current_uri, 'properties') === 0) ? 'active' : '' ?>" href="<?= BASE_URL ?>/properties">
-                            <i class="bi bi-building me-2"></i> Properties
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="<?= BASE_URL ?>/units" class="nav-link <?= strpos($current_uri, 'units') === 0 ? 'active' : '' ?>">
-                            <i class="bi bi-door-open me-2"></i> Units
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="<?= BASE_URL ?>/tenants" class="nav-link <?= strpos($current_uri, 'tenants') === 0 ? 'active' : '' ?>">
-                            <i class="bi bi-people me-2"></i> Tenants
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="<?= BASE_URL ?>/leases" class="nav-link <?= strpos($current_uri, 'leases') === 0 ? 'active' : '' ?>">
-                            <i class="bi bi-file-text me-2"></i> Leases
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="<?= BASE_URL ?>/utilities" class="nav-link <?= strpos($current_uri, 'utilities') === 0 ? 'active' : '' ?>">
-                            <i class="bi bi-lightning-charge me-2"></i> Utilities
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="<?= BASE_URL ?>/maintenance" class="nav-link <?= strpos($current_uri, 'maintenance') === 0 ? 'active' : '' ?>">
-                            <i class="bi bi-tools me-2"></i> Maintenance
-                        </a>
-                    </li>
                 <?php endif; ?>
-                <?php if (true): ?>
+
+                <?php if (in_array($userRole, ['manager', 'agent', 'landlord', 'airbnb_manager'], true)): ?>
+                    <?php if ($userRole !== 'airbnb_manager'): ?>
+                        <!-- PROPERTY MANAGEMENT Section -->
+                        <li class="nav-item mt-3">
+                            <small class="nav-header text-uppercase px-3">CLIENT MANAGEMENT</small>
+                        </li>
+                        <?php if ($isAgentSide): ?>
+                            <li class="nav-item">
+                                <a class="nav-link <?= (strpos($current_uri, 'agent/leads') === 0) ? 'active' : '' ?>" href="<?= BASE_URL ?>/agent/leads">
+                                    <i class="bi bi-kanban me-2"></i> CRM
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="<?= BASE_URL ?>/agent/clients" class="nav-link <?= strpos($current_uri, 'agent/clients') === 0 ? 'active' : '' ?>">
+                                    <i class="bi bi-people me-2"></i> Clients
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a href="<?= BASE_URL ?>/agent/contracts" class="nav-link <?= strpos($current_uri, 'agent/contracts') === 0 ? 'active' : '' ?>">
+                                    <i class="bi bi-file-text me-2"></i> Contracts
+                                </a>
+                            </li>
+                        <li class="nav-item mt-3">
+                            <small class="nav-header text-uppercase px-3">PROPERTY MANAGEMENT</small>
+                        </li>
+                        <?php endif; ?>
+                        <li class="nav-item">
+                            <a class="nav-link <?= (strpos($current_uri, 'properties') === 0) ? 'active' : '' ?>" href="<?= BASE_URL ?>/properties">
+                                <i class="bi bi-building me-2"></i> Properties
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="<?= BASE_URL ?>/units" class="nav-link <?= strpos($current_uri, 'units') === 0 ? 'active' : '' ?>">
+                                <i class="bi bi-door-open me-2"></i> Units
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="<?= BASE_URL ?>/tenants" class="nav-link <?= strpos($current_uri, 'tenants') === 0 ? 'active' : '' ?>">
+                                <i class="bi bi-people me-2"></i> Tenants
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="<?= BASE_URL ?>/leases" class="nav-link <?= strpos($current_uri, 'leases') === 0 ? 'active' : '' ?>">
+                                <i class="bi bi-file-text me-2"></i> Leases
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="<?= BASE_URL ?>/utilities" class="nav-link <?= strpos($current_uri, 'utilities') === 0 ? 'active' : '' ?>">
+                                <i class="bi bi-lightning-charge me-2"></i> Utilities
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="<?= BASE_URL ?>/maintenance" class="nav-link <?= strpos($current_uri, 'maintenance') === 0 ? 'active' : '' ?>">
+                                <i class="bi bi-tools me-2"></i> Maintenance
+                            </a>
+                        </li>
+                    <?php endif; ?>
                 
                 
                     <!-- FINANCIAL Section -->
@@ -2155,7 +2157,7 @@ ob_clean();
                     </li>
                 <?php endif; ?>
                 
-                <?php if (isset($_SESSION['user_role']) && in_array(strtolower($_SESSION['user_role']), ['manager','agent','landlord','realtor'], true)): ?>
+                <?php if (isset($_SESSION['user_role']) && in_array(strtolower($_SESSION['user_role']), ['manager','agent','landlord','realtor','airbnb_manager'], true)): ?>
                 <li class="nav-item mt-3">
                     <small class="nav-header text-uppercase px-3">Settings</small>
                 </li>
@@ -2178,15 +2180,22 @@ ob_clean();
                     <small class="nav-header text-uppercase px-3">OTHERS</small>
                 </li>
                 <li class="nav-item">
-                    <a href="<?= BASE_URL ?>/vacant-units" class="nav-link" target="_blank">
-                        <i class="bi bi-house-door me-2"></i> Vacant Units (Public)
+                    <a href="<?= BASE_URL ?>/airbnb" class="nav-link" target="_blank">
+                        <i class="bi bi-house-heart me-2"></i> Airbnb Stays (Public)
                     </a>
                 </li>
-                <li class="nav-item">
-                    <a href="<?= BASE_URL ?>/jiji" class="nav-link <?= (strpos($current_uri, 'jiji') === 0) ? 'active' : '' ?>">
-                        <i class="bi bi-megaphone-fill me-2"></i> Post to Jiji
-                    </a>
-                </li>
+                <?php if ($userRole !== 'airbnb_manager'): ?>
+                    <li class="nav-item">
+                        <a href="<?= BASE_URL ?>/vacant-units" class="nav-link" target="_blank">
+                            <i class="bi bi-house-door me-2"></i> Vacant Units (Public)
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="<?= BASE_URL ?>/jiji" class="nav-link <?= (strpos($current_uri, 'jiji') === 0) ? 'active' : '' ?>">
+                            <i class="bi bi-megaphone-fill me-2"></i> Post to Jiji
+                        </a>
+                    </li>
+                <?php endif; ?>
                 <li class="nav-item">
                     <a class="nav-link dropdown-toggle <?= (strpos($current_uri, 'integrations') === 0) ? 'active' : '' ?>" 
                        href="#integrationsSubmenu" 

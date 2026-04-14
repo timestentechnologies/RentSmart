@@ -21,7 +21,7 @@ ob_start();
     <!-- Stats Cards -->
     <div class="row mb-4">
         <div class="col-xl-2 col-md-4 mb-3">
-            <div class="card border-primary h-100">
+            <div class="card stat-card h-100">
                 <div class="card-body text-center">
                     <h6 class="text-muted mb-2">Today's Check-ins</h6>
                     <h3 class="text-primary mb-0"><?php echo count($upcomingCheckIns); ?></h3>
@@ -29,7 +29,7 @@ ob_start();
             </div>
         </div>
         <div class="col-xl-2 col-md-4 mb-3">
-            <div class="card border-success h-100">
+            <div class="card stat-card h-100">
                 <div class="card-body text-center">
                     <h6 class="text-muted mb-2">Today's Check-outs</h6>
                     <h3 class="text-success mb-0"><?php echo count($upcomingCheckOuts); ?></h3>
@@ -37,7 +37,7 @@ ob_start();
             </div>
         </div>
         <div class="col-xl-2 col-md-4 mb-3">
-            <div class="card border-info h-100">
+            <div class="card stat-card h-100">
                 <div class="card-body text-center">
                     <h6 class="text-muted mb-2">Occupancy Rate</h6>
                     <h3 class="text-info mb-0"><?php echo round($occupancyData['occupancy_rate'] ?? 0, 1); ?>%</h3>
@@ -45,7 +45,7 @@ ob_start();
             </div>
         </div>
         <div class="col-xl-2 col-md-4 mb-3">
-            <div class="card border-warning h-100">
+            <div class="card stat-card h-100">
                 <div class="card-body text-center">
                     <h6 class="text-muted mb-2">Pending Walk-ins</h6>
                     <h3 class="text-warning mb-0"><?php echo count($pendingWalkins); ?></h3>
@@ -53,7 +53,7 @@ ob_start();
             </div>
         </div>
         <div class="col-xl-2 col-md-4 mb-3">
-            <div class="card border-danger h-100">
+            <div class="card stat-card h-100">
                 <div class="card-body text-center">
                     <h6 class="text-muted mb-2">Walk-in Conversion</h6>
                     <h3 class="text-danger mb-0"><?php echo round($walkinStats['conversion_rate'] ?? 0, 1); ?>%</h3>
@@ -61,7 +61,7 @@ ob_start();
             </div>
         </div>
         <div class="col-xl-2 col-md-4 mb-3">
-            <div class="card border-secondary h-100">
+            <div class="card stat-card h-100">
                 <div class="card-body text-center">
                     <h6 class="text-muted mb-2">Active Bookings</h6>
                     <h3 class="text-secondary mb-0"><?php echo ($stats['checked_in'] ?? 0) + ($stats['confirmed'] ?? 0); ?></h3>

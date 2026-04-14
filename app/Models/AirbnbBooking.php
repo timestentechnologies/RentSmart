@@ -239,6 +239,8 @@ class AirbnbBooking extends Model
             $placeholders = implode(',', array_fill(0, count($propertyIds), '?'));
             $sql .= " AND b.property_id IN ($placeholders)";
             $params = $propertyIds;
+        } else {
+            $sql .= " AND 1=0";
         }
 
         $sql .= " ORDER BY b.check_in_date ASC LIMIT ?";
@@ -263,6 +265,8 @@ class AirbnbBooking extends Model
             $placeholders = implode(',', array_fill(0, count($propertyIds), '?'));
             $sql .= " AND b.property_id IN ($placeholders)";
             $params = $propertyIds;
+        } else {
+            $sql .= " AND 1=0";
         }
 
         $sql .= " ORDER BY b.check_out_date ASC LIMIT ?";
@@ -376,6 +380,8 @@ class AirbnbBooking extends Model
             $placeholders = implode(',', array_fill(0, count($propertyIds), '?'));
             $sql .= " AND property_id IN ($placeholders)";
             $params = array_merge($params, $propertyIds);
+        } else {
+            $sql .= " AND 1=0";
         }
 
         $stmt = $this->db->prepare($sql);
@@ -409,6 +415,8 @@ class AirbnbBooking extends Model
             $placeholders = implode(',', array_fill(0, count($propertyIds), '?'));
             $sql .= " AND property_id IN ($placeholders)";
             $params = array_merge($params, $propertyIds);
+        } else {
+            $sql .= " AND 1=0";
         }
 
         $sql .= " GROUP BY DATE(check_in_date) ORDER BY date";

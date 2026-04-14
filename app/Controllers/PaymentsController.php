@@ -325,7 +325,7 @@ class PaymentsController
         unset($tenant);
         
         // Get count of tenants with overdue payments
-        $delinquentTenants = $paymentModel->getDelinquentTenants();
+        $delinquentTenants = $paymentModel->getDelinquentTenants($this->userId);
         $pendingPaymentsCount = is_array($delinquentTenants) ? count($delinquentTenants) : 0;
         
         require 'views/payments/index.php';

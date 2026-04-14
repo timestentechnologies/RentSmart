@@ -327,7 +327,8 @@ class Property extends Model
                     $params[] = $userId;
                 }
                 // Caretaker assigned to property
-                $sql .= " OR p.caretaker_user_id = ?";
+                $sql .= " OR p.caretaker_user_id = ? OR p.airbnb_manager_id = ?";
+                $params[] = $userId;
                 $params[] = $userId;
                 $sql .= ")";
             }
@@ -779,10 +780,10 @@ class Property extends Model
                     FROM units u
                     INNER JOIN properties p ON u.property_id = p.id
                     WHERE u.status = 'vacant'
-                    AND (p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ?)
+                    AND (p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ? OR p.airbnb_manager_id = ?)
                     ORDER BY p.name, u.unit_number";
             $stmt = $this->db->prepare($sql);
-            $stmt->execute([$userId, $userId, $userId, $userId]);
+            $stmt->execute([$userId, $userId, $userId, $userId, $userId]);
         }
         
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
@@ -833,10 +834,10 @@ class Property extends Model
                     LEFT JOIN leases l ON u.id = l.unit_id AND l.status = 'active'
                     LEFT JOIN tenants t ON l.tenant_id = t.id
                     WHERE u.status = 'occupied'
-                    AND (p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ?)
+                    AND (p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ? OR p.airbnb_manager_id = ?)
                     ORDER BY p.name, u.unit_number";
             $stmt = $this->db->prepare($sql);
-            $stmt->execute([$userId, $userId, $userId, $userId]);
+            $stmt->execute([$userId, $userId, $userId, $userId, $userId]);
         }
         
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
@@ -883,10 +884,10 @@ class Property extends Model
                     LEFT JOIN leases l ON u.id = l.unit_id AND l.status = 'active'
                     LEFT JOIN tenants t ON l.tenant_id = t.id
                     WHERE m.created_at BETWEEN ? AND ?
-                    AND (p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ?)
+                    AND (p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ? OR p.airbnb_manager_id = ?)
                     ORDER BY m.created_at DESC";
             $stmt = $this->db->prepare($sql);
-            $stmt->execute([$startDate, $endDate, $userId, $userId, $userId, $userId]);
+            $stmt->execute([$startDate, $endDate, $userId, $userId, $userId, $userId, $userId]);
         }
         
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
@@ -930,11 +931,11 @@ class Property extends Model
                     LEFT JOIN units u ON p.id = u.property_id
                     LEFT JOIN maintenance_requests m ON u.id = m.unit_id 
                         AND m.created_at BETWEEN ? AND ?
-                    WHERE (p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ?)
+                    WHERE (p.owner_id = ? OR p.manager_id = ? OR p.agent_id = ? OR p.caretaker_user_id = ? OR p.airbnb_manager_id = ?)
                     GROUP BY p.id, p.name
                     ORDER BY total_cost DESC";
             $stmt = $this->db->prepare($sql);
-            $stmt->execute([$startDate, $endDate, $userId, $userId, $userId, $userId]);
+            $stmt->execute([$startDate, $endDate, $userId, $userId, $userId, $userId, $userId]);
         }
         
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);

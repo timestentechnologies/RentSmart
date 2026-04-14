@@ -256,6 +256,8 @@ class AirbnbWalkinGuest extends Model
             $placeholders = implode(',', array_fill(0, count($propertyIds), '?'));
             $sql .= " AND property_id IN ($placeholders)";
             $params = $propertyIds;
+        } else {
+            $sql .= " AND 1=0";
         }
 
         $stmt = $this->db->prepare($sql);

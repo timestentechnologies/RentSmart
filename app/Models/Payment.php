@@ -788,6 +788,10 @@ class Payment extends Model
                 $sql .= " OR pr.agent_id = ?";
                 $params[] = $userId;
             }
+            if ($user->isRole('airbnb_manager')) {
+                $sql .= " OR pr.airbnb_manager_id = ?";
+                $params[] = $userId;
+            }
             // Caretaker assigned to property
             $sql .= " OR pr.caretaker_user_id = ?";
             $params[] = $userId;
@@ -1709,11 +1713,16 @@ class Payment extends Model
         return $result[0]['total_delinquent'] ?? 0;
     }
 
-    public function getDelinquencyRate()
+    public function getDelinquencyRate($userId = null)
     {
+        $userModel = new User();
+        $params = [];
+        
         $sql = "SELECT 
-                    (COUNT(CASE WHEN p.paid_amount IS NULL OR p.paid_amount < l.rent_amount THEN 1 END) * 100.0 / COUNT(*)) as delinquency_rate
+                    (COUNT(CASE WHEN p.paid_amount IS NULL OR p.paid_amount < l.rent_amount THEN 1 END) * 100.0 / NULLIF(COUNT(*), 0)) as delinquency_rate
                 FROM leases l
+                JOIN units u ON l.unit_id = u.id
+                JOIN properties pr ON u.property_id = pr.id
                 LEFT JOIN (
                     SELECT lease_id, SUM(amount) as paid_amount
                     FROM payments
@@ -1722,13 +1731,21 @@ class Payment extends Model
                     GROUP BY lease_id
                 ) p ON l.id = p.lease_id
                 WHERE l.status = 'active'";
+
+        if ($userId && !$userModel->isAdmin($userId)) {
+            $sql .= " AND (pr.owner_id = ? OR pr.manager_id = ? OR pr.agent_id = ? OR pr.caretaker_user_id = ? OR pr.airbnb_manager_id = ?)";
+            $params = array_fill(0, 5, $userId);
+        }
         
-        $result = $this->query($sql);
+        $result = $this->query($sql, $params);
         return round($result[0]['delinquency_rate'] ?? 0, 2);
     }
 
-    public function getDelinquentTenants()
+    public function getDelinquentTenants($userId = null)
     {
+        $userModel = new User();
+        $params = [];
+
         $sql = "SELECT 
                     t.id,
                     t.name,
@@ -1751,26 +1768,44 @@ class Payment extends Model
                     GROUP BY lease_id
                 ) p ON l.id = p.lease_id
                 WHERE l.status = 'active'
-                AND (p.paid_amount IS NULL OR p.paid_amount < l.rent_amount)
-                ORDER BY outstanding_amount DESC";
+                AND (p.paid_amount IS NULL OR p.paid_amount < l.rent_amount)";
+
+        if ($userId && !$userModel->isAdmin($userId)) {
+            $sql .= " AND (pr.owner_id = ? OR pr.manager_id = ? OR pr.agent_id = ? OR pr.caretaker_user_id = ? OR pr.airbnb_manager_id = ?)";
+            $params = array_fill(0, 5, $userId);
+        }
+
+        $sql .= " ORDER BY outstanding_amount DESC";
         
-        return $this->query($sql);
+        return $this->query($sql, $params);
     }
 
-    public function getAgingReport()
+    public function getAgingReport($userId = null)
     {
+        $userModel = new User();
+        $params = [];
+
         $sql = "SELECT 
                     CASE 
-                        WHEN DATEDIFF(CURRENT_DATE(), payment_date) <= 30 THEN '0-30 days'
-                        WHEN DATEDIFF(CURRENT_DATE(), payment_date) <= 60 THEN '31-60 days'
-                        WHEN DATEDIFF(CURRENT_DATE(), payment_date) <= 90 THEN '61-90 days'
+                        WHEN DATEDIFF(CURRENT_DATE(), p.payment_date) <= 30 THEN '0-30 days'
+                        WHEN DATEDIFF(CURRENT_DATE(), p.payment_date) <= 60 THEN '31-60 days'
+                        WHEN DATEDIFF(CURRENT_DATE(), p.payment_date) <= 90 THEN '61-90 days'
                         ELSE 'Over 90 days'
                     END as aging_period,
                     COUNT(*) as count,
-                    SUM(amount) as total_amount
-                FROM payments
-                WHERE payment_date <= CURRENT_DATE()
-                GROUP BY aging_period
+                    SUM(p.amount) as total_amount
+                FROM payments p
+                JOIN leases l ON p.lease_id = l.id
+                JOIN units u ON l.unit_id = u.id
+                JOIN properties pr ON u.property_id = pr.id
+                WHERE p.payment_date <= CURRENT_DATE()";
+
+        if ($userId && !$userModel->isAdmin($userId)) {
+            $sql .= " AND (pr.owner_id = ? OR pr.manager_id = ? OR pr.agent_id = ? OR pr.caretaker_user_id = ? OR pr.airbnb_manager_id = ?)";
+            $params = array_fill(0, 5, $userId);
+        }
+
+        $sql .= " GROUP BY aging_period
                 ORDER BY 
                     CASE aging_period
                         WHEN '0-30 days' THEN 1
@@ -1779,23 +1814,35 @@ class Payment extends Model
                         ELSE 4
                     END";
         
-        return $this->query($sql);
+        return $this->query($sql, $params);
     }
 
-    public function getPaymentTrends($months = 12)
+    public function getPaymentTrends($months = 12, $userId = null)
     {
+        $userModel = new User();
+        $params = [$months];
+
         $sql = "SELECT 
-                    DATE_FORMAT(payment_date, '%Y-%m') as month,
+                    DATE_FORMAT(p.payment_date, '%Y-%m') as month,
                     COUNT(*) as payment_count,
-                    SUM(amount) as total_amount,
-                    COUNT(DISTINCT lease_id) as unique_tenants,
-                    AVG(amount) as average_payment
-                FROM payments
-                WHERE payment_date >= DATE_SUB(CURRENT_DATE(), INTERVAL ? MONTH)
-                GROUP BY DATE_FORMAT(payment_date, '%Y-%m')
+                    SUM(p.amount) as total_amount,
+                    COUNT(DISTINCT p.lease_id) as unique_tenants,
+                    AVG(p.amount) as average_payment
+                FROM payments p
+                JOIN leases l ON p.lease_id = l.id
+                JOIN units u ON l.unit_id = u.id
+                JOIN properties pr ON u.property_id = pr.id
+                WHERE p.payment_date >= DATE_SUB(CURRENT_DATE(), INTERVAL ? MONTH)";
+
+        if ($userId && !$userModel->isAdmin($userId)) {
+            $sql .= " AND (pr.owner_id = ? OR pr.manager_id = ? OR pr.agent_id = ? OR pr.caretaker_user_id = ? OR pr.airbnb_manager_id = ?)";
+            $params = array_merge($params, array_fill(0, 5, $userId));
+        }
+
+        $sql .= " GROUP BY DATE_FORMAT(p.payment_date, '%Y-%m')
                 ORDER BY month ASC";
         
-        return $this->query($sql, [$months]);
+        return $this->query($sql, $params);
     }
 
     public function getTenantPaymentHistory()
