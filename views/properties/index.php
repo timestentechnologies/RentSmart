@@ -45,6 +45,9 @@ ob_start();
     </div>
 
     <!-- Statistics Cards -->
+    <?php
+    $isAirbnbManagerView = isset($_SESSION['user_role']) && strtolower($_SESSION['user_role']) === 'airbnb_manager';
+    ?>
     <div class="row g-3 mb-4">
         <div class="col-12 col-md-4">
             <div class="stat-card property-count">
@@ -64,18 +67,23 @@ ob_start();
             <div class="stat-card occupancy-rate">
                 <div class="d-flex justify-content-between align-items-start">
                         <div>
-                        <h6 class="card-title">Average Occupancy</h6>
+                        <h6 class="card-title"><?= $isAirbnbManagerView ? 'Airbnb Enabled' : 'Average Occupancy' ?></h6>
                         <h2 class="mt-3 mb-2">
                                 <?php
-                                $totalOccupancy = array_sum(array_column($properties, 'occupancy_rate'));
-                                $avgOccupancy = $properties ? round($totalOccupancy / count($properties), 1) : 0;
-                                echo $avgOccupancy . '%';
+                                if ($isAirbnbManagerView) {
+                                    $enabledCount = array_sum(array_column($properties, 'is_airbnb_enabled'));
+                                    echo $enabledCount;
+                                } else {
+                                    $totalOccupancy = array_sum(array_column($properties, 'occupancy_rate'));
+                                    $avgOccupancy = $properties ? round($totalOccupancy / count($properties), 1) : 0;
+                                    echo $avgOccupancy . '%';
+                                }
                                 ?>
                             </h2>
-                        <p class="mb-0 text-muted">Across all properties</p>
+                        <p class="mb-0 text-muted"><?= $isAirbnbManagerView ? 'Properties with Airbnb enabled' : 'Across all properties' ?></p>
                         </div>
                         <div class="stats-icon">
-                        <i class="bi bi-person-check fs-1 text-success opacity-25"></i>
+                        <i class="bi <?= $isAirbnbManagerView ? 'bi-house-heart' : 'bi-person-check' ?> fs-1 text-success opacity-25"></i>
                     </div>
                 </div>
             </div>
@@ -84,17 +92,22 @@ ob_start();
             <div class="stat-card monthly-income">
                 <div class="d-flex justify-content-between align-items-start">
                         <div>
-                        <h6 class="card-title">Total Monthly Income</h6>
+                        <h6 class="card-title"><?= $isAirbnbManagerView ? 'Airbnb Eligible Units' : 'Total Monthly Income' ?></h6>
                         <h2 class="mt-3 mb-2">
                                 <?php
-                                $totalIncome = array_sum(array_column($properties, 'monthly_income'));
-                                echo 'Ksh' . number_format($totalIncome, 2);
+                                if ($isAirbnbManagerView) {
+                                    $totalEligible = array_sum(array_column($properties, 'airbnb_eligible_units'));
+                                    echo $totalEligible;
+                                } else {
+                                    $totalIncome = array_sum(array_column($properties, 'monthly_income'));
+                                    echo 'Ksh' . number_format($totalIncome, 2);
+                                }
                                 ?>
                             </h2>
-                        <p class="mb-0 text-muted">Expected monthly revenue</p>
+                        <p class="mb-0 text-muted"><?= $isAirbnbManagerView ? 'Units available for Airbnb bookings' : 'Expected monthly revenue' ?></p>
                         </div>
                         <div class="stats-icon">
-                        <i class="bi bi-cash-stack fs-1 text-info opacity-25"></i>
+                        <i class="bi <?= $isAirbnbManagerView ? 'bi-door-open' : 'bi-cash-stack' ?> fs-1 text-info opacity-25"></i>
                     </div>
                 </div>
             </div>
@@ -114,8 +127,13 @@ ob_start();
                         <th>Name</th>
                         <th>Address</th>
                         <th>Units</th>
+                        <?php if ($isAirbnbManagerView): ?>
+                            <th style="min-width: 120px;">Airbnb Status</th>
+                            <th>Avg Daily Rate</th>
+                        <?php else: ?>
                             <th style="min-width: 150px;">Occupancy</th>
-                        <th>Monthly Income</th>
+                            <th>Monthly Income</th>
+                        <?php endif; ?>
                             <th class="no-sort" style="width: 120px;">Actions</th>
                     </tr>
                 </thead>
@@ -147,14 +165,32 @@ ob_start();
                                     <?= $property['units_count'] ?> units
                             </span>
                         </td>
+                        <?php if ($isAirbnbManagerView): ?>
+                            <td>
+                                <?php if (!empty($property['is_airbnb_enabled'])): ?>
+                                    <span class="badge bg-success">Enabled</span>
+                                <?php else: ?>
+                                    <span class="badge bg-secondary">Disabled</span>
+                                <?php endif; ?>
+                                <small class="text-muted d-block mt-1">
+                                    <?= $property['airbnb_eligible_units'] ?? 0 ?> eligible units
+                                </small>
+                            </td>
+                            <td>
+                                <span class="fw-medium text-success">
+                                    Ksh<?= number_format($property['avg_daily_rate'] ?? 0, 2) ?>
+                                </span>
+                                <small class="text-muted d-block">per night</small>
+                            </td>
+                        <?php else: ?>
                             <td>
                                 <div class="d-flex align-items-center gap-2">
                                     <div class="progress flex-grow-1" style="height: 8px;">
-                                        <div class="progress-bar <?= $property['occupancy_rate'] >= 80 ? 'bg-success' : ($property['occupancy_rate'] >= 50 ? 'bg-warning' : 'bg-danger') ?>" 
-                                             role="progressbar" 
+                                        <div class="progress-bar <?= $property['occupancy_rate'] >= 80 ? 'bg-success' : ($property['occupancy_rate'] >= 50 ? 'bg-warning' : 'bg-danger') ?>"
+                                             role="progressbar"
                                      style="width: <?= $property['occupancy_rate'] ?>%;"
-                                     aria-valuenow="<?= $property['occupancy_rate'] ?>" 
-                                     aria-valuemin="0" 
+                                     aria-valuenow="<?= $property['occupancy_rate'] ?>"
+                                     aria-valuemin="0"
                                      aria-valuemax="100">
                                         </div>
                                     </div>
@@ -167,7 +203,8 @@ ob_start();
                                 <span class="fw-medium text-success">
                                     Ksh<?= number_format($property['monthly_income'], 2) ?>
                                 </span>
-                        </td>
+                            </td>
+                        <?php endif; ?>
                         <td>
                             <div class="btn-group">
                                 <button type="button" 

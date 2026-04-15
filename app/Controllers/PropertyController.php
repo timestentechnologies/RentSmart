@@ -8,6 +8,8 @@ use App\Models\User;
 use App\Models\ActivityLog;
 use App\Models\Employee;
 use App\Models\Subscription;
+use App\Models\AirbnbProperty;
+use App\Models\AirbnbUnitRate;
 use App\Database\Connection;
 use App\Helpers\FileUploadHelper;
 use Exception;
@@ -82,11 +84,16 @@ class PropertyController
                 $properties = $stmt->fetchAll(\PDO::FETCH_ASSOC);
             }
         
+            // Check if current user is airbnb_manager
+            $isAirbnbManager = isset($_SESSION['user_role']) && strtolower($_SESSION['user_role']) === 'airbnb_manager';
+            $airbnbPropertyModel = $isAirbnbManager ? new AirbnbProperty() : null;
+            $airbnbRateModel = $isAirbnbManager ? new AirbnbUnitRate() : null;
+
             // Calculate statistics for each property
             foreach ($properties as &$property) {
                 // Get all units for this property with accurate status
                 $units = $this->unit->where('property_id', $property['id'], $_SESSION['user_id']);
-                
+
                 // Calculate total units and occupied units
                 $totalUnits = count($units);
                 $occupiedUnits = array_filter($units, function($unit) {
@@ -94,24 +101,49 @@ class PropertyController
                     return $unit['status'] === 'occupied';
                 });
                 $occupiedCount = count($occupiedUnits);
-                
+
                 // Calculate occupancy rate
-                $property['occupancy_rate'] = $totalUnits > 0 
-                    ? ($occupiedCount / $totalUnits) * 100 
+                $property['occupancy_rate'] = $totalUnits > 0
+                    ? ($occupiedCount / $totalUnits) * 100
                     : 0;
-                
+
                 // Calculate monthly income (only from occupied units with valid rent)
                 $property['monthly_income'] = array_sum(
                     array_map(function($unit) {
-                        return $unit['status'] === 'occupied' && is_numeric($unit['rent_amount']) 
-                            ? floatval($unit['rent_amount']) 
+                        return $unit['status'] === 'occupied' && is_numeric($unit['rent_amount'])
+                            ? floatval($unit['rent_amount'])
                             : 0;
                     }, $units)
                 );
-                
+
                 // Store unit counts
                 $property['units_count'] = $totalUnits;
                 $property['occupied_units'] = $occupiedCount;
+
+                // For airbnb_manager, calculate Airbnb-specific metrics
+                if ($isAirbnbManager && $airbnbPropertyModel) {
+                    $airbnbSettings = $airbnbPropertyModel->getByPropertyId($property['id']);
+                    $property['is_airbnb_enabled'] = $airbnbSettings['is_airbnb_enabled'] ?? false;
+
+                    // Count Airbnb-eligible units and calculate avg daily rate
+                    $eligibleUnits = 0;
+                    $totalBaseRate = 0;
+                    $rateCount = 0;
+
+                    foreach ($units as $unit) {
+                        if (!empty($unit['is_airbnb_eligible'])) {
+                            $eligibleUnits++;
+                            $rates = $airbnbRateModel->getByUnitId($unit['id']);
+                            if ($rates && !empty($rates['base_price_per_night'])) {
+                                $totalBaseRate += floatval($rates['base_price_per_night']);
+                                $rateCount++;
+                            }
+                        }
+                    }
+
+                    $property['airbnb_eligible_units'] = $eligibleUnits;
+                    $property['avg_daily_rate'] = $rateCount > 0 ? $totalBaseRate / $rateCount : 0;
+                }
             }
 
             echo view('properties/index', [

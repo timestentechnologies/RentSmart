@@ -1110,7 +1110,7 @@ ob_clean();
             width: 40px;
             height: 40px;
             border-radius: 50%;
-            border: none;
+            border: 2px solid white;
             background: #212529;
             color: white;
             font-size: 1rem;
@@ -1119,6 +1119,7 @@ ob_clean();
             display: flex;
             align-items: center;
             justify-content: center;
+            box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.3);
         }
         
         [data-theme="dark"] .theme-toggle-header {
