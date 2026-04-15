@@ -164,8 +164,8 @@ class PropertyController
 
     public function create()
     {
-        // Only admin, landlord, agent and manager can create properties
-        if (!$this->user->isAdmin() && !$this->user->isLandlord() && !$this->user->isAgent() && !$this->user->isManager()) {
+        // Only admin, landlord, agent, manager and airbnb_manager can create properties
+        if (!$this->user->isAdmin() && !$this->user->isLandlord() && !$this->user->isAgent() && !$this->user->isManager() && !$this->user->isAirbnbManager()) {
             $_SESSION['flash_message'] = 'Access denied';
             $_SESSION['flash_type'] = 'danger';
             header('Location: ' . BASE_URL . '/properties');
@@ -183,8 +183,8 @@ class PropertyController
                  strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest';
 
         try {
-            // Only admin, landlord, agent and manager can create properties
-            if (!$this->user->isAdmin() && !$this->user->isLandlord() && !$this->user->isAgent() && !$this->user->isManager()) {
+            // Only admin, landlord, agent, manager and airbnb_manager can create properties
+            if (!$this->user->isAdmin() && !$this->user->isLandlord() && !$this->user->isAgent() && !$this->user->isManager() && !$this->user->isAirbnbManager()) {
                 throw new Exception('Access denied');
             }
 
