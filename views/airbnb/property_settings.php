@@ -18,7 +18,7 @@ ob_start();
     <form method="POST" action="<?php echo BASE_URL; ?>/airbnb/property-settings/<?php echo $property['id']; ?>">
         <!-- General Settings -->
         <div class="card mb-4">
-            <div class="card-header bg-primary text-white">
+            <div class="card-header text-white" style="background-color: #2c1343;">
                 <h5 class="mb-0"><i class="fas fa-cog"></i> General Airbnb Settings</h5>
             </div>
             <div class="card-body">
@@ -75,7 +75,7 @@ ob_start();
 
         <!-- Fees & Charges -->
         <div class="card mb-4">
-            <div class="card-header bg-success text-white">
+            <div class="card-header text-white" style="background-color: #ff8c00;">
                 <h5 class="mb-0"><i class="fas fa-money-bill"></i> Fees & Charges</h5>
             </div>
             <div class="card-body">
@@ -110,7 +110,7 @@ ob_start();
 
         <!-- House Rules -->
         <div class="card mb-4">
-            <div class="card-header bg-info text-white">
+            <div class="card-header text-white" style="background-color: #e69406;">
                 <h5 class="mb-0"><i class="fas fa-clipboard-list"></i> House Rules</h5>
             </div>
             <div class="card-body">
@@ -124,7 +124,7 @@ ob_start();
 
         <!-- Unit Rates -->
         <div class="card mb-4">
-            <div class="card-header bg-warning text-dark">
+            <div class="card-header text-white" style="background-color: #ff8c00;">
                 <h5 class="mb-0"><i class="fas fa-door-open"></i> Unit Rates & Airbnb Eligibility</h5>
             </div>
             <div class="card-body">
