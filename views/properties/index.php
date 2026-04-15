@@ -299,22 +299,26 @@ ob_start();
                                             <span class="input-group-text">Unit #</span>
                                             <input type="text" class="form-control" name="units[0][number]" placeholder="Number" required>
                                         </div>
-                                        <div class="input-group mb-2">
-                                            <span class="input-group-text">Type</span>
-                                            <select class="form-select" name="units[0][type]" required>
-                                                <option value="">Select Type</option>
-                                                <option value="studio">Studio</option>
-                                                <option value="1bhk">1 BHK</option>
-                                                <option value="2bhk">2 BHK</option>
-                                                <option value="3bhk">3 BHK</option>
-                                                <option value="other">Other</option>
-                                            </select>
-                                            <span class="input-group-text">Size (sq ft)</span>
-                                            <input type="number" step="0.01" class="form-control" name="units[0][size]" placeholder="Size">
+                                        <div class="row g-2 mb-2">
+                                            <div class="col-6">
+                                                <label class="form-label small mb-1">Unit Type</label>
+                                                <select class="form-select" name="units[0][type]" required>
+                                                    <option value="">Select Type</option>
+                                                    <option value="studio">Studio</option>
+                                                    <option value="1bhk">1 BHK</option>
+                                                    <option value="2bhk">2 BHK</option>
+                                                    <option value="3bhk">3 BHK</option>
+                                                    <option value="other">Other</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-6">
+                                                <label class="form-label small mb-1">Size (sq ft)</label>
+                                                <input type="number" step="0.01" class="form-control" name="units[0][size]" placeholder="Size">
+                                            </div>
                                         </div>
                                         <div class="input-group">
-                                            <span class="input-group-text">Rent Ksh</span>
-                                            <input type="number" step="0.01" class="form-control" name="units[0][rent]" placeholder="Monthly Rent" required>
+                                            <span class="input-group-text">Ksh</span>
+                                            <input type="number" step="0.01" class="form-control" name="units[0][rent]" placeholder="<?= $isAirbnbManagerView ? 'Daily Rate' : 'Monthly Rent' ?>" required>
                                             <button type="button" class="btn btn-outline-danger" onclick="removeUnitField(this)">
                                                 <i class="bi bi-trash"></i>
                                             </button>
@@ -718,7 +722,7 @@ ob_start();
                         <input type="number" step="0.01" class="form-control" id="unit_size" name="size">
                     </div>
                     <div class="mb-3">
-                        <label for="unit_rent" class="form-label">Monthly Rent</label>
+                        <label for="unit_rent" class="form-label"><?= $isAirbnbManagerView ? 'Daily Rate (Ksh)' : 'Monthly Rent (Ksh)' ?></label>
                         <input type="number" step="0.01" class="form-control" id="unit_rent" name="rent_amount" required>
                     </div>
                     <div class="mb-3">
@@ -769,7 +773,7 @@ ob_start();
                         <input type="number" step="0.01" class="form-control" id="editUnitSize" name="size">
                     </div>
                     <div class="mb-3">
-                        <label for="editUnitRent" class="form-label">Monthly Rent (Ksh)</label>
+                        <label for="editUnitRent" class="form-label"><?= $isAirbnbManagerView ? 'Daily Rate (Ksh)' : 'Monthly Rent (Ksh)' ?></label>
                         <input type="number" step="0.01" class="form-control" id="editUnitRent" name="rent_amount" required>
                     </div>
                     <div class="mb-3">
@@ -841,6 +845,7 @@ const removeLoadingAlerts = () => {
 let currentPropertyId = null;
 let propertyIdToDelete = null;
 let __pendingDeletePropertyFile = null;
+const isAirbnbManager = <?= $isAirbnbManagerView ? 'true' : 'false' ?>;
 
 document.addEventListener('DOMContentLoaded', () => {
     try {
@@ -1320,27 +1325,32 @@ function addUnitField() {
     const container = document.getElementById('unitsContainer');
     const newUnitField = document.createElement('div');
     newUnitField.className = 'unit-entry mb-2';
+    const rentPlaceholder = isAirbnbManager ? 'Daily Rate' : 'Monthly Rent';
     newUnitField.innerHTML = `
         <div class="input-group mb-2">
             <span class="input-group-text">Unit #</span>
             <input type="text" class="form-control" name="units[${unitFieldCounter}][number]" placeholder="Number" required>
         </div>
-        <div class="input-group mb-2">
-            <span class="input-group-text">Type</span>
-            <select class="form-select" name="units[${unitFieldCounter}][type]" required>
-                <option value="">Select Type</option>
-                <option value="studio">Studio</option>
-                <option value="1bhk">1 BHK</option>
-                <option value="2bhk">2 BHK</option>
-                <option value="3bhk">3 BHK</option>
-                <option value="other">Other</option>
-            </select>
-            <span class="input-group-text">Size (sq ft)</span>
-            <input type="number" step="0.01" class="form-control" name="units[${unitFieldCounter}][size]" placeholder="Size">
+        <div class="row g-2 mb-2">
+            <div class="col-6">
+                <label class="form-label small mb-1">Unit Type</label>
+                <select class="form-select" name="units[${unitFieldCounter}][type]" required>
+                    <option value="">Select Type</option>
+                    <option value="studio">Studio</option>
+                    <option value="1bhk">1 BHK</option>
+                    <option value="2bhk">2 BHK</option>
+                    <option value="3bhk">3 BHK</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            <div class="col-6">
+                <label class="form-label small mb-1">Size (sq ft)</label>
+                <input type="number" step="0.01" class="form-control" name="units[${unitFieldCounter}][size]" placeholder="Size">
+            </div>
         </div>
         <div class="input-group">
-            <span class="input-group-text">Rent Ksh</span>
-            <input type="number" step="0.01" class="form-control" name="units[${unitFieldCounter}][rent]" placeholder="Monthly Rent" required>
+            <span class="input-group-text">Ksh</span>
+            <input type="number" step="0.01" class="form-control" name="units[${unitFieldCounter}][rent]" placeholder="${rentPlaceholder}" required>
             <button type="button" class="btn btn-outline-danger" onclick="removeUnitField(this)">
                 <i class="bi bi-trash"></i>
             </button>
