@@ -1095,15 +1095,15 @@ class AirbnbController
                 });
             }
 
-            // Filter by eligibility if requested
+            // Filter by eligibility if requested (presence of airbnb_rates = eligible)
             $filterEligible = $_GET['eligible'] ?? null;
             if ($filterEligible === 'yes') {
                 $allUnits = array_filter($allUnits, function($u) {
-                    return !empty($u['is_airbnb_eligible']);
+                    return !empty($u['airbnb_rates']) && !empty($u['airbnb_rates']['base_price_per_night']);
                 });
             } elseif ($filterEligible === 'no') {
                 $allUnits = array_filter($allUnits, function($u) {
-                    return empty($u['is_airbnb_eligible']);
+                    return empty($u['airbnb_rates']) || empty($u['airbnb_rates']['base_price_per_night']);
                 });
             }
 
