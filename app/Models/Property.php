@@ -569,6 +569,21 @@ class Property extends Model
             $stmt->execute([$id]);
             $units = $stmt->fetchAll(\PDO::FETCH_COLUMN);
 
+            // Delete Airbnb records before deleting units/property
+            try {
+                // Delete Airbnb unit rates for units of this property
+                if (!empty($units)) {
+                    $placeholders = str_repeat('?,', count($units) - 1) . '?';
+                    $stmt = $this->db->prepare("DELETE FROM airbnb_unit_rates WHERE unit_id IN ($placeholders)");
+                    $stmt->execute($units);
+                }
+                // Delete Airbnb property settings
+                $stmt = $this->db->prepare("DELETE FROM airbnb_properties WHERE property_id = ?");
+                $stmt->execute([(int)$id]);
+            } catch (\Exception $e) {
+                // Continue even if Airbnb tables don't exist
+            }
+
             // Remove property-scoped records that may not be protected by FK cascades
             try {
                 // Journal entries (general ledger) scoped by property

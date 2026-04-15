@@ -749,11 +749,12 @@ class PropertyController
                 throw new Exception('Property not found or access denied');
             }
 
-            // Only admin, owner, manager, or agent can delete
-            if (!$this->user->isAdmin() && 
-                $property['owner_id'] != $_SESSION['user_id'] && 
+            // Only admin, owner, manager, agent, or airbnb_manager can delete
+            if (!$this->user->isAdmin() &&
+                $property['owner_id'] != $_SESSION['user_id'] &&
                 $property['manager_id'] != $_SESSION['user_id'] &&
-                $property['agent_id'] != $_SESSION['user_id']) {
+                $property['agent_id'] != $_SESSION['user_id'] &&
+                $property['airbnb_manager_id'] != $_SESSION['user_id']) {
                 throw new Exception('Access denied');
             }
 
