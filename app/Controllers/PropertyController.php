@@ -673,6 +673,29 @@ class PropertyController
                     $fileUploadHelper->updateEntityFiles('property', $id);
                 }
 
+                // Handle edited units (Airbnb Manager)
+                if ($this->user->isAirbnbManager() && !empty($_POST['edit_units'])) {
+                    $airbnbRateModel = new AirbnbUnitRate();
+                    foreach ($_POST['edit_units'] as $unitData) {
+                        if (!empty($unitData['id'])) {
+                            $unitId = (int)$unitData['id'];
+                            $updateData = [
+                                'unit_number' => $unitData['unit_number'] ?? '',
+                                'type' => $unitData['type'] ?? 'other',
+                                'size' => !empty($unitData['size']) ? (float)$unitData['size'] : null,
+                                'rent_amount' => (float)($unitData['daily_rate'] ?? 0),
+                                'status' => $unitData['status'] ?? 'vacant'
+                            ];
+                            // Update unit
+                            $this->unit->update($unitId, $updateData);
+                            // Update Airbnb rate
+                            $airbnbRateModel->createOrUpdate($unitId, [
+                                'base_price_per_night' => $updateData['rent_amount']
+                            ]);
+                        }
+                    }
+                }
+
                 $ip = $_SERVER['REMOTE_ADDR'] ?? null;
                 $agent = $_SERVER['HTTP_USER_AGENT'] ?? null;
                 $this->activityLog->add($_SESSION['user_id'] ?? null, $_SESSION['user_role'] ?? null, 'property.update', 'property', (int)$id, (int)$id, json_encode($data), $ip, $agent);

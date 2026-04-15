@@ -470,6 +470,23 @@ ob_start();
                             </div>
                         </div>
 
+                        <!-- Units Section (Airbnb Manager) -->
+                        <?php if ($isAirbnbManagerView): ?>
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header d-flex justify-content-between align-items-center">
+                                    <h6 class="mb-0">Units & Airbnb Rates</h6>
+                                    <small class="text-muted">Daily rates are used for Airbnb bookings</small>
+                                </div>
+                                <div class="card-body">
+                                    <div id="editUnitsContainer">
+                                        <!-- Units will be loaded here via JavaScript -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+
                         <!-- Images and Documents for Edit -->
                         <div class="col-12">
                             <!-- Existing Files Display -->
@@ -1075,6 +1092,11 @@ const editProperty = async (id) => {
         
         // Load existing files for editing
         await loadPropertyFilesForEdit(property.id);
+
+        // Load units for editing (Airbnb Manager)
+        if (isAirbnbManager) {
+            await loadUnitsForEdit(property.id);
+        }
     } catch (error) {
         console.error('Error:', error);
         showAlert('error', error.message || 'Error loading property details');
@@ -1201,6 +1223,74 @@ async function loadPropertyFilesForEdit(propertyId) {
         }
     } catch (error) {
         console.error('Error loading property files for edit:', error);
+    }
+}
+
+// Load units for editing (Airbnb Manager)
+async function loadUnitsForEdit(propertyId) {
+    try {
+        const response = await fetch(`${BASE_URL}/properties/${propertyId}/units`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to load units');
+        }
+
+        const data = await response.json();
+        const container = document.getElementById('editUnitsContainer');
+        if (!container) return;
+
+        container.innerHTML = '';
+
+        if (data.units && data.units.length > 0) {
+            data.units.forEach((unit, index) => {
+                const unitDiv = document.createElement('div');
+                unitDiv.className = 'unit-edit-row mb-3 p-3 border rounded';
+                unitDiv.innerHTML = `
+                    <div class="row g-2">
+                        <div class="col-md-2">
+                            <label class="form-label small">Unit #</label>
+                            <input type="text" class="form-control form-control-sm" name="edit_units[${index}][unit_number]" value="${unit.unit_number || ''}" required>
+                            <input type="hidden" name="edit_units[${index}][id]" value="${unit.id}">
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small">Type</label>
+                            <select class="form-select form-select-sm" name="edit_units[${index}][type]">
+                                <option value="studio" ${unit.type === 'studio' ? 'selected' : ''}>Studio</option>
+                                <option value="1bhk" ${unit.type === '1bhk' ? 'selected' : ''}>1 BHK</option>
+                                <option value="2bhk" ${unit.type === '2bhk' ? 'selected' : ''}>2 BHK</option>
+                                <option value="3bhk" ${unit.type === '3bhk' ? 'selected' : ''}>3 BHK</option>
+                                <option value="other" ${unit.type === 'other' ? 'selected' : ''}>Other</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label small">Size (sq ft)</label>
+                            <input type="number" step="0.01" class="form-control form-control-sm" name="edit_units[${index}][size]" value="${unit.size || ''}">
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">Daily Rate (Ksh)</label>
+                            <input type="number" step="0.01" class="form-control form-control-sm" name="edit_units[${index}][daily_rate]" value="${unit.rent_amount || 0}" required>
+                        </div>
+                        <div class="col-md-3">
+                            <label class="form-label small">Status</label>
+                            <select class="form-select form-select-sm" name="edit_units[${index}][status]">
+                                <option value="vacant" ${unit.status === 'vacant' ? 'selected' : ''}>Vacant</option>
+                                <option value="occupied" ${unit.status === 'occupied' ? 'selected' : ''}>Occupied</option>
+                            </select>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(unitDiv);
+            });
+        } else {
+            container.innerHTML = '<p class="text-muted">No units found. Add units from the property view.</p>';
+        }
+    } catch (error) {
+        console.error('Error loading units for edit:', error);
     }
 }
 

@@ -162,12 +162,16 @@ class Unit extends Model
                 $sql .= " OR p.agent_id = ?";
                 $params[] = $userId;
             }
+            if ($user->isAirbnbManager()) {
+                $sql .= " OR p.airbnb_manager_id = ?";
+                $params[] = $userId;
+            }
             // Caretaker assigned to property
             $sql .= " OR p.caretaker_user_id = ?";
             $params[] = $userId;
             $sql .= ")";
         }
-        
+
         $sql .= " ORDER BY p.name, u.unit_number";
         
         $stmt = $this->db->prepare($sql);
@@ -209,12 +213,16 @@ class Unit extends Model
                 $sql .= " OR p.agent_id = ?";
                 $params[] = $userId;
             }
+            if ($user->isAirbnbManager()) {
+                $sql .= " OR p.airbnb_manager_id = ?";
+                $params[] = $userId;
+            }
             // Caretaker assigned to property
             $sql .= " OR p.caretaker_user_id = ?";
             $params[] = $userId;
             $sql .= ")";
         }
-        
+
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetch(\PDO::FETCH_ASSOC);
@@ -256,24 +264,28 @@ class Unit extends Model
                 $sql .= " OR p.agent_id = ?";
                 $params[] = $userId;
             }
+            if ($user->isAirbnbManager()) {
+                $sql .= " OR p.airbnb_manager_id = ?";
+                $params[] = $userId;
+            }
             // Caretaker assigned to property
             $sql .= " OR p.caretaker_user_id = ?";
             $params[] = $userId;
             $sql .= ")";
         }
-        
+
         $sql .= " ORDER BY u.unit_number";
-        
+
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
         $units = $stmt->fetchAll(\PDO::FETCH_ASSOC);
-        
+
         // Update the status based on actual occupancy
         foreach ($units as &$unit) {
             $unit['status'] = $unit['actual_status'];
             unset($unit['actual_status']);
         }
-        
+
         return $units;
     }
 
@@ -316,14 +328,18 @@ class Unit extends Model
                 $sql .= " OR p.agent_id = ?";
                 $params[] = $userId;
             }
+            if ($user->isAirbnbManager()) {
+                $sql .= " OR p.airbnb_manager_id = ?";
+                $params[] = $userId;
+            }
             // Caretaker assigned to property
             $sql .= " OR p.caretaker_user_id = ?";
             $params[] = $userId;
             $sql .= ")";
         }
-        
+
         $sql .= " ORDER BY p.name, u.unit_number";
-        
+
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
