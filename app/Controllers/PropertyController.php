@@ -395,6 +395,9 @@ class PropertyController
                     }
                 }
 
+                // Check if user is airbnb_manager (needed for unit creation)
+                $isAirbnbManager = $this->user->isAirbnbManager();
+
                 // Handle units if provided
                 $createdUnitIds = [];
                 if (!empty($_POST['units'])) {
@@ -406,7 +409,8 @@ class PropertyController
                                 'type' => $unit['type'] ?? 'other',
                                 'size' => !empty($unit['size']) ? (float)$unit['size'] : null,
                                 'rent_amount' => (float)$unit['rent'],
-                                'status' => 'vacant'
+                                'status' => 'vacant',
+                                'is_airbnb_eligible' => $isAirbnbManager ? 1 : 0
                             ];
 
                             $unitId = $this->unit->create($unitData);
@@ -419,7 +423,7 @@ class PropertyController
                 }
 
                 // If airbnb_manager, auto-enable Airbnb for this property and set unit rates
-                if ($this->user->isAirbnbManager()) {
+                if ($isAirbnbManager) {
                     $airbnbPropertyModel = new AirbnbProperty();
                     $airbnbPropertyModel->createOrUpdate($propertyId, [
                         'is_airbnb_enabled' => 1,

@@ -421,14 +421,16 @@ class Unit extends Model
                 type, 
                 size, 
                 rent_amount, 
-                status
+                status,
+                is_airbnb_eligible
             ) VALUES (
                 :property_id,
                 :unit_number,
                 :type,
                 :size,
                 :rent_amount,
-                :status
+                :status,
+                :is_airbnb_eligible
             )";
 
             error_log("Unit::create - SQL: " . $sql);
@@ -440,7 +442,8 @@ class Unit extends Model
                 'type' => $data['type'],
                 'size' => $data['size'],
                 'rent_amount' => $data['rent_amount'],
-                'status' => $data['status'] ?? 'vacant'
+                'status' => $data['status'] ?? 'vacant',
+                'is_airbnb_eligible' => $data['is_airbnb_eligible'] ?? 0
             ]);
 
             if ($result) {

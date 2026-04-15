@@ -394,8 +394,8 @@ class AirbnbPublicController
             $checkIn = $_GET['check_in'] ?? null;
             $checkOut = $_GET['check_out'] ?? null;
 
-            if (!$propertyId || !$checkIn || !$checkOut) {
-                echo json_encode(['success' => false, 'message' => 'Missing required parameters']);
+            if (!$propertyId) {
+                echo json_encode(['success' => false, 'message' => 'Property ID required']);
                 return;
             }
 
@@ -417,11 +417,18 @@ class AirbnbPublicController
 
             $availableUnits = [];
             foreach ($units as $unit) {
-                $isAvailable = $this->bookingModel->isUnitAvailable($unit['id'], $checkIn, $checkOut);
+                // If dates provided, check availability; otherwise include all eligible units
+                $isAvailable = true;
+                if ($checkIn && $checkOut) {
+                    $isAvailable = $this->bookingModel->isUnitAvailable($unit['id'], $checkIn, $checkOut);
+                }
                 
                 if ($isAvailable) {
                     $rates = $this->unitRateModel->getByUnitId($unit['id']);
-                    $price = $this->unitRateModel->calculatePrice($unit['id'], $checkIn, $checkOut);
+                    $price = null;
+                    if ($checkIn && $checkOut) {
+                        $price = $this->unitRateModel->calculatePrice($unit['id'], $checkIn, $checkOut);
+                    }
                     
                     $availableUnits[] = [
                         'id' => $unit['id'],

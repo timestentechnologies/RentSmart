@@ -74,7 +74,7 @@ ob_start();
         </div>
 
         <!-- Fees & Charges -->
-        <div class="card mb-4">
+        <div class="card mb-4" style="overflow: visible; z-index: 100; position: relative;">
             <div class="card-header text-white" style="background-color: #ff8c00;">
                 <h5 class="mb-0"><i class="fas fa-money-bill"></i> Fees & Charges</h5>
             </div>
@@ -109,7 +109,7 @@ ob_start();
         </div>
 
         <!-- House Rules -->
-        <div class="card mb-4">
+        <div class="card mb-4" style="position: relative; z-index: 1;">
             <div class="card-header text-white" style="background-color: #e69406;">
                 <h5 class="mb-0"><i class="fas fa-clipboard-list"></i> House Rules</h5>
             </div>
