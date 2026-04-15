@@ -125,19 +125,17 @@ class PropertyController
                     $airbnbSettings = $airbnbPropertyModel->getByPropertyId($property['id']);
                     $property['is_airbnb_enabled'] = $airbnbSettings['is_airbnb_enabled'] ?? false;
 
-                    // Count Airbnb-eligible units and calculate avg daily rate
+                    // Count Airbnb-eligible units (have rate records) and calculate avg daily rate
                     $eligibleUnits = 0;
                     $totalBaseRate = 0;
                     $rateCount = 0;
 
                     foreach ($units as $unit) {
-                        if (!empty($unit['is_airbnb_eligible'])) {
+                        $rates = $airbnbRateModel->getByUnitId($unit['id']);
+                        if ($rates && !empty($rates['base_price_per_night'])) {
                             $eligibleUnits++;
-                            $rates = $airbnbRateModel->getByUnitId($unit['id']);
-                            if ($rates && !empty($rates['base_price_per_night'])) {
-                                $totalBaseRate += floatval($rates['base_price_per_night']);
-                                $rateCount++;
-                            }
+                            $totalBaseRate += floatval($rates['base_price_per_night']);
+                            $rateCount++;
                         }
                     }
 
@@ -215,13 +213,15 @@ class PropertyController
             }
             $caretakerEmployeeId = isset($_POST['caretaker_employee_id']) ? (int)$_POST['caretaker_employee_id'] : 0;
 
-            // Set owner_id, manager_id, or agent_id based on role
+            // Set owner_id, manager_id, agent_id, or airbnb_manager_id based on role
             if ($this->user->isLandlord()) {
                 $data['owner_id'] = $_SESSION['user_id'];
             } elseif ($this->user->isManager()) {
                 $data['manager_id'] = $_SESSION['user_id'];
             } elseif ($this->user->isAgent()) {
                 $data['agent_id'] = $_SESSION['user_id'];
+            } elseif ($this->user->isAirbnbManager()) {
+                $data['airbnb_manager_id'] = $_SESSION['user_id'];
             }
 
             // Validate required fields
@@ -396,6 +396,7 @@ class PropertyController
                 }
 
                 // Handle units if provided
+                $createdUnitIds = [];
                 if (!empty($_POST['units'])) {
                     foreach ($_POST['units'] as $index => $unit) {
                         if (!empty($unit['number']) && !empty($unit['rent'])) {
@@ -407,10 +408,36 @@ class PropertyController
                                 'rent_amount' => (float)$unit['rent'],
                                 'status' => 'vacant'
                             ];
-                            
+
                             $unitId = $this->unit->create($unitData);
                             if (!$unitId) {
                                 throw new Exception('Failed to create unit: ' . $unit['number']);
+                            }
+                            $createdUnitIds[] = $unitId;
+                        }
+                    }
+                }
+
+                // If airbnb_manager, auto-enable Airbnb for this property and set unit rates
+                if ($this->user->isAirbnbManager()) {
+                    $airbnbPropertyModel = new AirbnbProperty();
+                    $airbnbPropertyModel->createOrUpdate($propertyId, [
+                        'is_airbnb_enabled' => 1,
+                        'min_stay_nights' => 1,
+                        'max_stay_nights' => 30,
+                        'instant_booking' => 1
+                    ]);
+
+                    // Set Airbnb rates for created units (presence of rate record = eligible)
+                    if (!empty($createdUnitIds)) {
+                        $airbnbRateModel = new AirbnbUnitRate();
+                        foreach ($createdUnitIds as $unitId) {
+                            // Get the unit's rent amount to use as base rate
+                            $unit = $this->unit->find($unitId);
+                            if ($unit) {
+                                $airbnbRateModel->createOrUpdate($unitId, [
+                                    'base_price_per_night' => $unit['rent_amount'] ?? 0
+                                ]);
                             }
                         }
                     }
