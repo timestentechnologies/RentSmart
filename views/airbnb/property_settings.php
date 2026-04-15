@@ -90,7 +90,7 @@ ob_start();
                         <input type="number" name="security_deposit" class="form-control" step="0.01" 
                             value="<?php echo htmlspecialchars($settings['security_deposit'] ?? '0.00'); ?>" min="0">
                     </div>
-                    <div class="col-md-4 mb-3">
+                    <div class="col-md-4 mb-3" style="position: relative; z-index: 2;">
                         <label class="form-label">Cancellation Policy</label>
                         <select name="cancellation_policy" class="form-select">
                             <option value="flexible" <?php echo ($settings['cancellation_policy'] ?? '') === 'flexible' ? 'selected' : ''; ?>>
