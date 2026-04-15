@@ -428,7 +428,7 @@ class PropertyController
                         'instant_booking' => 1
                     ]);
 
-                    // Set Airbnb rates for created units (presence of rate record = eligible)
+                    // Set Airbnb rates for created units and mark as eligible
                     if (!empty($createdUnitIds)) {
                         $airbnbRateModel = new AirbnbUnitRate();
                         foreach ($createdUnitIds as $unitId) {
@@ -438,6 +438,8 @@ class PropertyController
                                 $airbnbRateModel->createOrUpdate($unitId, [
                                     'base_price_per_night' => $unit['rent_amount'] ?? 0
                                 ]);
+                                // Mark unit as Airbnb eligible
+                                $this->unit->update($unitId, ['is_airbnb_eligible' => 1]);
                             }
                         }
                     }

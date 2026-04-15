@@ -289,6 +289,18 @@ class Unit extends Model
         return $units;
     }
 
+    public function getByPropertyId($propertyId)
+    {
+        $sql = "SELECT u.*, p.name as property_name 
+                FROM units u
+                JOIN properties p ON u.property_id = p.id
+                WHERE u.property_id = ?";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([$propertyId]);
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+    }
+
     public function getVacantUnits($userId = null)
     {
         $user = new User();
