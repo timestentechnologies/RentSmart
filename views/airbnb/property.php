@@ -1,4 +1,10 @@
-<?php include 'views/partials/header.php'; ?>
+<?php 
+// Enable error reporting for debugging
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+try {
+include 'views/partials/header.php'; 
+?>
 
 <div class="container py-5">
     <div class="row">
@@ -110,4 +116,11 @@
     </div>
 </div>
 
-<?php include 'views/partials/footer.php'; ?>
+<?php include 'views/partials/footer.php'; 
+} catch (\Throwable $e) {
+    echo '<h2>View Error:</h2>';
+    echo '<p><strong>Error:</strong> ' . htmlspecialchars($e->getMessage()) . '</p>';
+    echo '<p><strong>File:</strong> ' . htmlspecialchars($e->getFile()) . ':' . $e->getLine() . '</p>';
+    echo '<pre>' . htmlspecialchars($e->getTraceAsString()) . '</pre>';
+}
+?>
