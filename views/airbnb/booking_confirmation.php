@@ -302,7 +302,7 @@
                         </div>
 
                         <div id="modalInstructionsBox" class="bg-light rounded p-3 mb-4 text-center">
-                            <div id="modalInstructions" class="fw-bold text-primary mb-0"></div>
+                            <div id="modalInstructions" class="fw-bold text-primary mb-0" style="white-space: pre-line;"></div>
                         </div>
 
                         <!-- M-Pesa Modal Fields -->
@@ -413,6 +413,7 @@
                 if (!card.length) return;
 
                 const type = card.data('method-type');
+                const cardInstructions = card.data('instructions');
                 let details = {};
                 
                 try {
@@ -426,16 +427,19 @@
                 
                 $('#mpesaInstructions').text('');
 
+                // Use card instructions if available (these are the auto-populated ones from admin)
+                if (cardInstructions && cardInstructions.trim() !== '') {
+                    $('#mpesaInstructions').text(cardInstructions);
+                    return;
+                }
+
+                // Fallback for older methods or missing descriptions
                 if (type === 'mpesa_manual') {
                     let instr = 'Follow instructions to pay: ';
                     if (details.mpesa_method === 'till') instr += 'Buy Goods Till ' + (details.till_number || '---');
                     else if (details.mpesa_method === 'paybill') instr += 'Paybill ' + (details.paybill_number || '---') + ' (Acc: ' + (details.account_number || 'STAY') + ')';
                     else instr += 'Manual M-Pesa';
                     $('#mpesaInstructions').text(instr);
-                } else if (type === 'mpesa_pochi' || type === 'mpesa_send_money') {
-                    $('#mpesaInstructions').text(card.data('instructions') || 'Follow the M-Pesa instructions on your phone.');
-                } else if (type === 'bank_transfer') {
-                    $('#mpesaInstructions').text(card.data('instructions') || 'Follow the bank transfer instructions.');
                 } else if (type === 'mpesa_stk') {
                     $('#mpesaInstructions').text('You will receive an M-Pesa prompt to enter your PIN.');
                 }
