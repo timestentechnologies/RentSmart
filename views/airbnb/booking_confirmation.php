@@ -116,8 +116,8 @@
     
     <?php
     // Countdown logic
-    $checkInDateTime = new DateTime($booking['check_in_date'] . ' ' . ($booking['check_in_time'] ?? '14:00:00'));
-    $now = new DateTime();
+    $checkInDateTime = new \DateTime($booking['check_in_date'] . ' ' . ($booking['check_in_time'] ?? '14:00:00'));
+    $now = new \DateTime();
     $interval = $now->diff($checkInDateTime);
     $isPastCheckIn = $now > $checkInDateTime;
 
@@ -367,6 +367,7 @@
                     <!-- Hidden instructions helper for modal sync -->
                     <div id="mpesaInstructions" class="d-none"></div>
                 </div>
+                <?php endif; ?>
             </div>
         </div>
 
