@@ -228,7 +228,8 @@
             </div>
 
             <!-- Payment Methods -->
-                <div class="info-box bg-light border-0">
+            <div class="col-md-6">
+                <div class="info-box bg-light border-2 border-accent-soft h-100">
                     <h6 class="mb-3 text-uppercase text-muted small fw-bold"><i class="fas fa-credit-card text-accent me-2"></i>Secure Your Booking</h6>
                     <p class="small text-muted mb-3">Select your preferred payment method to finalize the reservation.</p>
                     
@@ -262,7 +263,7 @@
                                      data-method-type="cash"
                                      data-method-id="0">
                                     <i class="fas fa-building"></i>
-                                    <span class="small fw-bold">Pay at Office</span>
+                                    <span class="small fw-bold text-truncate d-block">Pay at Office</span>
                                 </div>
                             </div>
                         <?php elseif (!$hasManualMethods): ?>
@@ -295,6 +296,7 @@
                         <span class="spinner-border spinner-border-sm text-accent me-1"></span> <span id="paymentStatusText">Processing...</span>
                     </div>
                 </div>
+            </div>
         </div>
 
         <div class="row mt-4 g-2">

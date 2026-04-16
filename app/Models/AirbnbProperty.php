@@ -104,11 +104,11 @@ class AirbnbProperty extends Model
             $sql = "INSERT INTO {$this->table} (
                 property_id, is_airbnb_enabled, min_stay_nights, max_stay_nights,
                 check_in_time, check_out_time, cleaning_fee, security_deposit,
-                booking_lead_time_hours, instant_booking, house_rules, cancellation_policy
+                booking_lead_time_hours, instant_booking, allow_office_payments, house_rules, cancellation_policy
             ) VALUES (
                 :property_id, :is_airbnb_enabled, :min_stay_nights, :max_stay_nights,
                 :check_in_time, :check_out_time, :cleaning_fee, :security_deposit,
-                :booking_lead_time_hours, :instant_booking, :house_rules, :cancellation_policy
+                :booking_lead_time_hours, :instant_booking, :allow_office_payments, :house_rules, :cancellation_policy
             )";
             
             $stmt = $this->db->prepare($sql);
@@ -123,6 +123,7 @@ class AirbnbProperty extends Model
                 'security_deposit' => $data['security_deposit'] ?? 0.00,
                 'booking_lead_time_hours' => $data['booking_lead_time_hours'] ?? 24,
                 'instant_booking' => $data['instant_booking'] ?? 0,
+                'allow_office_payments' => $data['allow_office_payments'] ?? 1,
                 'house_rules' => $data['house_rules'] ?? null,
                 'cancellation_policy' => $data['cancellation_policy'] ?? 'moderate'
             ]);
