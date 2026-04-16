@@ -497,6 +497,10 @@ class AirbnbPublicController
                 return;
             }
 
+            // Get unit and property for context
+            $unit = $this->unit->find($booking['unit_id']);
+            $property = $this->property->find($booking['property_id']);
+
             // Get site settings
             $settings = $this->settings->getAllAsAssoc();
             $siteName = $settings['site_name'] ?? 'RentSmart';
@@ -507,12 +511,20 @@ class AirbnbPublicController
                 ? (BASE_URL . '/public/assets/images/' . $appsLogoFile)
                 : ($siteLogoFile ? (BASE_URL . '/public/assets/images/' . $siteLogoFile) : (BASE_URL . '/public/assets/images/logo.svg'));
 
+            // Ensure necessary columns exist in payments table for Airbnb
+            $this->ensureAirbnbPaymentColumns();
+
+            // Fetch Property Payment Methods
+            $pmModel = new \App\Models\PaymentMethod();
+            $paymentMethods = $pmModel->getActiveForProperty($booking['property_id']);
+
             require 'views/airbnb/booking_confirmation.php';
         } catch (\Exception $e) {
             error_log($e->getMessage());
             require 'views/errors/500.php';
         }
     }
+
 
     /**
      * Download PDF Receipt
