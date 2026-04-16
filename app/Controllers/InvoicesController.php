@@ -660,6 +660,21 @@ class InvoicesController
         } catch (\Throwable $e) {
         }
 
+        // Enrich Airbnb context if applicable
+        $airbnbContext = null;
+        if (preg_match('/AIRBNB_BOOKING#(\d+)/', (string)($invoice['notes'] ?? ''), $m)) {
+            $bid = (int)$m[1];
+            if ($bid > 0) {
+                try {
+                    $db = $invModel->getDb();
+                    $stmt = $db->prepare("SELECT guest_name, guest_email FROM airbnb_bookings WHERE id = ? LIMIT 1");
+                    $stmt->execute([$bid]);
+                    $airbnbContext = $stmt->fetch(\PDO::FETCH_ASSOC) ?: null;
+                } catch (\Throwable $e) {
+                }
+            }
+        }
+
         // Make available to the view
         $paymentStatus = $paymentStatus;
         $maintenancePayments = $maintenancePayments;
@@ -940,6 +955,21 @@ class InvoicesController
                 $displayNotes = 'Manual invoice';
             }
         }
+        // Enrich Airbnb context if applicable
+        $airbnbContext = null;
+        if (preg_match('/AIRBNB_BOOKING#(\d+)/', (string)($invoice['notes'] ?? ''), $m)) {
+            $bid = (int)$m[1];
+            if ($bid > 0) {
+                try {
+                    $db = $invModel->getDb();
+                    $stmt = $db->prepare("SELECT guest_name, guest_email FROM airbnb_bookings WHERE id = ? LIMIT 1");
+                    $stmt->execute([$bid]);
+                    $airbnbContext = $stmt->fetch(\PDO::FETCH_ASSOC) ?: null;
+                } catch (\Throwable $e) {
+                }
+            }
+        }
+
         ob_start();
         include __DIR__ . '/../../views/invoices/invoice_pdf.php';
         $html = ob_get_clean();
@@ -1067,6 +1097,21 @@ class InvoicesController
                     'listing_location' => $listingLocation,
                 ];
             }
+            // Enrich Airbnb context if applicable
+            $airbnbContext = null;
+            if (preg_match('/AIRBNB_BOOKING#(\d+)/', (string)($invoice['notes'] ?? ''), $m)) {
+                $bid = (int)$m[1];
+                if ($bid > 0) {
+                    try {
+                        $db = $invModel->getDb();
+                        $stmt = $db->prepare("SELECT guest_name, guest_email FROM airbnb_bookings WHERE id = ? LIMIT 1");
+                        $stmt->execute([$bid]);
+                        $airbnbContext = $stmt->fetch(\PDO::FETCH_ASSOC) ?: null;
+                    } catch (\Throwable $e) {
+                    }
+                }
+            }
+
             ob_start();
             include __DIR__ . '/../../views/invoices/invoice_pdf.php';
             $html = ob_get_clean();

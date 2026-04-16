@@ -28,8 +28,8 @@ ob_start();
       <div class="row g-3">
         <div class="col-md-6">
           <h6>Bill To</h6>
-          <div><?= htmlspecialchars(!empty($realtorContext) ? (($realtorContext['client_name'] ?? '-') ?: '-') : ($invoice['tenant_name'] ?? '-')) ?></div>
-          <div class="text-muted small"><?= htmlspecialchars(!empty($realtorContext) ? (($realtorContext['client_email'] ?? '-') ?: '-') : ($invoice['tenant_email'] ?? '-')) ?></div>
+          <div><?= htmlspecialchars(!empty($realtorContext) ? (($realtorContext['client_name'] ?? '-') ?: '-') : (!empty($airbnbContext) ? (($airbnbContext['guest_name'] ?? '-') ?: '-') : ($invoice['tenant_name'] ?? '-'))) ?></div>
+          <div class="text-muted small"><?= htmlspecialchars(!empty($realtorContext) ? (($realtorContext['client_email'] ?? '-') ?: '-') : (!empty($airbnbContext) ? (($airbnbContext['guest_email'] ?? '-') ?: '-') : ($invoice['tenant_email'] ?? '-'))) ?></div>
           <?php if (!empty($realtorContext) && (!empty($realtorContext['listing_title']) || !empty($realtorContext['listing_location']))): ?>
             <div class="text-muted small">
               <?= htmlspecialchars((string)($realtorContext['listing_title'] ?? '')) ?>

@@ -22,7 +22,7 @@ ob_start();
       <form method="get" class="row g-2 align-items-end" id="invoiceFiltersForm">
         <div class="col-12 col-md-3">
           <label class="form-label mb-1">Search</label>
-          <input type="text" class="form-control" name="q" value="<?= htmlspecialchars($_GET['q'] ?? '') ?>" placeholder="Invoice no, <?= $role === 'realtor' ? 'client, listing' : 'tenant, guest' ?>, notes" id="invoiceSearchInput" autocomplete="off">
+          <input type="text" class="form-control" name="q" value="<?= htmlspecialchars($_GET['q'] ?? '') ?>" placeholder="Invoice no, <?= ($role === 'realtor' || $role === 'airbnb_manager') ? 'client, listing' : 'tenant, guest' ?>, notes" id="invoiceSearchInput" autocomplete="off">
         </div>
         <div class="col-6 col-md-2">
           <label class="form-label mb-1">Status</label>
@@ -47,10 +47,10 @@ ob_start();
         </div>
         <?php if ($role !== 'realtor'): ?>
           <div class="col-12 col-md-3">
-            <label class="form-label mb-1">Tenant</label>
+            <label class="form-label mb-1"><?= $role === 'airbnb_manager' ? 'Client' : 'Tenant' ?></label>
             <?php $tid = $_GET['tenant_id'] ?? ''; ?>
             <select class="form-select" name="tenant_id">
-              <option value="">All tenants</option>
+              <option value=""><?= $role === 'airbnb_manager' ? 'All clients' : 'All tenants' ?></option>
               <?php foreach (($tenants ?? []) as $t): ?>
                 <option value="<?= (int)$t['id'] ?>" <?= ((string)$tid === (string)$t['id'])?'selected':'' ?>><?= htmlspecialchars($t['name'] ?? ('Tenant #'.$t['id'])) ?></option>
               <?php endforeach; ?>
@@ -84,7 +84,7 @@ ob_start();
                 <th>Client</th>
                 <th>Listing</th>
               <?php else: ?>
-                <th>Tenant</th>
+                <th><?= $role === 'airbnb_manager' ? 'Client' : 'Tenant' ?></th>
               <?php endif; ?>
               <th>Issued</th>
               <th>Due</th>

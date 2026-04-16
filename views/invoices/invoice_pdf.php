@@ -107,8 +107,8 @@
           <td>
             <div class="section-title">Bill To</div>
             <div class="box">
-              <div class="row"><div class="label">Customer</div><div class="value"><?= htmlspecialchars(!empty($realtorContext) ? (($realtorContext['client_name'] ?? '-') ?: '-') : ($invoice['tenant_name'] ?? '-')) ?></div></div>
-              <div class="row"><div class="label">Email</div><div class="small"><?= htmlspecialchars(!empty($realtorContext) ? (($realtorContext['client_email'] ?? '-') ?: '-') : ($invoice['tenant_email'] ?? '-')) ?></div></div>
+              <div class="row"><div class="label">Customer</div><div class="value"><?= htmlspecialchars(!empty($realtorContext) ? (($realtorContext['client_name'] ?? '-') ?: '-') : (!empty($airbnbContext) ? (($airbnbContext['guest_name'] ?? '-') ?: '-') : ($invoice['tenant_name'] ?? '-'))) ?></div></div>
+              <div class="row"><div class="label">Email</div><div class="small"><?= htmlspecialchars(!empty($realtorContext) ? (($realtorContext['client_email'] ?? '-') ?: '-') : (!empty($airbnbContext) ? (($airbnbContext['guest_email'] ?? '-') ?: '-') : ($invoice['tenant_email'] ?? '-'))) ?></div></div>
               <?php if (!empty($realtorContext) && (!empty($realtorContext['listing_title']) || !empty($realtorContext['listing_location']))): ?>
               <div class="row"><div class="label">Listing</div><div class="small"><?= htmlspecialchars((string)($realtorContext['listing_title'] ?? '')) ?><?= !empty($realtorContext['listing_location']) ? (' • ' . htmlspecialchars((string)$realtorContext['listing_location'])) : '' ?></div></div>
               <?php endif; ?>
