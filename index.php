@@ -528,6 +528,8 @@ $routes = [
     'airbnb/api/available-units' => ['controller' => 'AirbnbPublicController', 'action' => 'apiGetAvailableUnits'],
     'airbnb/api/calculate-price' => ['controller' => 'AirbnbPublicController', 'action' => 'apiCalculatePrice'],
     'airbnb/api/check-availability' => ['controller' => 'AirbnbPublicController', 'action' => 'apiCheckAvailability'],
+    'airbnb/booking/initiate-stk' => ['POST' => ['controller' => 'AirbnbPublicController', 'action' => 'apiInitiateSTK']],
+
     // Airbnb Management Routes
     'airbnb/dashboard' => ['controller' => 'AirbnbController', 'action' => 'dashboard'],
     'airbnb/bookings' => ['controller' => 'AirbnbController', 'action' => 'bookings'],

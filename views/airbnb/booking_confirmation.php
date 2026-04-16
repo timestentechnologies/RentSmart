@@ -228,23 +228,50 @@
             </div>
 
             <!-- Payment Methods -->
-            <div class="col-md-6">
                 <div class="info-box bg-light border-0">
                     <h6 class="mb-3 text-uppercase text-muted small fw-bold"><i class="fas fa-credit-card text-accent me-2"></i>Secure Your Booking</h6>
                     <p class="small text-muted mb-3">Select your preferred payment method to finalize the reservation.</p>
                     
                     <div class="row g-2 mb-3">
-                        <div class="col-6">
-                            <div class="payment-card" data-method="M-Pesa">
-                                <i class="fas fa-mobile-alt"></i>
-                                <span class="small fw-bold">M-Pesa</span>
+                        <?php 
+                        $hasMethods = !empty($paymentMethods);
+                        if ($hasMethods): 
+                            foreach ($paymentMethods as $index => $pm):
+                                $icon = 'fa-credit-card';
+                                if (strpos(strtolower($pm['name']), 'm-pesa') !== false || $pm['type'] === 'mpesa_stk' || $pm['type'] === 'mpesa_manual') $icon = 'fa-mobile-alt';
+                                if (strpos(strtolower($pm['name']), 'bank') !== false || $pm['type'] === 'bank_transfer') $icon = 'fa-university';
+                                if (strpos(strtolower($pm['name']), 'office') !== false || $pm['type'] === 'cash') $icon = 'fa-building';
+                        ?>
+                            <div class="col-6">
+                                <div class="payment-card <?= $index === 0 ? 'active' : '' ?>" 
+                                     data-method-id="<?= $pm['id'] ?>" 
+                                     data-method-type="<?= $pm['type'] ?>"
+                                     data-method-name="<?= htmlspecialchars($pm['name']) ?>"
+                                     data-details='<?= htmlspecialchars($pm['details']) ?>'>
+                                    <i class="fas <?= $icon ?>"></i>
+                                    <span class="small fw-bold"><?= htmlspecialchars($pm['name']) ?></span>
+                                </div>
                             </div>
+                        <?php endforeach; else: ?>
+                            <div class="col-12">
+                                <div class="payment-card active" data-method-name="Pay at Office" data-method-type="cash">
+                                    <i class="fas fa-building"></i>
+                                    <span class="small fw-bold">Pay at Office</span>
+                                </div>
+                            </div>
+                        <?php endif; ?>
+                    </div>
+
+                    <!-- M-Pesa Specific Fields -->
+                    <div id="mpesaFields" class="d-none mb-3 p-3 bg-white rounded shadow-sm border">
+                        <div id="mpesaInstructions" class="small mb-2 text-primary fw-bold"></div>
+                        <div class="mb-2">
+                            <label class="small text-muted mb-1">M-Pesa Phone Number</label>
+                            <input type="text" id="mpesaPhone" class="form-control form-control-sm" placeholder="e.g. 0712345678" value="<?= htmlspecialchars($booking['guest_phone']) ?>">
                         </div>
-                        <div class="col-6">
-                            <div class="payment-card active" data-method="Pay at Office">
-                                <i class="fas fa-building"></i>
-                                <span class="small fw-bold">Pay at Office</span>
-                            </div>
+                        <div id="manualMpesaFields" class="d-none">
+                            <label class="small text-muted mb-1">Transaction Code</label>
+                            <input type="text" id="mpesaCode" class="form-control form-control-sm" placeholder="e.g. RKL7W8X9Y1" style="text-transform: uppercase;">
                         </div>
                     </div>
 
@@ -253,10 +280,9 @@
                     </button>
                     
                     <div id="paymentStatus" class="mt-2 text-center small d-none">
-                        <span class="spinner-border spinner-border-sm text-accent me-1"></span> Processing...
+                        <span class="spinner-border spinner-border-sm text-accent me-1"></span> <span id="paymentStatusText">Processing...</span>
                     </div>
                 </div>
-            </div>
         </div>
 
         <div class="row mt-4 g-2">
@@ -310,12 +336,40 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         $(document).ready(function() {
-            let selectedMethod = 'Pay at Office';
+            let selectedMethodName = $('.payment-card.active').data('method-name') || 'Pay at Office';
+            let selectedMethodType = $('.payment-card.active').data('method-type') || 'cash';
+            let selectedMethodId = $('.payment-card.active').data('method-id') || 0;
+
+            function updatePaymentUI() {
+                const card = $('.payment-card.active');
+                const type = card.data('method-type');
+                const details = card.data('details') ? JSON.parse(card.data('details')) : {};
+                
+                $('#mpesaFields').addClass('d-none');
+                $('#manualMpesaFields').addClass('d-none');
+                $('#mpesaInstructions').text('');
+
+                if (type === 'mpesa_manual') {
+                    $('#mpesaFields').removeClass('d-none');
+                    $('#manualMpesaFields').removeClass('d-none');
+                    let instr = 'Follow instructions to pay: ';
+                    if (details.mpesa_method === 'till') instr += 'Buy Goods Till ' + details.till_number;
+                    else if (details.mpesa_method === 'paybill') instr += 'Paybill ' + details.paybill_number + ' (Acc: ' + (details.account_number || 'STAY') + ')';
+                    $('#mpesaInstructions').text(instr);
+                } else if (type === 'mpesa_stk') {
+                    $('#mpesaFields').removeClass('d-none');
+                    $('#mpesaInstructions').text('You will receive an M-Pesa prompt to enter your PIN.');
+                }
+            }
+            updatePaymentUI();
 
             $('.payment-card').click(function() {
                 $('.payment-card').removeClass('active');
                 $(this).addClass('active');
-                selectedMethod = $(this).data('method');
+                selectedMethodName = $(this).data('method-name');
+                selectedMethodType = $(this).data('method-type');
+                selectedMethodId = $(this).data('method-id');
+                updatePaymentUI();
             });
 
             $('#btnWhatsAppShare').click(function() {
@@ -337,18 +391,55 @@
             $('#btnConfirmPayment').click(function() {
                 const btn = $(this);
                 const status = $('#paymentStatus');
+                const statusText = $('#paymentStatusText');
                 const reference = '<?php echo $booking['booking_reference']; ?>';
+
+                // Basic validation for M-Pesa
+                if (selectedMethodType === 'mpesa_manual' || selectedMethodType === 'mpesa_stk') {
+                    const phone = $('#mpesaPhone').val();
+                    if (!phone) return alert('Phone number is required');
+                    if (selectedMethodType === 'mpesa_manual' && !$('#mpesaCode').val()) return alert('Transaction Code is required');
+                }
 
                 btn.prop('disabled', true);
                 status.removeClass('d-none');
+                statusText.text(selectedMethodType === 'mpesa_stk' ? 'Sending prompt...' : 'Processing...');
 
+                const commonData = {
+                    method: selectedMethodName,
+                    method_type: selectedMethodType,
+                    method_id: selectedMethodId,
+                    mpesa_phone: $('#mpesaPhone').val(),
+                    mpesa_transaction_code: $('#mpesaCode').val(),
+                    csrf_token: $('meta[name="csrf-token"]').attr('content')
+                };
+
+                // Handle STK Push specifically
+                if (selectedMethodType === 'mpesa_stk') {
+                    $.post('<?= BASE_URL ?>/airbnb/booking/initiate-stk', {
+                        booking_id: '<?= $booking['id'] ?>',
+                        phone_number: $('#mpesaPhone').val(),
+                        amount: '<?= $booking['final_total'] ?>',
+                        payment_method_id: selectedMethodId,
+                        csrf_token: commonData.csrf_token
+                    }, function(res) {
+                        if (res.success) {
+                            alert('STK Prompt sent! Please complete on your phone. We will verify and confirm your booking automatically.');
+                            window.location.reload();
+                        } else {
+                            alert('STK Error: ' + res.message);
+                            btn.prop('disabled', false);
+                            status.addClass('d-none');
+                        }
+                    }, 'json');
+                    return;
+                }
+
+                // Default capture (Manual/Office/Other)
                 $.ajax({
                     url: '<?= BASE_URL ?>/airbnb/booking-confirmation/' + reference + '/capture-payment',
                     method: 'POST',
-                    data: {
-                        method: selectedMethod,
-                        csrf_token: $('meta[name="csrf-token"]').attr('content')
-                    },
+                    data: commonData,
                     success: function(response) {
                         if (response.success) {
                             alert('Booking Confirmed! Your receipt has been generated and sent to your email.');
