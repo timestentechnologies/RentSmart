@@ -403,7 +403,7 @@ class PaymentsController
                                 throw new \Exception('Booking is required');
                             }
                             $bookingModel = new AirbnbBooking();
-                            $booking = $bookingModel->getById($bookingId);
+                            $booking = $bookingModel->findById($bookingId);
                             if (!$booking) {
                                 throw new \Exception('Invalid booking selected');
                             }
@@ -412,7 +412,7 @@ class PaymentsController
                             $newPaid = (float)$booking['amount_paid'] + $amount;
                             $payStatus = ($newPaid >= (float)$booking['final_total']) ? 'paid' : 'partial';
                             
-                            $bookingModel->update($bookingId, [
+                            $bookingModel->updateBooking($bookingId, [
                                 'amount_paid' => $newPaid,
                                 'payment_status' => $payStatus
                             ]);
@@ -487,7 +487,7 @@ class PaymentsController
                         $_SESSION['flash_type'] = 'success';
                         header('Location: ' . BASE_URL . '/payments');
                         exit;
-                    } catch (\Exception $e) {
+                    } catch (\Throwable $e) {
                         $_SESSION['flash_message'] = 'Error: ' . $e->getMessage();
                         $_SESSION['flash_type'] = 'danger';
                         header('Location: ' . BASE_URL . '/payments');
