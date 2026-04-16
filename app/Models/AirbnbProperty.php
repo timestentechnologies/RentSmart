@@ -78,6 +78,7 @@ class AirbnbProperty extends Model
             $fields = [];
             $params = ['property_id' => $propertyId];
             
+            $allowedFields = [
                 'is_airbnb_enabled', 'min_stay_nights', 'max_stay_nights',
                 'check_in_time', 'check_out_time', 'cleaning_fee', 'security_deposit',
                 'booking_lead_time_hours', 'instant_booking', 'house_rules', 'cancellation_policy',
