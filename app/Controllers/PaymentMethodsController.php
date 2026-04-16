@@ -134,7 +134,7 @@ class PaymentMethodsController
                 throw new \Exception('Name and type are required');
             }
 
-            // Handle M-Pesa specific fields
+            // Handle payment specific fields
             $details = [];
             if ($type === 'mpesa_manual') {
                 $mpesaMethod = trim($_POST['mpesa_method'] ?? '');
@@ -146,6 +146,12 @@ class PaymentMethodsController
                 } elseif ($mpesaMethod === 'till') {
                     $details['till_number'] = trim($_POST['till_number'] ?? '');
                 }
+            } elseif ($type === 'mpesa_pochi' || $type === 'mpesa_send_money') {
+                $details['phone_number'] = trim($_POST['phone_number'] ?? '');
+            } elseif ($type === 'bank_transfer') {
+                $details['bank_name'] = trim($_POST['bank_name'] ?? '');
+                $details['account_name'] = trim($_POST['account_name'] ?? '');
+                $details['account_number'] = trim($_POST['account_number'] ?? '');
             } elseif ($type === 'mpesa_stk') {
                 $details['consumer_key'] = trim($_POST['consumer_key'] ?? '');
                 $details['consumer_secret'] = trim($_POST['consumer_secret'] ?? '');
@@ -247,7 +253,7 @@ class PaymentMethodsController
                 throw new \Exception('Name and type are required');
             }
 
-            // Handle M-Pesa specific fields
+            // Handle payment specific fields
             $details = [];
             if ($type === 'mpesa_manual') {
                 $mpesaMethod = trim($_POST['mpesa_method'] ?? '');
@@ -259,6 +265,12 @@ class PaymentMethodsController
                 } elseif ($mpesaMethod === 'till') {
                     $details['till_number'] = trim($_POST['till_number'] ?? '');
                 }
+            } elseif ($type === 'mpesa_pochi' || $type === 'mpesa_send_money') {
+                $details['phone_number'] = trim($_POST['phone_number'] ?? '');
+            } elseif ($type === 'bank_transfer') {
+                $details['bank_name'] = trim($_POST['bank_name'] ?? '');
+                $details['account_name'] = trim($_POST['account_name'] ?? '');
+                $details['account_number'] = trim($_POST['account_number'] ?? '');
             } elseif ($type === 'mpesa_stk') {
                 $details['consumer_key'] = trim($_POST['consumer_key'] ?? '');
                 $details['consumer_secret'] = trim($_POST['consumer_secret'] ?? '');

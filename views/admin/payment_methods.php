@@ -71,7 +71,10 @@ ob_start();
                                         <div class="me-2">
                                             <?php
                                             $typeIcons = [
-                                                'mpesa' => 'bi-phone',
+                                                'mpesa_manual' => 'bi-phone',
+                                                'mpesa_stk' => 'bi-lightning-charge',
+                                                'mpesa_pochi' => 'bi-person-badge',
+                                                'mpesa_send_money' => 'bi-send',
                                                 'bank_transfer' => 'bi-bank',
                                                 'cash' => 'bi-cash',
                                                 'cheque' => 'bi-receipt',
@@ -101,7 +104,7 @@ ob_start();
                                     <span class="text-muted">
                                         <?= htmlspecialchars($method['description'] ?? 'No description') ?>
                                     </span>
-                                    <?php if ($method['type'] === 'mpesa_manual' || $method['type'] === 'mpesa_stk'): ?>
+                                    <?php if (in_array($method['type'], ['mpesa_manual', 'mpesa_stk', 'mpesa_pochi', 'mpesa_send_money', 'bank_transfer'])): ?>
                                         <?php 
                                         $details = json_decode($method['details'] ?? '{}', true);
                                         if ($method['type'] === 'mpesa_manual'): 
@@ -117,6 +120,14 @@ ob_start();
                                         <?php elseif ($method['type'] === 'mpesa_stk'): ?>
                                             <br><small class="text-info">
                                                 Shortcode: <?= htmlspecialchars($details['shortcode'] ?? 'N/A') ?>
+                                            </small>
+                                        <?php elseif ($method['type'] === 'mpesa_pochi' || $method['type'] === 'mpesa_send_money'): ?>
+                                            <br><small class="text-info">
+                                                Phone: <?= htmlspecialchars($details['phone_number'] ?? 'N/A') ?>
+                                            </small>
+                                        <?php elseif ($method['type'] === 'bank_transfer'): ?>
+                                            <br><small class="text-info">
+                                                <?= htmlspecialchars($details['bank_name'] ?? 'N/A') ?> - <?= htmlspecialchars($details['account_number'] ?? 'N/A') ?>
                                             </small>
                                         <?php endif; ?>
                                     <?php endif; ?>
@@ -185,6 +196,8 @@ ob_start();
                             <option value="">Select Type</option>
                             <option value="mpesa_manual">M-Pesa (Manual)</option>
                             <option value="mpesa_stk">M-Pesa (STK Push)</option>
+                            <option value="mpesa_pochi">M-Pesa (Pochi la Biashara)</option>
+                            <option value="mpesa_send_money">M-Pesa (Send Money)</option>
                             <option value="bank_transfer">Bank Transfer</option>
                             <option value="cash">Cash</option>
                             <option value="cheque">Cheque</option>
@@ -260,6 +273,30 @@ ob_start();
                             <input type="password" id="add_passkey" name="passkey" class="form-control" placeholder="M-Pesa Passkey">
                         </div>
                     </div>
+
+                    <!-- Pochi / Send Money Fields -->
+                    <div id="add_mpesa_simple_fields" style="display: none;">
+                        <div class="mb-3">
+                            <label for="add_phone_number" class="form-label">Phone Number</label>
+                            <input type="text" id="add_phone_number" name="phone_number" class="form-control" placeholder="e.g., 0712345678" oninput="updateDescriptionTemplate('add')">
+                        </div>
+                    </div>
+
+                    <!-- Bank Transfer Fields -->
+                    <div id="add_bank_fields" style="display: none;">
+                        <div class="mb-3">
+                            <label for="add_bank_name" class="form-label">Bank Name</label>
+                            <input type="text" id="add_bank_name" name="bank_name" class="form-control" placeholder="e.g., Equity Bank" oninput="updateDescriptionTemplate('add')">
+                        </div>
+                        <div class="mb-3">
+                            <label for="add_account_name" class="form-label">Account Name</label>
+                            <input type="text" id="add_account_name" name="account_name" class="form-control" placeholder="e.g., John Doe" oninput="updateDescriptionTemplate('add')">
+                        </div>
+                        <div class="mb-3">
+                            <label for="add_account_number" class="form-label">Account Number</label>
+                            <input type="text" id="add_account_number" name="account_number" class="form-control" placeholder="e.g., 123456789" oninput="updateDescriptionTemplate('add')">
+                        </div>
+                    </div>
                     <div class="mb-3">
                         <label for="add_description" class="form-label">Description</label>
                         <textarea id="add_description" name="description" class="form-control" rows="3"></textarea>
@@ -320,6 +357,8 @@ ob_start();
                             <option value="">Select Type</option>
                             <option value="mpesa_manual">M-Pesa (Manual)</option>
                             <option value="mpesa_stk">M-Pesa (STK Push)</option>
+                            <option value="mpesa_pochi">M-Pesa (Pochi la Biashara)</option>
+                            <option value="mpesa_send_money">M-Pesa (Send Money)</option>
                             <option value="bank_transfer">Bank Transfer</option>
                             <option value="cash">Cash</option>
                             <option value="cheque">Cheque</option>
@@ -394,6 +433,30 @@ ob_start();
                             <input type="password" id="edit_passkey" name="passkey" class="form-control" placeholder="M-Pesa Passkey">
                         </div>
                     </div>
+
+                    <!-- Pochi / Send Money Fields -->
+                    <div id="edit_mpesa_simple_fields" style="display: none;">
+                        <div class="mb-3">
+                            <label for="edit_phone_number" class="form-label">Phone Number</label>
+                            <input type="text" id="edit_phone_number" name="phone_number" class="form-control" placeholder="e.g., 0712345678" oninput="updateDescriptionTemplate('edit')">
+                        </div>
+                    </div>
+
+                    <!-- Bank Transfer Fields -->
+                    <div id="edit_bank_fields" style="display: none;">
+                        <div class="mb-3">
+                            <label for="edit_bank_name" class="form-label">Bank Name</label>
+                            <input type="text" id="edit_bank_name" name="bank_name" class="form-control" placeholder="e.g., Equity Bank" oninput="updateDescriptionTemplate('edit')">
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_account_name" class="form-label">Account Name</label>
+                            <input type="text" id="edit_account_name" name="account_name" class="form-control" placeholder="e.g., John Doe" oninput="updateDescriptionTemplate('edit')">
+                        </div>
+                        <div class="mb-3">
+                            <label for="edit_account_number" class="form-label">Account Number</label>
+                            <input type="text" id="edit_account_number" name="account_number" class="form-control" placeholder="e.g., 123456789" oninput="updateDescriptionTemplate('edit')">
+                        </div>
+                    </div>
                     <div class="mb-3">
                         <label for="edit_description" class="form-label">Description</label>
                         <textarea id="edit_description" name="description" class="form-control" rows="3"></textarea>
@@ -439,16 +502,71 @@ function toggleMpesaFields(prefix) {
     const typeSelect = document.getElementById(prefix + '_type');
     const mpesaManualFields = document.getElementById(prefix + '_mpesa_manual_fields');
     const mpesaStkFields = document.getElementById(prefix + '_mpesa_stk_fields');
+    const mpesaSimpleFields = document.getElementById(prefix + '_mpesa_simple_fields');
+    const bankFields = document.getElementById(prefix + '_bank_fields');
     
     // Hide all M-Pesa fields first
     mpesaManualFields.style.display = 'none';
     mpesaStkFields.style.display = 'none';
+    mpesaSimpleFields.style.display = 'none';
+    bankFields.style.display = 'none';
     
     // Show relevant fields based on type
     if (typeSelect.value === 'mpesa_manual') {
         mpesaManualFields.style.display = 'block';
     } else if (typeSelect.value === 'mpesa_stk') {
         mpesaStkFields.style.display = 'block';
+    } else if (typeSelect.value === 'mpesa_pochi' || typeSelect.value === 'mpesa_send_money') {
+        mpesaSimpleFields.style.display = 'block';
+    } else if (typeSelect.value === 'bank_transfer') {
+        bankFields.style.display = 'block';
+    }
+    
+    updateDescriptionTemplate(prefix);
+}
+
+// Auto-populate Description Template
+function updateDescriptionTemplate(prefix) {
+    const typeSelect = document.getElementById(prefix + '_type');
+    const descArea = document.getElementById(prefix + '_description');
+    
+    // Don't overwrite if there's already significant custom text (optional logic)
+    // if (descArea.value.trim() !== '') return;
+
+    let template = '';
+    const type = typeSelect.value;
+    
+    if (type === 'mpesa_manual') {
+        const paybillRadio = document.getElementById(prefix + '_paybill');
+        const tillRadio = document.getElementById(prefix + '_till');
+        
+        if (paybillRadio && paybillRadio.checked) {
+            const pb = document.getElementById(prefix + '_paybill_number').value || '____';
+            const acc = document.getElementById(prefix + '_account_number').value || '____';
+            template = `1. Go to M-Pesa menu\n2. Select Lipa na M-Pesa\n3. Select Paybill\n4. Enter Business No: ${pb}\n5. Enter Account No: ${acc}\n6. Enter Amount and PIN`;
+        } else if (tillRadio && tillRadio.checked) {
+            const till = document.getElementById(prefix + '_till_number').value || '____';
+            template = `1. Go to M-Pesa menu\n2. Select Lipa na M-Pesa\n3. Select Buy Goods and Services\n4. Enter Till No: ${till}\n5. Enter Amount and PIN`;
+        }
+    } else if (type === 'mpesa_stk') {
+        template = "You will receive an M-Pesa STK push prompt on your phone. Enter your PIN to complete the payment.";
+    } else if (type === 'mpesa_pochi') {
+        const phone = document.getElementById(prefix + '_phone_number').value || '____';
+        template = `1. Go to M-Pesa menu\n2. Select Lipa na M-Pesa\n3. Select Pochi la Biashara\n4. Enter Phone No: ${phone}\n5. Enter Amount and PIN`;
+    } else if (type === 'mpesa_send_money') {
+        const phone = document.getElementById(prefix + '_phone_number').value || '____';
+        template = `1. Go to M-Pesa menu\n2. Select Send Money\n3. Enter Phone No: ${phone}\n4. Enter Amount and PIN`;
+    } else if (type === 'bank_transfer') {
+        const bank = document.getElementById(prefix + '_bank_name').value || '____';
+        const name = document.getElementById(prefix + '_account_name').value || '____';
+        const num = document.getElementById(prefix + '_account_number').value || '____';
+        template = `Please transfer total amount to:\nBank: ${bank}\nAccount Name: ${name}\nAccount Number: ${num}`;
+    } else if (type === 'cash') {
+        template = "Payment can be settled in cash at our property office or reception upon check-in.";
+    }
+    
+    if (template) {
+        descArea.value = template;
     }
 }
 
@@ -474,12 +592,18 @@ function toggleMpesaManualFields(prefix) {
 // Add event listeners for M-Pesa manual fields
 document.addEventListener('DOMContentLoaded', function() {
     // Add form radio button listeners
-    document.getElementById('add_paybill').addEventListener('change', () => toggleMpesaManualFields('add'));
-    document.getElementById('add_till').addEventListener('change', () => toggleMpesaManualFields('add'));
+    document.getElementById('add_paybill').addEventListener('change', () => { toggleMpesaManualFields('add'); updateDescriptionTemplate('add'); });
+    document.getElementById('add_till').addEventListener('change', () => { toggleMpesaManualFields('add'); updateDescriptionTemplate('add'); });
+    document.getElementById('add_paybill_number').addEventListener('input', () => updateDescriptionTemplate('add'));
+    document.getElementById('add_account_number').addEventListener('input', () => updateDescriptionTemplate('add'));
+    document.getElementById('add_till_number').addEventListener('input', () => updateDescriptionTemplate('add'));
     
     // Edit form radio button listeners
-    document.getElementById('edit_paybill').addEventListener('change', () => toggleMpesaManualFields('edit'));
-    document.getElementById('edit_till').addEventListener('change', () => toggleMpesaManualFields('edit'));
+    document.getElementById('edit_paybill').addEventListener('change', () => { toggleMpesaManualFields('edit'); updateDescriptionTemplate('edit'); });
+    document.getElementById('edit_till').addEventListener('change', () => { toggleMpesaManualFields('edit'); updateDescriptionTemplate('edit'); });
+    document.getElementById('edit_paybill_number').addEventListener('input', () => updateDescriptionTemplate('edit'));
+    document.getElementById('edit_account_number').addEventListener('input', () => updateDescriptionTemplate('edit'));
+    document.getElementById('edit_till_number').addEventListener('input', () => updateDescriptionTemplate('edit'));
 });
 
 // Add Payment Method Form
@@ -585,8 +709,8 @@ function editPaymentMethod(id) {
             // Toggle M-Pesa fields based on type
             toggleMpesaFields('edit');
             
-            // Populate M-Pesa specific fields
-            if (method.type === 'mpesa_manual' || method.type === 'mpesa_stk') {
+            // Populate specific fields
+            if (method.type === 'mpesa_manual' || method.type === 'mpesa_stk' || method.type === 'mpesa_pochi' || method.type === 'mpesa_send_money' || method.type === 'bank_transfer') {
                 const details = JSON.parse(method.details || '{}');
                 
                 if (method.type === 'mpesa_manual') {
@@ -606,6 +730,12 @@ function editPaymentMethod(id) {
                     document.getElementById('edit_consumer_secret').value = details.consumer_secret || '';
                     document.getElementById('edit_shortcode').value = details.shortcode || '';
                     document.getElementById('edit_passkey').value = details.passkey || '';
+                } else if (method.type === 'mpesa_pochi' || method.type === 'mpesa_send_money') {
+                    document.getElementById('edit_phone_number').value = details.phone_number || '';
+                } else if (method.type === 'bank_transfer') {
+                    document.getElementById('edit_bank_name').value = details.bank_name || '';
+                    document.getElementById('edit_account_name').value = details.account_name || '';
+                    document.getElementById('edit_account_number').value = details.account_number || '';
                 }
             }
             

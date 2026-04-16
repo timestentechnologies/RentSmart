@@ -240,7 +240,7 @@
                             foreach ($paymentMethods as $index => $pm):
                                 $icon = 'fa-credit-card';
                                 $pmName = strtolower($pm['name']);
-                                if (strpos($pmName, 'm-pesa') !== false || $pm['type'] === 'mpesa_stk' || $pm['type'] === 'mpesa_manual') $icon = 'fa-mobile-alt';
+                                if (strpos($pmName, 'm-pesa') !== false || in_array($pm['type'], ['mpesa_stk', 'mpesa_manual', 'mpesa_pochi', 'mpesa_send_money'])) $icon = 'fa-mobile-alt';
                                 if (strpos($pmName, 'bank') !== false || $pm['type'] === 'bank_transfer') $icon = 'fa-university';
                                 if (strpos($pmName, 'office') !== false || $pm['type'] === 'cash') $icon = 'fa-building';
                         ?>
@@ -441,14 +441,13 @@
                 if (!card.length) return;
 
                 const name = card.data('method-name');
-                const type = card.data('method-type');
-                let iconClass = 'fa-credit-card';
+                let iconClass = 'fas fa-credit-card';
                 if (card.find('i').length) {
-                    iconClass = card.find('i').attr('class').split(' ').filter(c => c.startsWith('fa-')).join(' ');
+                    iconClass = card.find('i').attr('class').split(' ').filter(c => c.startsWith('fa')).join(' ');
                 }
 
                 $('#modalMethodName').text(name);
-                $('#modalMethodIcon').attr('class', iconClass);
+                $('#modalMethodIcon').attr('class', iconClass + ' fa-3x');
                 
                 // Reset fields
                 $('#modalMpesaFields').addClass('d-none');
@@ -462,9 +461,9 @@
                 }
                 $('#modalInstructions').text(instructions);
 
-                if (type === 'mpesa_manual' || type === 'mpesa_stk') {
+                if (['mpesa_manual', 'mpesa_stk', 'mpesa_pochi', 'mpesa_send_money'].includes(type)) {
                     $('#modalMpesaFields').removeClass('d-none');
-                    if (type === 'mpesa_manual') $('#modalManualMpesaFields').removeClass('d-none');
+                    if (['mpesa_manual', 'mpesa_pochi', 'mpesa_send_money'].includes(type)) $('#modalManualMpesaFields').removeClass('d-none');
                 }
 
                 const paymentModal = new bootstrap.Modal(document.getElementById('paymentModal'));
@@ -514,10 +513,10 @@
                 const reference = '<?php echo $booking['booking_reference']; ?>';
 
                 // Basic validation for M-Pesa
-                if (selectedMethodType === 'mpesa_manual' || selectedMethodType === 'mpesa_stk') {
+                if (['mpesa_manual', 'mpesa_stk', 'mpesa_pochi', 'mpesa_send_money'].includes(selectedMethodType)) {
                     const phone = $('#modalMpesaPhone').val();
                     if (!phone) return alert('Phone number is required');
-                    if (selectedMethodType === 'mpesa_manual' && !$('#modalMpesaCode').val()) return alert('Transaction Code is required');
+                    if (['mpesa_manual', 'mpesa_pochi', 'mpesa_send_money'].includes(selectedMethodType) && !$('#modalMpesaCode').val()) return alert('Transaction Code is required');
                 }
 
                 btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Completing...');
