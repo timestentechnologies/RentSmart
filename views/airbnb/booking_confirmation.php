@@ -425,6 +425,14 @@
                 
                 $('#mpesaInstructions').text('');
 
+                if (type === 'mpesa_manual') {
+                    let instr = 'Follow instructions to pay: ';
+                    if (details.mpesa_method === 'till') instr += 'Buy Goods Till ' + (details.till_number || '---');
+                    else if (details.mpesa_method === 'paybill') instr += 'Paybill ' + (details.paybill_number || '---') + ' (Acc: ' + (details.account_number || 'STAY') + ')';
+                    else instr += 'Manual M-Pesa';
+                    $('#mpesaInstructions').text(instr);
+                } else if (type === 'mpesa_stk') {
+                    $('#mpesaInstructions').text('You will receive an M-Pesa prompt to enter your PIN.');
                 }
             }
 
