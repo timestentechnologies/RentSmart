@@ -764,6 +764,9 @@ class AirbnbPublicController
 
             $invoiceId = $invModel->createInvoice($invoiceData, $items);
 
+            // Link invoice to booking using the new column
+            $this->db->prepare("UPDATE invoices SET airbnb_booking_id = ? WHERE id = ?")->execute([$booking['id'], $invoiceId]);
+
             // 2. Record Payment (if Pay at Office, we might mark as pending verification, but user wants it "captured")
             // For Airbnb, we'll mark as 'paid' if it's "Pay at Office" because the manager will verify it manually 
             // but the user wants the system to capture it immediately.

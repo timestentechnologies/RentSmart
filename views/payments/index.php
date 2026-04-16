@@ -1,6 +1,7 @@
 <?php
 ob_start();
 $isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
+$isAirbnbManager = strtolower((string)($_SESSION['user_role'] ?? '')) === 'airbnb_manager';
 ?>
 <div class="container-fluid pt-4">
     <!-- Page Header -->
@@ -214,7 +215,11 @@ $isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
                                                 </div>
                                                 <div>
                                                     <?= htmlspecialchars($payment['tenant_name'] ?? 'Unknown') ?>
-                                                    <div class="small text-muted">ID: <?= $payment['tenant_id'] ?></div>
+                                                    <?php if (!empty($payment['airbnb_booking_ref'])): ?>
+                                                        <div class="small text-muted">Booking: <?= htmlspecialchars($payment['airbnb_booking_ref']) ?></div>
+                                                    <?php elseif (!empty($payment['tenant_id'])): ?>
+                                                        <div class="small text-muted">ID: <?= $payment['tenant_id'] ?></div>
+                                                    <?php endif; ?>
                                                 </div>
                                             </div>
                                         </td>
@@ -259,6 +264,10 @@ $isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
                                             } elseif ($rawType === 'utility' || $hasUtility || $isUtilByNotes) {
                                                 $typeClass = 'bg-info';
                                                 $typeText = !empty($payment['utility_type']) ? ucfirst((string)$payment['utility_type']) : 'Utility';
+                                            } elseif (strpos($rawType, 'airbnb_') === 0) {
+                                                $typeClass = 'bg-primary'; // Using primary for Airbnb
+                                                $typeText = ucfirst(str_replace('airbnb_', '', $rawType));
+                                                if ($typeText === 'Booking') $typeClass = 'bg-dark';
                                             } else {
                                                 $typeClass = 'bg-success';
                                                 $typeText = 'Rent';
@@ -377,10 +386,88 @@ $isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
             <form method="POST" action="<?= BASE_URL ?>/payments/store" enctype="multipart/form-data">
                 <?= csrf_field() ?>
                 <div class="modal-header">
-                    <h5 class="modal-title" id="addPaymentModalLabel">Add Payment</h5>
+                    <h5 class="modal-title" id="addPaymentModalLabel"><?= $isAirbnbManager ? 'Add Airbnb Payment' : 'Add Payment' ?></h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
+                    <?php if ($isAirbnbManager): ?>
+                        <div class="mb-4">
+                            <label class="form-label d-block fw-bold mb-3">Capture Payment For:</label>
+                            <div class="btn-group w-100" role="group">
+                                <input type="radio" class="btn-check" name="airbnb_payment_category" id="cat_booking" value="booking" checked autocomplete="off">
+                                <label class="btn btn-outline-primary" for="cat_booking">
+                                    <i class="bi bi-calendar-check me-1"></i>Booking
+                                </label>
+
+                                <input type="radio" class="btn-check" name="airbnb_payment_category" id="cat_walkin" value="walkin" autocomplete="off">
+                                <label class="btn btn-outline-primary" for="cat_walkin">
+                                    <i class="bi bi-person-walking me-1"></i>Walk-in
+                                </label>
+
+                                <input type="radio" class="btn-check" name="airbnb_payment_category" id="cat_invoice" value="invoice" autocomplete="off">
+                                <label class="btn btn-outline-primary" for="cat_invoice">
+                                    <i class="bi bi-file-earmark-text me-1"></i>Invoice
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Booking Selection -->
+                        <div class="airbnb-source-fields" id="source_booking">
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Select Booking</label>
+                                <select class="form-select select2-modal" name="airbnb_booking_id" id="airbnb_booking_id">
+                                    <option value="">-- Search Booking (Ref or Guest Name) --</option>
+                                    <?php foreach (($airbnbBookings ?? []) as $b): ?>
+                                        <?php 
+                                            $balance = (float)$b['final_total'] - (float)$b['amount_paid'];
+                                            if ($balance < 0) $balance = 0;
+                                        ?>
+                                        <option value="<?= $b['id'] ?>" data-amount="<?= $balance ?>">
+                                            <?= htmlspecialchars($b['booking_reference']) ?> - <?= htmlspecialchars($b['guest_name']) ?> (Due: <?= number_format($balance, 2) ?>)
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Walk-in Selection -->
+                        <div class="airbnb-source-fields d-none" id="source_walkin">
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Select Walk-in Guest</label>
+                                <select class="form-select select2-modal" name="airbnb_walkin_guest_id" id="airbnb_walkin_guest_id">
+                                    <option value="">-- Search Walk-in Guest --</option>
+                                    <?php foreach (($airbnbWalkins ?? []) as $w): ?>
+                                        <option value="<?= $w['id'] ?>">
+                                            <?= htmlspecialchars($w['guest_name']) ?> (<?= htmlspecialchars($w['status']) ?>)
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Invoice Selection -->
+                        <div class="airbnb-source-fields d-none" id="source_invoice">
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">Select Invoice</label>
+                                <select class="form-select select2-modal" name="invoice_id" id="airbnb_invoice_id">
+                                    <option value="">-- Search Invoice --</option>
+                                    <?php foreach (($invoices ?? []) as $inv): ?>
+                                        <?php 
+                                            $total = (float)($inv['total_amount'] ?? 0);
+                                            $paid = (float)($inv['paid_amount'] ?? 0);
+                                            $balance = $total - $paid;
+                                        ?>
+                                        <option value="<?= $inv['id'] ?>" data-amount="<?= $balance ?>">
+                                            Inv #<?= htmlspecialchars($inv['id']) ?> - <?= htmlspecialchars($inv['tenant_name'] ?? 'Client') ?> (Due: <?= number_format($balance, 2) ?>)
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        </div>
+
+                        <hr>
+                    <?php endif; ?>
+
                     <?php if ($isRealtor): ?>
                         <div class="mb-3">
                             <label class="form-label">Contract</label>
@@ -451,6 +538,15 @@ $isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
                             <input type="month" class="form-control" name="applies_to_month" id="realtor_applies_to_month" value="<?= date('Y-m') ?>">
                             <div class="form-text" id="realtor_month_hint" style="display:none;">Required for monthly contracts (mortgage monthly).</div>
                         </div>
+                        </div>
+                    <?php elseif ($isAirbnbManager): ?>
+                        <div class="mb-3">
+                            <label class="form-label">Amount</label>
+                            <div class="input-group shadow-sm">
+                                <span class="input-group-text bg-light fw-bold text-primary">Ksh</span>
+                                <input type="number" step="0.01" class="form-control form-control-lg border-primary fw-bold" name="amount" id="airbnb_amount" placeholder="0.00" required>
+                            </div>
+                        </div>
                     <?php else: ?>
                         <div class="mb-3">
                             <label for="tenant_id" class="form-label">Tenant</label>
@@ -488,7 +584,7 @@ $isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
                         </div>
                     <?php endif; ?>
 
-                    <?php if (!$isRealtor): ?>
+                    <?php if (!$isRealtor && !$isAirbnbManager): ?>
                         <div class="mb-3">
                             <label class="form-label">Payment Type</label>
                             <div class="form-check">
@@ -512,7 +608,7 @@ $isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
                         </div>
                     <?php endif; ?>
 
-                    <?php if (!$isRealtor): ?>
+                    <?php if (!$isRealtor && !$isAirbnbManager): ?>
                     <div id="rent_payment_section" class="mb-3">
                         <label for="rent_amount" class="form-label">Rent Amount</label>
                         <div class="input-group">
@@ -2004,6 +2100,60 @@ document.addEventListener('DOMContentLoaded', function() {
 
     contractSel.addEventListener('change', applyContractRules);
     applyContractRules();
+})();
+
+// Airbnb Payments Modal Logic
+(function(){
+    const categoryRadios = document.querySelectorAll('input[name="airbnb_payment_category"]');
+    const sourceFields = document.querySelectorAll('.airbnb-source-fields');
+    const airbnbAmount = document.getElementById('airbnb_amount');
+    
+    if (!categoryRadios.length || !airbnbAmount) return;
+
+    const toggleFields = (val) => {
+        sourceFields.forEach(f => {
+            if (f.id === 'source_' + val) {
+                f.classList.remove('d-none');
+            } else {
+                f.classList.add('d-none');
+            }
+        });
+    };
+
+    categoryRadios.forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            toggleFields(e.target.value);
+            // Optional: reset amount or keep it? 
+            // Better to clear if switching to Walk-in which has no auto-amount
+            if (e.target.value === 'walkin') {
+                airbnbAmount.value = '';
+            }
+        });
+    });
+
+    // Auto-fill amount from Booking
+    const bookingSelect = document.getElementById('airbnb_booking_id');
+    if (bookingSelect) {
+        $(bookingSelect).on('select2:select change', function(e) {
+            const opt = bookingSelect.options[bookingSelect.selectedIndex];
+            if (opt && opt.value) {
+                const amount = opt.getAttribute('data-amount');
+                if (amount) airbnbAmount.value = parseFloat(amount).toFixed(2);
+            }
+        });
+    }
+
+    // Auto-fill amount from Invoice
+    const invoiceSelect = document.getElementById('airbnb_invoice_id');
+    if (invoiceSelect) {
+        $(invoiceSelect).on('select2:select change', function(e) {
+            const opt = invoiceSelect.options[invoiceSelect.selectedIndex];
+            if (opt && opt.value) {
+                const amount = opt.getAttribute('data-amount');
+                if (amount) airbnbAmount.value = parseFloat(amount).toFixed(2);
+            }
+        });
+    }
 })();
 </script>
 <?php

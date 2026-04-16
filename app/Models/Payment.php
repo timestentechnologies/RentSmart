@@ -16,6 +16,7 @@ class Payment extends Model
     {
         parent::__construct();
         $this->ensureRealtorPaymentColumns();
+        $this->ensureAirbnbPaymentColumns();
     }
 
     public function getRealtorPaymentsByDateRange($startDate, $endDate, $userId)
@@ -83,6 +84,37 @@ class Payment extends Model
         try {
             $this->db->exec("ALTER TABLE payments ADD UNIQUE KEY uq_realtor_payment_ref (realtor_user_id, payment_type, reference_number)");
         } catch (\Exception $e) {
+        }
+    }
+
+    private function ensureAirbnbPaymentColumns(): void
+    {
+        try {
+            // Check for airbnb_booking_id
+            $res = $this->db->query("SHOW COLUMNS FROM payments LIKE 'airbnb_booking_id'")->fetchAll();
+            if (empty($res)) {
+                $this->db->exec("ALTER TABLE payments ADD COLUMN airbnb_booking_id INT NULL AFTER realtor_contract_id");
+            }
+
+            // Check for airbnb_walkin_guest_id
+            $res = $this->db->query("SHOW COLUMNS FROM payments LIKE 'airbnb_walkin_guest_id'")->fetchAll();
+            if (empty($res)) {
+                $this->db->exec("ALTER TABLE payments ADD COLUMN airbnb_walkin_guest_id INT NULL AFTER airbnb_booking_id");
+            }
+
+            // Check for user_id
+            $res = $this->db->query("SHOW COLUMNS FROM payments LIKE 'user_id'")->fetchAll();
+            if (empty($res)) {
+                $this->db->exec("ALTER TABLE payments ADD COLUMN user_id INT NULL AFTER airbnb_walkin_guest_id");
+            }
+
+            // Indexes
+            try { $this->db->exec("CREATE INDEX idx_airbnb_booking ON payments (airbnb_booking_id)"); } catch (\Exception $e) {}
+            try { $this->db->exec("CREATE INDEX idx_airbnb_walkin ON payments (airbnb_walkin_guest_id)"); } catch (\Exception $e) {}
+            try { $this->db->exec("CREATE INDEX idx_payment_user ON payments (user_id)"); } catch (\Exception $e) {}
+            
+        } catch (\Exception $e) {
+            error_log("Error in ensureAirbnbPaymentColumns: " . $e->getMessage());
         }
     }
 
@@ -569,7 +601,7 @@ class Payment extends Model
 
             $stmt = $this->db->prepare($sql);
             $stmt->execute($params);
-            $leases = $stmt->fetchAll(\PDO::FETCH_ASSOC) ?: [];
+            $leases = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
             $rentStmt = $this->db->prepare("SELECT COALESCE(SUM(amount),0) as total_paid
                 FROM payments
@@ -1211,19 +1243,24 @@ class Payment extends Model
         $user->find($userId);
         
         $sql = "SELECT p.*, 
-                t.name as tenant_name, 
+                COALESCE(t.name, ab.guest_name, aw.guest_name) as tenant_name, 
                 t.id as tenant_id,
                 u.unit_number,
-                pr.name as property_name,
+                COALESCE(pr.name, p_ab.name, p_aw.name) as property_name,
                 mmp.phone_number,
                 mmp.transaction_code,
                 mmp.verification_status as mpesa_status,
-                ut.utility_type
+                ut.utility_type,
+                ab.booking_reference as airbnb_booking_ref
                 FROM payments p 
-                JOIN leases l ON p.lease_id = l.id 
-                JOIN tenants t ON l.tenant_id = t.id 
-                JOIN units u ON l.unit_id = u.id
-                JOIN properties pr ON u.property_id = pr.id
+                LEFT JOIN leases l ON p.lease_id = l.id 
+                LEFT JOIN tenants t ON l.tenant_id = t.id 
+                LEFT JOIN units u ON l.unit_id = u.id
+                LEFT JOIN properties pr ON u.property_id = pr.id
+                LEFT JOIN airbnb_bookings ab ON p.airbnb_booking_id = ab.id
+                LEFT JOIN properties p_ab ON ab.property_id = p_ab.id
+                LEFT JOIN airbnb_walkin_guests aw ON p.airbnb_walkin_guest_id = aw.id
+                LEFT JOIN properties p_aw ON aw.property_id = p_aw.id
                 LEFT JOIN manual_mpesa_payments mmp ON p.id = mmp.payment_id
                 LEFT JOIN utilities ut ON p.utility_id = ut.id";
 
@@ -1242,6 +1279,12 @@ class Payment extends Model
             }
             if ($user->isAgent()) {
                 $sql .= " OR pr.agent_id = ?";
+                $params[] = $userId;
+            }
+            if ($user->isAirbnbManager()) {
+                $sql .= " OR pr.airbnb_manager_id = ? OR p_ab.airbnb_manager_id = ? OR p_aw.airbnb_manager_id = ?";
+                $params[] = $userId;
+                $params[] = $userId;
                 $params[] = $userId;
             }
             // Caretaker assigned to property

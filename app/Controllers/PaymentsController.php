@@ -9,6 +9,9 @@ use App\Models\ActivityLog;
 use App\Models\RealtorClient;
 use App\Models\RealtorListing;
 use App\Models\RealtorContract;
+use App\Models\AirbnbBooking;
+use App\Models\AirbnbWalkinGuest;
+use App\Models\Invoice;
 
 class PaymentsController
 {
@@ -228,6 +231,30 @@ class PaymentsController
             return;
         }
 
+        if ($role === 'airbnb_manager') {
+            $bookingModel = new AirbnbBooking();
+            $walkinModel = new AirbnbWalkinGuest();
+            $invoiceModel = new Invoice();
+
+            $payments = $paymentModel->getPaymentsWithTenantInfo($this->userId);
+            $airbnbBookings = $bookingModel->getBookingsForUser($this->userId, $role);
+            $airbnbWalkins = $walkinModel->getWalkinGuestsForUser($this->userId, $role);
+            
+            // Only active/offered walkins for payment capture
+            $airbnbWalkins = array_filter($airbnbWalkins, fn($w) => in_array($w['status'], ['inquiry', 'offered']));
+            
+            $filters = ['status' => 'sent', 'visibility' => 'active'];
+            $invoices = $invoiceModel->search($filters, $this->userId);
+            
+            $tenants = [];
+            $pendingPaymentsCount = 0;
+            $propertyModel = new \App\Models\Property();
+            $properties = $propertyModel->getAll($this->userId);
+
+            require 'views/payments/index.php';
+            return;
+        }
+
         $tenantModel = new Tenant();
         $utilityModel = new \App\Models\Utility();
         $utilityReadingModel = new \App\Models\UtilityReading();
@@ -342,6 +369,132 @@ class PaymentsController
                 $paymentModel = new Payment();
 
                 $role = strtolower((string)($_SESSION['user_role'] ?? 'guest'));
+                
+                if ($role === 'airbnb_manager') {
+                    try {
+                        if (!verify_csrf_token()) {
+                            $_SESSION['flash_message'] = 'Invalid security token';
+                            $_SESSION['flash_type'] = 'danger';
+                            header('Location: ' . BASE_URL . '/payments');
+                            exit;
+                        }
+
+                        $category = $_POST['airbnb_payment_category'] ?? 'booking';
+                        $amount = (float)($_POST['amount'] ?? 0);
+                        $paymentDate = trim((string)($_POST['payment_date'] ?? date('Y-m-d')));
+                        $paymentMethod = trim((string)($_POST['payment_method'] ?? 'cash'));
+                        $reference = trim((string)($_POST['reference_number'] ?? ''));
+                        $status = trim((string)($_POST['status'] ?? 'completed'));
+                        $notes = trim((string)($_POST['notes'] ?? ''));
+
+                        $paymentData = [
+                            'amount' => $amount,
+                            'payment_date' => $paymentDate,
+                            'payment_method' => $paymentMethod,
+                            'reference_number' => ($reference !== '') ? $reference : null,
+                            'status' => $status,
+                            'notes' => $notes,
+                            'payment_type' => 'airbnb_' . $category
+                        ];
+
+                        if ($category === 'booking') {
+                            $bookingId = (int)($_POST['airbnb_booking_id'] ?? 0);
+                            if ($bookingId <= 0) {
+                                throw new \Exception('Booking is required');
+                            }
+                            $bookingModel = new AirbnbBooking();
+                            $booking = $bookingModel->getById($bookingId);
+                            if (!$booking) {
+                                throw new \Exception('Invalid booking selected');
+                            }
+                            $paymentData['airbnb_booking_id'] = $bookingId;
+                            
+                            $newPaid = (float)$booking['amount_paid'] + $amount;
+                            $payStatus = ($newPaid >= (float)$booking['final_total']) ? 'paid' : 'partial';
+                            
+                            $bookingModel->update($bookingId, [
+                                'amount_paid' => $newPaid,
+                                'payment_status' => $payStatus
+                            ]);
+                            $paymentData['notes'] = trim('Booking Ref: ' . $booking['booking_reference'] . ' | ' . $notes);
+                        } elseif ($category === 'walkin') {
+                            $walkinId = (int)($_POST['airbnb_walkin_guest_id'] ?? 0);
+                            if ($walkinId <= 0) {
+                                throw new \Exception('Walk-in guest is required');
+                            }
+                            $paymentData['airbnb_walkin_guest_id'] = $walkinId;
+                        } elseif ($category === 'invoice') {
+                            $invoiceId = (int)($_POST['invoice_id'] ?? 0);
+                            if ($invoiceId <= 0) {
+                                throw new \Exception('Invoice is required');
+                            }
+                            $invoiceModel = new Invoice();
+                            $invoice = $invoiceModel->find($invoiceId);
+                            if ($invoice) {
+                                $paymentData['lease_id'] = $invoice['lease_id'] ?? null;
+                                // NEW: If it's an Airbnb invoice, mark it as paid
+                                if (!empty($invoice['airbnb_booking_id']) || !empty($invoice['airbnb_walkin_guest_id'])) {
+                                    $db = \App\Database\Connection::getInstance()->getConnection();
+                                    $db->prepare("UPDATE invoices SET status = 'paid' WHERE id = ?")->execute([$invoiceId]);
+                                }
+                            }
+                        }
+
+                        $sql = "INSERT INTO payments (
+                                    airbnb_booking_id, airbnb_walkin_guest_id, amount, 
+                                    payment_date, payment_type, payment_method, 
+                                    reference_number, status, notes, lease_id, user_id
+                                ) VALUES (
+                                    :airbnb_booking_id, :airbnb_walkin_guest_id, :amount, 
+                                    :payment_date, :payment_type, :payment_method, 
+                                    :reference_number, :status, :notes, :lease_id, :user_id
+                                )";
+                        
+                        $db = \App\Database\Connection::getInstance()->getConnection();
+                        $stmt = $db->prepare($sql);
+                        $stmt->execute([
+                            'airbnb_booking_id' => $paymentData['airbnb_booking_id'] ?? null,
+                            'airbnb_walkin_guest_id' => $paymentData['airbnb_walkin_guest_id'] ?? null,
+                            'amount' => $paymentData['amount'],
+                            'payment_date' => $paymentData['payment_date'],
+                            'payment_type' => $paymentData['payment_type'],
+                            'payment_method' => $paymentData['payment_method'],
+                            'reference_number' => $paymentData['reference_number'],
+                            'status' => $paymentData['status'],
+                            'notes' => $paymentData['notes'],
+                            'lease_id' => $paymentData['lease_id'] ?? null,
+                            'user_id' => $_SESSION['user_id'] ?? null
+                        ]);
+                        $paymentId = $db->lastInsertId();
+
+                        if (!empty($_FILES['payment_attachments']['name'][0])) {
+                            $this->handlePaymentAttachments($paymentId);
+                        }
+
+                        try {
+                            $this->activityLog->add(
+                                $_SESSION['user_id'],
+                                $role,
+                                'payment.create',
+                                'payment',
+                                (int)$paymentId,
+                                null,
+                                json_encode($paymentData)
+                            );
+                        } catch (\Exception $e) {}
+
+                        $_SESSION['flash_message'] = 'Airbnb payment captured successfully!';
+                        $_SESSION['flash_type'] = 'success';
+                        header('Location: ' . BASE_URL . '/payments');
+                        exit;
+                    } catch (\Exception $e) {
+                        $_SESSION['flash_message'] = 'Error: ' . $e->getMessage();
+                        $_SESSION['flash_type'] = 'danger';
+                        header('Location: ' . BASE_URL . '/payments');
+                        exit;
+                    }
+                }
+
                 if ($role === 'realtor') {
                     try {
                         if (!verify_csrf_token()) {

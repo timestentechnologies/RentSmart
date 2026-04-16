@@ -10,6 +10,8 @@ use App\Models\AirbnbWalkinGuest;
 use App\Models\Property;
 use App\Models\Unit;
 use App\Models\User;
+use App\Models\Invoice;
+use App\Models\Payment;
 
 class AirbnbController
 {
@@ -32,6 +34,8 @@ class AirbnbController
         $this->property = new Property();
         $this->unit = new Unit();
         $this->user = new User();
+        $this->invoiceModel = new Invoice();
+        $this->paymentModel = new Payment();
     }
 
     /**
@@ -279,6 +283,10 @@ class AirbnbController
 
             // Create booking
             $bookingId = $this->bookingModel->createBooking($data);
+            $booking = $this->bookingModel->findById($bookingId);
+
+            // AUTO-CREATE INVOICE
+            $this->invoiceModel->createFromAirbnbBooking($booking, $auth['userId']);
 
             // Record initial payment if amount paid
             if ($data['amount_paid'] > 0) {
@@ -289,7 +297,13 @@ class AirbnbController
                 ], $auth['userId']);
             }
 
-            $_SESSION['success'] = 'Booking created successfully. Reference: ' . $this->bookingModel->findById($bookingId)['booking_reference'];
+            // Update walk-in guest status if converted
+            $walkinGuestId = $_POST['walkin_guest_id'] ?? null;
+            if ($walkinGuestId) {
+                $this->walkinModel->updateStatus($walkinGuestId, 'converted', $bookingId);
+            }
+
+            $_SESSION['success'] = 'Booking created successfully. Reference: ' . $booking['booking_reference'];
             header('Location: ' . BASE_URL . '/airbnb/bookings/' . $bookingId);
             exit;
         } catch (\Exception $e) {
@@ -477,18 +491,22 @@ class AirbnbController
      */
     private function recordPayment($bookingId, $data, $userId)
     {
-        $sql = "INSERT INTO airbnb_booking_payments (
-            booking_id, amount, payment_method, transaction_reference, 
-            payment_date, notes, recorded_by_user_id
-        ) VALUES (?, ?, ?, ?, NOW(), ?, ?)";
+        $booking = $this->bookingModel->findById($bookingId);
+        if (!$booking) return false;
+
+        // Use central payments table
+        $sql = "INSERT INTO payments (
+            airbnb_booking_id, amount, payment_method, reference_number, 
+            payment_date, payment_type, status, notes, user_id
+        ) VALUES (?, ?, ?, ?, CURDATE(), 'airbnb_booking', 'completed', ?, ?)";
         
         $stmt = $this->db->prepare($sql);
         return $stmt->execute([
             $bookingId,
             $data['amount'],
             $data['payment_method'],
-            $data['transaction_reference'] ?? null,
-            $data['notes'] ?? null,
+            $data['transaction_reference'] ?? $booking['booking_reference'],
+            $data['notes'] ?? 'Airbnb Payment',
             $userId
         ]);
     }
@@ -498,7 +516,7 @@ class AirbnbController
      */
     private function getBookingPayments($bookingId)
     {
-        $stmt = $this->db->prepare("SELECT * FROM airbnb_booking_payments WHERE booking_id = ? ORDER BY payment_date DESC");
+        $stmt = $this->db->prepare("SELECT * FROM payments WHERE airbnb_booking_id = ? ORDER BY payment_date DESC");
         $stmt->execute([$bookingId]);
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
     }
@@ -647,6 +665,10 @@ class AirbnbController
                 }
 
                 $guestId = $this->walkinModel->create($data);
+                $guest = $this->walkinModel->findById($guestId);
+
+                // AUTO-CREATE DRAFT INVOICE
+                $this->invoiceModel->createFromAirbnbWalkin($guest, $auth['userId']);
 
                 $_SESSION['success'] = 'Walk-in guest inquiry recorded successfully';
                 header('Location: ' . BASE_URL . '/airbnb/walkin-guests');

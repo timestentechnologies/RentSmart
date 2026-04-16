@@ -70,7 +70,11 @@ class Invoice extends Model
             user_id INT NULL,
             created_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            airbnb_booking_id INT NULL,
+            airbnb_walkin_guest_id INT NULL,
             INDEX idx_tenant (tenant_id),
+            INDEX idx_airbnb_booking (airbnb_booking_id),
+            INDEX idx_airbnb_walkin (airbnb_walkin_guest_id),
             INDEX idx_issue_date (issue_date),
             INDEX idx_status (status)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
@@ -96,6 +100,16 @@ class Invoice extends Model
         } catch (\Exception $e) {}
         try {
             $this->db->exec("ALTER TABLE invoices ADD INDEX idx_archived_at (archived_at)");
+        } catch (\Exception $e) {}
+
+        // Ensure Airbnb columns exist
+        try {
+            $this->db->exec("ALTER TABLE invoices ADD COLUMN airbnb_booking_id INT NULL AFTER tenant_id");
+            $this->db->exec("CREATE INDEX idx_airbnb_booking ON invoices (airbnb_booking_id)");
+        } catch (\Exception $e) {}
+        try {
+            $this->db->exec("ALTER TABLE invoices ADD COLUMN airbnb_walkin_guest_id INT NULL AFTER airbnb_booking_id");
+            $this->db->exec("CREATE INDEX idx_airbnb_walkin ON invoices (airbnb_walkin_guest_id)");
         } catch (\Exception $e) {}
     }
 
@@ -719,5 +733,85 @@ class Invoice extends Model
         foreach ($invoices as $inv) {
             $this->updateStatusForTenantMonth((int)$inv['tenant_id'], $inv['issue_date']);
         }
+    }
+
+    /**
+     * Create an invoice for an Airbnb booking
+     */
+    public function createFromAirbnbBooking($booking, $userId)
+    {
+        if (empty($booking['id'])) return 0;
+
+        $items = [
+            [
+                'description' => 'Airbnb Stay: ' . ($booking['booking_reference'] ?? ('#'.$booking['id'])) . ' (' . ($booking['nights'] ?? 1) . ' nights)',
+                'quantity' => 1,
+                'unit_price' => $booking['total_amount'] ?? 0
+            ]
+        ];
+
+        if (!empty($booking['cleaning_fee']) && $booking['cleaning_fee'] > 0) {
+            $items[] = ['description' => 'Cleaning Fee', 'quantity' => 1, 'unit_price' => $booking['cleaning_fee']];
+        }
+
+        if (!empty($booking['security_deposit']) && $booking['security_deposit'] > 0) {
+            $items[] = ['description' => 'Security Deposit (Refundable)', 'quantity' => 1, 'unit_price' => $booking['security_deposit']];
+        }
+
+        if (!empty($booking['tax_amount']) && $booking['tax_amount'] > 0) {
+            $items[] = ['description' => 'Tax', 'quantity' => 1, 'unit_price' => $booking['tax_amount']];
+        }
+
+        if (!empty($booking['discount_amount']) && $booking['discount_amount'] > 0) {
+            $items[] = ['description' => 'Discount', 'quantity' => 1, 'unit_price' => -($booking['discount_amount'])];
+        }
+
+        $data = [
+            'tenant_id' => null,
+            'issue_date' => date('Y-m-d'),
+            'due_date' => $booking['check_in_date'] ?? date('Y-m-d'),
+            'status' => 'sent',
+            'notes' => 'AIRBNB_BOOKING#' . $booking['id'] . ' | Guest: ' . ($booking['guest_name'] ?? 'Unknown'),
+            'user_id' => $userId
+        ];
+
+        $invoiceId = $this->createInvoice($data, $items);
+        
+        // Link it
+        $this->db->prepare("UPDATE invoices SET airbnb_booking_id = ? WHERE id = ?")->execute([$booking['id'], $invoiceId]);
+        
+        return $invoiceId;
+    }
+
+    /**
+     * Create an invoice for an Airbnb walk-in (Draft)
+     */
+    public function createFromAirbnbWalkin($walkin, $userId)
+    {
+        if (empty($walkin['id'])) return 0;
+
+        $items = [
+            [
+                'description' => 'Airbnb Walk-in Inquiry: ' . ($walkin['guest_name'] ?? 'Guest'),
+                'quantity' => 1,
+                'unit_price' => 0 // Use placeholder or calculate from budget_range
+            ]
+        ];
+
+        $data = [
+            'tenant_id' => null,
+            'issue_date' => date('Y-m-d'),
+            'due_date' => $walkin['preferred_check_in'] ?? date('Y-m-d'),
+            'status' => 'draft',
+            'notes' => 'AIRBNB_WALKIN#' . $walkin['id'] . ' | Inquiry for ' . ($walkin['property_name'] ?? 'Property'),
+            'user_id' => $userId
+        ];
+
+        $invoiceId = $this->createInvoice($data, $items);
+        
+        // Link it
+        $this->db->prepare("UPDATE invoices SET airbnb_walkin_guest_id = ? WHERE id = ?")->execute([$walkin['id'], $invoiceId]);
+        
+        return $invoiceId;
     }
 }
