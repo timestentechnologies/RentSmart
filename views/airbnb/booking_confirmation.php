@@ -288,12 +288,71 @@
                         </div>
                     </div>
 
-                    <button class="btn btn-brand w-100" id="btnConfirmPayment">
-                        Confirm & Reserve
+                    <button class="btn btn-brand w-100" id="btnOpenPaymentModal">
+                        Proceed to Payment
                     </button>
-                    
-                    <div id="paymentStatus" class="mt-2 text-center small d-none">
-                        <span class="spinner-border spinner-border-sm text-accent me-1"></span> <span id="paymentStatusText">Processing...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment Modal -->
+        <div class="modal fade" id="paymentModal" tabindex="-1" aria-labelledby="paymentModalLabel" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow-lg">
+                    <div class="modal-header bg-accent text-white">
+                        <h5 class="modal-title fw-bold" id="paymentModalLabel">
+                            <i class="fas fa-shield-alt me-2"></i>Complete Payment
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <div class="text-center mb-4">
+                            <div class="display-6 text-accent mb-2">
+                                <i id="modalMethodIcon" class="fas fa-credit-card"></i>
+                            </div>
+                            <h4 id="modalMethodName" class="fw-bold mb-1">Payment Method</h4>
+                            <p class="text-muted small">Reference: <?= htmlspecialchars($booking['booking_reference']) ?></p>
+                        </div>
+
+                        <div id="modalInstructionsBox" class="bg-light rounded p-3 mb-4 text-center">
+                            <div id="modalInstructions" class="fw-bold text-primary mb-0"></div>
+                        </div>
+
+                        <!-- M-Pesa Modal Fields -->
+                        <div id="modalMpesaFields" class="d-none">
+                            <div class="mb-3">
+                                <label class="form-label small fw-bold text-muted">M-Pesa Phone Number</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white border-end-0"><i class="fas fa-phone-alt text-muted small"></i></span>
+                                    <input type="text" id="modalMpesaPhone" class="form-control border-start-0 ps-0" placeholder="07XXXXXXXX" value="<?= htmlspecialchars($booking['guest_phone']) ?>">
+                                </div>
+                            </div>
+                            <div id="modalManualMpesaFields" class="d-none">
+                                <label class="form-label small fw-bold text-muted">Transaction Code</label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white border-end-0"><i class="fas fa-key text-muted small"></i></span>
+                                    <input type="text" id="modalMpesaCode" class="form-control border-start-0 ps-0" placeholder="e.g. RKL7W8X9Y1" style="text-transform: uppercase;">
+                                </div>
+                                <div class="form-text mt-1 small">Enter the code received in your confirmation SMS.</div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center mb-4 bg-light rounded p-2 px-3">
+                            <span class="text-muted small">Total Payable:</span>
+                            <span class="h5 fw-bold text-accent mb-0">KES <?= number_format($booking['final_total'], 2) ?></span>
+                        </div>
+
+                        <button class="btn btn-brand w-100 py-2 fw-bold" id="btnConfirmPayment">
+                            Confirm & Complete Reservation
+                        </button>
+                        
+                        <div id="paymentStatus" class="mt-3 text-center small d-none">
+                            <div class="spinner-border spinner-border-sm text-accent me-2" role="status"></div>
+                            <span id="paymentStatusText" class="fw-medium">Processing...</span>
+                        </div>
+                    </div>
+                    <div class="modal-footer bg-light border-0 justify-content-center py-2">
+                        <small class="text-muted"><i class="fas fa-lock me-1"></i> Secure Encrypted Transaction</small>
                     </div>
                 </div>
             </div>
@@ -409,18 +468,53 @@
                 updatePaymentUI();
             });
 
+            $('#btnOpenPaymentModal').click(function() {
+                const card = $('.payment-card.active');
+                if (!card.length) return;
+
+                const name = card.data('method-name');
+                const type = card.data('method-type');
+                let iconClass = 'fa-credit-card';
+                if (card.find('i').length) {
+                    iconClass = card.find('i').attr('class').split(' ').filter(c => c.startsWith('fa-')).join(' ');
+                }
+
+                $('#modalMethodName').text(name);
+                $('#modalMethodIcon').attr('class', iconClass);
+                
+                // Reset fields
+                $('#modalMpesaFields').addClass('d-none');
+                $('#modalManualMpesaFields').addClass('d-none');
+                
+                let instructions = $('#mpesaInstructions').text();
+                if (type === 'cash') {
+                    instructions = 'Payment can be settled at the property reception upon check-in.';
+                } else if (!instructions) {
+                    instructions = 'Please follow the prompts on your device to finalize the payment.';
+                }
+                $('#modalInstructions').text(instructions);
+
+                if (type === 'mpesa_manual' || type === 'mpesa_stk') {
+                    $('#modalMpesaFields').removeClass('d-none');
+                    if (type === 'mpesa_manual') $('#modalManualMpesaFields').removeClass('d-none');
+                }
+
+                const paymentModal = new bootstrap.Modal(document.getElementById('paymentModal'));
+                paymentModal.show();
+            });
+
             $('#btnWhatsAppShare').click(function() {
                 const reference = '<?php echo $booking['booking_reference']; ?>';
                 const property = '<?php echo addslashes($booking['property_name']); ?>';
                 const total = '<?php echo number_format($booking['final_total'], 2); ?>';
                 const checkIn = '<?php echo date('M d', strtotime($booking['check_in_date'])); ?>';
-                const pdfUrl = window.location.origin + '<?= BASE_URL ?>/airbnb/booking-confirmation/' + reference + '/download-receipt';
+                const confirmationUrl = window.location.href;
                 
                 const text = `*Booking Confirmation - ${property}*\n` +
                              `Reference: ${reference}\n` +
                              `Check-in: ${checkIn}\n` +
                              `Total: KES ${total}\n\n` +
-                             `Download your receipt here: ${pdfUrl}`;
+                             `View Details & Receipt: ${confirmationUrl}`;
                 
                 window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
             });
@@ -436,12 +530,12 @@
 
                 // Basic validation for M-Pesa
                 if (selectedMethodType === 'mpesa_manual' || selectedMethodType === 'mpesa_stk') {
-                    const phone = $('#mpesaPhone').val();
+                    const phone = $('#modalMpesaPhone').val();
                     if (!phone) return alert('Phone number is required');
-                    if (selectedMethodType === 'mpesa_manual' && !$('#mpesaCode').val()) return alert('Transaction Code is required');
+                    if (selectedMethodType === 'mpesa_manual' && !$('#modalMpesaCode').val()) return alert('Transaction Code is required');
                 }
 
-                btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Processing...');
+                btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Completing...');
                 status.removeClass('d-none');
                 statusText.text(selectedMethodType === 'mpesa_stk' ? 'Sending prompt...' : 'Processing...');
 
@@ -449,8 +543,8 @@
                     method: selectedMethodName,
                     method_type: selectedMethodType,
                     method_id: selectedMethodId,
-                    mpesa_phone: $('#mpesaPhone').val(),
-                    mpesa_transaction_code: $('#mpesaCode').val(),
+                    mpesa_phone: $('#modalMpesaPhone').val(),
+                    mpesa_transaction_code: $('#modalMpesaCode').val(),
                     csrf_token: $('meta[name="csrf-token"]').attr('content')
                 };
 
@@ -465,10 +559,11 @@
                     }, function(res) {
                         if (res.success) {
                             alert('STK Prompt sent! Please complete on your phone. We will verify and confirm your booking automatically.');
+                            bootstrap.Modal.getInstance(document.getElementById('paymentModal')).hide();
                             window.location.reload();
                         } else {
                             alert('STK Error: ' + res.message);
-                            btn.prop('disabled', false).text('Confirm & Reserve');
+                            btn.prop('disabled', false).text('Confirm & Complete Reservation');
                             status.addClass('d-none');
                         }
                     }, 'json').fail(function() {
@@ -487,17 +582,18 @@
                     success: function(response) {
                         if (response.success) {
                             alert('Booking Reserved Successfully!');
+                            bootstrap.Modal.getInstance(document.getElementById('paymentModal')).hide();
                             window.location.reload();
                         } else {
                             alert('Error: ' + response.message);
-                            btn.prop('disabled', false).text('Confirm & Reserve');
+                            btn.prop('disabled', false).text('Confirm & Complete Reservation');
                             status.addClass('d-none');
                         }
                     },
                     error: function(xhr) {
                         console.error('AJAX Error:', xhr.responseText);
                         alert('An error occurred. Please try again or contact support.');
-                        btn.prop('disabled', false).text('Confirm & Reserve');
+                        btn.prop('disabled', false).text('Confirm & Complete Reservation');
                         status.addClass('d-none');
                     }
                 });

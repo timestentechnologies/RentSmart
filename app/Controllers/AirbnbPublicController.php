@@ -883,10 +883,13 @@ class AirbnbPublicController
             $mail->isHTML(true);
             $mail->Subject = "Booking Confirmation: " . $booking['property_name'] . " (" . $booking['booking_reference'] . ")";
             
+            $confirmationUrl = BASE_URL . "/airbnb/booking-confirmation/" . $booking['booking_reference'];
+            
             $body = "<h2>Hello " . htmlspecialchars($booking['guest_name']) . ",</h2>";
             $body .= "<p>Your booking at <strong>" . htmlspecialchars($booking['property_name']) . "</strong> has been confirmed.</p>";
             $body .= "<p><strong>Reference:</strong> " . htmlspecialchars($booking['booking_reference']) . "<br>";
             $body .= "<strong>Dates:</strong> " . date('M d, Y', strtotime($booking['check_in_date'])) . " to " . date('M d, Y', strtotime($booking['check_out_date'])) . "</p>";
+            $body .= "<p><strong>View Details & Receipt:</strong> <a href='" . $confirmationUrl . "'>" . $confirmationUrl . "</a></p>";
             $body .= "<p>Please find your booking receipt attached to this email.</p>";
             $body .= "<p>We look forward to hosting you!</p>";
             $body .= "<br><p>Best regards,<br>" . htmlspecialchars($siteName) . " Team</p>";

@@ -122,8 +122,16 @@
                     <td class="text-right">KES <?= number_format($booking['security_deposit'], 2) ?></td>
                 </tr>
                 <tr class="total-row">
-                    <td>Total Paid</td>
+                    <td>Total Payable</td>
                     <td class="text-right accent">KES <?= number_format($booking['final_total'], 2) ?></td>
+                </tr>
+                <tr>
+                    <td class="label">Payment Status:</td>
+                    <td class="text-right">
+                        <span style="color: <?= ($booking['payment_status'] === 'paid' ? '#155724' : '#856404') ?>; font-weight: bold; text-transform: uppercase;">
+                            <?= ($booking['payment_status'] === 'paid' ? 'PAID' : 'PENDING VERIFICATION') ?>
+                        </span>
+                    </td>
                 </tr>
             </table>
         </div>
