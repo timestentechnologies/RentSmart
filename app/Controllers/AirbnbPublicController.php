@@ -176,9 +176,16 @@ class AirbnbPublicController
      */
     public function property($propertyId)
     {
+        // Force error display for debugging
+        error_reporting(E_ALL);
+        ini_set('display_errors', 1);
+        
+        echo "<!-- Debug: Starting property method for ID: $propertyId -->";
+        
         try {
             // Check if property exists and is enabled for Airbnb
             $property = $this->property->find($propertyId);
+            echo "<!-- Debug: Property found -->";
             if (!$property) {
                 http_response_code(404);
                 require 'views/errors/404.php';
@@ -186,7 +193,9 @@ class AirbnbPublicController
             }
 
             // Check if Airbnb is enabled for this property
+            echo "<!-- Debug: Checking airbnb settings -->";
             $airbnbSettings = $this->propertyModel->getByPropertyId($propertyId);
+            echo "<!-- Debug: Airbnb settings checked -->";
             if (!$airbnbSettings || !$airbnbSettings['is_airbnb_enabled']) {
                 http_response_code(404);
                 require 'views/errors/404.php';
@@ -194,6 +203,7 @@ class AirbnbPublicController
             }
 
             // Get property images from file_uploads table
+            echo "<!-- Debug: Getting property images -->";
             $stmt = $this->db->prepare("SELECT * FROM file_uploads WHERE entity_type = 'property' AND entity_id = ? AND file_type = 'image' ORDER BY created_at DESC");
             $stmt->execute([$propertyId]);
             $property['images'] = $stmt->fetchAll(\PDO::FETCH_ASSOC);
@@ -211,6 +221,7 @@ class AirbnbPublicController
             }
 
             // Get eligible units with rates and property settings
+            echo "<!-- Debug: Getting units query -->";
             $stmt = $this->db->prepare("
                 SELECT 
                     u.id,
@@ -234,7 +245,9 @@ class AirbnbPublicController
                 WHERE u.property_id = ? AND u.is_airbnb_eligible = 1
             ");
             $stmt->execute([$propertyId]);
+            echo "<!-- Debug: Units query executed -->";
             $units = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+            echo "<!-- Debug: Units fetched: " . count($units) . " -->";
 
             // Get unit images from file_uploads table
             foreach ($units as &$unit) {
@@ -257,13 +270,18 @@ class AirbnbPublicController
             }
 
             // Get settings for display
+            echo "<!-- Debug: Getting settings -->";
             $settings = $this->settings->getAll();
+            echo "<!-- Debug: Settings loaded -->";
 
             // Make airbnbSettings available to view
+            echo "<!-- Debug: Loading view -->";
             $airbnbSettings = $this->propertyModel->getByPropertyId($propertyId);
 
             // Load the view
+            echo "<!-- Debug: Including view -->";
             require 'views/airbnb/property.php';
+            echo "<!-- Debug: View loaded successfully -->";
         } catch (\Exception $e) {
             error_log('Error loading property page: ' . $e->getMessage());
             http_response_code(500);
