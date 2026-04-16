@@ -1077,6 +1077,34 @@ class AdminController
                     error_log("Realtor module data deleted successfully");
                 }
 
+                // Airbnb Module Deletion (bookings/walk-ins managed by this specific user)
+                error_log("Deleting user-managed Airbnb data...");
+                try {
+                    // Delete invoices associated with this user's bookings first
+                    $db->prepare("DELETE FROM invoice_items WHERE invoice_id IN (
+                        SELECT id FROM invoices WHERE airbnb_booking_id IN (SELECT id FROM airbnb_bookings WHERE booked_by_user_id = ?)
+                    )")->execute([(int)$id]);
+                    $db->prepare("DELETE FROM invoices WHERE airbnb_booking_id IN (SELECT id FROM airbnb_bookings WHERE booked_by_user_id = ?)")->execute([(int)$id]);
+                    
+                    // Delete the bookings themselves
+                    $stmt = $db->prepare("DELETE FROM airbnb_bookings WHERE booked_by_user_id = ?");
+                    $stmt->execute([(int)$id]);
+                    $deleted['airbnb_bookings'] = (int)$stmt->rowCount();
+
+                    // Delete invoices associated with walk-in guests
+                    $db->prepare("DELETE FROM invoice_items WHERE invoice_id IN (
+                        SELECT id FROM invoices WHERE airbnb_walkin_guest_id IN (SELECT id FROM airbnb_walkin_guests WHERE handled_by_user_id = ?)
+                    )")->execute([(int)$id]);
+                    $db->prepare("DELETE FROM invoices WHERE airbnb_walkin_guest_id IN (SELECT id FROM airbnb_walkin_guests WHERE handled_by_user_id = ?)")->execute([(int)$id]);
+
+                    // Delete the walk-ins themselves
+                    $stmt = $db->prepare("DELETE FROM airbnb_walkin_guests WHERE handled_by_user_id = ?");
+                    $stmt->execute([(int)$id]);
+                    $deleted['airbnb_walkin_guests'] = (int)$stmt->rowCount();
+                } catch (\Exception $e) {
+                    error_log("Airbnb cleanup error: " . $e->getMessage());
+                }
+
                 // Treat landlord/manager/agent as property owners: delete all their property data.
                 // For caretakers/other staff: only unlink assignments.
                 $isPropertyOwnerRole = in_array((string)($user['role'] ?? ''), ['landlord', 'manager', 'agent'], true);

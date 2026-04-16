@@ -571,17 +571,35 @@ class Property extends Model
 
             // Delete Airbnb records before deleting units/property
             try {
-                // Delete Airbnb unit rates for units of this property
+                // 1. Delete invoices associated with this property's bookings
+                $this->db->prepare("DELETE FROM invoice_items WHERE invoice_id IN (
+                    SELECT id FROM invoices WHERE airbnb_booking_id IN (SELECT id FROM airbnb_bookings WHERE property_id = ?)
+                )")->execute([(int)$id]);
+                $this->db->prepare("DELETE FROM invoices WHERE airbnb_booking_id IN (SELECT id FROM airbnb_bookings WHERE property_id = ?)")->execute([(int)$id]);
+
+                // 2. Delete the airbnb bookings themselves
+                $this->db->prepare("DELETE FROM airbnb_bookings WHERE property_id = ?")->execute([(int)$id]);
+
+                // 3. Delete invoices associated with walk-in guests for this property
+                $this->db->prepare("DELETE FROM invoice_items WHERE invoice_id IN (
+                    SELECT id FROM invoices WHERE airbnb_walkin_guest_id IN (SELECT id FROM airbnb_walkin_guests WHERE property_id = ?)
+                )")->execute([(int)$id]);
+                $this->db->prepare("DELETE FROM invoices WHERE airbnb_walkin_guest_id IN (SELECT id FROM airbnb_walkin_guests WHERE property_id = ?)")->execute([(int)$id]);
+
+                // 4. Delete the walk-ins themselves
+                $this->db->prepare("DELETE FROM airbnb_walkin_guests WHERE property_id = ?")->execute([(int)$id]);
+
+                // 5. Delete Airbnb unit rates for units of this property
                 if (!empty($units)) {
                     $placeholders = str_repeat('?,', count($units) - 1) . '?';
                     $stmt = $this->db->prepare("DELETE FROM airbnb_unit_rates WHERE unit_id IN ($placeholders)");
                     $stmt->execute($units);
                 }
-                // Delete Airbnb property settings
+                // 6. Delete Airbnb property settings
                 $stmt = $this->db->prepare("DELETE FROM airbnb_properties WHERE property_id = ?");
                 $stmt->execute([(int)$id]);
             } catch (\Exception $e) {
-                // Continue even if Airbnb tables don't exist
+                error_log("Airbnb property cleanup error: " . $e->getMessage());
             }
 
             // Remove property-scoped records that may not be protected by FK cascades
