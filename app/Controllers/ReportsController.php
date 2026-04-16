@@ -99,7 +99,7 @@ class ReportsController
                 $end = date('Y-m-t');
 
                 $bookingModel = new \App\Models\AirbnbBooking();
-                $propertyIds = $this->property->getAccessiblePropertyIds($userId);
+                $propertyIds = $this->user->getAccessiblePropertyIds($userId);
                 $airbnbStats = $bookingModel->getBookingStats($propertyIds, $start, $end);
                 
                 // Calculate ADR (Average Daily Rate)
@@ -108,18 +108,58 @@ class ReportsController
                     $adr = $airbnbStats['total_revenue'] / $airbnbStats['total_nights'];
                 }
 
+                $occupancyData = $bookingModel->getOccupancyData($propertyIds);
+                $recentBookings = $bookingModel->getAllBookings([
+                    'property_id' => $propertyIds,
+                    'check_in_from' => $start,
+                    'check_in_to' => $end,
+                    'limit' => 5
+                ]);
+
+                // Calculate occupancy rate from bookings
+                $totalUnits = count($propertyIds);
+                $occupiedNights = array_sum(array_column($occupancyData, 'nights_booked'));
+                $totalPossibleNights = $totalUnits * date('t'); // days in current month
+                $occupancyRate = $totalPossibleNights > 0 ? ($occupiedNights / $totalPossibleNights) * 100 : 0;
+
                 $stats = [
                     'total_revenue' => $airbnbStats['total_revenue'] ?? 0,
                     'total_bookings' => $airbnbStats['total_bookings'] ?? 0,
                     'adr' => $adr,
-                    'occupancy_data' => $bookingModel->getOccupancyData($propertyIds),
-                    'recent_payments' => $this->payment->getRecent(5, $userId)
+                    'occupancy_data' => $occupancyData,
+                    'recent_payments' => $recentBookings // Airbnb bookings as "payments"
                 ];
+
+                // Prepare occupancy array for the view
+                $occupancy = [
+                    'occupancy_rate' => $occupancyRate,
+                    'occupied_units' => $airbnbStats['completed_bookings'] ?? 0, // Completed stays
+                    'total_units' => $airbnbStats['total_bookings'] ?? 0 // Total bookings as "units"
+                ];
+
+                // Get Airbnb revenue by property
+                $propertyRevenue = [];
+                if (!empty($propertyIds) && is_array($propertyIds)) {
+                    $placeholders = implode(',', array_fill(0, count($propertyIds), '?'));
+                    $sql = "SELECT p.id, p.name, COALESCE(SUM(ab.final_total), 0) as revenue
+                            FROM properties p
+                            LEFT JOIN airbnb_bookings ab ON p.id = ab.property_id 
+                                AND ab.check_in_date BETWEEN ? AND ?
+                                AND ab.status != 'cancelled'
+                            WHERE p.id IN ($placeholders)
+                            GROUP BY p.id, p.name
+                            ORDER BY revenue DESC";
+                    $stmt = $this->db->prepare($sql);
+                    $params = array_merge([$start, $end], $propertyIds);
+                    $stmt->execute($params);
+                    $propertyRevenue = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+                }
 
                 echo view('reports/index', [
                     'title' => 'Reports',
                     'stats' => $stats,
-                    'propertyRevenue' => $this->payment->getPaymentsByProperty($userId),
+                    'occupancy' => $occupancy,
+                    'propertyRevenue' => $propertyRevenue,
                     'users' => null,
                     'isAdmin' => false,
                     'isRealtor' => false,
@@ -506,7 +546,7 @@ class ReportsController
     private function getAirbnbPerformanceReport($startDate, $endDate, $userId)
     {
         $bookingModel = new \App\Models\AirbnbBooking();
-        $propertyIds = $this->property->getAccessiblePropertyIds($userId);
+        $propertyIds = $this->user->getAccessiblePropertyIds($userId);
         
         $stats = $bookingModel->getBookingStats($propertyIds, $startDate, $endDate);
         $recentBookings = $bookingModel->getAllBookings([

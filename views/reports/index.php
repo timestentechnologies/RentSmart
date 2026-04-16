@@ -1,7 +1,7 @@
 <?php
 ob_start();
 $stats = $stats ?? [];
-$occupancy = $stats['occupancy'] ?? ['occupancy_rate' => 0, 'occupied_units' => 0, 'total_units' => 0];
+$occupancy = $occupancy ?? $stats['occupancy'] ?? ['occupancy_rate' => 0, 'occupied_units' => 0, 'total_units' => 0];
 $isAdmin = $isAdmin ?? false;
 $isRealtor = $isRealtor ?? false;
 $isAirbnbManager = $isAirbnbManager ?? false;
@@ -135,7 +135,7 @@ $users = $users ?? [];
     </div>
 
     <!-- Report Generator -->
-    <div class="card mb-4">
+    <div class="card mb-4" style="position: relative; z-index: 100;">
         <div class="card-header">
             <h5 class="card-title mb-0">Generate Reports</h5>
         </div>
@@ -208,18 +208,17 @@ $users = $users ?? [];
             <div class="card h-100">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="card-title mb-0">Financial Overview</h5>
-                    <div class="dropdown">
-                        <button class="btn btn-link dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                            <i class="bi bi-three-dots-vertical"></i>
-                        </button>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item"
-                                    href="<?= BASE_URL ?>/reports/generate?type=<?= $isRealtor ? 'realtor_financial' : 'financial' ?>&format=pdf">Export
-                                    as PDF</a></li>
-                            <li><a class="dropdown-item"
-                                    href="<?= BASE_URL ?>/reports/generate?type=<?= $isRealtor ? 'realtor_financial' : 'financial' ?>&format=csv">Export
-                                    as CSV</a></li>
-                        </ul>
+                    <div class="d-flex gap-2">
+                        <a href="<?= BASE_URL ?>/reports/generate?type=<?= $isRealtor ? 'realtor_financial' : 'financial' ?>&format=pdf"
+                           class="btn btn-sm" style="background-color: #fd7e14; border-color: #fd7e14; color: white;"
+                           title="Export as PDF">
+                            <i class="bi bi-file-pdf"></i>
+                        </a>
+                        <a href="<?= BASE_URL ?>/reports/generate?type=<?= $isRealtor ? 'realtor_financial' : 'financial' ?>&format=csv"
+                           class="btn btn-sm" style="background-color: #6f42c1; border-color: #6f42c1; color: white;"
+                           title="Export as CSV">
+                            <i class="bi bi-filetype-csv"></i>
+                        </a>
                     </div>
                 </div>
                 <div class="card-body">
@@ -243,8 +242,8 @@ $users = $users ?? [];
                                         <tr>
                                             <td><?= htmlspecialchars($isRealtor ? ($payment['client_name'] ?? 'N/A') : ($isAirbnbManager ? ($payment['guest_name'] ?? 'N/A') : ($payment['tenant_name'] ?? 'N/A'))) ?>
                                             </td>
-                                            <td>Ksh<?= number_format($payment['amount'], 2) ?></td>
-                                            <td><?= date('M j, Y', strtotime($payment['payment_date'])) ?></td>
+                                            <td>Ksh<?= number_format($isAirbnbManager ? ($payment['final_total'] ?? 0) : ($payment['amount'] ?? 0), 2) ?></td>
+                                            <td><?= date('M j, Y', strtotime($isAirbnbManager ? ($payment['check_in_date'] ?? date('Y-m-d')) : ($payment['payment_date'] ?? date('Y-m-d')))) ?></td>
                                             <td><span class="badge bg-success">Completed</span></td>
                                         </tr>
                                     <?php endforeach; ?>
@@ -262,18 +261,17 @@ $users = $users ?? [];
                 <div class="card h-100">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="card-title mb-0">Occupancy Overview</h5>
-                        <div class="dropdown">
-                            <button class="btn btn-link dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                <i class="bi bi-three-dots-vertical"></i>
-                            </button>
-                            <ul class="dropdown-menu">
-                                <li><a class="dropdown-item"
-                                        href="<?= BASE_URL ?>/reports/generate?type=occupancy&format=pdf">Export as PDF</a>
-                                </li>
-                                <li><a class="dropdown-item"
-                                        href="<?= BASE_URL ?>/reports/generate?type=occupancy&format=csv">Export as CSV</a>
-                                </li>
-                            </ul>
+                        <div class="d-flex gap-2">
+                            <a href="<?= BASE_URL ?>/reports/generate?type=occupancy&format=pdf"
+                               class="btn btn-sm" style="background-color: #fd7e14; border-color: #fd7e14; color: white;"
+                               title="Export as PDF">
+                                <i class="bi bi-file-pdf"></i>
+                            </a>
+                            <a href="<?= BASE_URL ?>/reports/generate?type=occupancy&format=csv"
+                               class="btn btn-sm" style="background-color: #6f42c1; border-color: #6f42c1; color: white;"
+                               title="Export as CSV">
+                                <i class="bi bi-filetype-csv"></i>
+                            </a>
                         </div>
                     </div>
                     <div class="card-body">
@@ -292,17 +290,17 @@ $users = $users ?? [];
                         <div class="row text-center">
                             <div class="col">
                                 <h3 class="fw-bold text-success"><?= $occupancy['occupied_units'] ?></h3>
-                                <p class="text-muted mb-0">Occupied Units</p>
+                                <p class="text-muted mb-0"><?= $isAirbnbManager ? 'Completed Stays' : 'Occupied Units' ?></p>
                             </div>
                             <div class="col">
                                 <h3 class="fw-bold text-warning">
                                     <?= $occupancy['total_units'] - $occupancy['occupied_units'] ?>
                                 </h3>
-                                <p class="text-muted mb-0">Vacant Units</p>
+                                <p class="text-muted mb-0"><?= $isAirbnbManager ? 'Active/Upcoming' : 'Vacant Units' ?></p>
                             </div>
                             <div class="col">
                                 <h3 class="fw-bold text-info"><?= $occupancy['total_units'] ?></h3>
-                                <p class="text-muted mb-0">Total Units</p>
+                                <p class="text-muted mb-0"><?= $isAirbnbManager ? 'Total Bookings' : 'Total Units' ?></p>
                             </div>
                         </div>
                     </div>
@@ -313,18 +311,17 @@ $users = $users ?? [];
                 <div class="card h-100">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="card-title mb-0">Listings Overview</h5>
-                        <div class="dropdown">
-                            <button class="btn btn-link dropdown-toggle" type="button" data-bs-toggle="dropdown">
-                                <i class="bi bi-three-dots-vertical"></i>
-                            </button>
-                            <ul class="dropdown-menu">
-                                <li><a class="dropdown-item"
-                                        href="<?= BASE_URL ?>/reports/generate?type=realtor_listings&format=pdf">Export as
-                                        PDF</a></li>
-                                <li><a class="dropdown-item"
-                                        href="<?= BASE_URL ?>/reports/generate?type=realtor_listings&format=csv">Export as
-                                        CSV</a></li>
-                            </ul>
+                        <div class="d-flex gap-2">
+                            <a href="<?= BASE_URL ?>/reports/generate?type=realtor_listings&format=pdf"
+                               class="btn btn-sm" style="background-color: #fd7e14; border-color: #fd7e14; color: white;"
+                               title="Export as PDF">
+                                <i class="bi bi-file-pdf"></i>
+                            </a>
+                            <a href="<?= BASE_URL ?>/reports/generate?type=realtor_listings&format=csv"
+                               class="btn btn-sm" style="background-color: #6f42c1; border-color: #6f42c1; color: white;"
+                               title="Export as CSV">
+                                <i class="bi bi-filetype-csv"></i>
+                            </a>
                         </div>
                     </div>
                     <div class="card-body">

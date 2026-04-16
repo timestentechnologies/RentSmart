@@ -202,6 +202,12 @@ class AirbnbBooking extends Model
 
         $sql .= " ORDER BY b.check_in_date DESC, b.created_at DESC";
 
+        // Handle limit - directly interpolate since we validate it's numeric
+        $limit = !empty($filters['limit']) && is_numeric($filters['limit']) ? (int)$filters['limit'] : null;
+        if ($limit && $limit > 0) {
+            $sql .= " LIMIT " . $limit;
+        }
+
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
         return $stmt->fetchAll(\PDO::FETCH_ASSOC);
