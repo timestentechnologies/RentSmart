@@ -249,6 +249,7 @@
                                      data-method-id="<?= $pm['id'] ?>" 
                                      data-method-type="<?= $pm['type'] ?>"
                                      data-method-name="<?= htmlspecialchars($pm['name']) ?>"
+                                     data-instructions="<?= htmlspecialchars($pm['description']) ?>"
                                      data-details='<?= htmlspecialchars($pm['details']) ?>'>
                                     <i class="fas <?= $icon ?>"></i>
                                     <span class="small fw-bold text-truncate d-block"><?= htmlspecialchars($pm['name']) ?></span>
@@ -431,6 +432,10 @@
                     else if (details.mpesa_method === 'paybill') instr += 'Paybill ' + (details.paybill_number || '---') + ' (Acc: ' + (details.account_number || 'STAY') + ')';
                     else instr += 'Manual M-Pesa';
                     $('#mpesaInstructions').text(instr);
+                } else if (type === 'mpesa_pochi' || type === 'mpesa_send_money') {
+                    $('#mpesaInstructions').text(card.data('instructions') || 'Follow the M-Pesa instructions on your phone.');
+                } else if (type === 'bank_transfer') {
+                    $('#mpesaInstructions').text(card.data('instructions') || 'Follow the bank transfer instructions.');
                 } else if (type === 'mpesa_stk') {
                     $('#mpesaInstructions').text('You will receive an M-Pesa prompt to enter your PIN.');
                 }
@@ -441,6 +446,7 @@
                 if (!card.length) return;
 
                 const name = card.data('method-name');
+                const type = card.data('method-type');
                 let iconClass = 'fas fa-credit-card';
                 if (card.find('i').length) {
                     iconClass = card.find('i').attr('class').split(' ').filter(c => c.startsWith('fa')).join(' ');
