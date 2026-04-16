@@ -2981,16 +2981,20 @@ class Payment extends Model
         $sql = "SELECT
                     pr.id,
                     pr.name,
-                    COALESCE(SUM(CASE
-                        WHEN p.status IN ('completed', 'verified')
-                        AND p.payment_date BETWEEN ? AND ?
-                        THEN p.amount
-                        ELSE 0
-                    END), 0) as revenue
+                    COALESCE(SUM(p_agg.amount), 0) as revenue
                 FROM properties pr
-                LEFT JOIN units u ON pr.id = u.property_id
-                LEFT JOIN leases l ON u.id = l.unit_id
-                LEFT JOIN payments p ON l.id = p.lease_id";
+                LEFT JOIN (
+                    SELECT p.amount, COALESCE(u_l.property_id, u_ab.property_id, u_aw.property_id) as property_id
+                    FROM payments p
+                    LEFT JOIN leases l ON p.lease_id = l.id
+                    LEFT JOIN units u_l ON l.unit_id = u_l.id
+                    LEFT JOIN airbnb_bookings ab ON p.airbnb_booking_id = ab.id
+                    LEFT JOIN units u_ab ON ab.unit_id = u_ab.id
+                    LEFT JOIN airbnb_walkin_guests aw ON p.airbnb_walkin_guest_id = aw.id
+                    LEFT JOIN properties u_aw ON aw.property_id = u_aw.id
+                    WHERE p.status IN ('completed', 'verified')
+                    AND p.payment_date BETWEEN ? AND ?
+                ) p_agg ON pr.id = p_agg.property_id";
         $params = [$startDate, $endDate];
         if (!$isAdmin) {
             $sql .= " WHERE (pr.owner_id = ? OR pr.manager_id = ? OR pr.agent_id = ? OR pr.caretaker_user_id = ? OR pr.airbnb_manager_id = ?)";

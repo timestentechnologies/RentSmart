@@ -159,13 +159,25 @@ class AirbnbBooking extends Model
         $params = [];
 
         if (!empty($filters['property_id'])) {
-            $sql .= " AND b.property_id = ?";
-            $params[] = $filters['property_id'];
+            if (is_array($filters['property_id'])) {
+                $placeholders = implode(',', array_fill(0, count($filters['property_id']), '?'));
+                $sql .= " AND b.property_id IN ($placeholders)";
+                $params = array_merge($params, $filters['property_id']);
+            } else {
+                $sql .= " AND b.property_id = ?";
+                $params[] = $filters['property_id'];
+            }
         }
 
         if (!empty($filters['unit_id'])) {
-            $sql .= " AND b.unit_id = ?";
-            $params[] = $filters['unit_id'];
+            if (is_array($filters['unit_id'])) {
+                $placeholders = implode(',', array_fill(0, count($filters['unit_id']), '?'));
+                $sql .= " AND b.unit_id IN ($placeholders)";
+                $params = array_merge($params, $filters['unit_id']);
+            } else {
+                $sql .= " AND b.unit_id = ?";
+                $params[] = $filters['unit_id'];
+            }
         }
 
         if (!empty($filters['status'])) {
