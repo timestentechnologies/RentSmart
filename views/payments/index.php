@@ -102,7 +102,7 @@ $isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
     </div>
 
     <!-- Filters Section -->
-    <div class="card mb-4">
+    <div class="card mb-4" style="position: relative; z-index: 3;">
         <div class="card-body">
             <form id="filterForm" class="row g-3">
                 <div class="col-md-3">
