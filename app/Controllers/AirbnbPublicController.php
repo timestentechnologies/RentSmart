@@ -271,12 +271,10 @@ class AirbnbPublicController
 
             // Get settings for display
             echo "<!-- Debug: Getting settings -->";
-            $settings = $this->settings->getAll();
+            $settings = $this->settings->getAllAsAssoc();
             echo "<!-- Debug: Settings loaded -->";
 
-            // Make airbnbSettings available to view
-            echo "<!-- Debug: Loading view -->";
-            $airbnbSettings = $this->propertyModel->getByPropertyId($propertyId);
+
 
             // Load the view
             echo "<!-- Debug: Including view -->";

@@ -3,7 +3,7 @@
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 try {
-include 'views/partials/header.php'; 
+require __DIR__ . '/../partials/public_header.php'; 
 ?>
 
 <div class="container py-5">
@@ -116,7 +116,7 @@ include 'views/partials/header.php';
     </div>
 </div>
 
-<?php include 'views/partials/footer.php'; 
+<?php require __DIR__ . '/../partials/public_footer.php'; 
 } catch (\Throwable $e) {
     echo '<h2>View Error:</h2>';
     echo '<p><strong>Error:</strong> ' . htmlspecialchars($e->getMessage()) . '</p>';
