@@ -194,8 +194,9 @@ class AirbnbPublicController
             }
 
             // Get property images
-            $this->property->id = $propertyId;
-            $property['images'] = $this->property->getImages();
+            $stmt = $this->db->prepare("SELECT * FROM property_images WHERE property_id = ? ORDER BY sort_order ASC");
+            $stmt->execute([$propertyId]);
+            $property['images'] = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
             // Get eligible units with rates
             $stmt = $this->db->prepare("
@@ -221,8 +222,9 @@ class AirbnbPublicController
 
             // Get unit images
             foreach ($units as &$unit) {
-                $this->unit->id = $unit['id'];
-                $unit['images'] = $this->unit->getImages();
+                $stmt = $this->db->prepare("SELECT * FROM unit_images WHERE unit_id = ? ORDER BY sort_order ASC");
+                $stmt->execute([$unit['id']]);
+                $unit['images'] = $stmt->fetchAll(\PDO::FETCH_ASSOC);
             }
 
             // Get settings for display

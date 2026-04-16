@@ -7,7 +7,7 @@
             <h1 class="mb-3"><?php echo htmlspecialchars($property['name']); ?></h1>
             <p class="text-muted">
                 <i class="fas fa-map-marker-alt"></i>
-                <?php echo htmlspecialchars($property['address'] . ', ' . $property['city']); ?>
+                <?php echo htmlspecialchars(($property['address'] ?? '') . ', ' . ($property['city'] ?? '')); ?>
             </p>
 
             <!-- Property Images -->
@@ -48,14 +48,14 @@
                             <div class="card-body">
                                 <h5 class="card-title">Unit <?php echo htmlspecialchars($unit['unit_number']); ?></h5>
                                 <p class="card-text">
-                                    <span class="badge bg-info"><?php echo htmlspecialchars($unit['type']); ?></span>
-                                    <?php if ($unit['size']): ?>
+                                    <span class="badge bg-info"><?php echo htmlspecialchars($unit['type'] ?? 'Unknown'); ?></span>
+                                    <?php if (!empty($unit['size'])): ?>
                                     <span class="badge bg-secondary"><?php echo $unit['size']; ?> sq ft</span>
                                     <?php endif; ?>
                                 </p>
                                 <p class="card-text">
                                     <strong class="text-primary">
-                                        KES <?php echo number_format($unit['base_price_per_night'] ?? $unit['rent_amount'], 2); ?> 
+                                        KES <?php echo number_format($unit['base_price_per_night'] ?? $unit['rent_amount'] ?? 0, 2); ?> 
                                         / night
                                     </strong>
                                 </p>
@@ -89,7 +89,7 @@
                         </li>
                         <li class="mb-2">
                             <i class="fas fa-map-marker-alt text-primary"></i>
-                            <?php echo htmlspecialchars($property['city']); ?>
+                            <?php echo htmlspecialchars($property['city'] ?? ''); ?>
                         </li>
                         <?php if (!empty($airbnbSettings['check_in_time'])): ?>
                         <li class="mb-2">
