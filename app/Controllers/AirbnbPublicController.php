@@ -193,10 +193,22 @@ class AirbnbPublicController
                 return;
             }
 
-            // Get property images
-            $stmt = $this->db->prepare("SELECT * FROM property_images WHERE property_id = ? ORDER BY sort_order ASC");
+            // Get property images from file_uploads table
+            $stmt = $this->db->prepare("SELECT * FROM file_uploads WHERE entity_type = 'property' AND entity_id = ? AND file_type = 'image' ORDER BY created_at DESC");
             $stmt->execute([$propertyId]);
             $property['images'] = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+            
+            // Add full URL to each image
+            foreach ($property['images'] as &$file) {
+                $uploadPath = $file['upload_path'];
+                if (strpos($uploadPath, 'public/') === 0) {
+                    $file['path'] = $uploadPath;
+                } elseif (strpos($uploadPath, 'uploads/') === 0) {
+                    $file['path'] = 'public/' . $uploadPath;
+                } else {
+                    $file['path'] = 'public/uploads/' . $uploadPath;
+                }
+            }
 
             // Get eligible units with rates
             $stmt = $this->db->prepare("
@@ -220,11 +232,24 @@ class AirbnbPublicController
             $stmt->execute([$propertyId]);
             $units = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
-            // Get unit images
+            // Get unit images from file_uploads table
             foreach ($units as &$unit) {
-                $stmt = $this->db->prepare("SELECT * FROM unit_images WHERE unit_id = ? ORDER BY sort_order ASC");
+                $stmt = $this->db->prepare("SELECT * FROM file_uploads WHERE entity_type = 'unit' AND entity_id = ? AND file_type = 'image' ORDER BY created_at DESC");
                 $stmt->execute([$unit['id']]);
-                $unit['images'] = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+                $files = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+                
+                // Add full URL to each image
+                foreach ($files as &$file) {
+                    $uploadPath = $file['upload_path'];
+                    if (strpos($uploadPath, 'public/') === 0) {
+                        $file['path'] = $uploadPath;
+                    } elseif (strpos($uploadPath, 'uploads/') === 0) {
+                        $file['path'] = 'public/' . $uploadPath;
+                    } else {
+                        $file['path'] = 'public/uploads/' . $uploadPath;
+                    }
+                }
+                $unit['images'] = $files;
             }
 
             // Get settings for display
