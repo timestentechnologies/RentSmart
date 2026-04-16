@@ -275,22 +275,8 @@
                         <?php endif; ?>
                     </div>
 
-                    <!-- M-Pesa Specific Fields -->
-                    <div id="mpesaFields" class="d-none mb-3 p-3 bg-white rounded shadow-sm border">
-                        <div id="mpesaInstructions" class="small mb-2 text-primary fw-bold"></div>
-                        <div class="mb-2">
-                            <label class="small text-muted mb-1">M-Pesa Phone Number</label>
-                            <input type="text" id="mpesaPhone" class="form-control form-control-sm" placeholder="e.g. 0712345678" value="<?= htmlspecialchars($booking['guest_phone']) ?>">
-                        </div>
-                        <div id="manualMpesaFields" class="d-none">
-                            <label class="small text-muted mb-1">Transaction Code</label>
-                            <input type="text" id="mpesaCode" class="form-control form-control-sm" placeholder="e.g. RKL7W8X9Y1" style="text-transform: uppercase;">
-                        </div>
-                    </div>
-
-                    <button class="btn btn-brand w-100" id="btnOpenPaymentModal">
-                        Proceed to Payment
-                    </button>
+                    <!-- Hidden instructions helper for modal sync -->
+                    <div id="mpesaInstructions" class="d-none"></div>
                 </div>
             </div>
         </div>
@@ -437,38 +423,12 @@
                     console.error('Error parsing payment details:', e);
                 }
                 
-                $('#mpesaFields').addClass('d-none');
-                $('#manualMpesaFields').addClass('d-none');
                 $('#mpesaInstructions').text('');
 
-                if (type === 'mpesa_manual') {
-                    $('#mpesaFields').removeClass('d-none');
-                    $('#manualMpesaFields').removeClass('d-none');
-                    let instr = 'Follow instructions to pay: ';
-                    if (details.mpesa_method === 'till') instr += 'Buy Goods Till ' + (details.till_number || '---');
-                    else if (details.mpesa_method === 'paybill') instr += 'Paybill ' + (details.paybill_number || '---') + ' (Acc: ' + (details.account_number || 'STAY') + ')';
-                    else instr += 'Manual M-Pesa';
-                    $('#mpesaInstructions').text(instr);
-                } else if (type === 'mpesa_stk') {
-                    $('#mpesaFields').removeClass('d-none');
-                    $('#mpesaInstructions').text('You will receive an M-Pesa prompt to enter your PIN.');
                 }
             }
-            
-            // Initial UI update
-            updatePaymentUI();
 
-            $('.payment-card').click(function() {
-                $('.payment-card').removeClass('active');
-                $(this).addClass('active');
-                selectedMethodName = $(this).data('method-name');
-                selectedMethodType = $(this).data('method-type');
-                selectedMethodId = $(this).data('method-id');
-                console.log('Selected Method:', selectedMethodName, selectedMethodType);
-                updatePaymentUI();
-            });
-
-            $('#btnOpenPaymentModal').click(function() {
+            function openPaymentModal() {
                 const card = $('.payment-card.active');
                 if (!card.length) return;
 
@@ -501,7 +461,24 @@
 
                 const paymentModal = new bootstrap.Modal(document.getElementById('paymentModal'));
                 paymentModal.show();
+            }
+            
+            // Initial UI update
+            updatePaymentUI();
+
+            $('.payment-card').click(function() {
+                $('.payment-card').removeClass('active');
+                $(this).addClass('active');
+                selectedMethodName = $(this).data('method-name');
+                selectedMethodType = $(this).data('method-type');
+                selectedMethodId = $(this).data('method-id');
+                console.log('Selected Method:', selectedMethodName, selectedMethodType);
+                updatePaymentUI();
+                openPaymentModal(); // Trigger modal on click
             });
+
+            // Keep the function but button is gone
+            // $('#btnOpenPaymentModal').click(function() { ... });
 
             $('#btnWhatsAppShare').click(function() {
                 const reference = '<?php echo $booking['booking_reference']; ?>';
