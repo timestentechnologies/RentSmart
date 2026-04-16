@@ -210,7 +210,7 @@ class AirbnbPublicController
                 }
             }
 
-            // Get eligible units with rates
+            // Get eligible units with rates and property settings
             $stmt = $this->db->prepare("
                 SELECT 
                     u.id,
@@ -219,14 +219,18 @@ class AirbnbPublicController
                     u.size,
                     u.rent_amount,
                     aur.base_price_per_night,
-                    aur.cleaning_fee,
-                    aur.security_deposit,
-                    aur.min_stay_nights,
-                    aur.max_stay_nights,
+                    aur.weekend_price,
                     aur.weekly_discount_percent,
-                    aur.monthly_discount_percent
+                    aur.monthly_discount_percent,
+                    ap.cleaning_fee,
+                    ap.security_deposit,
+                    ap.min_stay_nights,
+                    ap.max_stay_nights,
+                    ap.check_in_time,
+                    ap.check_out_time
                 FROM units u
                 LEFT JOIN airbnb_unit_rates aur ON u.id = aur.unit_id
+                LEFT JOIN airbnb_properties ap ON ap.property_id = u.property_id
                 WHERE u.property_id = ? AND u.is_airbnb_eligible = 1
             ");
             $stmt->execute([$propertyId]);
