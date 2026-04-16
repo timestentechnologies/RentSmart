@@ -86,10 +86,35 @@
             border-radius: 14px;
             padding: 0.75rem 1rem;
             transition: all 0.2s;
+            background-color: white;
+            appearance: none;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%236B3E99' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: 16px 12px;
         }
         .form-control:focus, .form-select:focus {
             border-color: var(--primary-color);
             box-shadow: 0 0 0 4px rgba(107, 62, 153, 0.1);
+        }
+        /* Custom select dropdown styling */
+        select option {
+            background-color: white;
+            color: var(--dark-color);
+            padding: 0.75rem;
+        }
+        select option:hover,
+        select option:focus,
+        select option:active,
+        select option:checked {
+            background-color: rgba(255, 138, 0, 0.15) !important;
+            color: var(--dark-color) !important;
+        }
+        select:focus option:checked {
+            background-color: var(--accent-color) !important;
+            color: white !important;
         }
         .text-accent { color: var(--accent-color) !important; }
     </style>
