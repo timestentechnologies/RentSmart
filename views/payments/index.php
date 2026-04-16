@@ -437,7 +437,12 @@ $isAirbnbManager = strtolower((string)($_SESSION['user_role'] ?? '')) === 'airbn
                                 <select class="form-select select2-modal" name="airbnb_walkin_guest_id" id="airbnb_walkin_guest_id">
                                     <option value="">-- Search Walk-in Guest --</option>
                                     <?php foreach (($airbnbWalkins ?? []) as $w): ?>
-                                        <option value="<?= $w['id'] ?>">
+                                        <?php 
+                                            // Extract numeric budget if possible
+                                            $budget = preg_replace('/[^0-9.]/', '', $w['budget_range'] ?? '0');
+                                            $budgetVal = is_numeric($budget) ? (float)$budget : 0;
+                                        ?>
+                                        <option value="<?= $w['id'] ?>" data-amount="<?= $budgetVal ?>">
                                             <?= htmlspecialchars($w['guest_name']) ?> (<?= htmlspecialchars($w['status']) ?>)
                                         </option>
                                     <?php endforeach; ?>
@@ -2131,29 +2136,50 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Auto-fill amount from Booking
-    const bookingSelect = document.getElementById('airbnb_booking_id');
-    if (bookingSelect) {
-        $(bookingSelect).on('select2:select change', function(e) {
-            const opt = bookingSelect.options[bookingSelect.selectedIndex];
-            if (opt && opt.value) {
-                const amount = opt.getAttribute('data-amount');
-                if (amount) airbnbAmount.value = parseFloat(amount).toFixed(2);
-            }
-        });
-    }
+    // Auto-fill amount logic
+    const selects = {
+        'booking': document.getElementById('airbnb_booking_id'),
+        'walkin': document.getElementById('airbnb_walkin_guest_id'),
+        'invoice': document.getElementById('airbnb_invoice_id')
+    };
+    
+    Object.entries(selects).forEach(([cat, sel]) => {
+        if (!sel) return;
+        
+        const updateAmount = () => {
+            const currentCat = document.querySelector('input[name="airbnb_payment_category"]:checked')?.value;
+            if (currentCat !== cat) return;
 
-    // Auto-fill amount from Invoice
-    const invoiceSelect = document.getElementById('airbnb_invoice_id');
-    if (invoiceSelect) {
-        $(invoiceSelect).on('select2:select change', function(e) {
-            const opt = invoiceSelect.options[invoiceSelect.selectedIndex];
+            const opt = sel.options[sel.selectedIndex];
             if (opt && opt.value) {
                 const amount = opt.getAttribute('data-amount');
-                if (amount) airbnbAmount.value = parseFloat(amount).toFixed(2);
+                if (amount && !isNaN(parseFloat(amount))) {
+                    airbnbAmount.value = parseFloat(amount).toFixed(2);
+                } else {
+                    airbnbAmount.value = '';
+                }
+            } else {
+                airbnbAmount.value = '';
+            }
+        };
+
+        // Standard change
+        sel.addEventListener('change', updateAmount);
+        // Select2-specific events
+        $(sel).on('select2:select change', updateAmount);
+    });
+
+    // Also trigger update when category changes to populate the initial amount for the selected category
+    categoryRadios.forEach(radio => {
+        radio.addEventListener('change', () => {
+            const currentCat = document.querySelector('input[name="airbnb_payment_category"]:checked')?.value;
+            if (currentCat && selects[currentCat]) {
+                const sel = selects[currentCat];
+                const updateEvent = new Event('change');
+                sel.dispatchEvent(updateEvent);
             }
         });
-    }
+    });
 })();
 </script>
 <?php
