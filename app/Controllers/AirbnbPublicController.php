@@ -172,6 +172,72 @@ class AirbnbPublicController
     }
 
     /**
+     * Show property details page
+     */
+    public function property($propertyId)
+    {
+        try {
+            // Check if property exists and is enabled for Airbnb
+            $property = $this->property->find($propertyId);
+            if (!$property) {
+                http_response_code(404);
+                require 'views/errors/404.php';
+                return;
+            }
+
+            // Check if Airbnb is enabled for this property
+            $airbnbSettings = $this->propertyModel->getByPropertyId($propertyId);
+            if (!$airbnbSettings || !$airbnbSettings['is_airbnb_enabled']) {
+                http_response_code(404);
+                require 'views/errors/404.php';
+                return;
+            }
+
+            // Get property images
+            $this->property->id = $propertyId;
+            $property['images'] = $this->property->getImages();
+
+            // Get eligible units with rates
+            $stmt = $this->db->prepare("
+                SELECT 
+                    u.id,
+                    u.unit_number,
+                    u.type,
+                    u.size,
+                    u.rent_amount,
+                    aur.base_price_per_night,
+                    aur.cleaning_fee,
+                    aur.security_deposit,
+                    aur.min_stay_nights,
+                    aur.max_stay_nights,
+                    aur.weekly_discount_percent,
+                    aur.monthly_discount_percent
+                FROM units u
+                LEFT JOIN airbnb_unit_rates aur ON u.id = aur.unit_id
+                WHERE u.property_id = ? AND u.is_airbnb_eligible = 1
+            ");
+            $stmt->execute([$propertyId]);
+            $units = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+
+            // Get unit images
+            foreach ($units as &$unit) {
+                $this->unit->id = $unit['id'];
+                $unit['images'] = $this->unit->getImages();
+            }
+
+            // Get settings for display
+            $settings = $this->settings->getAll();
+
+            // Load the view
+            require 'views/airbnb/property.php';
+        } catch (\Exception $e) {
+            error_log('Error loading property page: ' . $e->getMessage());
+            http_response_code(500);
+            require 'views/errors/500.php';
+        }
+    }
+
+    /**
      * Show booking form for a specific unit
      */
     public function bookUnit()

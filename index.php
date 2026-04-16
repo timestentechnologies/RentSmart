@@ -519,6 +519,7 @@ $routes = [
 
     // Airbnb Public Routes
     'airbnb' => ['controller' => 'AirbnbPublicController', 'action' => 'index'],
+    'airbnb/property/(\d+)' => ['controller' => 'AirbnbPublicController', 'action' => 'property'],
     'airbnb/book' => ['controller' => 'AirbnbPublicController', 'action' => 'bookUnit'],
     'airbnb/submit-booking' => ['POST' => ['controller' => 'AirbnbPublicController', 'action' => 'submitBooking']],
     'airbnb/booking-confirmation/([A-Za-z0-9]+)' => ['controller' => 'AirbnbPublicController', 'action' => 'bookingConfirmation'],
