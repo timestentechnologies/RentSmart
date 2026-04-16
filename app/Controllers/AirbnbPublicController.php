@@ -9,6 +9,12 @@ use App\Models\AirbnbUnitRate;
 use App\Models\Property;
 use App\Models\Unit;
 use App\Models\Setting;
+use App\Models\Invoice;
+use App\Models\Payment;
+use App\Models\User;
+use Dompdf\Dompdf;
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
 
 class AirbnbPublicController
 {
@@ -495,14 +501,70 @@ class AirbnbPublicController
             $settings = $this->settings->getAllAsAssoc();
             $siteName = $settings['site_name'] ?? 'RentSmart';
             $favicon = $settings['site_favicon'] ?? '';
-            $siteLogo = isset($settings['site_logo']) && $settings['site_logo']
-                ? BASE_URL . '/public/assets/images/' . $settings['site_logo']
-                : BASE_URL . '/public/assets/images/logo.png';
+            $siteLogoFile = $settings['site_logo'] ?? '';
+            $appsLogoFile = $settings['apps_page_logo'] ?? '';
+            $siteLogo = $appsLogoFile
+                ? (BASE_URL . '/public/assets/images/' . $appsLogoFile)
+                : ($siteLogoFile ? (BASE_URL . '/public/assets/images/' . $siteLogoFile) : (BASE_URL . '/public/assets/images/logo.svg'));
 
             require 'views/airbnb/booking_confirmation.php';
         } catch (\Exception $e) {
             error_log($e->getMessage());
             require 'views/errors/500.php';
+        }
+    }
+
+    /**
+     * Download PDF Receipt
+     */
+    public function downloadReceipt($reference)
+    {
+        while (ob_get_level()) {
+            ob_end_clean();
+        }
+
+        try {
+            $booking = $this->bookingModel->findByReference($reference);
+            if (!$booking) {
+                http_response_code(404);
+                echo 'Booking not found.';
+                exit;
+            }
+
+            $settings = $this->settings->getAllAsAssoc();
+            $siteName = $settings['site_name'] ?? 'RentSmart';
+            $logoFilename = $settings['site_logo'] ?? '';
+            if ($settings['apps_page_logo'] ?? '') {
+                $logoFilename = $settings['apps_page_logo'];
+            }
+            
+            $logoPath = null;
+            if ($logoFilename) {
+                $logoPath = __DIR__ . '/../../public/assets/images/' . $logoFilename;
+            }
+
+            if (!class_exists('Dompdf\\Dompdf')) {
+                require_once __DIR__ . '/../../vendor/dompdf/dompdf/src/Dompdf.php';
+            }
+
+            ob_start();
+            include __DIR__ . '/../../views/airbnb/receipt_pdf.php';
+            $html = ob_get_clean();
+
+            $dompdf = new Dompdf();
+            $dompdf->loadHtml($html);
+            $dompdf->setPaper('A4', 'portrait');
+            $dompdf->render();
+
+            $filename = 'receipt_' . $booking['booking_reference'] . '.pdf';
+            header('Content-Type: application/pdf');
+            header('Content-Disposition: attachment; filename="' . $filename . '"');
+            echo $dompdf->output();
+            exit;
+        } catch (\Exception $e) {
+            error_log('PDF Generation Error: ' . $e->getMessage());
+            echo 'Error generating receipt.';
+            exit;
         }
     }
 
@@ -702,10 +764,12 @@ class AirbnbPublicController
                 'user_id' => $managerUserId
             ];
             
-            // We need to ensure airbnb_booking_id exists in payments table
+            // We need to ensure airbnb_booking_id and user_id exists in payments table
             try {
                 $this->db->exec("ALTER TABLE payments ADD COLUMN airbnb_booking_id INT NULL AFTER lease_id");
+                $this->db->exec("ALTER TABLE payments ADD COLUMN user_id INT NULL AFTER airbnb_booking_id");
                 $this->db->exec("ALTER TABLE payments ADD INDEX idx_airbnb_booking (airbnb_booking_id)");
+                $this->db->exec("ALTER TABLE payments ADD INDEX idx_payment_user (user_id)");
             } catch (\Exception $e) {}
 
             $sql = "INSERT INTO payments (lease_id, airbnb_booking_id, amount, payment_date, payment_type, payment_method, reference_number, status, notes, user_id) 
@@ -722,6 +786,11 @@ class AirbnbPublicController
                 'amount_paid' => ($method === 'Pay at Office') ? 0 : $amount
             ]);
 
+            // 4. Auto-email confirmation if email exists
+            if (!empty($booking['guest_email'])) {
+                $this->sendBookingConfirmationEmail($booking, $invoiceId);
+            }
+
             echo json_encode([
                 'success' => true, 
                 'message' => 'Payment selection recorded successfully. Invoice generated.',
@@ -730,6 +799,77 @@ class AirbnbPublicController
         } catch (\Exception $e) {
             error_log('Airbnb capturePayment error: ' . $e->getMessage());
             echo json_encode(['success' => false, 'message' => 'Error processing payment: ' . $e->getMessage()]);
+        }
+    }
+
+    /**
+     * Helper: Send booking confirmation email with PDF attachment
+     */
+    private function sendBookingConfirmationEmail($booking, $invoiceId)
+    {
+        try {
+            $settings = $this->settings->getAllAsAssoc();
+            $siteName = $settings['site_name'] ?? 'RentSmart';
+            $logoFilename = $settings['apps_page_logo'] ?? $settings['site_logo'] ?? '';
+            
+            $logoPath = null;
+            if ($logoFilename) {
+                $logoPath = __DIR__ . '/../../public/assets/images/' . $logoFilename;
+            }
+
+            // Generate PDF in memory
+            if (!class_exists('Dompdf\\Dompdf')) {
+                require_once __DIR__ . '/../../vendor/dompdf/dompdf/src/Dompdf.php';
+            }
+            ob_start();
+            include __DIR__ . '/../../views/airbnb/receipt_pdf.php';
+            $html = ob_get_clean();
+
+            $dompdf = new Dompdf();
+            $dompdf->loadHtml($html);
+            $dompdf->setPaper('A4', 'portrait');
+            $dompdf->render();
+            $pdfContent = $dompdf->output();
+
+            // Prepare Email
+            require_once __DIR__ . '/../../vendor/phpmailer/phpmailer/src/PHPMailer.php';
+            require_once __DIR__ . '/../../vendor/phpmailer/phpmailer/src/SMTP.php';
+            require_once __DIR__ . '/../../vendor/phpmailer/phpmailer/src/Exception.php';
+
+            $mail = new PHPMailer(true);
+            
+            // SMTP Settings
+            $mail->isSMTP();
+            $mail->Host = $settings['smtp_host'] ?? '';
+            $mail->SMTPAuth = true;
+            $mail->Username = $settings['smtp_user'] ?? '';
+            $mail->Password = $settings['smtp_pass'] ?? '';
+            $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+            $mail->Port = $settings['smtp_port'] ?? 587;
+            
+            $fromEmail = $settings['smtp_user'] ?? $settings['site_email'] ?? 'no-reply@rentsmart.co.ke';
+            $mail->setFrom($fromEmail, $siteName);
+            $mail->addAddress($booking['guest_email'], $booking['guest_name']);
+            
+            $mail->isHTML(true);
+            $mail->Subject = "Booking Confirmation: " . $booking['property_name'] . " (" . $booking['booking_reference'] . ")";
+            
+            $body = "<h2>Hello " . htmlspecialchars($booking['guest_name']) . ",</h2>";
+            $body .= "<p>Your booking at <strong>" . htmlspecialchars($booking['property_name']) . "</strong> has been confirmed.</p>";
+            $body .= "<p><strong>Reference:</strong> " . htmlspecialchars($booking['booking_reference']) . "<br>";
+            $body .= "<strong>Dates:</strong> " . date('M d, Y', strtotime($booking['check_in_date'])) . " to " . date('M d, Y', strtotime($booking['check_out_date'])) . "</p>";
+            $body .= "<p>Please find your booking receipt attached to this email.</p>";
+            $body .= "<p>We look forward to hosting you!</p>";
+            $body .= "<br><p>Best regards,<br>" . htmlspecialchars($siteName) . " Team</p>";
+            
+            $mail->Body = $body;
+            $mail->addStringAttachment($pdfContent, 'BookingReceipt_' . $booking['booking_reference'] . '.pdf');
+            
+            $mail->send();
+            return true;
+        } catch (\Exception $e) {
+            error_log('Mailing Error: ' . $e->getMessage());
+            return false;
         }
     }
 }

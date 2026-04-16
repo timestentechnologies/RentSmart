@@ -259,13 +259,27 @@
             </div>
         </div>
 
-        <div class="text-center mt-4">
-            <a href="<?php echo BASE_URL; ?>/airbnb" class="btn btn-link text-muted text-decoration-none small">
-                <i class="fas fa-chevron-left me-1"></i> Return to Listings
-            </a>
-            <button class="btn btn-link text-muted text-decoration-none small" onclick="window.print()">
-                <i class="fas fa-print me-1"></i> Print Confirmation
-            </button>
+        <div class="row mt-4 g-2">
+            <div class="col-md-3">
+                <a href="<?php echo BASE_URL; ?>/airbnb/booking-confirmation/<?php echo $booking['booking_reference']; ?>/download-receipt" class="btn btn-outline-brand w-100">
+                    <i class="fas fa-file-pdf me-1"></i> Download PDF
+                </a>
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-success w-100" id="btnWhatsAppShare">
+                    <i class="fab fa-whatsapp me-1"></i> Share WhatsApp
+                </button>
+            </div>
+            <div class="col-md-3">
+                <button class="btn btn-light w-100" onclick="window.print()">
+                    <i class="fas fa-print me-1"></i> Print Page
+                </button>
+            </div>
+            <div class="col-md-3">
+                <a href="<?php echo BASE_URL; ?>/airbnb" class="btn btn-link text-muted text-decoration-none w-100">
+                    <i class="fas fa-chevron-left me-1"></i> Back to Home
+                </a>
+            </div>
         </div>
 
         <!-- Footer Notes -->
@@ -304,6 +318,22 @@
                 selectedMethod = $(this).data('method');
             });
 
+            $('#btnWhatsAppShare').click(function() {
+                const reference = '<?php echo $booking['booking_reference']; ?>';
+                const property = '<?php echo addslashes($booking['property_name']); ?>';
+                const total = '<?php echo number_format($booking['final_total'], 2); ?>';
+                const checkIn = '<?php echo date('M d', strtotime($booking['check_in_date'])); ?>';
+                const pdfUrl = window.location.origin + '<?= BASE_URL ?>/airbnb/booking-confirmation/' + reference + '/download-receipt';
+                
+                const text = `*Booking Confirmation - ${property}*\n` +
+                             `Reference: ${reference}\n` +
+                             `Check-in: ${checkIn}\n` +
+                             `Total: KES ${total}\n\n` +
+                             `Download your receipt here: ${pdfUrl}`;
+                
+                window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
+            });
+
             $('#btnConfirmPayment').click(function() {
                 const btn = $(this);
                 const status = $('#paymentStatus');
@@ -321,7 +351,7 @@
                     },
                     success: function(response) {
                         if (response.success) {
-                            alert('Booking Confirmed! Your invoice has been generated.');
+                            alert('Booking Confirmed! Your receipt has been generated and sent to your email.');
                             window.location.reload();
                         } else {
                             alert('Error: ' + response.message);
