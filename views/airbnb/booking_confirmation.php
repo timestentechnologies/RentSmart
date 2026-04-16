@@ -329,14 +329,9 @@
                             <span class="h5 fw-bold text-accent mb-0">KES <?= number_format($booking['final_total'], 2) ?></span>
                         </div>
 
-                        <button class="btn btn-brand w-100 py-2 fw-bold" id="btnConfirmPayment">
+                        <button class="btn btn-brand w-100 py-3 fw-bold shadow-sm mt-2" id="btnConfirmPayment">
                             Confirm & Complete Reservation
                         </button>
-                        
-                        <div id="paymentStatus" class="mt-3 text-center small d-none">
-                            <div class="spinner-border spinner-border-sm text-accent me-2" role="status"></div>
-                            <span id="paymentStatusText" class="fw-medium">Processing...</span>
-                        </div>
                     </div>
                     <div class="modal-footer bg-light border-0 justify-content-center py-2">
                         <small class="text-muted"><i class="fas fa-lock me-1"></i> Secure Encrypted Transaction</small>
@@ -389,6 +384,25 @@
             </div>
         </div>
     </div>
+</div>
+
+<!-- Success Modal -->
+<div class="modal fade" id="successModal" tabindex="-1" aria-labelledby="successModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-body p-5 text-center">
+                <div class="mb-4">
+                    <i class="fas fa-check-circle text-success display-1"></i>
+                </div>
+                <h3 class="fw-bold mb-3">Booking Reserved!</h3>
+                <p id="successModalMessage" class="text-muted mb-4">Your reservation has been successfully received. We will notify you once payment is verified.</p>
+                <button type="button" class="btn btn-brand w-100 py-3 fw-bold" id="btnSuccessClose">
+                    Great, Thank You!
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
     <?php require __DIR__ . '/../partials/public_footer.php'; ?>
 
@@ -538,9 +552,7 @@
                     if (['mpesa_manual', 'mpesa_pochi', 'mpesa_send_money'].includes(selectedMethodType) && !$('#modalMpesaCode').val()) return alert('Transaction Code is required');
                 }
 
-                btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Completing...');
-                status.removeClass('d-none');
-                statusText.text(selectedMethodType === 'mpesa_stk' ? 'Sending prompt...' : 'Processing...');
+                btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Completing Reservation...');
 
                 const commonData = {
                     method: selectedMethodName,
@@ -555,24 +567,23 @@
                 if (selectedMethodType === 'mpesa_stk') {
                     $.post('<?= BASE_URL ?>/airbnb/booking/initiate-stk', {
                         booking_id: '<?= $booking['id'] ?>',
-                        phone_number: $('#mpesaPhone').val(),
+                        phone_number: $('#modalMpesaPhone').val(),
                         amount: '<?= $booking['final_total'] ?>',
                         payment_method_id: selectedMethodId,
                         csrf_token: commonData.csrf_token
                     }, function(res) {
                         if (res.success) {
-                            alert('STK Prompt sent! Please complete on your phone. We will verify and confirm your booking automatically.');
+                            $('#successModalMessage').text('STK Prompt sent! Please complete on your phone. We will verify and confirm your booking automatically.');
+                            const successModal = new bootstrap.Modal(document.getElementById('successModal'));
                             bootstrap.Modal.getInstance(document.getElementById('paymentModal')).hide();
-                            window.location.reload();
+                            successModal.show();
                         } else {
                             alert('STK Error: ' + res.message);
                             btn.prop('disabled', false).text('Confirm & Complete Reservation');
-                            status.addClass('d-none');
                         }
                     }, 'json').fail(function() {
                         alert('Connecton error while initiating STK.');
-                        btn.prop('disabled', false).text('Confirm & Reserve');
-                        status.addClass('d-none');
+                        btn.prop('disabled', false).text('Confirm & Complete Reservation');
                     });
                     return;
                 }
@@ -584,22 +595,24 @@
                     data: commonData,
                     success: function(response) {
                         if (response.success) {
-                            alert('Booking Reserved Successfully!');
+                            const successModal = new bootstrap.Modal(document.getElementById('successModal'));
                             bootstrap.Modal.getInstance(document.getElementById('paymentModal')).hide();
-                            window.location.reload();
+                            successModal.show();
                         } else {
                             alert('Error: ' + response.message);
                             btn.prop('disabled', false).text('Confirm & Complete Reservation');
-                            status.addClass('d-none');
                         }
                     },
                     error: function(xhr) {
                         console.error('AJAX Error:', xhr.responseText);
                         alert('An error occurred. Please try again or contact support.');
                         btn.prop('disabled', false).text('Confirm & Complete Reservation');
-                        status.addClass('d-none');
                     }
                 });
+            });
+
+            $('#btnSuccessClose').click(function() {
+                window.location.reload();
             });
         });
     </script>
