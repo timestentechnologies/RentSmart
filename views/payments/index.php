@@ -168,26 +168,26 @@ $isAirbnbManager = strtolower((string)($_SESSION['user_role'] ?? '')) === 'airbn
                     <thead>
                         <tr>
                             <?php if ($isRealtor): ?>
-                                <th>Client</th>
-                                <th>Listing</th>
+                                <th class="text-nowrap">Client</th>
+                                <th class="text-nowrap">Listing</th>
                             <?php else: ?>
-                                <th>Tenant</th>
+                                <th class="text-nowrap">Tenant</th>
                             <?php endif; ?>
-                            <th>Amount</th>
-                            <th>Date</th>
-                            <th>Type</th>
+                            <th class="text-nowrap">Amount</th>
+                            <th class="text-nowrap">Date</th>
+                            <th class="text-nowrap">Type</th>
                             <?php if (!$isRealtor): ?>
-                                <th>Method</th>
+                                <th class="text-nowrap">Method</th>
                             <?php endif; ?>
-                            <th>M-Pesa Code</th>
-                            <th>Phone Number</th>
-                            <th>Status</th>
-                            <th>Notes</th>
+                            <th class="text-nowrap">M-Pesa Code</th>
+                            <th class="text-nowrap">Phone Number</th>
+                            <th class="text-nowrap">Status</th>
+                            <th class="text-nowrap">Notes</th>
                             <?php if (!$isRealtor): ?>
-                                <th>Property</th>
+                                <th class="text-nowrap">Property</th>
                             <?php endif; ?>
-                            <th>Receipt</th>
-                            <th>Actions</th>
+                            <th class="text-nowrap">Receipt</th>
+                            <th class="text-nowrap text-center">Actions</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -208,7 +208,7 @@ $isAirbnbManager = strtolower((string)($_SESSION['user_role'] ?? '')) === 'airbn
                                         </td>
                                         <td><?= htmlspecialchars($payment['listing_title'] ?? '') ?></td>
                                     <?php else: ?>
-                                        <td>
+                                        <td style="min-width: 300px;">
                                             <div class="d-flex align-items-center">
                                                 <div class="avatar-circle bg-primary text-white me-2">
                                                     <?= strtoupper(substr($payment['tenant_name'] ?? 'U', 0, 1)) ?>
@@ -224,18 +224,18 @@ $isAirbnbManager = strtolower((string)($_SESSION['user_role'] ?? '')) === 'airbn
                                             </div>
                                         </td>
                                     <?php endif; ?>
-                                    <td>
-                                        <span class="fw-medium text-success">
+                                    <td class="text-nowrap">
+                                        <span class="fw-bold text-success">
                                             Ksh<?= number_format($payment['amount'], 2) ?>
                                         </span>
                                     </td>
-                                    <td>
+                                    <td class="text-nowrap">
                                         <div class="d-flex align-items-center">
                                             <i class="bi bi-calendar text-muted me-2"></i>
                                             <?= date('M d, Y', strtotime($payment['payment_date'])) ?>
                                         </div>
                                     </td>
-                                    <td>
+                                    <td class="text-nowrap">
                                         <?php
                                         if ($isRealtor) {
                                             $terms = strtolower((string)($payment['contract_terms_type'] ?? ''));
@@ -279,7 +279,7 @@ $isAirbnbManager = strtolower((string)($_SESSION['user_role'] ?? '')) === 'airbn
                                         </span>
                                     </td>
                                     <?php if (!$isRealtor): ?>
-                                        <td>
+                                        <td class="text-nowrap">
                                             <?php
                                             $methodClasses = [
                                                 'cash' => 'bg-success',
@@ -298,7 +298,7 @@ $isAirbnbManager = strtolower((string)($_SESSION['user_role'] ?? '')) === 'airbn
                                             </span>
                                         </td>
                                     <?php endif; ?>
-                                    <td>
+                                    <td class="text-nowrap">
                                         <?php if (!empty($payment['transaction_code'] ?? null)): ?>
                                             <code class="text-primary"><?= htmlspecialchars((string)($payment['transaction_code'] ?? '')) ?></code>
                                         <?php elseif (!empty($payment['reference_number'] ?? null)): ?>
@@ -307,24 +307,26 @@ $isAirbnbManager = strtolower((string)($_SESSION['user_role'] ?? '')) === 'airbn
                                             <span class="text-muted">-</span>
                                         <?php endif; ?>
                                     </td>
-                                    <td>
+                                    <td class="text-nowrap">
                                         <?php if (!empty($payment['phone_number'] ?? null)): ?>
-                                            <span class="text-dark"><?= htmlspecialchars((string)($payment['phone_number'] ?? '')) ?></span>
+                                            <span class="text-dark small fw-medium"><?= htmlspecialchars((string)($payment['phone_number'] ?? '')) ?></span>
                                         <?php else: ?>
                                             <span class="text-muted">-</span>
                                         <?php endif; ?>
                                     </td>
-                                    <td>
+                                    <td class="text-nowrap">
                                         <?php
                                         $status = (string)($payment['status'] ?? 'completed');
                                         $statusClasses = [
                                             'completed' => 'bg-success',
-                                            'pending' => 'bg-warning',
+                                            'paid' => 'bg-success',
+                                            'pending' => 'bg-warning text-dark',
                                             'failed' => 'bg-danger',
-                                            'pending_verification' => 'bg-warning'
+                                            'partial' => 'bg-info',
+                                            'pending_verification' => 'bg-warning text-dark'
                                         ];
                                         $statusClass = $statusClasses[$status] ?? 'bg-secondary';
-                                        $statusText = ucwords(str_replace('_', ' ', $status));
+                                        $statusText = ucwords(str_replace(['_', '-'], ' ', $status));
                                         ?>
                                         <span class="badge <?= $statusClass ?>"><?= $statusText ?></span>
                                     </td>
@@ -1083,18 +1085,53 @@ $isAirbnbManager = strtolower((string)($_SESSION['user_role'] ?? '')) === 'airbn
     background: linear-gradient(45deg, var(--warning-color), #e6a800);
 }
 
-/* Ensure actions are clickable even if other positioned elements overlap */
-#paymentsTable td:last-child,
-#paymentsTable th:last-child {
-    position: relative;
-    z-index: 3;
+/* Enhanced Table Responsiveness */
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 12px;
 }
 
-#paymentsTable .btn-group,
-#paymentsTable .btn-group .btn {
-    position: relative;
-    z-index: 4;
-    pointer-events: auto;
+#paymentsTable {
+    min-width: 1600px; /* Force horizontal scroll for many modules */
+    font-size: 0.875rem;
+    table-layout: auto;
+}
+
+#paymentsTable thead th {
+    background-color: #2b1c4a; /* Brand dark purple */
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 12px 15px;
+    border: none;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+#paymentsTable tbody td {
+    padding: 12px 15px;
+    border-bottom: 1px solid #f1f1f1;
+    background-color: #fff;
+}
+
+.x-small { font-size: 0.75rem; }
+
+/* Ensure actions are clickable and stay visible on scroll */
+#paymentsTable td:last-child,
+#paymentsTable th:last-child {
+    position: sticky;
+    right: 0;
+    background-color: #fff !important;
+    z-index: 20;
+    box-shadow: -5px 0 10px rgba(0,0,0,0.05);
+}
+#paymentsTable thead th:last-child {
+    z-index: 21;
+    background-color: #2b1c4a !important;
 }
 </style>
 
