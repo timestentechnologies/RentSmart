@@ -171,17 +171,17 @@ $activePage = 'airbnb';
             min-height: 46px;
         }
         .custom-select-trigger:hover {
-            border-color: #ff6b35;
-            box-shadow: 0 0 0 0.2rem rgba(255, 107, 53, 0.15);
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 0.2rem rgba(255, 138, 0, 0.15);
         }
         .custom-select-trigger.active {
-            border-color: #ff6b35;
-            box-shadow: 0 0 0 0.2rem rgba(255, 107, 53, 0.25);
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 0.2rem rgba(255, 138, 0, 0.25);
         }
         .custom-select-trigger .arrow {
             margin-left: 8px;
             transition: transform 0.2s;
-            color: #ff6b35;
+            color: var(--accent-color);
         }
         .custom-select-trigger.active .arrow {
             transform: rotate(180deg);
@@ -192,7 +192,7 @@ $activePage = 'airbnb';
             left: 0;
             right: 0;
             background: #fff;
-            border: 1px solid rgba(255, 107, 53, 0.3);
+            border: 1px solid rgba(255, 138, 0, 0.3);
             border-radius: 14px;
             margin-top: 4px;
             box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
@@ -216,7 +216,7 @@ $activePage = 'airbnb';
         }
         .custom-select-option:hover,
         .custom-select-option.selected {
-            background: #ff6b35;
+            background: var(--accent-color);
             color: white;
         }
         .custom-select-option:first-child {

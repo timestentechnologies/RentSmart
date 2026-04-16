@@ -841,7 +841,7 @@
         }
         .custom-select-option:hover,
         .custom-select-option.selected {
-            background: #ff6b35;
+            background: var(--accent-color);
             color: white;
         }
         .custom-select-option:first-child {
