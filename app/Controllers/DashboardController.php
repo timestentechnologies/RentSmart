@@ -722,7 +722,7 @@ class DashboardController
                     ['name' => 'Billing',          'icon' => 'bi-credit-card-2-back', 'url' => '/subscription/renew',            'color' => $orange],
                     ['name' => 'Branding',         'icon' => 'bi-building',           'url' => '/branding',                      'color' => $brown],
                     ['name' => 'Contact Us',       'icon' => 'bi-life-preserver',     'url' => '/contact',                       'color' => $purple],
-                    ['name' => 'Settings',         'icon' => 'bi-gear',               'url' => '/settings',                      'color' => $indigo],
+                    ['name' => 'Settings',         'icon' => 'bi-gear',               'url' => '/branding',                      'color' => $indigo],
                 ];
 
             // ════════════════════════════════════════════════════════════════
