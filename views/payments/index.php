@@ -392,22 +392,29 @@ $isAirbnbManager = strtolower((string)($_SESSION['user_role'] ?? '')) === 'airbn
                 <div class="modal-body">
                     <?php if ($isAirbnbManager): ?>
                         <div class="mb-4">
-                            <label class="form-label d-block fw-bold mb-3">Capture Payment For:</label>
-                            <div class="btn-group w-100" role="group">
-                                <input type="radio" class="btn-check" name="airbnb_payment_category" id="cat_booking" value="booking" checked autocomplete="off">
-                                <label class="btn btn-outline-primary" for="cat_booking">
-                                    <i class="bi bi-calendar-check me-1"></i>Booking
-                                </label>
-
-                                <input type="radio" class="btn-check" name="airbnb_payment_category" id="cat_walkin" value="walkin" autocomplete="off">
-                                <label class="btn btn-outline-primary" for="cat_walkin">
-                                    <i class="bi bi-person-walking me-1"></i>Walk-in
-                                </label>
-
-                                <input type="radio" class="btn-check" name="airbnb_payment_category" id="cat_invoice" value="invoice" autocomplete="off">
-                                <label class="btn btn-outline-primary" for="cat_invoice">
-                                    <i class="bi bi-file-earmark-text me-1"></i>Invoice
-                                </label>
+                            <label class="form-label d-block fw-bold small text-muted text-uppercase mb-3">Capture Payment For:</label>
+                            <div class="row g-2">
+                                <div class="col-4">
+                                    <input type="radio" class="btn-check" name="airbnb_payment_category" id="cat_booking" value="booking" checked autocomplete="off">
+                                    <label class="btn btn-outline-orange w-100 py-2" for="cat_booking">
+                                        <i class="bi bi-calendar-check d-block mb-1"></i>
+                                        <span class="small fw-bold">Booking</span>
+                                    </label>
+                                </div>
+                                <div class="col-4">
+                                    <input type="radio" class="btn-check" name="airbnb_payment_category" id="cat_walkin" value="walkin" autocomplete="off">
+                                    <label class="btn btn-outline-orange w-100 py-2" for="cat_walkin">
+                                        <i class="bi bi-person-walking d-block mb-1"></i>
+                                        <span class="small fw-bold">Walk-in</span>
+                                    </label>
+                                </div>
+                                <div class="col-4">
+                                    <input type="radio" class="btn-check" name="airbnb_payment_category" id="cat_invoice" value="invoice" autocomplete="off">
+                                    <label class="btn btn-outline-orange w-100 py-2" for="cat_invoice">
+                                        <i class="bi bi-file-earmark-text d-block mb-1"></i>
+                                        <span class="small fw-bold">Invoice</span>
+                                    </label>
+                                </div>
                             </div>
                         </div>
 
@@ -546,10 +553,12 @@ $isAirbnbManager = strtolower((string)($_SESSION['user_role'] ?? '')) === 'airbn
                         </div>
                     <?php elseif ($isAirbnbManager): ?>
                         <div class="mb-3">
-                            <label class="form-label">Amount</label>
-                            <div class="input-group shadow-sm">
-                                <span class="input-group-text bg-light fw-bold text-primary">Ksh</span>
-                                <input type="number" step="0.01" class="form-control form-control-lg border-primary fw-bold" name="amount" id="airbnb_amount" placeholder="0.00" required>
+                            <label class="form-label fw-bold small text-muted text-uppercase mb-2">Amount Due</label>
+                            <div class="input-group airbnb-amount-group">
+                                <span class="input-group-text bg-white border-orange border-end-0 rounded-start-pill px-3">
+                                    <span class="fw-bold text-orange">Ksh</span>
+                                </span>
+                                <input type="number" step="0.01" class="form-control form-control-lg border-orange border-start-0 rounded-end-pill fw-bold text-dark ps-0" name="amount" id="airbnb_amount" placeholder="0.00" required>
                             </div>
                         </div>
                     <?php else: ?>
@@ -1019,6 +1028,38 @@ $isAirbnbManager = strtolower((string)($_SESSION['user_role'] ?? '')) === 'airbn
 </div>
 
 <style>
+/* Airbnb Orange Theme */
+.text-orange { color: #ff6b35 !important; }
+.border-orange { border-color: #ff6b35 !important; }
+
+.btn-outline-orange {
+    color: #ff6b35;
+    border-color: #ff6b35;
+    border-radius: 10px;
+}
+.btn-outline-orange:hover, .btn-check:checked + .btn-outline-orange {
+    background-color: #ff6b35;
+    border-color: #ff6b35;
+    color: #fff;
+}
+
+.airbnb-amount-group {
+    filter: drop-shadow(0 4px 6px rgba(255, 107, 53, 0.15));
+}
+.airbnb-amount-group .form-control:focus {
+    box-shadow: 0 0 0 4px rgba(255, 107, 53, 0.15);
+    border-color: #ff6b35;
+}
+
+.rounded-start-pill {
+    border-top-left-radius: 50rem !important;
+    border-bottom-left-radius: 50rem !important;
+}
+.rounded-end-pill {
+    border-top-right-radius: 50rem !important;
+    border-bottom-right-radius: 50rem !important;
+}
+
 .avatar-circle {
     width: 36px;
     height: 36px;
