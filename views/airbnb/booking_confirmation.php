@@ -301,8 +301,8 @@
                             <p class="text-muted small">Reference: <?= htmlspecialchars($booking['booking_reference']) ?></p>
                         </div>
 
-                        <div id="modalInstructionsBox" class="bg-light rounded p-3 mb-4 text-center">
-                            <div id="modalInstructions" class="fw-bold text-primary mb-0" style="white-space: pre-line;"></div>
+                        <div id="modalInstructionsBox" class="bg-light rounded p-4 mb-4 text-start">
+                            <div id="modalInstructions" class="fw-bold mb-0" style="white-space: pre-line; color: #331452; line-height: 1.6;"></div>
                         </div>
 
                         <!-- M-Pesa Modal Fields -->
@@ -457,7 +457,7 @@
                 }
 
                 $('#modalMethodName').text(name);
-                $('#modalMethodIcon').attr('class', iconClass + ' fa-3x');
+                $('#modalMethodIcon').attr('class', iconClass + ' fa-2x');
                 
                 // Reset fields
                 $('#modalMpesaFields').addClass('d-none');
@@ -469,7 +469,16 @@
                 } else if (!instructions) {
                     instructions = 'Please follow the prompts on your device to finalize the payment.';
                 }
-                $('#modalInstructions').text(instructions);
+                
+                // Colorize numbers and codes in orange
+                let formattedInstructions = instructions;
+                if (type !== 'cash') {
+                    // Match numbers of 3+ digits or potentially alphanumeric codes (like transaction codes or paybills)
+                    // This regex targets 07xx..., numbers like 123456, and ensures we don't accidentally colorize the step numbers (like "1.")
+                    formattedInstructions = instructions.replace(/(?<!\d\.\s)(\b\d{4,}\b|\b[A-Z0-9]{8,12}\b)/g, '<span style="color: var(--accent-color)">$1</span>');
+                }
+                
+                $('#modalInstructions').html(formattedInstructions);
 
                 if (['mpesa_manual', 'mpesa_stk', 'mpesa_pochi', 'mpesa_send_money'].includes(type)) {
                     $('#modalMpesaFields').removeClass('d-none');
