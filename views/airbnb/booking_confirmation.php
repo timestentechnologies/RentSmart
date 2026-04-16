@@ -189,7 +189,7 @@
             </div>
 
             <!-- Guest Details -->
-            <div class="col-md-4">
+            <div class="col-md-6">
                 <div class="info-box">
                     <h6 class="mb-3 text-uppercase text-muted small fw-bold"><i class="fas fa-user text-accent me-2"></i>Guest Information</h6>
                     <div class="mb-2">
@@ -207,42 +207,8 @@
                 </div>
             </div>
 
-            <!-- Status & Countdown Dashboard -->
-            <div class="col-md-4">
-                <div class="info-box bg-accent-soft border-0">
-                    <h6 class="mb-3 text-uppercase text-muted small fw-bold"><i class="fas fa-tasks text-accent me-2"></i>Stay Status</h6>
-                    <div class="row g-2">
-                        <div class="col-6">
-                            <small class="text-muted d-block text-uppercase" style="font-size: 10px;">Booking</small>
-                            <?php if ($bookingStatus === 'confirmed' || $bookingStatus === 'reserved'): ?>
-                                <span class="badge bg-success w-100 py-2">BOOKED</span>
-                            <?php else: ?>
-                                <span class="badge bg-warning text-dark w-100 py-2">PENDING</span>
-                            <?php endif; ?>
-                        </div>
-                        <div class="col-6">
-                            <small class="text-muted d-block text-uppercase" style="font-size: 10px;">Payment</small>
-                            <?php if ($isFullyPaid): ?>
-                                <span class="badge bg-success w-100 py-2">PAID</span>
-                            <?php elseif (($booking['amount_paid'] ?? 0) > 0): ?>
-                                <span class="badge bg-info text-dark w-100 py-2">PARTIAL</span>
-                            <?php else: ?>
-                                <span class="badge bg-danger w-100 py-2">UNPAID</span>
-                            <?php endif; ?>
-                        </div>
-                        <div class="col-12 mt-3 text-center">
-                            <div class="bg-white rounded p-2 border border-accent-soft">
-                                <i class="fas fa-clock text-accent me-2"></i>
-                                <span class="fw-bold text-accent"><?= $countdownText ?></span>
-                                <small class="text-muted d-block" style="font-size: 11px;">until check-in</small>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             <!-- Unit Details -->
-            <div class="col-md-4">
+            <div class="col-md-6">
                 <div class="info-box">
                     <h6 class="mb-3 text-uppercase text-muted small fw-bold"><i class="fas fa-home text-accent me-2"></i>Property</h6>
                     <div class="mb-2">
@@ -288,6 +254,36 @@
                     <div class="d-flex justify-content-between">
                         <span class="fw-bold">Total Payable</span>
                         <h4 class="text-accent mb-0">KES <?php echo number_format($booking['final_total'], 2); ?></h4>
+                    </div>
+
+                    <div class="mt-4 pt-3 border-top">
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <small class="text-muted d-block text-uppercase mb-1" style="font-size: 10px; font-weight: 700;">Booking Status</small>
+                                <?php if ($bookingStatus === 'confirmed' || $bookingStatus === 'reserved'): ?>
+                                    <span class="badge bg-success w-100 py-2">BOOKED</span>
+                                <?php else: ?>
+                                    <span class="badge bg-warning text-dark w-100 py-2">PENDING</span>
+                                <?php endif; ?>
+                            </div>
+                            <div class="col-6">
+                                <small class="text-muted d-block text-uppercase mb-1" style="font-size: 10px; font-weight: 700;">Payment Status</small>
+                                <?php if ($isFullyPaid): ?>
+                                    <span class="badge bg-success w-100 py-2">PAID</span>
+                                <?php elseif (($booking['amount_paid'] ?? 0) > 0): ?>
+                                    <span class="badge bg-info text-dark w-100 py-2">PARTIAL</span>
+                                <?php else: ?>
+                                    <span class="badge bg-danger w-100 py-2">UNPAID</span>
+                                <?php endif; ?>
+                            </div>
+                            <div class="col-12 mt-3 text-center">
+                                <div class="bg-light rounded p-2 border">
+                                    <i class="fas fa-clock text-accent me-2"></i>
+                                    <span class="fw-bold text-accent"><?= $countdownText ?></span>
+                                    <small class="text-muted d-block" style="font-size: 11px;">until check-in</small>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
