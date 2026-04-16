@@ -238,7 +238,15 @@ class AirbnbPublicController
         } catch (\Exception $e) {
             error_log('Error loading property page: ' . $e->getMessage());
             http_response_code(500);
-            require 'views/errors/500.php';
+            // Show error details for debugging
+            echo '<h2>Debug Error Details:</h2>';
+            echo '<p><strong>Error:</strong> ' . htmlspecialchars($e->getMessage()) . '</p>';
+            echo '<p><strong>File:</strong> ' . htmlspecialchars($e->getFile()) . '</p>';
+            echo '<p><strong>Line:</strong> ' . $e->getLine() . '</p>';
+            echo '<hr><p><strong>Trace:</strong></p><pre>';
+            echo htmlspecialchars($e->getTraceAsString());
+            echo '</pre>';
+            return;
         }
     }
 
