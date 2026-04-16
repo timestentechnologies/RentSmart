@@ -92,14 +92,15 @@
         .amenity-icon {
             width: 40px;
             height: 40px;
-            background: rgba(107, 62, 153, 0.08);
+            background: rgba(255, 138, 0, 0.1);
             border-radius: 12px;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: var(--primary-color);
+            color: var(--accent-color);
             margin-right: 0.75rem;
         }
+        .text-accent { color: var(--accent-color) !important; }
     </style>
 </head>
 <body>
@@ -112,7 +113,7 @@
                 <div class="mb-4">
                     <h1 class="display-5 fw-bold mb-2"><?php echo htmlspecialchars($property['name']); ?></h1>
                     <p class="text-muted mb-0">
-                        <i class="bi bi-geo-alt-fill text-danger me-2"></i>
+                        <i class="bi bi-geo-alt-fill text-accent me-2"></i>
                         <?php echo htmlspecialchars(($property['address'] ?? '') . ', ' . ($property['city'] ?? '')); ?>
                     </p>
                 </div>

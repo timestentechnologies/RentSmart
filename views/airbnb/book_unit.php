@@ -66,9 +66,32 @@
         }
         .info-card {
             border: none;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+            border-radius: 20px;
+            background: white;
         }
+        .amenity-icon {
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 138, 0, 0.1);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--accent-color);
+            margin-right: 0.75rem;
+        }
+        .form-control, .form-select {
+            border: 1px solid #e5e7eb;
+            border-radius: 14px;
+            padding: 0.75rem 1rem;
+            transition: all 0.2s;
+        }
+        .form-control:focus, .form-select:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 4px rgba(107, 62, 153, 0.1);
+        }
+        .text-accent { color: var(--accent-color) !important; }
     </style>
 </head>
 <body>
@@ -88,7 +111,7 @@
             <div class="col-lg-8">
                 <h2 class="mb-3"><?php echo htmlspecialchars($property['name']); ?></h2>
                 <p class="text-muted mb-4">
-                    <i class="fas fa-map-marker-alt me-2"></i>
+                    <i class="fas fa-map-marker-alt me-2 text-accent"></i>
                     <?php echo htmlspecialchars($property['address']); ?>, 
                     <?php echo htmlspecialchars($property['city']); ?>, 
                     <?php echo htmlspecialchars($property['state']); ?>
@@ -110,19 +133,37 @@
                     <div class="card-body">
                         <div class="row">
                             <div class="col-md-4 mb-3">
-                                <i class="fas fa-bed text-primary me-2"></i>
-                                <strong><?php echo htmlspecialchars($unit['unit_number']); ?></strong>
-                                <small class="text-muted d-block">Unit Number</small>
+                                <div class="d-flex align-items-center">
+                                    <div class="amenity-icon">
+                                        <i class="fas fa-bed"></i>
+                                    </div>
+                                    <div>
+                                        <strong><?php echo htmlspecialchars($unit['unit_number']); ?></strong>
+                                        <small class="text-muted d-block">Unit Number</small>
+                                    </div>
+                                </div>
                             </div>
                             <div class="col-md-4 mb-3">
-                                <i class="fas fa-home text-primary me-2"></i>
-                                <strong><?php echo htmlspecialchars($unit['type']); ?></strong>
-                                <small class="text-muted d-block">Type</small>
+                                <div class="d-flex align-items-center">
+                                    <div class="amenity-icon">
+                                        <i class="fas fa-home"></i>
+                                    </div>
+                                    <div>
+                                        <strong><?php echo htmlspecialchars($unit['type']); ?></strong>
+                                        <small class="text-muted d-block">Type</small>
+                                    </div>
+                                </div>
                             </div>
                             <div class="col-md-4 mb-3">
-                                <i class="fas fa-clock text-primary me-2"></i>
-                                <strong><?php echo date('g:i A', strtotime($airbnbSettings['check_in_time'] ?? '14:00:00')); ?></strong>
-                                <small class="text-muted d-block">Check-in</small>
+                                <div class="d-flex align-items-center">
+                                    <div class="amenity-icon">
+                                        <i class="fas fa-clock"></i>
+                                    </div>
+                                    <div>
+                                        <strong><?php echo date('g:i A', strtotime($airbnbSettings['check_in_time'] ?? '14:00:00')); ?></strong>
+                                        <small class="text-muted d-block">Check-in</small>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -133,7 +174,7 @@
                 <div class="mb-4">
                     <h5>Availability</h5>
                     <div class="availability-badge <?php echo $isAvailable ? 'available' : 'unavailable'; ?>">
-                        <i class="fas <?php echo $isAvailable ? 'fa-check-circle' : 'fa-times-circle'; ?> me-2"></i>
+                        <i class="fas <?php echo $isAvailable ? 'fa-check-circle text-success' : 'fa-times-circle text-danger'; ?> me-2"></i>
                         <?php echo $isAvailable ? 'Available for selected dates' : 'Not available for selected dates'; ?>
                     </div>
                 </div>
@@ -143,7 +184,7 @@
                 <?php if (!empty($airbnbSettings['house_rules'])): ?>
                 <div class="card info-card mb-4">
                     <div class="card-body">
-                        <h5 class="card-title"><i class="fas fa-clipboard-list me-2"></i>House Rules</h5>
+                        <h5 class="card-title"><i class="fas fa-clipboard-list me-2 text-accent"></i>House Rules</h5>
                         <p class="card-text"><?php echo nl2br(htmlspecialchars($airbnbSettings['house_rules'])); ?></p>
                     </div>
                 </div>
@@ -153,11 +194,11 @@
                 <?php if (!empty($property['caretaker_name'])): ?>
                 <div class="card info-card">
                     <div class="card-body">
-                        <h5 class="card-title"><i class="fas fa-user-tie me-2"></i>Property Manager</h5>
+                        <h5 class="card-title"><i class="fas fa-user-tie me-2 text-accent"></i>Property Manager</h5>
                         <p class="card-text mb-1"><strong><?php echo htmlspecialchars($property['caretaker_name']); ?></strong></p>
                         <?php if (!empty($property['caretaker_contact'])): ?>
                         <p class="card-text text-muted">
-                            <i class="fas fa-phone me-2"></i><?php echo htmlspecialchars($property['caretaker_contact']); ?>
+                            <i class="fas fa-phone me-2 text-accent"></i><?php echo htmlspecialchars($property['caretaker_contact']); ?>
                         </p>
                         <?php endif; ?>
                     </div>
@@ -266,7 +307,7 @@
                             </button>
 
                             <p class="text-muted small mt-2 text-center">
-                                <i class="fas fa-info-circle me-1"></i>
+                                <i class="fas fa-info-circle me-1 text-accent"></i>
                                 You won't be charged yet
                             </p>
                         </form>
