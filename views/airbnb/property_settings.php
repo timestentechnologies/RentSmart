@@ -32,12 +32,21 @@ ob_start();
                             </label>
                         </div>
                     </div>
-                    <div class="col-md-4 mb-3">
+                    <div class="col-md-3 mb-3">
                         <div class="form-check form-switch">
                             <input class="form-check-input" type="checkbox" name="instant_booking" id="instant_booking" 
                                 <?php echo (!empty($settings['instant_booking'])) ? 'checked' : ''; ?>>
                             <label class="form-check-label" for="instant_booking">
                                 Enable Instant Booking
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-md-3 mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" name="allow_office_payments" id="allow_office_payments" 
+                                <?php echo (isset($settings['allow_office_payments']) && $settings['allow_office_payments'] == 0) ? '' : 'checked'; ?>>
+                            <label class="form-check-label" for="allow_office_payments">
+                                Allow Pay at Office
                             </label>
                         </div>
                     </div>

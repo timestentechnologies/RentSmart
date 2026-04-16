@@ -837,6 +837,7 @@ class AirbnbController
                     'security_deposit' => $_POST['security_deposit'] ?? 0.00,
                     'booking_lead_time_hours' => $_POST['booking_lead_time_hours'] ?? 24,
                     'instant_booking' => isset($_POST['instant_booking']) ? 1 : 0,
+                    'allow_office_payments' => isset($_POST['allow_office_payments']) ? 1 : 0,
                     'house_rules' => $_POST['house_rules'] ?? null,
                     'cancellation_policy' => $_POST['cancellation_policy'] ?? 'moderate'
                 ];

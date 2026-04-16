@@ -234,13 +234,14 @@
                     
                     <div class="row g-2 mb-3">
                         <?php 
-                        $hasMethods = !empty($paymentMethods);
-                        if ($hasMethods): 
+                        $hasManualMethods = !empty($paymentMethods);
+                        if ($hasManualMethods): 
                             foreach ($paymentMethods as $index => $pm):
                                 $icon = 'fa-credit-card';
-                                if (strpos(strtolower($pm['name']), 'm-pesa') !== false || $pm['type'] === 'mpesa_stk' || $pm['type'] === 'mpesa_manual') $icon = 'fa-mobile-alt';
-                                if (strpos(strtolower($pm['name']), 'bank') !== false || $pm['type'] === 'bank_transfer') $icon = 'fa-university';
-                                if (strpos(strtolower($pm['name']), 'office') !== false || $pm['type'] === 'cash') $icon = 'fa-building';
+                                $pmName = strtolower($pm['name']);
+                                if (strpos($pmName, 'm-pesa') !== false || $pm['type'] === 'mpesa_stk' || $pm['type'] === 'mpesa_manual') $icon = 'fa-mobile-alt';
+                                if (strpos($pmName, 'bank') !== false || $pm['type'] === 'bank_transfer') $icon = 'fa-university';
+                                if (strpos($pmName, 'office') !== false || $pm['type'] === 'cash') $icon = 'fa-building';
                         ?>
                             <div class="col-6">
                                 <div class="payment-card <?= $index === 0 ? 'active' : '' ?>" 
@@ -249,14 +250,25 @@
                                      data-method-name="<?= htmlspecialchars($pm['name']) ?>"
                                      data-details='<?= htmlspecialchars($pm['details']) ?>'>
                                     <i class="fas <?= $icon ?>"></i>
-                                    <span class="small fw-bold"><?= htmlspecialchars($pm['name']) ?></span>
+                                    <span class="small fw-bold text-truncate d-block"><?= htmlspecialchars($pm['name']) ?></span>
                                 </div>
                             </div>
-                        <?php endforeach; else: ?>
-                            <div class="col-12">
-                                <div class="payment-card active" data-method-name="Pay at Office" data-method-type="cash">
+                        <?php endforeach; endif; ?>
+
+                        <?php if ($allowOfficePayment): ?>
+                            <div class="col-6">
+                                <div class="payment-card <?= (!$hasManualMethods) ? 'active' : '' ?>" 
+                                     data-method-name="Pay at Office" 
+                                     data-method-type="cash"
+                                     data-method-id="0">
                                     <i class="fas fa-building"></i>
                                     <span class="small fw-bold">Pay at Office</span>
+                                </div>
+                            </div>
+                        <?php elseif (!$hasManualMethods): ?>
+                            <div class="col-12">
+                                <div class="alert alert-warning py-2 small mb-0">
+                                    <i class="fas fa-exclamation-triangle me-1"></i> No payment methods available. Please contact support.
                                 </div>
                             </div>
                         <?php endif; ?>
@@ -336,14 +348,33 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         $(document).ready(function() {
-            let selectedMethodName = $('.payment-card.active').data('method-name') || 'Pay at Office';
-            let selectedMethodType = $('.payment-card.active').data('method-type') || 'cash';
-            let selectedMethodId = $('.payment-card.active').data('method-id') || 0;
+            // Initial selection logic
+            let activeCard = $('.payment-card.active').first();
+            if (activeCard.length === 0) {
+                // If no card is active (edge case), activate the first one
+                activeCard = $('.payment-card').first();
+                activeCard.addClass('active');
+            }
+
+            let selectedMethodName = activeCard.data('method-name');
+            let selectedMethodType = activeCard.data('method-type');
+            let selectedMethodId = activeCard.data('method-id');
 
             function updatePaymentUI() {
                 const card = $('.payment-card.active');
+                if (!card.length) return;
+
                 const type = card.data('method-type');
-                const details = card.data('details') ? JSON.parse(card.data('details')) : {};
+                let details = {};
+                
+                try {
+                    const rawDetails = card.data('details');
+                    if (rawDetails) {
+                        details = (typeof rawDetails === 'object') ? rawDetails : JSON.parse(rawDetails);
+                    }
+                } catch (e) {
+                    console.error('Error parsing payment details:', e);
+                }
                 
                 $('#mpesaFields').addClass('d-none');
                 $('#manualMpesaFields').addClass('d-none');
@@ -353,14 +384,17 @@
                     $('#mpesaFields').removeClass('d-none');
                     $('#manualMpesaFields').removeClass('d-none');
                     let instr = 'Follow instructions to pay: ';
-                    if (details.mpesa_method === 'till') instr += 'Buy Goods Till ' + details.till_number;
-                    else if (details.mpesa_method === 'paybill') instr += 'Paybill ' + details.paybill_number + ' (Acc: ' + (details.account_number || 'STAY') + ')';
+                    if (details.mpesa_method === 'till') instr += 'Buy Goods Till ' + (details.till_number || '---');
+                    else if (details.mpesa_method === 'paybill') instr += 'Paybill ' + (details.paybill_number || '---') + ' (Acc: ' + (details.account_number || 'STAY') + ')';
+                    else instr += 'Manual M-Pesa';
                     $('#mpesaInstructions').text(instr);
                 } else if (type === 'mpesa_stk') {
                     $('#mpesaFields').removeClass('d-none');
                     $('#mpesaInstructions').text('You will receive an M-Pesa prompt to enter your PIN.');
                 }
             }
+            
+            // Initial UI update
             updatePaymentUI();
 
             $('.payment-card').click(function() {
@@ -369,6 +403,7 @@
                 selectedMethodName = $(this).data('method-name');
                 selectedMethodType = $(this).data('method-type');
                 selectedMethodId = $(this).data('method-id');
+                console.log('Selected Method:', selectedMethodName, selectedMethodType);
                 updatePaymentUI();
             });
 
@@ -388,7 +423,10 @@
                 window.open('https://wa.me/?text=' + encodeURIComponent(text), '_blank');
             });
 
-            $('#btnConfirmPayment').click(function() {
+            $('#btnConfirmPayment').click(function(e) {
+                e.preventDefault();
+                console.log('Confirm button clicked');
+                
                 const btn = $(this);
                 const status = $('#paymentStatus');
                 const statusText = $('#paymentStatusText');
@@ -401,7 +439,7 @@
                     if (selectedMethodType === 'mpesa_manual' && !$('#mpesaCode').val()) return alert('Transaction Code is required');
                 }
 
-                btn.prop('disabled', true);
+                btn.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2"></span>Processing...');
                 status.removeClass('d-none');
                 statusText.text(selectedMethodType === 'mpesa_stk' ? 'Sending prompt...' : 'Processing...');
 
@@ -428,10 +466,14 @@
                             window.location.reload();
                         } else {
                             alert('STK Error: ' + res.message);
-                            btn.prop('disabled', false);
+                            btn.prop('disabled', false).text('Confirm & Reserve');
                             status.addClass('d-none');
                         }
-                    }, 'json');
+                    }, 'json').fail(function() {
+                        alert('Connecton error while initiating STK.');
+                        btn.prop('disabled', false).text('Confirm & Reserve');
+                        status.addClass('d-none');
+                    });
                     return;
                 }
 
@@ -442,17 +484,18 @@
                     data: commonData,
                     success: function(response) {
                         if (response.success) {
-                            alert('Booking Confirmed! Your receipt has been generated and sent to your email.');
+                            alert('Booking Reserved Successfully!');
                             window.location.reload();
                         } else {
                             alert('Error: ' + response.message);
-                            btn.prop('disabled', false);
+                            btn.prop('disabled', false).text('Confirm & Reserve');
                             status.addClass('d-none');
                         }
                     },
-                    error: function() {
+                    error: function(xhr) {
+                        console.error('AJAX Error:', xhr.responseText);
                         alert('An error occurred. Please try again or contact support.');
-                        btn.prop('disabled', false);
+                        btn.prop('disabled', false).text('Confirm & Reserve');
                         status.addClass('d-none');
                     }
                 });

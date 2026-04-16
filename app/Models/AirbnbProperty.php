@@ -42,8 +42,23 @@ class AirbnbProperty extends Model
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
                 $this->db->exec($sql);
             }
+
+            // Ensure allow_office_payments column exists
+            $this->ensureOfficePaymentColumn();
         } catch (\Exception $e) {
             error_log("Error in AirbnbProperty::ensureTable: " . $e->getMessage());
+        }
+    }
+
+    private function ensureOfficePaymentColumn()
+    {
+        try {
+            $col = $this->db->query("SHOW COLUMNS FROM {$this->table} LIKE 'allow_office_payments'")->fetch(\PDO::FETCH_ASSOC);
+            if (!$col) {
+                $this->db->exec("ALTER TABLE {$this->table} ADD COLUMN allow_office_payments TINYINT(1) NOT NULL DEFAULT 1");
+            }
+        } catch (\Exception $e) {
+            error_log("Error adding allow_office_payments column: " . $e->getMessage());
         }
     }
 
@@ -63,10 +78,10 @@ class AirbnbProperty extends Model
             $fields = [];
             $params = ['property_id' => $propertyId];
             
-            $allowedFields = [
                 'is_airbnb_enabled', 'min_stay_nights', 'max_stay_nights',
                 'check_in_time', 'check_out_time', 'cleaning_fee', 'security_deposit',
-                'booking_lead_time_hours', 'instant_booking', 'house_rules', 'cancellation_policy'
+                'booking_lead_time_hours', 'instant_booking', 'house_rules', 'cancellation_policy',
+                'allow_office_payments'
             ];
             
             foreach ($data as $key => $value) {

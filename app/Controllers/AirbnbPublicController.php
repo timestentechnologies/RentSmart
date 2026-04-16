@@ -518,6 +518,10 @@ class AirbnbPublicController
             $pmModel = new \App\Models\PaymentMethod();
             $paymentMethods = $pmModel->getActiveForProperty($booking['property_id']);
 
+            // Get property settings for toggles
+            $airbnbSettings = $this->propertyModel->getByPropertyId($booking['property_id']);
+            $allowOfficePayment = (isset($airbnbSettings['allow_office_payments']) && $airbnbSettings['allow_office_payments'] == 0) ? false : true;
+
             require 'views/airbnb/booking_confirmation.php';
         } catch (\Exception $e) {
             error_log($e->getMessage());
