@@ -102,7 +102,7 @@ $isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
     </div>
 
     <!-- Filters Section -->
-    <div class="card mb-4">
+    <div class="card mb-4 filters-card">
         <div class="card-body">
             <form id="filterForm" class="row g-3">
                 <div class="col-md-3">
@@ -157,7 +157,7 @@ $isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
     </div>
 
     <!-- Payments Table -->
-    <div class="card">
+    <div class="card payment-history-card">
         <div class="card-header border-bottom">
             <h5 class="card-title mb-0">Payment History</h5>
         </div>
@@ -953,6 +953,121 @@ $isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
     position: relative;
     z-index: 4;
     pointer-events: auto;
+}
+
+/* Fix for custom select dropdown z-index on payments page */
+/* Filters card needs higher z-index than Payment History card */
+.filters-card {
+    position: relative;
+    z-index: 100 !important;
+}
+
+.payment-history-card {
+    position: relative;
+    z-index: 1;
+}
+
+/* Custom Select Dropdown Styles */
+.custom-select-wrapper {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+}
+
+.custom-select-trigger {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1rem;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 1rem;
+    color: #212529;
+    min-height: 46px;
+}
+
+.custom-select-trigger:hover {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(107, 62, 153, 0.15);
+}
+
+.custom-select-trigger.active {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.2rem rgba(107, 62, 153, 0.25);
+}
+
+.custom-select-trigger .arrow {
+    margin-left: 8px;
+    transition: transform 0.2s;
+    color: var(--primary-color);
+}
+
+.custom-select-trigger.active .arrow {
+    transform: rotate(180deg);
+}
+
+.custom-select-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #fff;
+    border: 1px solid rgba(107, 62, 153, 0.3);
+    border-radius: 14px;
+    margin-top: 4px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    z-index: 9999 !important;
+    max-height: 280px;
+    overflow-y: auto;
+    display: none;
+}
+
+.custom-select-dropdown.show {
+    display: block;
+}
+
+.custom-select-option {
+    padding: 12px 16px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    font-size: 1rem;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.custom-select-option:last-child {
+    border-bottom: none;
+}
+
+.custom-select-option:hover,
+.custom-select-option.selected {
+    background: var(--accent-color);
+    color: white;
+}
+
+.custom-select-option:first-child {
+    border-radius: 13px 13px 0 0;
+}
+
+.custom-select-option:last-child {
+    border-radius: 0 0 13px 13px;
+}
+
+/* Hide original select when enhanced */
+select.js-enhanced {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+    height: 0;
+    width: 0;
+}
+
+/* Ensure filters section card is above payment history card */
+.filters-card .custom-select-wrapper {
+    position: relative;
+    z-index: 100;
 }
 </style>
 
@@ -2005,6 +2120,114 @@ document.addEventListener('DOMContentLoaded', function() {
     contractSel.addEventListener('change', applyContractRules);
     applyContractRules();
 })();
+
+// Initialize custom selects for filter dropdowns
+document.addEventListener('DOMContentLoaded', function() {
+    initCustomSelects();
+});
+
+// Custom Select Dropdown Functionality
+function initCustomSelects() {
+    const selects = document.querySelectorAll('#filterForm select.form-select:not(.js-enhanced)');
+    
+    selects.forEach(function(select) {
+        if (select.classList.contains('js-enhanced')) return;
+        
+        select.classList.add('js-enhanced');
+        
+        const wrapper = document.createElement('div');
+        wrapper.className = 'custom-select-wrapper';
+        select.parentNode.insertBefore(wrapper, select);
+        wrapper.appendChild(select);
+        
+        const trigger = document.createElement('div');
+        trigger.className = 'custom-select-trigger';
+        trigger.innerHTML = '<span class="selected-text">-- Select --</span><i class="bi bi-chevron-down arrow"></i>';
+        wrapper.appendChild(trigger);
+        
+        const dropdown = document.createElement('div');
+        dropdown.className = 'custom-select-dropdown';
+        wrapper.appendChild(dropdown);
+        
+        Array.from(select.options).forEach(function(option, index) {
+            const opt = document.createElement('div');
+            opt.className = 'custom-select-option';
+            opt.textContent = option.text;
+            opt.setAttribute('data-value', option.value);
+            opt.setAttribute('data-index', index);
+            
+            if (option.selected) {
+                opt.classList.add('selected');
+                trigger.querySelector('.selected-text').textContent = option.text;
+            }
+            
+            dropdown.appendChild(opt);
+        });
+        
+        trigger.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const isOpen = dropdown.classList.contains('show');
+            
+            document.querySelectorAll('.custom-select-dropdown.show').forEach(function(d) {
+                d.classList.remove('show');
+                const wrapperEl = d.closest('.custom-select-wrapper');
+                if (wrapperEl) {
+                    const trig = wrapperEl.querySelector('.custom-select-trigger');
+                    if (trig) trig.classList.remove('active');
+                }
+            });
+            
+            if (!isOpen) {
+                dropdown.classList.add('show');
+                trigger.classList.add('active');
+            }
+        });
+        
+        dropdown.querySelectorAll('.custom-select-option').forEach(function(opt) {
+            opt.addEventListener('click', function(e) {
+                e.stopPropagation();
+                const index = parseInt(this.getAttribute('data-index'));
+                const value = this.getAttribute('data-value');
+                
+                select.selectedIndex = index;
+                select.value = value;
+                
+                const event = new Event('change', { bubbles: true });
+                select.dispatchEvent(event);
+                
+                dropdown.querySelectorAll('.custom-select-option').forEach(function(o) {
+                    o.classList.remove('selected');
+                });
+                this.classList.add('selected');
+                trigger.querySelector('.selected-text').textContent = this.textContent;
+                
+                dropdown.classList.remove('show');
+                trigger.classList.remove('active');
+            });
+        });
+        
+        select.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            if (selectedOption) {
+                trigger.querySelector('.selected-text').textContent = selectedOption.text;
+                dropdown.querySelectorAll('.custom-select-option').forEach(function(opt, idx) {
+                    opt.classList.toggle('selected', idx === this.selectedIndex);
+                }.bind(this));
+            }
+        });
+    });
+}
+
+document.addEventListener('click', function() {
+    document.querySelectorAll('.custom-select-dropdown.show').forEach(function(d) {
+        d.classList.remove('show');
+        const wrapperEl = d.closest('.custom-select-wrapper');
+        if (wrapperEl) {
+            const trig = wrapperEl.querySelector('.custom-select-trigger');
+            if (trig) trig.classList.remove('active');
+        }
+    });
+});
 </script>
 <?php
 $content = ob_get_clean();
