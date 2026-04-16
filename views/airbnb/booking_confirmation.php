@@ -189,7 +189,7 @@
             </div>
 
             <!-- Guest Details -->
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <div class="info-box">
                     <h6 class="mb-3 text-uppercase text-muted small fw-bold"><i class="fas fa-user text-accent me-2"></i>Guest Information</h6>
                     <div class="mb-2">
@@ -208,7 +208,7 @@
             </div>
 
             <!-- Unit Details -->
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <div class="info-box">
                     <h6 class="mb-3 text-uppercase text-muted small fw-bold"><i class="fas fa-home text-accent me-2"></i>Property</h6>
                     <div class="mb-2">
