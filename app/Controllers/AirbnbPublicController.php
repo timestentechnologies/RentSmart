@@ -228,6 +228,9 @@ class AirbnbPublicController
             // Get settings for display
             $settings = $this->settings->getAll();
 
+            // Make airbnbSettings available to view
+            $airbnbSettings = $this->propertyModel->getByPropertyId($propertyId);
+
             // Load the view
             require 'views/airbnb/property.php';
         } catch (\Exception $e) {
