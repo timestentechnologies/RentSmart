@@ -113,6 +113,31 @@
 </head>
 <body>
     <?php require __DIR__ . '/../partials/public_header.php'; ?>
+    
+    <?php
+    // Countdown logic
+    $checkInDateTime = new DateTime($booking['check_in_date'] . ' ' . ($booking['check_in_time'] ?? '14:00:00'));
+    $now = new DateTime();
+    $interval = $now->diff($checkInDateTime);
+    $isPastCheckIn = $now > $checkInDateTime;
+
+    $countdownText = '';
+    if ($isPastCheckIn) {
+        $countdownText = 'Stay Started';
+    } else {
+        if ($interval->days > 0) {
+            $countdownText = $interval->days . ' day' . ($interval->days > 1 ? 's' : '') . ' remaining';
+        } elseif ($interval->h > 0) {
+            $countdownText = $interval->h . ' hour' . ($interval->h > 1 ? 's' : '') . ' remaining';
+        } else {
+            $countdownText = $interval->i . ' minute' . ($interval->i > 1 ? 's' : '') . ' remaining';
+        }
+    }
+
+    $paymentStatus = strtolower($booking['payment_status'] ?? 'pending');
+    $bookingStatus = strtolower($booking['status'] ?? 'pending');
+    $isFullyPaid = ($paymentStatus === 'paid');
+    ?>
 
     <div class="container confirmation-container py-4">
         <div class="row mb-4 align-items-center">
@@ -122,7 +147,13 @@
                         <i class="fas fa-check"></i>
                     </div>
                     <div>
-                        <h2 class="mb-0 h3">Booking Request Received!</h2>
+                        <h2 class="mb-0 h3">
+                            <?php if ($bookingStatus === 'confirmed' || $bookingStatus === 'reserved'): ?>
+                                <i class="fas fa-check-circle text-success me-2"></i>Booking Confirmed!
+                            <?php else: ?>
+                                Booking Request Received!
+                            <?php endif; ?>
+                        </h2>
                         <p class="text-muted mb-0">Your reservation details are below.</p>
                     </div>
                 </div>
@@ -170,8 +201,42 @@
                         <span class="fw-bold"><?php echo htmlspecialchars($booking['guest_phone']); ?></span>
                     </div>
                     <div class="mb-0">
-                        <small class="text-muted d-block">Travelers</small>
-                        <span class="fw-bold"><?php echo $booking['guest_count']; ?> Person(s)</span>
+                        <small class="text-muted d-block">Guests</small>
+                        <span class="fw-bold"><?php echo htmlspecialchars($booking['guest_count']); ?> Person(s)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Status & Countdown Dashboard -->
+            <div class="col-md-4">
+                <div class="info-box bg-accent-soft border-0">
+                    <h6 class="mb-3 text-uppercase text-muted small fw-bold"><i class="fas fa-tasks text-accent me-2"></i>Stay Status</h6>
+                    <div class="row g-2">
+                        <div class="col-6">
+                            <small class="text-muted d-block text-uppercase" style="font-size: 10px;">Booking</small>
+                            <?php if ($bookingStatus === 'confirmed' || $bookingStatus === 'reserved'): ?>
+                                <span class="badge bg-success w-100 py-2">BOOKED</span>
+                            <?php else: ?>
+                                <span class="badge bg-warning text-dark w-100 py-2">PENDING</span>
+                            <?php endif; ?>
+                        </div>
+                        <div class="col-6">
+                            <small class="text-muted d-block text-uppercase" style="font-size: 10px;">Payment</small>
+                            <?php if ($isFullyPaid): ?>
+                                <span class="badge bg-success w-100 py-2">PAID</span>
+                            <?php elseif (($booking['amount_paid'] ?? 0) > 0): ?>
+                                <span class="badge bg-info text-dark w-100 py-2">PARTIAL</span>
+                            <?php else: ?>
+                                <span class="badge bg-danger w-100 py-2">UNPAID</span>
+                            <?php endif; ?>
+                        </div>
+                        <div class="col-12 mt-3 text-center">
+                            <div class="bg-white rounded p-2 border border-accent-soft">
+                                <i class="fas fa-clock text-accent me-2"></i>
+                                <span class="fw-bold text-accent"><?= $countdownText ?></span>
+                                <small class="text-muted d-block" style="font-size: 11px;">until check-in</small>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -229,11 +294,34 @@
 
             <!-- Payment Methods -->
             <div class="col-md-6">
-                <div class="info-box bg-light border-2 border-accent-soft h-100">
-                    <h6 class="mb-3 text-uppercase text-muted small fw-bold"><i class="fas fa-credit-card text-accent me-2"></i>Secure Your Booking</h6>
-                    <p class="small text-muted mb-3">Select your preferred payment method to finalize the reservation.</p>
-                    
-                    <div class="row g-2 mb-3">
+                <?php if ($isFullyPaid): ?>
+                    <div class="info-box bg-success text-white border-0 h-100 text-center d-flex flex-column justify-content-center">
+                        <div class="mb-3">
+                            <i class="fas fa-check-circle display-4"></i>
+                        </div>
+                        <h5 class="fw-bold">Payment Complete!</h5>
+                        <p class="small mb-4">Thank you for your payment. Your booking is fully secured.</p>
+                        <a href="<?php echo BASE_URL; ?>/airbnb/booking-confirmation/<?php echo $booking['booking_reference']; ?>/download-receipt" class="btn btn-light text-success fw-bold">
+                            <i class="fas fa-file-pdf me-2"></i>Download Receipt
+                        </a>
+                    </div>
+                <?php else: ?>
+                    <div class="info-box bg-light border-2 border-accent-soft h-100">
+                        <h6 class="mb-3 text-uppercase text-muted small fw-bold"><i class="fas fa-credit-card text-accent me-2"></i>Secure Your Booking</h6>
+                        
+                        <?php if ($bookingStatus === 'confirmed' || $bookingStatus === 'reserved'): ?>
+                            <div class="alert bg-accent-soft border-accent-soft small mb-3">
+                                <i class="fas fa-info-circle me-1 text-accent"></i> Your booking is reserved. Please complete payment to fully secure your stay.
+                            </div>
+                            <button class="btn btn-brand w-100 mb-3 py-3 shadow-sm" onclick="openPaymentModal()">
+                                <i class="fas fa-wallet me-2"></i> PAY NOW
+                            </button>
+                            <p class="text-center text-muted small mb-0">Or select a different method below:</p>
+                        <?php else: ?>
+                            <p class="small text-muted mb-3">Select your preferred payment method to finalize the reservation.</p>
+                        <?php endif; ?>
+                        
+                        <div class="row g-2 mb-3">
                         <?php 
                         $hasManualMethods = !empty($paymentMethods);
                         if ($hasManualMethods): 
