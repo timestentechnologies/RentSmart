@@ -523,6 +523,7 @@ $routes = [
     'airbnb/book' => ['controller' => 'AirbnbPublicController', 'action' => 'bookUnit'],
     'airbnb/submit-booking' => ['POST' => ['controller' => 'AirbnbPublicController', 'action' => 'submitBooking']],
     'airbnb/booking-confirmation/([A-Za-z0-9]+)' => ['controller' => 'AirbnbPublicController', 'action' => 'bookingConfirmation'],
+    'airbnb/booking-confirmation/([A-Za-z0-9]+)/capture-payment' => ['POST' => ['controller' => 'AirbnbPublicController', 'action' => 'capturePayment']],
     'airbnb/api/available-units' => ['controller' => 'AirbnbPublicController', 'action' => 'apiGetAvailableUnits'],
     'airbnb/api/calculate-price' => ['controller' => 'AirbnbPublicController', 'action' => 'apiCalculatePrice'],
     'airbnb/api/check-availability' => ['controller' => 'AirbnbPublicController', 'action' => 'apiCheckAvailability'],

@@ -631,45 +631,105 @@ class AirbnbPublicController
     }
 
     /**
-     * API: Check availability (public)
+     * API: Capture payment selection and generate invoice
      */
-    public function apiCheckAvailability()
+    public function capturePayment($reference)
     {
         header('Content-Type: application/json');
         
         try {
-            $unitId = $_GET['unit_id'] ?? null;
-            $checkIn = $_GET['check_in'] ?? null;
-            $checkOut = $_GET['check_out'] ?? null;
-
-            if (!$unitId || !$checkIn || !$checkOut) {
-                echo json_encode(['success' => false, 'message' => 'Missing required parameters']);
+            $booking = $this->bookingModel->findByReference($reference);
+            if (!$booking) {
+                echo json_encode(['success' => false, 'message' => 'Booking not found']);
                 return;
             }
 
-            // Get unit
-            $unit = $this->unit->find($unitId);
-            if (!$unit || !$unit['is_airbnb_eligible']) {
-                echo json_encode(['success' => false, 'available' => false, 'message' => 'Unit not found']);
-                return;
+            $method = $_POST['method'] ?? 'Pay at Office';
+            $amount = (float)($booking['final_total'] ?? 0);
+            
+            // Get the owner/manager of the property to attribute the invoice/payment
+            $propId = (int)$booking['property_id'];
+            $stmt = $this->db->prepare("SELECT owner_id, manager_id, airbnb_manager_id FROM properties WHERE id = ?");
+            $stmt->execute([$propId]);
+            $ownerData = $stmt->fetch(\PDO::FETCH_ASSOC);
+            
+            $managerUserId = $ownerData['airbnb_manager_id'] ?? $ownerData['manager_id'] ?? $ownerData['owner_id'] ?? null;
+
+            // 1. Create Invoice
+            $invModel = new \App\Models\Invoice();
+            $invoiceData = [
+                'tenant_id' => null, // Airbnb guests don't have tenant_id
+                'issue_date' => date('Y-m-d'),
+                'due_date' => date('Y-m-d'),
+                'status' => 'sent',
+                'notes' => 'AIRBNB_BOOKING#' . $booking['id'] . ' | Method: ' . $method,
+                'user_id' => $managerUserId
+            ];
+            
+            $items = [
+                [
+                    'description' => 'Airbnb Booking: ' . $booking['booking_reference'] . ' (' . $booking['nights'] . ' nights)',
+                    'quantity' => 1,
+                    'unit_price' => $booking['total_amount']
+                ]
+            ];
+            
+            if ($booking['cleaning_fee'] > 0) {
+                $items[] = ['description' => 'Cleaning Fee', 'quantity' => 1, 'unit_price' => $booking['cleaning_fee']];
+            }
+            if ($booking['security_deposit'] > 0) {
+                $items[] = ['description' => 'Security Deposit (Refundable)', 'quantity' => 1, 'unit_price' => $booking['security_deposit']];
+            }
+            if ($booking['discount_amount'] > 0) {
+                $items[] = ['description' => 'Discount', 'quantity' => 1, 'unit_price' => -($booking['discount_amount'])];
             }
 
-            // Check property Airbnb enabled
-            $airbnbSettings = $this->propertyModel->getByPropertyId($unit['property_id']);
-            if (!$airbnbSettings || !$airbnbSettings['is_airbnb_enabled']) {
-                echo json_encode(['success' => false, 'available' => false, 'message' => 'Property not available']);
-                return;
-            }
+            $invoiceId = $invModel->createInvoice($invoiceData, $items);
 
-            $isAvailable = $this->bookingModel->isUnitAvailable($unitId, $checkIn, $checkOut);
+            // 2. Record Payment (if Pay at Office, we might mark as pending verification, but user wants it "captured")
+            // For Airbnb, we'll mark as 'paid' if it's "Pay at Office" because the manager will verify it manually 
+            // but the user wants the system to capture it immediately.
+            $payModel = new \App\Models\Payment();
+            $paymentData = [
+                'lease_id' => null,
+                'amount' => $amount,
+                'payment_date' => date('Y-m-d'),
+                'payment_type' => 'rent',
+                'payment_method' => $method,
+                'reference_number' => $booking['booking_reference'],
+                'status' => ($method === 'Pay at Office') ? 'pending' : 'completed', // Manager verifies office payments
+                'notes' => 'Airbnb Booking Payment: ' . $booking['booking_reference'] . ' | Invoice #' . $invoiceId,
+                'user_id' => $managerUserId
+            ];
+            
+            // We need to ensure airbnb_booking_id exists in payments table
+            try {
+                $this->db->exec("ALTER TABLE payments ADD COLUMN airbnb_booking_id INT NULL AFTER lease_id");
+                $this->db->exec("ALTER TABLE payments ADD INDEX idx_airbnb_booking (airbnb_booking_id)");
+            } catch (\Exception $e) {}
+
+            $sql = "INSERT INTO payments (lease_id, airbnb_booking_id, amount, payment_date, payment_type, payment_method, reference_number, status, notes, user_id) 
+                    VALUES (:lease_id, :airbnb_booking_id, :amount, :payment_date, :payment_type, :payment_method, :reference_number, :status, :notes, :user_id)";
+            $payStmt = $this->db->prepare($sql);
+            $paymentData['airbnb_booking_id'] = $booking['id'];
+            $payStmt->execute($paymentData);
+
+            // 3. Update Booking Status
+            $newStatus = ($method === 'Pay at Office') ? 'confirmed' : 'confirmed'; 
+            $this->bookingModel->updateBooking($booking['id'], [
+                'status' => $newStatus,
+                'payment_status' => ($method === 'Pay at Office') ? 'pending' : 'paid',
+                'amount_paid' => ($method === 'Pay at Office') ? 0 : $amount
+            ]);
 
             echo json_encode([
-                'success' => true,
-                'available' => $isAvailable
+                'success' => true, 
+                'message' => 'Payment selection recorded successfully. Invoice generated.',
+                'invoice_id' => $invoiceId
             ]);
         } catch (\Exception $e) {
-            error_log($e->getMessage());
-            echo json_encode(['success' => false, 'message' => 'Error checking availability']);
+            error_log('Airbnb capturePayment error: ' . $e->getMessage());
+            echo json_encode(['success' => false, 'message' => 'Error processing payment: ' . $e->getMessage()]);
         }
     }
 }

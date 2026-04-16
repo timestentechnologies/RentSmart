@@ -119,11 +119,11 @@ $isRealtor = strtolower((string)($_SESSION['user_role'] ?? '')) === 'realtor';
                     <label for="propertyFilter" class="form-label">Property</label>
                     <select class="form-select" id="propertyFilter">
                         <option value="">All Properties</option>
-                        <?php 
-                        $propertyNames = array_values(array_unique(array_filter(array_map(function($p){ return $p['property_name'] ?? ''; }, $payments))));
-                        foreach ($propertyNames as $pname): ?>
-                            <option value="<?= htmlspecialchars($pname) ?>"><?= htmlspecialchars($pname) ?></option>
-                        <?php endforeach; ?>
+                        <?php if (!empty($properties)): ?>
+                            <?php foreach ($properties as $prop): ?>
+                                <option value="<?= htmlspecialchars($prop['name']) ?>"><?= htmlspecialchars($prop['name']) ?></option>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
                     </select>
                 </div>
                 <?php if (!$isRealtor): ?>

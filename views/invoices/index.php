@@ -22,7 +22,7 @@ ob_start();
       <form method="get" class="row g-2 align-items-end" id="invoiceFiltersForm">
         <div class="col-12 col-md-3">
           <label class="form-label mb-1">Search</label>
-          <input type="text" class="form-control" name="q" value="<?= htmlspecialchars($_GET['q'] ?? '') ?>" placeholder="Invoice no, <?= $role === 'realtor' ? 'client, listing' : 'tenant' ?>, notes" id="invoiceSearchInput" autocomplete="off">
+          <input type="text" class="form-control" name="q" value="<?= htmlspecialchars($_GET['q'] ?? '') ?>" placeholder="Invoice no, <?= $role === 'realtor' ? 'client, listing' : 'tenant, guest' ?>, notes" id="invoiceSearchInput" autocomplete="off">
         </div>
         <div class="col-6 col-md-2">
           <label class="form-label mb-1">Status</label>
@@ -102,7 +102,16 @@ ob_start();
                   <td><?= htmlspecialchars($inv['realtor_client_name'] ?? '-') ?></td>
                   <td><?= htmlspecialchars($inv['realtor_listing_title'] ?? '-') ?></td>
                 <?php else: ?>
-                  <td><?= htmlspecialchars($inv['tenant_name'] ?? '-') ?></td>
+                  <td>
+                    <?php if (!empty($inv['airbnb_guest_name'])): ?>
+                      <div class="d-flex align-items-center">
+                        <i class="bi bi-person-circle text-warning me-2" title="Airbnb Guest"></i>
+                        <span class="fw-bold"><?= htmlspecialchars($inv['airbnb_guest_name']) ?></span>
+                      </div>
+                    <?php else: ?>
+                      <?= htmlspecialchars($inv['tenant_name'] ?? '-') ?>
+                    <?php endif; ?>
+                  </td>
                 <?php endif; ?>
                 <td><?= htmlspecialchars($inv['issue_date']) ?></td>
                 <td><?= htmlspecialchars($inv['due_date'] ?? '-') ?></td>

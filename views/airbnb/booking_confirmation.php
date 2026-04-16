@@ -24,199 +24,320 @@
         }
         body { font-family: 'Inter', sans-serif; color: var(--dark-color); background-color: #fbfbff; }
         .confirmation-container {
-            max-width: 800px;
+            max-width: 900px;
             margin: 0 auto;
         }
         .success-icon {
-            width: 80px;
-            height: 80px;
-            background: #22c55e;
+            width: 70px;
+            height: 70px;
+            background: var(--accent-color);
             color: white;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 2.5rem;
-            margin: 0 auto 1.5rem;
-            box-shadow: 0 10px 20px rgba(34, 197, 94, 0.2);
+            font-size: 2rem;
+            margin: 0 auto 1rem;
+            box-shadow: 0 10px 20px rgba(255, 138, 0, 0.2);
         }
         .booking-reference {
-            background: #f8f9fa;
-            border: 2px dashed #dee2e6;
-            border-radius: 8px;
-            padding: 1rem;
+            background: #fff;
+            border: 2px dashed var(--accent-color);
+            border-radius: 12px;
+            padding: 0.75rem;
             text-align: center;
         }
         .booking-reference code {
-            font-size: 1.5rem;
+            font-size: 1.25rem;
             font-weight: bold;
-            color: #212529;
+            color: var(--accent-color);
+            letter-spacing: 2px;
         }
         .info-box {
             background: white;
             border-radius: 12px;
-            padding: 1.5rem;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 1.25rem;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.05);
             margin-bottom: 1rem;
+            height: 100%;
         }
         .status-badge {
             display: inline-block;
-            padding: 0.5rem 1rem;
+            padding: 0.4rem 1rem;
             border-radius: 20px;
-            font-weight: 500;
+            font-weight: 600;
+            font-size: 0.85rem;
+            text-transform: uppercase;
         }
-        .status-pending {
-            background: #fff3cd;
-            color: #856404;
+        .status-pending { background: #fff3cd; color: #856404; }
+        .status-confirmed { background: #d4edda; color: #155724; }
+        
+        .payment-card {
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid #eee;
+            border-radius: 10px;
+            padding: 1rem;
+            text-align: center;
         }
-        .status-confirmed {
-            background: #d4edda;
-            color: #155724;
+        .payment-card:hover {
+            border-color: var(--accent-color);
+            background: rgba(255, 138, 0, 0.05);
         }
+        .payment-card.active {
+            border-color: var(--accent-color);
+            background: rgba(255, 138, 0, 0.1);
+        }
+        .payment-card i {
+            display: block;
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+            color: var(--accent-color);
+        }
+        .btn-brand {
+            background: var(--accent-color);
+            border-color: var(--accent-color);
+            color: white;
+            padding: 0.6rem 2rem;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .btn-brand:hover {
+            background: #e67c00;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 138, 0, 0.3);
+        }
+        .text-accent { color: var(--accent-color) !important; }
+        .bg-accent-soft { background: rgba(255, 138, 0, 0.1); }
     </style>
 </head>
 <body>
     <?php require __DIR__ . '/../partials/public_header.php'; ?>
 
-    <div class="container confirmation-container py-5">
-        <div class="text-center mb-5">
-            <div class="success-icon">
-                <i class="fas fa-check"></i>
-            </div>
-            <h2 class="mb-3">Booking Request Received!</h2>
-            <p class="text-muted">Thank you for your booking. We'll contact you shortly to confirm.</p>
-        </div>
-
-        <!-- Booking Reference -->
-        <div class="booking-reference mb-4">
-            <p class="text-muted mb-2">Your Booking Reference</p>
-            <code><?php echo htmlspecialchars($booking['booking_reference']); ?></code>
-            <p class="small text-muted mt-2">Please save this reference for your records</p>
-        </div>
-
-        <div class="row g-4">
-            <!-- Booking Details -->
-            <div class="col-md-6">
-                <div class="info-box">
-                    <h5 class="mb-3"><i class="fas fa-calendar-alt text-primary me-2"></i>Stay Details</h5>
-                    <div class="mb-3">
-                        <small class="text-muted d-block">Check-in</small>
-                        <strong><?php echo date('l, F j, Y', strtotime($booking['check_in_date'])); ?></strong>
-                        <span class="text-muted">at <?php echo date('g:i A', strtotime($booking['check_in_time'])); ?></span>
+    <div class="container confirmation-container py-4">
+        <div class="row mb-4 align-items-center">
+            <div class="col-md-7">
+                <div class="d-flex align-items-center gap-3 mb-2">
+                    <div class="success-icon m-0">
+                        <i class="fas fa-check"></i>
                     </div>
-                    <div class="mb-3">
+                    <div>
+                        <h2 class="mb-0 h3">Booking Request Received!</h2>
+                        <p class="text-muted mb-0">Your reservation details are below.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-5">
+                <div class="booking-reference">
+                    <small class="text-muted d-block mb-1">Booking Reference</small>
+                    <code><?php echo htmlspecialchars($booking['booking_reference']); ?></code>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-3">
+            <!-- Stay Details -->
+            <div class="col-md-4">
+                <div class="info-box">
+                    <h6 class="mb-3 text-uppercase text-muted small fw-bold"><i class="fas fa-calendar-alt text-accent me-2"></i>Stay Details</h6>
+                    <div class="mb-2">
+                        <small class="text-muted d-block">Check-in</small>
+                        <span class="fw-bold"><?php echo date('D, M j, Y', strtotime($booking['check_in_date'])); ?></span>
+                        <div class="small text-muted"><?php echo date('g:i A', strtotime($booking['check_in_time'])); ?> onwards</div>
+                    </div>
+                    <div class="mb-2">
                         <small class="text-muted d-block">Check-out</small>
-                        <strong><?php echo date('l, F j, Y', strtotime($booking['check_out_date'])); ?></strong>
-                        <span class="text-muted">at <?php echo date('g:i A', strtotime($booking['check_out_time'])); ?></span>
+                        <span class="fw-bold"><?php echo date('D, M j, Y', strtotime($booking['check_out_date'])); ?></span>
+                        <div class="small text-muted">by <?php echo date('g:i A', strtotime($booking['check_out_time'])); ?></div>
                     </div>
                     <div class="mb-0">
                         <small class="text-muted d-block">Duration</small>
-                        <strong><?php echo $booking['nights']; ?> night(s)</strong>
+                        <span class="badge bg-accent-soft text-accent"><?php echo $booking['nights']; ?> Night(s)</span>
                     </div>
                 </div>
             </div>
 
             <!-- Guest Details -->
-            <div class="col-md-6">
+            <div class="col-md-4">
                 <div class="info-box">
-                    <h5 class="mb-3"><i class="fas fa-user text-primary me-2"></i>Guest Information</h5>
-                    <div class="mb-3">
-                        <small class="text-muted d-block">Name</small>
-                        <strong><?php echo htmlspecialchars($booking['guest_name']); ?></strong>
+                    <h6 class="mb-3 text-uppercase text-muted small fw-bold"><i class="fas fa-user text-accent me-2"></i>Guest Information</h6>
+                    <div class="mb-2">
+                        <small class="text-muted d-block">Lead Guest</small>
+                        <span class="fw-bold"><?php echo htmlspecialchars($booking['guest_name']); ?></span>
                     </div>
-                    <div class="mb-3">
+                    <div class="mb-2">
                         <small class="text-muted d-block">Phone</small>
-                        <strong><?php echo htmlspecialchars($booking['guest_phone']); ?></strong>
+                        <span class="fw-bold"><?php echo htmlspecialchars($booking['guest_phone']); ?></span>
                     </div>
-                    <?php if ($booking['guest_email']): ?>
-                    <div class="mb-3">
-                        <small class="text-muted d-block">Email</small>
-                        <strong><?php echo htmlspecialchars($booking['guest_email']); ?></strong>
-                    </div>
-                    <?php endif; ?>
                     <div class="mb-0">
-                        <small class="text-muted d-block">Guests</small>
-                        <strong><?php echo $booking['guest_count']; ?> person(s)</strong>
+                        <small class="text-muted d-block">Travelers</small>
+                        <span class="fw-bold"><?php echo $booking['guest_count']; ?> Person(s)</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Unit Details -->
+            <div class="col-md-4">
+                <div class="info-box">
+                    <h6 class="mb-3 text-uppercase text-muted small fw-bold"><i class="fas fa-home text-accent me-2"></i>Property</h6>
+                    <div class="mb-2">
+                        <small class="text-muted d-block">Property Name</small>
+                        <span class="fw-bold"><?php echo htmlspecialchars($booking['property_name']); ?></span>
+                    </div>
+                    <div class="mb-2">
+                        <small class="text-muted d-block">Unit Number</small>
+                        <span class="fw-bold">Unit #<?php echo htmlspecialchars($booking['unit_number']); ?></span>
+                    </div>
+                    <div class="mb-0">
+                        <small class="text-muted d-block">Location</small>
+                        <span class="small"><?php echo htmlspecialchars($booking['address'] . ', ' . $booking['city']); ?></span>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Price Summary -->
-        <div class="info-box mt-4">
-            <h5 class="mb-3"><i class="fas fa-receipt text-primary me-2"></i>Price Summary</h5>
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">KES <?php echo number_format($booking['price_per_night'], 2); ?> x <?php echo $booking['nights']; ?> nights</span>
+        <div class="row mt-3 g-3">
+            <!-- Price Breakdown -->
+            <div class="col-md-6">
+                <div class="info-box">
+                    <h6 class="mb-3 text-uppercase text-muted small fw-bold"><i class="fas fa-receipt text-accent me-2"></i>Price Summary</h6>
+                    <div class="d-flex justify-content-between mb-2 small">
+                        <span class="text-muted">Stay (<?php echo $booking['nights']; ?> nights)</span>
                         <span>KES <?php echo number_format($booking['total_amount'], 2); ?></span>
                     </div>
                     <?php if ($booking['discount_amount'] > 0): ?>
-                    <div class="d-flex justify-content-between mb-2 text-success">
-                        <span>Discount</span>
+                    <div class="d-flex justify-content-between mb-2 small text-success">
+                        <span>Discount Applied</span>
                         <span>-KES <?php echo number_format($booking['discount_amount'], 2); ?></span>
                     </div>
                     <?php endif; ?>
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">Cleaning fee</span>
+                    <div class="d-flex justify-content-between mb-2 small">
+                        <span class="text-muted">Cleaning Fee</span>
                         <span>KES <?php echo number_format($booking['cleaning_fee'], 2); ?></span>
                     </div>
-                    <div class="d-flex justify-content-between mb-2">
-                        <span class="text-muted">Security deposit</span>
+                    <div class="d-flex justify-content-between mb-2 small">
+                        <span class="text-muted">Security Deposit (Refundable)</span>
                         <span>KES <?php echo number_format($booking['security_deposit'], 2); ?></span>
                     </div>
-                    <hr>
+                    <hr class="my-2">
                     <div class="d-flex justify-content-between">
-                        <strong>Total</strong>
-                        <strong class="text-primary">KES <?php echo number_format($booking['final_total'], 2); ?></strong>
+                        <span class="fw-bold">Total Payable</span>
+                        <h4 class="text-accent mb-0">KES <?php echo number_format($booking['final_total'], 2); ?></h4>
                     </div>
                 </div>
-                <div class="col-md-6">
-                    <div class="alert alert-info">
-                        <h6 class="alert-heading"><i class="fas fa-info-circle me-2"></i>Payment Information</h6>
-                        <p class="mb-0 small">
-                            Payment will be collected during check-in. Please have the total amount ready.
-                            The security deposit will be refunded at check-out after property inspection.
-                        </p>
+            </div>
+
+            <!-- Payment Methods -->
+            <div class="col-md-6">
+                <div class="info-box bg-light border-0">
+                    <h6 class="mb-3 text-uppercase text-muted small fw-bold"><i class="fas fa-credit-card text-accent me-2"></i>Secure Your Booking</h6>
+                    <p class="small text-muted mb-3">Select your preferred payment method to finalize the reservation.</p>
+                    
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            <div class="payment-card" data-method="M-Pesa">
+                                <i class="fas fa-mobile-alt"></i>
+                                <span class="small fw-bold">M-Pesa</span>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="payment-card active" data-method="Pay at Office">
+                                <i class="fas fa-building"></i>
+                                <span class="small fw-bold">Pay at Office</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="btn btn-brand w-100" id="btnConfirmPayment">
+                        Confirm & Reserve
+                    </button>
+                    
+                    <div id="paymentStatus" class="mt-2 text-center small d-none">
+                        <span class="spinner-border spinner-border-sm text-accent me-1"></span> Processing...
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Status -->
         <div class="text-center mt-4">
-            <p class="mb-2">Booking Status</p>
-            <span class="status-badge status-<?php echo $booking['status']; ?>">
-                <?php echo ucfirst($booking['status']); ?>
-            </span>
-            <?php if ($booking['status'] === 'pending'): ?>
-            <p class="text-muted small mt-2">We're reviewing your booking and will confirm shortly.</p>
-            <?php endif; ?>
-        </div>
-
-        <div class="text-center mt-5">
-            <a href="<?php echo BASE_URL; ?>/airbnb" class="btn btn-outline-brand me-2">
-                <i class="fas fa-arrow-left me-2"></i>Back to Listings
+            <a href="<?php echo BASE_URL; ?>/airbnb" class="btn btn-link text-muted text-decoration-none small">
+                <i class="fas fa-chevron-left me-1"></i> Return to Listings
             </a>
-            <button class="btn btn-brand" onclick="window.print()">
-                <i class="fas fa-print me-2"></i>Print Confirmation
+            <button class="btn btn-link text-muted text-decoration-none small" onclick="window.print()">
+                <i class="fas fa-print me-1"></i> Print Confirmation
             </button>
         </div>
 
-        <!-- Important Notes -->
-        <div class="alert alert-warning mt-5">
-            <h6 class="alert-heading"><i class="fas fa-exclamation-triangle me-2"></i>Important Notes</h6>
-            <ul class="mb-0">
-                <li>Please bring a valid ID for check-in</li>
-                <li>Cancellation must be made at least 24 hours before check-in</li>
-                <li>Late check-out may incur additional charges</li>
-                <li>No smoking inside the property</li>
-            </ul>
+        <!-- Footer Notes -->
+        <div class="mt-4 border-top pt-4">
+            <h6 class="text-muted small fw-bold mb-3">GUEST GUIDELINES</h6>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <ul class="small text-muted ps-3 mb-0">
+                        <li>Present original ID/Passport upon check-in.</li>
+                        <li>Check-in is from <?php echo date('g:i A', strtotime($booking['check_in_time'])); ?>.</li>
+                        <li>Maximum of <?php echo $booking['guest_count']; ?> guests allowed.</li>
+                    </ul>
+                </div>
+                <div class="col-md-6">
+                    <ul class="small text-muted ps-3 mb-0">
+                        <li>Strictly No Smoking inside the property.</li>
+                        <li>Security deposit is partially/fully refundable after inspection.</li>
+                        <li>Quiet hours start from 10:00 PM.</li>
+                    </ul>
+                </div>
+            </div>
         </div>
     </div>
 
     <?php require __DIR__ . '/../partials/public_footer.php'; ?>
 
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            let selectedMethod = 'Pay at Office';
+
+            $('.payment-card').click(function() {
+                $('.payment-card').removeClass('active');
+                $(this).addClass('active');
+                selectedMethod = $(this).data('method');
+            });
+
+            $('#btnConfirmPayment').click(function() {
+                const btn = $(this);
+                const status = $('#paymentStatus');
+                const reference = '<?php echo $booking['booking_reference']; ?>';
+
+                btn.prop('disabled', true);
+                status.removeClass('d-none');
+
+                $.ajax({
+                    url: '<?= BASE_URL ?>/airbnb/booking-confirmation/' + reference + '/capture-payment',
+                    method: 'POST',
+                    data: {
+                        method: selectedMethod,
+                        csrf_token: $('meta[name="csrf-token"]').attr('content')
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            alert('Booking Confirmed! Your invoice has been generated.');
+                            window.location.reload();
+                        } else {
+                            alert('Error: ' + response.message);
+                            btn.prop('disabled', false);
+                            status.addClass('d-none');
+                        }
+                    },
+                    error: function() {
+                        alert('An error occurred. Please try again or contact support.');
+                        btn.prop('disabled', false);
+                        status.addClass('d-none');
+                    }
+                });
+            });
+        });
+    </script>
 </body>
 </html>
+

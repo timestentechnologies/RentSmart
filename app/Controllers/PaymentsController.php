@@ -328,6 +328,10 @@ class PaymentsController
         $delinquentTenants = $paymentModel->getDelinquentTenants($this->userId);
         $pendingPaymentsCount = is_array($delinquentTenants) ? count($delinquentTenants) : 0;
         
+        // NEW: Fetch all accessible properties for the filter dropdown
+        $propertyModel = new \App\Models\Property();
+        $properties = $propertyModel->getAll($this->userId);
+        
         require 'views/payments/index.php';
     }
 

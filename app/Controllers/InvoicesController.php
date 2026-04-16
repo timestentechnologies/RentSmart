@@ -239,6 +239,42 @@ class InvoicesController
                 }
             }
         }
+
+        // Enrich Airbnb invoices with guest name (from matching tag)
+        $airbnbBookingIds = [];
+        foreach ($invoices as $idx => $r) {
+            $notes = (string)($r['notes'] ?? '');
+            if (preg_match('/AIRBNB_BOOKING#(\d+)/', $notes, $m)) {
+                $bid = (int)$m[1];
+                if ($bid > 0) {
+                    $airbnbBookingIds[] = $bid;
+                    $invoices[$idx]['airbnb_booking_id'] = $bid;
+                }
+            }
+        }
+
+        $airbnbBookingIds = array_values(array_unique(array_filter($airbnbBookingIds, fn($v) => $v > 0)));
+        if (!empty($airbnbBookingIds)) {
+            try {
+                $db = $inv->getDb();
+                $ph = implode(',', array_fill(0, count($airbnbBookingIds), '?'));
+                $stmt = $db->prepare("SELECT id, guest_name FROM airbnb_bookings WHERE id IN ($ph)");
+                $stmt->execute($airbnbBookingIds);
+                $bMap = [];
+                foreach ($stmt->fetchAll(\PDO::FETCH_ASSOC) as $row) {
+                    $bMap[(int)$row['id']] = $row['guest_name'];
+                }
+                foreach ($invoices as $idx => $r) {
+                    $bid = (int)($r['airbnb_booking_id'] ?? 0);
+                    if ($bid > 0 && isset($bMap[$bid])) {
+                        $invoices[$idx]['airbnb_guest_name'] = $bMap[$bid];
+                    }
+                }
+            } catch (\Throwable $e) {
+                error_log('Airbnb invoice enrichment failed: ' . $e->getMessage());
+            }
+        }
+
         require 'views/invoices/index.php';
     }
 
