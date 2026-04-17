@@ -1938,6 +1938,11 @@ ob_clean();
                             <i class="bi bi-people me-2"></i> Agents
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link <?= (strpos($current_uri, 'admin/airbnb-managers') === 0) ? 'active' : '' ?>" href="<?= BASE_URL ?>/admin/airbnb-managers">
+                            <i class="bi bi-house-door me-2"></i> Airbnb Managers
+                        </a>
+                    </li>
 
                     <li class="nav-item mt-3">
                         <small class="nav-header text-uppercase px-3">ADMINISTRATION</small>

@@ -554,6 +554,11 @@ class AdminController
         return $this->usersByRole('agent', 'Agents - RentSmart');
     }
 
+    public function airbnbManagers()
+    {
+        return $this->usersByRole('airbnb_manager', 'Airbnb Managers - RentSmart');
+    }
+
     public function updateSubscription()
     {
         try {

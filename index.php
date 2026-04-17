@@ -187,6 +187,7 @@ $routes = [
     'admin/landlords' => ['controller' => 'AdminController', 'action' => 'landlords'],
     'admin/realtors' => ['controller' => 'AdminController', 'action' => 'realtors'],
     'admin/agents' => ['controller' => 'AdminController', 'action' => 'agents'],
+    'admin/airbnb-managers' => ['controller' => 'AdminController', 'action' => 'airbnbManagers'],
     'admin/users/store' => ['controller' => 'AdminController', 'action' => 'storeUser'],
     'admin/users/get/(\d+)' => ['controller' => 'AdminController', 'action' => 'getUser'],
     'admin/users/update' => ['controller' => 'AdminController', 'action' => 'updateUser'],

@@ -597,6 +597,7 @@ class DashboardController
                     ['name' => 'Landlords',         'icon' => 'bi-person-badge',      'url' => '/admin/landlords',                'color' => $blue],
                     ['name' => 'Realtors',          'icon' => 'bi-building',          'url' => '/admin/realtors',                 'color' => $green],
                     ['name' => 'Agents',            'icon' => 'bi-people',            'url' => '/admin/agents',                   'color' => $teal],
+                    ['name' => 'Airbnb Managers',   'icon' => 'bi-house-door',        'url' => '/admin/airbnb-managers',          'color' => $brown],
                     // ADMINISTRATION
                     ['name' => 'Users',             'icon' => 'bi-people-fill',       'url' => '/admin/users',                    'color' => $yellow],
                     ['name' => 'Sub. Plans',        'icon' => 'bi-award',             'url' => '/admin/subscriptions/plans',      'color' => $red],
