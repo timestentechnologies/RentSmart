@@ -341,6 +341,46 @@ class MaintenanceRequest extends Model
     }
 
     /**
+     * Get maintenance requests by property IDs (for Airbnb manager)
+     */
+    public function getByPropertyIds(array $propertyIds)
+    {
+        if (empty($propertyIds)) {
+            return [];
+        }
+        
+        $placeholders = implode(',', array_fill(0, count($propertyIds), '?'));
+        
+        $sql = "SELECT mr.*, 
+                COALESCE(t.name, t2.name) as tenant_name,
+                COALESCE(t.email, t2.email) as tenant_email,
+                COALESCE(t.phone, t2.phone) as tenant_phone,
+                COALESCE(mr.tenant_id, l.tenant_id) as resolved_tenant_id,
+                u.unit_number,
+                p.name as property_name,
+                p.caretaker_user_id,
+                p.airbnb_manager_id
+                FROM maintenance_requests mr
+                LEFT JOIN tenants t ON mr.tenant_id = t.id
+                LEFT JOIN units u ON mr.unit_id = u.id
+                LEFT JOIN properties p ON mr.property_id = p.id
+                LEFT JOIN leases l ON l.id = (
+                    SELECT l2.id
+                    FROM leases l2
+                    WHERE l2.unit_id = mr.unit_id AND l2.status = 'active'
+                    ORDER BY l2.id DESC
+                    LIMIT 1
+                )
+                LEFT JOIN tenants t2 ON l.tenant_id = t2.id
+                WHERE mr.property_id IN ($placeholders)
+                ORDER BY mr.requested_date DESC";
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($propertyIds);
+        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+    }
+
+    /**
      * Get maintenance costs for reports
      */
     public function getMaintenanceCosts($startDate, $endDate, $userId = null)

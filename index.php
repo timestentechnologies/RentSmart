@@ -549,6 +549,8 @@ $routes = [
     'airbnb/property-settings' => ['controller' => 'AirbnbController', 'action' => 'propertySettings'],
     'airbnb/property-settings/(\d+)' => ['controller' => 'AirbnbController', 'action' => 'propertySettings'],
     'airbnb/units' => ['controller' => 'AirbnbController', 'action' => 'units'],
+    'airbnb/maintenance' => ['controller' => 'AirbnbController', 'action' => 'maintenance'],
+    'airbnb/maintenance/update-status' => ['POST' => ['controller' => 'AirbnbController', 'action' => 'updateMaintenanceStatus']],
     // Realtor routes
     'realtor/dashboard' => ['controller' => 'RealtorDashboardController', 'action' => 'index'],
     'realtor/listings' => ['controller' => 'RealtorListingsController', 'action' => 'index'],
@@ -913,6 +915,8 @@ $protectedRoutes = [
     'airbnb/property-settings',
     'airbnb/property-settings/(\d+)',
     'airbnb/units',
+    'airbnb/maintenance',
+    'airbnb/maintenance/update-status',
 ];
 
 // Check if the current route requires authentication

@@ -1136,4 +1136,356 @@ class AirbnbController
             require 'views/errors/500.php';
         }
     }
+
+    /**
+     * Maintenance - List maintenance requests for Airbnb properties
+     */
+    public function maintenance()
+    {
+        try {
+            $auth = $this->checkAirbnbAccess();
+            $userId = $auth['userId'];
+            $propertyIds = $this->getAccessiblePropertyIds();
+
+            // Get maintenance requests for accessible properties
+            $maintenanceRequest = new \App\Models\MaintenanceRequest();
+            $requests = [];
+            $statistics = [
+                'total_requests' => 0,
+                'pending_requests' => 0,
+                'in_progress_requests' => 0,
+                'completed_requests' => 0
+            ];
+
+            if (!empty($propertyIds)) {
+                // Get all requests for these properties
+                $allRequests = $maintenanceRequest->getByPropertyIds($propertyIds);
+                $requests = $allRequests;
+                
+                // Calculate statistics
+                $statistics['total_requests'] = count($requests);
+                foreach ($requests as $request) {
+                    switch ($request['status']) {
+                        case 'pending':
+                            $statistics['pending_requests']++;
+                            break;
+                        case 'in_progress':
+                            $statistics['in_progress_requests']++;
+                            break;
+                        case 'completed':
+                            $statistics['completed_requests']++;
+                            break;
+                    }
+                }
+            }
+
+            // Get wallet balance for funding option
+            $walletModel = new \App\Models\Wallet();
+            $wallet = $walletModel->getByUserId($userId);
+            $walletBalance = $wallet ? (float)$wallet['balance'] : 0.0;
+
+            echo view('airbnb/maintenance', [
+                'title' => 'Airbnb Maintenance - RentSmart',
+                'requests' => $requests,
+                'statistics' => $statistics,
+                'walletBalance' => $walletBalance,
+                'properties' => $this->getPropertiesForDropdown($propertyIds)
+            ]);
+        } catch (\Exception $e) {
+            error_log('AirbnbController::maintenance - Error: ' . $e->getMessage());
+            $_SESSION['flash_message'] = 'Error loading maintenance requests';
+            $_SESSION['flash_type'] = 'danger';
+            redirect('/airbnb/dashboard');
+        }
+    }
+
+    /**
+     * Update maintenance status with expense handling
+     * Streamlined flow: Owner pays (wallet/cash) OR bills client
+     */
+    public function updateMaintenanceStatus()
+    {
+        try {
+            $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
+            
+            $id = filter_input(INPUT_POST, 'id', FILTER_VALIDATE_INT);
+            $status = filter_input(INPUT_POST, 'status', FILTER_SANITIZE_STRING);
+            $notes = filter_input(INPUT_POST, 'notes', FILTER_SANITIZE_STRING);
+            $assignedTo = filter_input(INPUT_POST, 'assigned_to', FILTER_SANITIZE_STRING);
+            $scheduledDate = filter_input(INPUT_POST, 'scheduled_date', FILTER_SANITIZE_STRING);
+            $estimatedCost = filter_input(INPUT_POST, 'estimated_cost', FILTER_VALIDATE_FLOAT);
+            $actualCost = filter_input(INPUT_POST, 'actual_cost', FILTER_VALIDATE_FLOAT);
+            
+            // Expense handling options
+            $paymentSource = filter_input(INPUT_POST, 'payment_source', FILTER_SANITIZE_STRING) ?: 'owner_funds';
+            $billToClient = isset($_POST['bill_to_client']) && $_POST['bill_to_client'] === '1';
+            
+            if (!$id || !$status) {
+                throw new \Exception('Request ID and status are required');
+            }
+
+            $auth = $this->checkAirbnbAccess();
+            $userId = $auth['userId'];
+            
+            $maintenanceRequest = new \App\Models\MaintenanceRequest();
+            $request = $maintenanceRequest->getById($id, $userId);
+            
+            if (!$request) {
+                throw new \Exception('Maintenance request not found');
+            }
+
+            // Update maintenance status
+            $maintenanceRequest->updateStatus($id, $status, $notes, $assignedTo, $scheduledDate, $estimatedCost, $actualCost);
+
+            // Handle expense and billing if actual cost is provided
+            if ($actualCost > 0 && $status === 'completed') {
+                $this->handleMaintenanceExpense($request, $actualCost, $paymentSource, $billToClient, $userId);
+            }
+
+            if ($isAjax) {
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'Maintenance request updated successfully'
+                ]);
+                exit;
+            }
+
+            $_SESSION['flash_message'] = 'Maintenance request updated successfully';
+            $_SESSION['flash_type'] = 'success';
+            redirect('/airbnb/maintenance');
+            
+        } catch (\Exception $e) {
+            error_log('AirbnbController::updateMaintenanceStatus - Error: ' . $e->getMessage());
+            
+            if ($isAjax) {
+                header('Content-Type: application/json');
+                echo json_encode([
+                    'success' => false,
+                    'message' => $e->getMessage()
+                ]);
+                exit;
+            }
+
+            $_SESSION['flash_message'] = $e->getMessage();
+            $_SESSION['flash_type'] = 'danger';
+            redirect('/airbnb/maintenance');
+        }
+    }
+
+    /**
+     * Handle maintenance expense - streamlined flow
+     * Option 1: Owner pays (from wallet or cash/bank)
+     * Option 2: Bill client (add to guest/tenant bill)
+     */
+    private function handleMaintenanceExpense($request, $actualCost, $paymentSource, $billToClient, $userId)
+    {
+        $expenseModel = new \App\Models\Expense();
+        
+        // Create expense record
+        $expenseData = [
+            'user_id' => $userId,
+            'property_id' => $request['property_id'] ?? null,
+            'unit_id' => $request['unit_id'] ?? null,
+            'category' => 'maintenance',
+            'amount' => $actualCost,
+            'expense_date' => date('Y-m-d'),
+            'payment_method' => $billToClient ? 'other' : ($paymentSource === 'wallet' ? 'wallet' : 'cash'),
+            'source_of_funds' => $billToClient ? 'tenant_charge' : $paymentSource,
+            'notes' => 'Airbnb Maintenance #' . $request['id'] . ': ' . ($request['title'] ?? ''),
+            'reference_type' => 'maintenance',
+            'reference_id' => $request['id']
+        ];
+
+        // Check for existing expense
+        $existing = $expenseModel->findByReference('maintenance', $request['id']);
+        if ($existing) {
+            $expenseId = $existing['id'];
+            $expenseModel->updateExpense($expenseId, $expenseData);
+        } else {
+            $expenseId = $expenseModel->insertExpense($expenseData);
+        }
+
+        // Handle wallet deduction if owner pays from wallet
+        if ($paymentSource === 'wallet' && !$billToClient) {
+            $walletModel = new \App\Models\Wallet();
+            $wallet = $walletModel->getByUserId($userId);
+            
+            if ($wallet && $wallet['balance'] >= $actualCost) {
+                $walletModel->deduct($userId, $actualCost, 
+                    'Maintenance expense for property: ' . ($request['property_name'] ?? 'N/A'),
+                    'maintenance_expense',
+                    $expenseId
+                );
+            } else {
+                throw new \Exception('Insufficient wallet balance. Available: ' . 
+                    ($wallet ? number_format($wallet['balance'], 2) : '0.00'));
+            }
+        }
+
+        // Handle billing to client (add charge to guest bill)
+        if ($billToClient) {
+            $this->addMaintenanceChargeToGuest($request, $actualCost, $userId);
+        }
+
+        // Post to ledger
+        $this->postMaintenanceToLedger($expenseData, $expenseId, $userId, $billToClient);
+    }
+
+    /**
+     * Add maintenance charge to guest/tenant bill
+     */
+    private function addMaintenanceChargeToGuest($request, $amount, $userId)
+    {
+        // For Airbnb bookings, create an additional charge
+        if (!empty($request['booking_id'])) {
+            $bookingModel = new AirbnbBooking();
+            $booking = $bookingModel->getById($request['booking_id']);
+            
+            if ($booking) {
+                // Add charge to booking
+                $chargeData = [
+                    'booking_id' => $booking['id'],
+                    'charge_type' => 'maintenance',
+                    'description' => 'Maintenance: ' . ($request['title'] ?? 'Maintenance fee'),
+                    'amount' => $amount,
+                    'created_at' => date('Y-m-d H:i:s')
+                ];
+                
+                // Store additional charges (requires new table or field)
+                // For now, we'll create an invoice item
+                $invoiceModel = new \App\Models\Invoice();
+                $invoiceModel->createAirbnbAdditionalCharge($chargeData);
+            }
+        }
+        
+        // Also create a negative payment to increase tenant/guest balance if they're in the system
+        if (!empty($request['resolved_tenant_id'])) {
+            $paymentModel = new \App\Models\Payment();
+            $lease = $paymentModel->getActiveLease((int)$request['resolved_tenant_id'], $userId);
+            
+            if ($lease) {
+                // Check if charge already exists
+                $db = $paymentModel->getDb();
+                $chk = $db->prepare("SELECT id FROM payments WHERE lease_id = ? AND notes LIKE ? LIMIT 1");
+                $chk->execute([$lease['id'], '%MAINT-AIRBNB-' . $request['id'] . '%']);
+                $existsAdj = $chk->fetch(\PDO::FETCH_ASSOC);
+                
+                if (!$existsAdj) {
+                    $paymentModel->createRentPayment([
+                        'lease_id' => $lease['id'],
+                        'amount' => -abs($amount),
+                        'payment_date' => date('Y-m-d'),
+                        'payment_type' => 'other',
+                        'payment_method' => 'other',
+                        'notes' => 'Maintenance charge to guest MAINT-AIRBNB-' . $request['id'] . ': ' . ($request['title'] ?? ''),
+                        'status' => 'completed'
+                    ]);
+                }
+            }
+        }
+    }
+
+    /**
+     * Post maintenance expense to ledger
+     */
+    private function postMaintenanceToLedger($expenseData, $expenseId, $userId, $billToClient)
+    {
+        try {
+            $ledger = new \App\Models\LedgerEntry();
+            if (!$ledger->referenceExists('expense', $expenseId)) {
+                $accModel = new \App\Models\Account();
+                
+                if ($billToClient) {
+                    // Debit AR (tenant owes us), Credit Maintenance Revenue
+                    $arAcc = $accModel->findByCode('1200'); // Accounts Receivable
+                    $revAcc = $accModel->findByCode('4000'); // Revenue
+                    
+                    if ($arAcc && $revAcc) {
+                        $desc = 'Maintenance charge to guest - Exp #' . $expenseId;
+                        $date = $expenseData['expense_date'] ?? date('Y-m-d');
+                        
+                        // Debit AR
+                        $ledger->post([
+                            'entry_date' => $date,
+                            'account_id' => (int)$arAcc['id'],
+                            'description' => $desc,
+                            'debit' => $expenseData['amount'],
+                            'credit' => 0,
+                            'user_id' => $userId,
+                            'property_id' => $expenseData['property_id'],
+                            'reference_type' => 'expense',
+                            'reference_id' => $expenseId,
+                        ]);
+                        
+                        // Credit Revenue
+                        $ledger->post([
+                            'entry_date' => $date,
+                            'account_id' => (int)$revAcc['id'],
+                            'description' => $desc,
+                            'debit' => 0,
+                            'credit' => $expenseData['amount'],
+                            'user_id' => $userId,
+                            'property_id' => $expenseData['property_id'],
+                            'reference_type' => 'expense',
+                            'reference_id' => $expenseId,
+                        ]);
+                    }
+                } else {
+                    // Owner paid - Debit Expense, Credit Cash/Wallet
+                    $cash = $accModel->findByCode('1000');
+                    $expAcc = $accModel->findByCode('5000');
+                    
+                    if ($cash && $expAcc) {
+                        $desc = 'Maintenance expense #' . $expenseId;
+                        $date = $expenseData['expense_date'] ?? date('Y-m-d');
+                        $amount = (float)$expenseData['amount'];
+                        
+                        // Debit Expense
+                        $ledger->post([
+                            'entry_date' => $date,
+                            'account_id' => (int)$expAcc['id'],
+                            'description' => $desc,
+                            'debit' => $amount,
+                            'credit' => 0,
+                            'user_id' => $userId,
+                            'property_id' => $expenseData['property_id'],
+                            'reference_type' => 'expense',
+                            'reference_id' => $expenseId,
+                        ]);
+                        
+                        // Credit Cash
+                        $ledger->post([
+                            'entry_date' => $date,
+                            'account_id' => (int)$cash['id'],
+                            'description' => $desc,
+                            'debit' => 0,
+                            'credit' => $amount,
+                            'user_id' => $userId,
+                            'property_id' => $expenseData['property_id'],
+                            'reference_type' => 'expense',
+                            'reference_id' => $expenseId,
+                        ]);
+                    }
+                }
+            }
+        } catch (\Exception $le) {
+            error_log('Airbnb maintenance ledger post failed: ' . $le->getMessage());
+        }
+    }
+
+    /**
+     * Helper: Get properties for dropdown
+     */
+    private function getPropertiesForDropdown($propertyIds)
+    {
+        $properties = [];
+        foreach ($propertyIds as $pid) {
+            $p = $this->property->find($pid);
+            if ($p) {
+                $properties[] = $p;
+            }
+        }
+        return $properties;
+    }
 }

@@ -2071,6 +2071,11 @@ ob_clean();
                             <i class="bi bi-building me-2"></i> My Properties
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link <?= (strpos($current_uri, 'airbnb/maintenance') === 0) ? 'active' : '' ?>" href="<?= BASE_URL ?>/airbnb/maintenance">
+                            <i class="bi bi-tools me-2"></i> Maintenance
+                        </a>
+                    </li>
 
                 <?php endif; ?>
 
