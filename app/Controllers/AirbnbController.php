@@ -1523,8 +1523,12 @@ class AirbnbController
                     $units = $this->unit->getByPropertyId($pid);
                     $p['units'] = $units;
                     $properties[] = $p;
+                    error_log('Property ' . $p['name'] . ' (ID: ' . $pid . ') has ' . count($units) . ' units');
+                } else {
+                    error_log('Property ID ' . $pid . ' not found');
                 }
             }
+            error_log('Total properties with units: ' . count($properties));
 
             // Get wallet balance for payment method dropdown
             $walletBalance = 0;

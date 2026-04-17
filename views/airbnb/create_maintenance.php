@@ -3,6 +3,21 @@ ob_start();
 ?>
 
 <div class="container-fluid pt-4">
+    <!-- Debug Info -->
+    <?php if (empty($properties)): ?>
+        <div class="alert alert-warning">
+            <strong>Debug:</strong> No properties available. Check user access permissions.
+        </div>
+    <?php else: ?>
+        <?php foreach ($properties as $p): ?>
+            <?php if (empty($p['units'])): ?>
+                <div class="alert alert-info">
+                    <strong>Debug:</strong> Property '<?= htmlspecialchars($p['name'] ?? 'Unknown') ?>' (ID: <?= $p['id'] ?>) has <strong>0 units</strong>.
+                </div>
+            <?php endif; ?>
+        <?php endforeach; ?>
+    <?php endif; ?>
+
     <!-- Page Header -->
     <div class="card page-header border-0 shadow-sm mb-4">
         <div class="card-body d-flex justify-content-between align-items-center">
@@ -145,10 +160,18 @@ ob_start();
 
 <script>
 // Property units data
+<?php
+// Debug: Log what properties and units we have
+error_log('Create Maintenance View - Properties count: ' . count($properties));
+foreach ($properties as $p) {
+    error_log('  Property: ' . ($p['name'] ?? 'N/A') . ' ID=' . ($p['id'] ?? 'N/A') . ' Units=' . count($p['units'] ?? []));
+}
+?>
 const propertyUnits = <?= json_encode(array_reduce($properties, function($acc, $p) {
     $acc[$p['id']] = $p['units'] ?? [];
     return $acc;
 }, [])) ?>;
+console.log('Property units data:', propertyUnits);
 
 function loadUnits(propertyId) {
     const unitSelect = document.getElementById('unitSelect');
