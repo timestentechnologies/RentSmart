@@ -1521,14 +1521,17 @@ class AirbnbController
                 if ($p) {
                     // Get units for this property using Unit model
                     $units = $this->unit->getByPropertyId($pid);
-                    $p['units'] = $units;
+                    // Ensure units is a sequential array
+                    $p['units'] = is_array($units) ? array_values($units) : [];
                     $properties[] = $p;
-                    error_log('Property ' . $p['name'] . ' (ID: ' . $pid . ') has ' . count($units) . ' units');
+                    error_log('Property ' . ($p['name'] ?? 'ID: '.$pid) . ' has ' . count($p['units']) . ' units');
                 } else {
                     error_log('Property ID ' . $pid . ' not found');
                 }
             }
-            error_log('Total properties with units: ' . count($properties));
+            // Ensure properties is a sequential array
+            $properties = array_values($properties);
+            error_log('Total properties formatted for view: ' . count($properties));
 
             // Get wallet balance for payment method dropdown
             $walletBalance = 0;

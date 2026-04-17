@@ -169,30 +169,43 @@ foreach ($properties as $p) {
 ?>
 const propertyUnits = <?= json_encode(array_reduce($properties, function($acc, $p) {
     // Use string keys to match HTML select values
-    $acc[(string)$p['id']] = $p['units'] ?? [];
+    $acc[(string)$p['id']] = array_values($p['units'] ?? []);
     return $acc;
-}, [])) ?>;
-console.log('Property units data:', propertyUnits);
+}, []), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_FORCE_OBJECT) ?>;
+console.log('Property units data initialized:', propertyUnits);
 
 function loadUnits(propertyId) {
     const unitSelect = document.getElementById('unitSelect');
+    if (!unitSelect) {
+        console.error('Unit select element not found!');
+        return;
+    }
 
     // Clear and reset
     unitSelect.innerHTML = '<option value="">-- Select Unit --</option>';
 
-    // Ensure propertyId is a string for consistent object key lookup
-    const key = String(propertyId);
-    console.log('Loading units for property:', propertyId, 'Key:', key, 'Units:', propertyUnits[key]);
+    try {
+        // Ensure propertyId is a string for consistent object key lookup
+        const key = String(propertyId);
+        const units = propertyUnits[key];
+        
+        console.log('Loading units for property:', propertyId, 'Key:', key, 'Found units:', units);
 
-    if (propertyId && propertyUnits[key] && propertyUnits[key].length > 0) {
-        propertyUnits[key].forEach(function(unit) {
-            const option = document.createElement('option');
-            option.value = unit.id;
-            option.textContent = unit.unit_number || 'Unit ' + unit.id;
-            unitSelect.appendChild(option);
-        });
-    } else {
-        unitSelect.innerHTML = '<option value="">-- No Units Available --</option>';
+        if (propertyId && units && Array.isArray(units) && units.length > 0) {
+            units.forEach(function(unit) {
+                const option = document.createElement('option');
+                option.value = unit.id;
+                option.textContent = (unit.unit_number || 'Unit ' + unit.id);
+                unitSelect.appendChild(option);
+            });
+            console.log('Successfully loaded ' + units.length + ' units');
+        } else if (propertyId) {
+            unitSelect.innerHTML = '<option value="">-- No Units Available --</option>';
+            console.warn('No units found for property key:', key);
+        }
+    } catch (err) {
+        console.error('Error in loadUnits:', err);
+        unitSelect.innerHTML = '<option value="">-- Error Loading Units --</option>';
     }
 }
 
