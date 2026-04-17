@@ -49,9 +49,10 @@ ob_start();
                     <!-- Unit -->
                     <div class="col-md-6">
                         <label class="form-label">Unit (Optional)</label>
-                        <select name="unit_id" id="unitSelect" class="form-select">
+                        <select name="unit_id" id="airbnb_unit_id_select" class="form-select" style="border: 2px solid orange !important;">
                             <option value="">Select Unit</option>
                         </select>
+                        <div id="unitCountDebug" class="small text-info mt-1"></div>
                     </div>
 
                     <!-- Title -->
@@ -175,7 +176,8 @@ const propertyUnits = <?= json_encode(array_reduce($properties, function($acc, $
 console.log('Property units data initialized:', propertyUnits);
 
 function loadAirbnbPropertyUnits(propertyId) {
-    const unitSelect = document.getElementById('unitSelect');
+    const unitSelect = document.getElementById('airbnb_unit_id_select');
+    const debugDiv = document.getElementById('unitCountDebug');
     if (!unitSelect) {
         console.error('Unit select element not found!');
         return;
@@ -185,6 +187,7 @@ function loadAirbnbPropertyUnits(propertyId) {
     unitSelect.options.length = 0;
     const defaultOpt = new Option('-- Select Unit --', '');
     unitSelect.add(defaultOpt);
+    if (debugDiv) debugDiv.textContent = 'Clearing units...';
 
     if (!propertyId) return;
 
@@ -208,17 +211,21 @@ function loadAirbnbPropertyUnits(propertyId) {
                     unitSelect.add(option);
                 });
                 console.log('Successfully added ' + units.length + ' options to unitSelect');
+                if (debugDiv) debugDiv.textContent = 'UNITS LOADED: ' + units.length;
             } else {
                 unitSelect.options[0].text = '-- No Units Available --';
                 console.warn('No units found for property key:', key);
+                if (debugDiv) debugDiv.textContent = 'NO UNITS FOUND';
             }
+
+            // Force visual refresh
+            unitSelect.style.border = '2px solid green !important';
 
             // If Select2 or jQuery is being used globally, trigger a refresh
             if (window.jQuery) {
                 const $el = jQuery(unitSelect);
                 if (typeof $el.trigger === 'function') {
                     $el.trigger('change');
-                    // Special case for Select2
                     if (typeof $el.select2 === 'function' && $el.data('select2')) {
                         $el.trigger('change.select2');
                     }
@@ -227,8 +234,9 @@ function loadAirbnbPropertyUnits(propertyId) {
         } catch (err) {
             console.error('Error in loadAirbnbPropertyUnits:', err);
             unitSelect.options[0].text = '-- Error Loading Units --';
+            if (debugDiv) debugDiv.textContent = 'ERROR LOADING';
         }
-    }, 50);
+    }, 100);
 }
 
 // Initialize on page load if property is pre-selected
