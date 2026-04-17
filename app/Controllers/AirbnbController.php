@@ -1179,18 +1179,20 @@ class AirbnbController
                 }
             }
 
-            // Get wallet balance for funding option
-            $walletModel = new \App\Models\Wallet();
-            $wallet = $walletModel->getByUserId($userId);
-            $walletBalance = $wallet ? (float)$wallet['balance'] : 0.0;
+            // Get wallet balance for funding option (default to 0 if wallet not set up)
+            $walletBalance = 0.0;
+            try {
+                $walletModel = new \App\Models\Wallet();
+                $wallet = $walletModel->getByUserId($userId);
+                $walletBalance = $wallet ? (float)$wallet['balance'] : 0.0;
+            } catch (\Exception $e) {
+                // Wallet table may not exist, continue with 0 balance
+                error_log('Wallet check failed: ' . $e->getMessage());
+            }
 
-            echo view('airbnb/maintenance', [
-                'title' => 'Airbnb Maintenance - RentSmart',
-                'requests' => $requests,
-                'statistics' => $statistics,
-                'walletBalance' => $walletBalance,
-                'properties' => $this->getPropertiesForDropdown($propertyIds)
-            ]);
+            $title = 'Airbnb Maintenance - RentSmart';
+            $properties = $this->getPropertiesForDropdown($propertyIds);
+            require 'views/airbnb/maintenance.php';
         } catch (\Exception $e) {
             error_log('AirbnbController::maintenance - Error: ' . $e->getMessage());
             $_SESSION['flash_message'] = 'Error loading maintenance requests';
@@ -1308,18 +1310,31 @@ class AirbnbController
 
         // Handle wallet deduction if owner pays from wallet
         if ($paymentSource === 'wallet' && !$billToClient) {
-            $walletModel = new \App\Models\Wallet();
-            $wallet = $walletModel->getByUserId($userId);
-            
-            if ($wallet && $wallet['balance'] >= $actualCost) {
-                $walletModel->deduct($userId, $actualCost, 
-                    'Maintenance expense for property: ' . ($request['property_name'] ?? 'N/A'),
-                    'maintenance_expense',
-                    $expenseId
-                );
-            } else {
-                throw new \Exception('Insufficient wallet balance. Available: ' . 
-                    ($wallet ? number_format($wallet['balance'], 2) : '0.00'));
+            try {
+                $walletModel = new \App\Models\Wallet();
+                $wallet = $walletModel->getByUserId($userId);
+                
+                if ($wallet && $wallet['balance'] >= $actualCost) {
+                    $walletModel->deduct($userId, $actualCost, 
+                        'Maintenance expense for property: ' . ($request['property_name'] ?? 'N/A'),
+                        'maintenance_expense',
+                        $expenseId
+                    );
+                } else {
+                    throw new \Exception('Insufficient wallet balance. Available: ' . 
+                        ($wallet ? number_format($wallet['balance'], 2) : '0.00'));
+                }
+            } catch (\Exception $e) {
+                // If wallet system is not available, treat as owner funds
+                if (strpos($e->getMessage(), 'Wallet system not available') !== false) {
+                    // Update expense to reflect owner funds instead
+                    $expenseModel->updateExpense($expenseId, array_merge($expenseData, [
+                        'payment_method' => 'cash',
+                        'source_of_funds' => 'owner_funds'
+                    ]));
+                } else {
+                    throw $e;
+                }
             }
         }
 

@@ -7,14 +7,36 @@ class Wallet extends Model
     protected $table = 'wallets';
 
     /**
+     * Check if wallet tables exist
+     */
+    private function tablesExist()
+    {
+        try {
+            $this->db->query("SELECT 1 FROM {$this->table} LIMIT 1");
+            return true;
+        } catch (\PDOException $e) {
+            return false;
+        }
+    }
+
+    /**
      * Get wallet by user ID
      */
     public function getByUserId($userId)
     {
-        $sql = "SELECT * FROM {$this->table} WHERE user_id = ? LIMIT 1";
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute([$userId]);
-        return $stmt->fetch(\PDO::FETCH_ASSOC);
+        if (!$this->tablesExist()) {
+            return null;
+        }
+        
+        try {
+            $sql = "SELECT * FROM {$this->table} WHERE user_id = ? LIMIT 1";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([$userId]);
+            return $stmt->fetch(\PDO::FETCH_ASSOC);
+        } catch (\Exception $e) {
+            error_log('Wallet getByUserId error: ' . $e->getMessage());
+            return null;
+        }
     }
 
     /**
@@ -22,6 +44,10 @@ class Wallet extends Model
      */
     public function getOrCreate($userId)
     {
+        if (!$this->tablesExist()) {
+            return ['id' => null, 'user_id' => $userId, 'balance' => 0.00];
+        }
+        
         $wallet = $this->getByUserId($userId);
         if ($wallet) {
             return $wallet;
@@ -43,6 +69,10 @@ class Wallet extends Model
      */
     public function add($userId, $amount, $description = '', $referenceType = null, $referenceId = null)
     {
+        if (!$this->tablesExist()) {
+            throw new \Exception('Wallet system not available - database tables not created');
+        }
+        
         $wallet = $this->getOrCreate($userId);
         $newBalance = (float)$wallet['balance'] + (float)$amount;
 
@@ -62,6 +92,10 @@ class Wallet extends Model
      */
     public function deduct($userId, $amount, $description = '', $referenceType = null, $referenceId = null)
     {
+        if (!$this->tablesExist()) {
+            throw new \Exception('Wallet system not available - database tables not created');
+        }
+        
         $wallet = $this->getByUserId($userId);
         if (!$wallet) {
             throw new \Exception('Wallet not found');
@@ -92,6 +126,10 @@ class Wallet extends Model
      */
     private function logTransaction($userId, $amount, $type, $description, $referenceType = null, $referenceId = null)
     {
+        if (!$this->tablesExist()) {
+            return;
+        }
+        
         try {
             $sql = "INSERT INTO wallet_transactions (user_id, amount, type, description, reference_type, reference_id, created_at) 
                     VALUES (?, ?, ?, ?, ?, ?, NOW())";
@@ -107,9 +145,18 @@ class Wallet extends Model
      */
     public function getTransactions($userId, $limit = 50)
     {
-        $sql = "SELECT * FROM wallet_transactions WHERE user_id = ? ORDER BY created_at DESC LIMIT ?";
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute([$userId, $limit]);
-        return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        if (!$this->tablesExist()) {
+            return [];
+        }
+        
+        try {
+            $sql = "SELECT * FROM wallet_transactions WHERE user_id = ? ORDER BY created_at DESC LIMIT ?";
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([$userId, $limit]);
+            return $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        } catch (\Exception $e) {
+            error_log('Wallet getTransactions error: ' . $e->getMessage());
+            return [];
+        }
     }
 }
