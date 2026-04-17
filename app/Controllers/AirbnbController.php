@@ -1503,4 +1503,93 @@ class AirbnbController
         }
         return $properties;
     }
+
+    /**
+     * Create maintenance request form
+     */
+    public function createMaintenance()
+    {
+        try {
+            $auth = $this->checkAirbnbAccess();
+            $userId = $auth['userId'];
+            $propertyIds = $this->getAccessiblePropertyIds();
+
+            // Get properties with units for dropdown
+            $properties = [];
+            foreach ($propertyIds as $pid) {
+                $p = $this->property->find($pid);
+                if ($p) {
+                    // Get units for this property
+                    $units = $this->propertyModel->getUnits($pid);
+                    $p['units'] = $units;
+                    $properties[] = $p;
+                }
+            }
+
+            require 'views/airbnb/create_maintenance.php';
+        } catch (\Exception $e) {
+            error_log('AirbnbController::createMaintenance - Error: ' . $e->getMessage());
+            $_SESSION['flash_message'] = 'Error loading maintenance form';
+            $_SESSION['flash_type'] = 'danger';
+            redirect('/airbnb/maintenance');
+        }
+    }
+
+    /**
+     * Store maintenance request
+     */
+    public function storeMaintenance()
+    {
+        try {
+            $auth = $this->checkAirbnbAccess();
+            $userId = $auth['userId'];
+
+            // Get form data
+            $propertyId = filter_input(INPUT_POST, 'property_id', FILTER_VALIDATE_INT);
+            $unitId = filter_input(INPUT_POST, 'unit_id', FILTER_VALIDATE_INT);
+            $title = filter_input(INPUT_POST, 'title', FILTER_SANITIZE_STRING);
+            $description = filter_input(INPUT_POST, 'description', FILTER_SANITIZE_STRING);
+            $category = filter_input(INPUT_POST, 'category', FILTER_SANITIZE_STRING);
+            $priority = filter_input(INPUT_POST, 'priority', FILTER_SANITIZE_STRING) ?: 'medium';
+            $estimatedCost = filter_input(INPUT_POST, 'estimated_cost', FILTER_VALIDATE_FLOAT);
+
+            if (!$propertyId || !$title || !$description) {
+                throw new \Exception('Property, title, and description are required');
+            }
+
+            // Verify access to property
+            $propertyIds = $this->getAccessiblePropertyIds();
+            if (!in_array($propertyId, $propertyIds)) {
+                throw new \Exception('You do not have access to this property');
+            }
+
+            // Create maintenance request
+            $maintenanceRequest = new \App\Models\MaintenanceRequest();
+            $data = [
+                'property_id' => $propertyId,
+                'unit_id' => $unitId ?: null,
+                'title' => $title,
+                'description' => $description,
+                'category' => $category ?: 'other',
+                'priority' => $priority,
+                'status' => 'pending',
+                'estimated_cost' => $estimatedCost ?: null,
+                'requested_date' => date('Y-m-d H:i:s'),
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s')
+            ];
+
+            $maintenanceRequest->create($data);
+
+            $_SESSION['flash_message'] = 'Maintenance request created successfully';
+            $_SESSION['flash_type'] = 'success';
+            redirect('/airbnb/maintenance');
+
+        } catch (\Exception $e) {
+            error_log('AirbnbController::storeMaintenance - Error: ' . $e->getMessage());
+            $_SESSION['flash_message'] = $e->getMessage();
+            $_SESSION['flash_type'] = 'danger';
+            redirect('/airbnb/maintenance/create');
+        }
+    }
 }

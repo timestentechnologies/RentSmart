@@ -148,7 +148,7 @@ $title = $title ?? 'Airbnb Maintenance - RentSmart';
                     <i class="bi bi-wallet2 me-1"></i>
                     Wallet: KES <?= number_format($walletBalance ?? 0, 2) ?>
                 </div>
-                <a href="<?= BASE_URL ?>/maintenance/create" class="btn btn-primary">
+                <a href="<?= BASE_URL ?>/airbnb/maintenance/create" class="btn btn-primary">
                     <i class="bi bi-plus-lg"></i> New Request
                 </a>
             </div>

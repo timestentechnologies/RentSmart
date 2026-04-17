@@ -550,6 +550,8 @@ $routes = [
     'airbnb/property-settings/(\d+)' => ['controller' => 'AirbnbController', 'action' => 'propertySettings'],
     'airbnb/units' => ['controller' => 'AirbnbController', 'action' => 'units'],
     'airbnb/maintenance' => ['controller' => 'AirbnbController', 'action' => 'maintenance'],
+    'airbnb/maintenance/create' => ['controller' => 'AirbnbController', 'action' => 'createMaintenance'],
+    'airbnb/maintenance/store' => ['POST' => ['controller' => 'AirbnbController', 'action' => 'storeMaintenance']],
     'airbnb/maintenance/update-status' => ['POST' => ['controller' => 'AirbnbController', 'action' => 'updateMaintenanceStatus']],
     // Realtor routes
     'realtor/dashboard' => ['controller' => 'RealtorDashboardController', 'action' => 'index'],
@@ -916,6 +918,8 @@ $protectedRoutes = [
     'airbnb/property-settings/(\d+)',
     'airbnb/units',
     'airbnb/maintenance',
+    'airbnb/maintenance/create',
+    'airbnb/maintenance/store',
     'airbnb/maintenance/update-status',
 ];
 
