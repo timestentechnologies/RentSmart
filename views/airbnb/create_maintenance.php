@@ -181,38 +181,54 @@ function loadAirbnbPropertyUnits(propertyId) {
         return;
     }
 
-    // Clear and reset
-    unitSelect.innerHTML = '<option value="">-- Select Unit --</option>';
+    // Clear and reset using standard DOM methods
+    unitSelect.options.length = 0;
+    const defaultOpt = new Option('-- Select Unit --', '');
+    unitSelect.add(defaultOpt);
 
-    try {
-        // Ensure propertyId is a string for consistent object key lookup
-        const key = String(propertyId);
-        let units = propertyUnits[key];
-        
-        console.log('Loading units for property:', propertyId, 'Key:', key, 'Found units:', units);
+    if (!propertyId) return;
 
-        // Handle case where units might be an object (e.g. from JSON_FORCE_OBJECT or associative PHP array)
-        if (units && !Array.isArray(units) && typeof units === 'object') {
-            console.log('Converting units object to array');
-            units = Object.values(units);
+    // Use a slight timeout to ensure we don't conflict with other automated resets
+    setTimeout(function() {
+        try {
+            const key = String(propertyId);
+            let units = propertyUnits[key];
+            
+            console.log('Attempting to populate units for property:', propertyId, 'Key:', key);
+
+            if (units && !Array.isArray(units) && typeof units === 'object') {
+                units = Object.values(units);
+            }
+
+            if (units && Array.isArray(units) && units.length > 0) {
+                console.table(units); // Debug info in console
+                units.forEach(function(unit) {
+                    const text = (unit.unit_number || 'Unit ' + unit.id);
+                    const option = new Option(text, unit.id);
+                    unitSelect.add(option);
+                });
+                console.log('Successfully added ' + units.length + ' options to unitSelect');
+            } else {
+                unitSelect.options[0].text = '-- No Units Available --';
+                console.warn('No units found for property key:', key);
+            }
+
+            // If Select2 or jQuery is being used globally, trigger a refresh
+            if (window.jQuery) {
+                const $el = jQuery(unitSelect);
+                if (typeof $el.trigger === 'function') {
+                    $el.trigger('change');
+                    // Special case for Select2
+                    if (typeof $el.select2 === 'function' && $el.data('select2')) {
+                        $el.trigger('change.select2');
+                    }
+                }
+            }
+        } catch (err) {
+            console.error('Error in loadAirbnbPropertyUnits:', err);
+            unitSelect.options[0].text = '-- Error Loading Units --';
         }
-
-        if (propertyId && units && Array.isArray(units) && units.length > 0) {
-            units.forEach(function(unit) {
-                const option = document.createElement('option');
-                option.value = unit.id;
-                option.textContent = (unit.unit_number || 'Unit ' + unit.id);
-                unitSelect.appendChild(option);
-            });
-            console.log('Successfully loaded ' + units.length + ' units');
-        } else if (propertyId) {
-            unitSelect.innerHTML = '<option value="">-- No Units Available --</option>';
-            console.warn('No units found for property key:', key);
-        }
-    } catch (err) {
-        console.error('Error in loadAirbnbPropertyUnits:', err);
-        unitSelect.innerHTML = '<option value="">-- Error Loading Units --</option>';
-    }
+    }, 50);
 }
 
 // Initialize on page load if property is pre-selected
