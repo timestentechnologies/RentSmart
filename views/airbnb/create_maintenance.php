@@ -38,7 +38,7 @@ ob_start();
                     <!-- Property -->
                     <div class="col-md-6">
                         <label class="form-label">Property <span class="text-danger">*</span></label>
-                        <select name="property_id" id="propertySelect" class="form-select" required onchange="loadUnits(this.value)">
+                        <select name="property_id" id="propertySelect" class="form-select" required onchange="loadAirbnbPropertyUnits(this.value)">
                             <option value="">Select Property</option>
                             <?php foreach ($properties as $property): ?>
                                 <option value="<?= $property['id'] ?>"><?= htmlspecialchars($property['name']) ?></option>
@@ -174,7 +174,7 @@ const propertyUnits = <?= json_encode(array_reduce($properties, function($acc, $
 }, []), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_FORCE_OBJECT) ?>;
 console.log('Property units data initialized:', propertyUnits);
 
-function loadUnits(propertyId) {
+function loadAirbnbPropertyUnits(propertyId) {
     const unitSelect = document.getElementById('unitSelect');
     if (!unitSelect) {
         console.error('Unit select element not found!');
@@ -204,7 +204,7 @@ function loadUnits(propertyId) {
             console.warn('No units found for property key:', key);
         }
     } catch (err) {
-        console.error('Error in loadUnits:', err);
+        console.error('Error in loadAirbnbPropertyUnits:', err);
         unitSelect.innerHTML = '<option value="">-- Error Loading Units --</option>';
     }
 }
@@ -213,7 +213,7 @@ function loadUnits(propertyId) {
 document.addEventListener('DOMContentLoaded', function() {
     const propertySelect = document.getElementById('propertySelect');
     if (propertySelect.value) {
-        loadUnits(propertySelect.value);
+        loadAirbnbPropertyUnits(propertySelect.value);
     }
 });
 </script>
