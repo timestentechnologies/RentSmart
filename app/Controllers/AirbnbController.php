@@ -1519,8 +1519,8 @@ class AirbnbController
             foreach ($propertyIds as $pid) {
                 $p = $this->property->find($pid);
                 if ($p) {
-                    // Get units for this property
-                    $units = $this->propertyModel->getUnits($pid);
+                    // Get units for this property using Unit model
+                    $units = $this->unit->getByPropertyId($pid);
                     $p['units'] = $units;
                     $properties[] = $p;
                 }
