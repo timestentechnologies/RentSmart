@@ -1526,6 +1526,19 @@ class AirbnbController
                 }
             }
 
+            // Get wallet balance for payment method dropdown
+            $walletBalance = 0;
+            try {
+                $wallet = new \App\Models\Wallet();
+                $walletData = $wallet->getByUserId($userId);
+                if ($walletData) {
+                    $walletBalance = $walletData['balance'] ?? 0;
+                }
+            } catch (\Exception $e) {
+                // Wallet might not exist yet, default to 0
+                error_log('AirbnbController::createMaintenance - Wallet error: ' . $e->getMessage());
+            }
+
             require 'views/airbnb/create_maintenance.php';
         } catch (\Exception $e) {
             error_log('AirbnbController::createMaintenance - Error: ' . $e->getMessage());

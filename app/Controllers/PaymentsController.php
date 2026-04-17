@@ -12,6 +12,7 @@ use App\Models\RealtorContract;
 use App\Models\AirbnbBooking;
 use App\Models\AirbnbWalkinGuest;
 use App\Models\Invoice;
+use App\Models\Wallet;
 
 class PaymentsController
 {
@@ -467,6 +468,36 @@ class PaymentsController
                         ]);
                         $paymentId = $db->lastInsertId();
 
+                        // Fund manager's wallet when Airbnb payment is received
+                        try {
+                            $wallet = new Wallet();
+                            $managerId = $_SESSION['user_id'] ?? null;
+                            $category = $_POST['airbnb_payment_category'] ?? 'booking';
+                            $sourceInfo = '';
+
+                            if ($category === 'booking' && !empty($booking)) {
+                                $sourceInfo = 'Booking: ' . ($booking['booking_reference'] ?? 'N/A');
+                            } elseif ($category === 'walkin') {
+                                $sourceInfo = 'Walk-in Guest';
+                            } elseif ($category === 'invoice') {
+                                $sourceInfo = 'Invoice Payment';
+                            }
+
+                            if ($managerId) {
+                                $wallet->add(
+                                    $managerId,
+                                    $amount,
+                                    'Airbnb payment received - ' . $sourceInfo,
+                                    'airbnb_payment',
+                                    $paymentId
+                                );
+                                error_log('Wallet funded: Manager ' . $managerId . ' received KES ' . $amount . ' from Airbnb payment #' . $paymentId);
+                            }
+                        } catch (\Exception $e) {
+                            // Log but don't fail the payment if wallet funding fails
+                            error_log('Wallet funding failed for Airbnb payment #' . $paymentId . ': ' . $e->getMessage());
+                        }
+
                         if (!empty($_FILES['payment_attachments']['name'][0])) {
                             $this->handlePaymentAttachments($paymentId);
                         }
@@ -662,6 +693,29 @@ class PaymentsController
                     }
                     
                     $paymentId = $paymentModel->createRentPayment($rentData);
+                    
+                    // Fund owner's wallet when rent payment is received
+                    try {
+                        $wallet = new Wallet();
+                        // Get property owner from lease
+                        $propertyModel = new \App\Models\Property();
+                        $property = $propertyModel->find($lease['property_id'] ?? 0);
+                        if ($property && !empty($property['user_id'])) {
+                            $ownerId = $property['user_id'];
+                            $wallet->add(
+                                $ownerId,
+                                (float)$rentData['amount'],
+                                'Rent payment from ' . ($lease['tenant_name'] ?? 'Tenant') . ' for ' . ($property['name'] ?? 'Property'),
+                                'rent_payment',
+                                $paymentId
+                            );
+                            error_log('Wallet funded: Owner ' . $ownerId . ' received KES ' . $rentData['amount'] . ' from rent payment #' . $paymentId);
+                        }
+                    } catch (\Exception $e) {
+                        // Log but don't fail the payment if wallet funding fails
+                        error_log('Wallet funding failed for rent payment #' . $paymentId . ': ' . $e->getMessage());
+                    }
+                    
                     // Auto-create monthly rent invoice (idempotent)
                     try {
                         $invModel = new \App\Models\Invoice();

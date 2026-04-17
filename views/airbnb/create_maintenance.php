@@ -23,7 +23,7 @@ ob_start();
                     <!-- Property -->
                     <div class="col-md-6">
                         <label class="form-label">Property <span class="text-danger">*</span></label>
-                        <select name="property_id" id="propertySelect" class="form-select" required>
+                        <select name="property_id" id="propertySelect" class="form-select" required onchange="loadUnits(this.value)">
                             <option value="">Select Property</option>
                             <?php foreach ($properties as $property): ?>
                                 <option value="<?= $property['id'] ?>"><?= htmlspecialchars($property['name']) ?></option>
@@ -84,6 +84,54 @@ ob_start();
                     </div>
                 </div>
 
+                <hr class="my-4">
+                <h5 class="mb-3"><i class="bi bi-credit-card me-2"></i>Payment Details</h5>
+
+                <div class="row g-3">
+                    <!-- Who Pays -->
+                    <div class="col-md-6">
+                        <label class="form-label">Who will pay for this maintenance? <span class="text-danger">*</span></label>
+                        <select name="payment_source" class="form-select" required>
+                            <option value="owner_funds">Owner/Manager Pays (My Wallet)</option>
+                            <option value="client_bill">Bill to Client</option>
+                            <option value="shared">Shared Cost</option>
+                        </select>
+                        <small class="text-muted">Select who will be responsible for payment</small>
+                    </div>
+
+                    <!-- Bill to Client -->
+                    <div class="col-md-6">
+                        <label class="form-label">Bill Client for this expense?</label>
+                        <div class="form-check form-switch mt-2">
+                            <input class="form-check-input" type="checkbox" name="bill_to_client" value="1" id="billToClientSwitch">
+                            <label class="form-check-label" for="billToClientSwitch">
+                                Yes, add this to client's invoice
+                            </label>
+                        </div>
+                        <small class="text-muted">Toggle to include this in client's next bill</small>
+                    </div>
+
+                    <!-- Payment Method -->
+                    <div class="col-md-6">
+                        <label class="form-label">How will you pay? <span class="text-danger">*</span></label>
+                        <select name="payment_method" class="form-select" required>
+                            <option value="wallet">Wallet (Available: KES <?= number_format($walletBalance ?? 0, 2) ?>)</option>
+                            <option value="cash">Cash</option>
+                            <option value="mpesa">MPesa</option>
+                            <option value="bank">Bank Transfer</option>
+                            <option value="later">Pay Later</option>
+                        </select>
+                        <small class="text-muted">Select your payment method</small>
+                    </div>
+
+                    <!-- Actual Cost -->
+                    <div class="col-md-6">
+                        <label class="form-label">Actual Cost (KES)</label>
+                        <input type="number" name="actual_cost" class="form-control" step="0.01" min="0" placeholder="0.00">
+                        <small class="text-muted">Leave blank if same as estimated</small>
+                    </div>
+                </div>
+
                 <div class="d-flex justify-content-between mt-4">
                     <a href="<?= BASE_URL ?>/airbnb/maintenance" class="btn btn-outline-secondary">Cancel</a>
                     <button type="submit" class="btn btn-primary">
@@ -102,19 +150,29 @@ const propertyUnits = <?= json_encode(array_reduce($properties, function($acc, $
     return $acc;
 }, [])) ?>;
 
-document.getElementById('propertySelect').addEventListener('change', function() {
-    const propertyId = this.value;
+function loadUnits(propertyId) {
     const unitSelect = document.getElementById('unitSelect');
     
-    unitSelect.innerHTML = '<option value="">Select Unit</option>';
+    // Clear and reset
+    unitSelect.innerHTML = '<option value="">-- Select Unit --</option>';
     
-    if (propertyId && propertyUnits[propertyId]) {
+    if (propertyId && propertyUnits[propertyId] && propertyUnits[propertyId].length > 0) {
         propertyUnits[propertyId].forEach(function(unit) {
             const option = document.createElement('option');
             option.value = unit.id;
-            option.textContent = unit.unit_number;
+            option.textContent = unit.unit_number || 'Unit ' + unit.id;
             unitSelect.appendChild(option);
         });
+    } else {
+        unitSelect.innerHTML = '<option value="">-- No Units Available --</option>';
+    }
+}
+
+// Initialize on page load if property is pre-selected
+document.addEventListener('DOMContentLoaded', function() {
+    const propertySelect = document.getElementById('propertySelect');
+    if (propertySelect.value) {
+        loadUnits(propertySelect.value);
     }
 });
 </script>
