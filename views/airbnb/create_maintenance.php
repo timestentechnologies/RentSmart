@@ -171,7 +171,7 @@ const propertyUnits = <?= json_encode(array_reduce($properties, function($acc, $
     // Use string keys to match HTML select values
     $acc[(string)$p['id']] = array_values($p['units'] ?? []);
     return $acc;
-}, []), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_FORCE_OBJECT) ?>;
+}, []), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
 console.log('Property units data initialized:', propertyUnits);
 
 function loadAirbnbPropertyUnits(propertyId) {
@@ -187,9 +187,15 @@ function loadAirbnbPropertyUnits(propertyId) {
     try {
         // Ensure propertyId is a string for consistent object key lookup
         const key = String(propertyId);
-        const units = propertyUnits[key];
+        let units = propertyUnits[key];
         
         console.log('Loading units for property:', propertyId, 'Key:', key, 'Found units:', units);
+
+        // Handle case where units might be an object (e.g. from JSON_FORCE_OBJECT or associative PHP array)
+        if (units && !Array.isArray(units) && typeof units === 'object') {
+            console.log('Converting units object to array');
+            units = Object.values(units);
+        }
 
         if (propertyId && units && Array.isArray(units) && units.length > 0) {
             units.forEach(function(unit) {

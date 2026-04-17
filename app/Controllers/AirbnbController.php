@@ -1521,10 +1521,14 @@ class AirbnbController
                 if ($p) {
                     // Get units for this property using Unit model
                     $units = $this->unit->getByPropertyId($pid);
-                    // Ensure units is a sequential array
-                    $p['units'] = is_array($units) ? array_values($units) : [];
+                    
+                    // Filter for Airbnb eligible units and ensure sequential array
+                    $p['units'] = array_values(array_filter($units ?? [], function($u) {
+                        return !empty($u['is_airbnb_eligible']);
+                    }));
+                    
                     $properties[] = $p;
-                    error_log('Property ' . ($p['name'] ?? 'ID: '.$pid) . ' has ' . count($p['units']) . ' units');
+                    error_log('Property ' . ($p['name'] ?? 'ID: '.$pid) . ' has ' . count($p['units']) . ' Airbnb eligible units');
                 } else {
                     error_log('Property ID ' . $pid . ' not found');
                 }
