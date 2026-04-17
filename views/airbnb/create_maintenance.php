@@ -168,19 +168,24 @@ foreach ($properties as $p) {
 }
 ?>
 const propertyUnits = <?= json_encode(array_reduce($properties, function($acc, $p) {
-    $acc[$p['id']] = $p['units'] ?? [];
+    // Use string keys to match HTML select values
+    $acc[(string)$p['id']] = $p['units'] ?? [];
     return $acc;
 }, [])) ?>;
 console.log('Property units data:', propertyUnits);
 
 function loadUnits(propertyId) {
     const unitSelect = document.getElementById('unitSelect');
-    
+
     // Clear and reset
     unitSelect.innerHTML = '<option value="">-- Select Unit --</option>';
-    
-    if (propertyId && propertyUnits[propertyId] && propertyUnits[propertyId].length > 0) {
-        propertyUnits[propertyId].forEach(function(unit) {
+
+    // Ensure propertyId is a string for consistent object key lookup
+    const key = String(propertyId);
+    console.log('Loading units for property:', propertyId, 'Key:', key, 'Units:', propertyUnits[key]);
+
+    if (propertyId && propertyUnits[key] && propertyUnits[key].length > 0) {
+        propertyUnits[key].forEach(function(unit) {
             const option = document.createElement('option');
             option.value = unit.id;
             option.textContent = unit.unit_number || 'Unit ' + unit.id;
