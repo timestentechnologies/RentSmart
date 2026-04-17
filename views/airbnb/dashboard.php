@@ -13,7 +13,7 @@ ob_start();
         transform: translateY(-5px);
         box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
     }
-    
+
     /* Left border for stat cards */
     .border-left-primary { border-left: 5px solid #0d6efd !important; }
     .border-left-success { border-left: 5px solid #198754 !important; }
@@ -21,28 +21,112 @@ ob_start();
     .border-left-warning { border-left: 5px solid #ffc107 !important; }
     .border-left-danger { border-left: 5px solid #dc3545 !important; }
     .border-left-secondary { border-left: 5px solid #6c757d !important; }
-    
+
     /* Top border for table cards */
     .border-top-primary { border-top: 5px solid #0d6efd !important; }
     .border-top-success { border-top: 5px solid #198754 !important; }
     .border-top-warning { border-top: 5px solid #ffc107 !important; }
     .border-top-secondary { border-top: 5px solid #6c757d !important; }
-    
+
     .card-header {
         background-color: transparent;
         border-bottom: 1px solid rgba(0,0,0,0.05);
         padding: 1.25rem;
     }
-    
+
     .card-body {
         padding: 1.25rem;
     }
-    
+
     .stat-card .card-body {
         display: flex;
         flex-direction: column;
         justify-content: center;
         min-height: 120px;
+    }
+
+    /* Responsive action buttons */
+    .action-buttons {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .action-buttons .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        white-space: nowrap;
+    }
+
+    /* Mobile view - stack buttons vertically with same width */
+    @media (max-width: 575.98px) {
+        .action-buttons {
+            flex-direction: column;
+            width: 100%;
+        }
+
+        .action-buttons .btn {
+            width: 100%;
+            min-width: 140px;
+            padding: 0.5rem 1rem;
+            font-size: 0.9rem;
+        }
+
+        .action-buttons .btn i {
+            margin-right: 0.25rem;
+        }
+
+        /* Remove margin from first button on mobile */
+        .action-buttons .btn.me-2 {
+            margin-right: 0 !important;
+            margin-bottom: 0.5rem !important;
+        }
+    }
+
+    /* Tablet and up - side by side */
+    @media (min-width: 576px) {
+        .action-buttons {
+            flex-direction: row;
+        }
+
+        .action-buttons .btn {
+            width: auto;
+            min-width: 130px;
+        }
+    }
+
+    /* Large screens - larger buttons */
+    @media (min-width: 992px) {
+        .action-buttons .btn {
+            min-width: 150px;
+            padding: 0.5rem 1.25rem;
+        }
+    }
+
+    /* Mobile header layout */
+    @media (max-width: 575.98px) {
+        .page-header .card-body {
+            flex-direction: column;
+            align-items: stretch !important;
+            gap: 1rem;
+        }
+
+        .page-header h1 {
+            font-size: 1.25rem;
+            text-align: center;
+        }
+    }
+
+    @media (min-width: 576px) and (max-width: 767.98px) {
+        .page-header .card-body {
+            flex-direction: row;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .page-header h1 {
+            font-size: 1.35rem;
+        }
     }
 </style>
 
@@ -51,7 +135,7 @@ ob_start();
     <div class="card page-header border-0 shadow-sm mb-4">
         <div class="card-body d-flex justify-content-between align-items-center">
             <h1 class="h3 mb-0">Airbnb Management Dashboard</h1>
-            <div>
+            <div class="action-buttons">
                 <a href="<?= BASE_URL ?>/airbnb/bookings/create" class="btn btn-primary me-2 shadow-sm">
                     <i class="bi bi-plus-lg"></i> New Booking
                 </a>

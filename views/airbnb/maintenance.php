@@ -1,16 +1,9 @@
 <?php
+ob_start();
 $siteName = $siteName ?? 'RentSmart';
 $title = $title ?? 'Airbnb Maintenance - RentSmart';
 ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= htmlspecialchars($title) ?></title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
-    <style>
+<style>
         :root {
             --brand-purple: #6B3E99;
             --brand-orange: #FF8A00;
@@ -141,22 +134,26 @@ $title = $title ?? 'Airbnb Maintenance - RentSmart';
         .category-cleaning { background: #e0f2f1; color: #00695c; }
         .category-other { background: #f5f5f5; color: #616161; }
     </style>
-</head>
-<body>
-    <div class="container-fluid py-4">
-        <!-- Header -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
+
+<div class="container-fluid pt-4">
+    <!-- Page Header -->
+    <div class="card page-header border-0 shadow-sm mb-4">
+        <div class="card-body d-flex justify-content-between align-items-center flex-wrap gap-3">
             <div>
-                <h2 class="mb-1"><i class="bi bi-tools text-orange me-2" style="color: var(--brand-orange);"></i>Airbnb Maintenance</h2>
-                <p class="text-muted mb-0">Manage maintenance requests for your Airbnb properties</p>
+                <h1 class="h3 mb-1"><i class="bi bi-tools text-warning me-2"></i>Airbnb Maintenance</h1>
+                <p class="text-muted mb-0 small">Manage maintenance requests for your Airbnb properties</p>
             </div>
-            <div class="d-flex gap-2">
-                <div class="wallet-balance">
-                    <i class="bi bi-wallet2"></i>
-                    <span>Wallet: KES <?= number_format($walletBalance ?? 0, 2) ?></span>
+            <div class="d-flex gap-2 align-items-center flex-wrap">
+                <div class="badge bg-success p-2">
+                    <i class="bi bi-wallet2 me-1"></i>
+                    Wallet: KES <?= number_format($walletBalance ?? 0, 2) ?>
                 </div>
+                <a href="<?= BASE_URL ?>/maintenance/create" class="btn btn-primary">
+                    <i class="bi bi-plus-lg"></i> New Request
+                </a>
             </div>
         </div>
+    </div>
 
         <!-- Statistics Cards -->
         <div class="row g-3 mb-4">
@@ -394,7 +391,6 @@ $title = $title ?? 'Airbnb Maintenance - RentSmart';
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         const updateModal = new bootstrap.Modal(document.getElementById('updateMaintenanceModal'));
         const expenseFlowPanel = document.getElementById('expenseFlowPanel');
@@ -489,9 +485,11 @@ $title = $title ?? 'Airbnb Maintenance - RentSmart';
             return icons[category] || 'bi-tools';
         }
     </script>
-</body>
-</html>
+
 <?php
+$content = ob_get_clean();
+require __DIR__ . '/../layouts/main.php';
+
 // Helper function for maintenance icons
 function getMaintenanceIcon($category) {
     $icons = [
