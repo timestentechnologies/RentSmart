@@ -1646,37 +1646,74 @@ class AirbnbController
         try {
             $auth = $this->checkAirbnbAccess();
             $userId = $auth['userId'];
+            $propertyIds = $this->getAccessiblePropertyIds();
 
-            // Get total completed Airbnb payments for this user
-            $sql = "SELECT SUM(amount) as total 
-                    FROM payments 
-                    WHERE (payment_type = 'airbnb_booking' OR payment_type LIKE 'airbnb_%') 
-                    AND status = 'completed' 
-                    AND user_id = ?";
+            if (empty($propertyIds)) {
+                $_SESSION['flash_message'] = "No accessible properties found for sync.";
+                $_SESSION['flash_type'] = "warning";
+                header('Location: ' . BASE_URL . '/airbnb/maintenance');
+                exit;
+            }
+
+            $placeholders = implode(',', array_fill(0, count($propertyIds), '?'));
+
+            // Find all completed Airbnb payments that haven't been added to the wallet yet
+            // This includes older payments with NULL user_id if they belong to properties managed by this user
+            $sql = "SELECT p.*, b.booking_reference, w.guest_name as walkin_name 
+                    FROM payments p 
+                    LEFT JOIN airbnb_bookings b ON p.airbnb_booking_id = b.id 
+                    LEFT JOIN airbnb_walkin_guests w ON p.airbnb_walkin_guest_id = w.id
+                    WHERE p.status = 'completed' 
+                    AND (p.payment_type = 'airbnb_booking' OR p.payment_type LIKE 'airbnb_%')
+                    AND (
+                        b.property_id IN ($placeholders) 
+                        OR w.id IN (SELECT id FROM airbnb_walkin_guests WHERE property_id IN ($placeholders))
+                        OR p.user_id = ?
+                    )
+                    AND p.id NOT IN (
+                        SELECT reference_id 
+                        FROM wallet_transactions 
+                        WHERE (reference_type = 'airbnb_payment' OR reference_type = 'airbnb_payment_sync')
+                        AND reference_id IS NOT NULL
+                    )";
             
             $stmt = $this->db->prepare($sql);
-            $stmt->execute([$userId]);
-            $totalPayments = (float)($stmt->fetch(\PDO::FETCH_ASSOC)['total'] ?? 0);
+            // Construct params array: [propertyIds..., propertyIds..., userId]
+            $params = array_merge($propertyIds, $propertyIds, [$userId]);
+            $stmt->execute($params);
+            $pendingPayments = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
-            // Get existing wallet transactions for this user regarding airbnb_payment or sync
-            $checkSql = "SELECT SUM(amount) as existing_total 
-                         FROM wallet_transactions 
-                         WHERE user_id = ? AND (reference_type = 'airbnb_payment' OR reference_type = 'airbnb_payment_sync')";
-            
-            $stmt = $this->db->prepare($checkSql);
-            $stmt->execute([$userId]);
-            $existingFunds = (float)($stmt->fetch(\PDO::FETCH_ASSOC)['existing_total'] ?? 0);
+            $totalAdded = 0;
+            $count = 0;
 
-            $toAdd = $totalPayments - $existingFunds;
+            foreach ($pendingPayments as $payment) {
+                $amount = (float)$payment['amount'];
+                $paymentId = $payment['id'];
+                $ref = $payment['booking_reference'] ?? $payment['walkin_name'] ?? 'N/A';
 
-            if ($toAdd > 0.01) {
-                $this->walletModel->add(
-                    $userId,
-                    $toAdd,
-                    'Retroactive sync: Airbnb payments (' . date('Y-m-d') . ')',
-                    'airbnb_payment_sync'
-                );
-                $message = "Wallet successfully synced. Added KES " . number_format($toAdd, 2) . " to your balance.";
+                try {
+                    $this->walletModel->add(
+                        $userId,
+                        $amount,
+                        'Retroactive sync: Airbnb payment - Ref: ' . $ref,
+                        'airbnb_payment_sync',
+                        $paymentId
+                    );
+
+                    // Also fix the user_id in the payments table if it was missing
+                    if (is_null($payment['user_id'])) {
+                        $this->db->prepare("UPDATE payments SET user_id = ? WHERE id = ?")->execute([$userId, $paymentId]);
+                    }
+
+                    $totalAdded += $amount;
+                    $count++;
+                } catch (\Exception $e) {
+                    error_log("Failed to sync payment ID $paymentId: " . $e->getMessage());
+                }
+            }
+
+            if ($count > 0) {
+                $message = "Wallet successfully synced. Added KES " . number_format($totalAdded, 2) . " from $count historical payments.";
                 $type = 'success';
             } else {
                 $message = "Wallet is already up to date. No new funds added.";
