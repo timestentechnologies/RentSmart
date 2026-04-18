@@ -441,12 +441,13 @@ ob_start();
 </div>
 
 <style>
-.alert {
+/* Style for JS-triggered toast alerts only */
+body > .alert {
     position: fixed;
     top: 20px;
     left: 50%;
     transform: translateX(-50%);
-    z-index: 9999;
+    z-index: 10000; /* Higher than sidebar */
     min-width: 300px;
     text-align: center;
     box-shadow: 0 3px 6px rgba(0,0,0,0.16);
