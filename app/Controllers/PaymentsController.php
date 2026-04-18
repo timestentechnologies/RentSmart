@@ -710,6 +710,27 @@ class PaymentsController
                                 $paymentId
                             );
                             error_log('Wallet funded: Owner ' . $ownerId . ' received KES ' . $rentData['amount'] . ' from rent payment #' . $paymentId);
+
+                            // NEW: If this is an Airbnb property, also fund the manager's Airbnb wallet
+                            try {
+                                $airbnbPropModel = new \App\Models\AirbnbProperty();
+                                $airbnbProp = $airbnbPropModel->getByPropertyId($lease['property_id']);
+                                if ($airbnbProp && $airbnbProp['is_airbnb_enabled']) {
+                                    $managerId = $property['airbnb_manager_id'] ?? $property['manager_id'] ?? null;
+                                    if ($managerId) {
+                                        $wallet->add(
+                                            $managerId,
+                                            (float)$rentData['amount'],
+                                            'Airbnb property income (Auto) - Ref: ' . ($rentData['reference_number'] ?? 'N/A'),
+                                            'airbnb_payment',
+                                            $paymentId
+                                        );
+                                        error_log('Airbnb Wallet funded: Manager ' . $managerId . ' received KES ' . $rentData['amount']);
+                                    }
+                                }
+                            } catch (\Exception $ae) {
+                                error_log('Auto Airbnb wallet funding failed: ' . $ae->getMessage());
+                            }
                         }
                     } catch (\Exception $e) {
                         // Log but don't fail the payment if wallet funding fails

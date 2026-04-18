@@ -1657,29 +1657,31 @@ class AirbnbController
 
             $placeholders = implode(',', array_fill(0, count($propertyIds), '?'));
 
-            // Find all completed Airbnb payments that haven't been added to the wallet yet
-            // This includes older payments with NULL user_id if they belong to properties managed by this user
-            $sql = "SELECT p.*, b.booking_reference, w.guest_name as walkin_name 
+            // Find all completed payments for properties managed for Airbnb that haven't been added to the wallet yet
+            // This captures Airbnb bookings, Walk-ins, AND standard Rent payments for these properties
+            $sql = "SELECT p.*, b.booking_reference, w.guest_name as walkin_name, l.id as lease_id, pr.name as property_name
                     FROM payments p 
                     LEFT JOIN airbnb_bookings b ON p.airbnb_booking_id = b.id 
                     LEFT JOIN airbnb_walkin_guests w ON p.airbnb_walkin_guest_id = w.id
+                    LEFT JOIN leases l ON p.lease_id = l.id
+                    LEFT JOIN units u ON l.unit_id = u.id
+                    LEFT JOIN properties pr ON (b.property_id = pr.id OR w.property_id = pr.id OR u.property_id = pr.id)
                     WHERE p.status = 'completed' 
-                    AND (p.payment_type = 'airbnb_booking' OR p.payment_type LIKE 'airbnb_%')
                     AND (
                         b.property_id IN ($placeholders) 
                         OR w.id IN (SELECT id FROM airbnb_walkin_guests WHERE property_id IN ($placeholders))
-                        OR p.user_id = ?
+                        OR u.property_id IN ($placeholders)
                     )
                     AND p.id NOT IN (
                         SELECT reference_id 
                         FROM wallet_transactions 
-                        WHERE (reference_type = 'airbnb_payment' OR reference_type = 'airbnb_payment_sync')
+                        WHERE (reference_type = 'airbnb_payment' OR reference_type = 'airbnb_payment_sync' OR reference_type = 'rent_payment')
                         AND reference_id IS NOT NULL
                     )";
             
             $stmt = $this->db->prepare($sql);
-            // Construct params array: [propertyIds..., propertyIds..., userId]
-            $params = array_merge($propertyIds, $propertyIds, [$userId]);
+            // Construct params array: [propertyIds..., propertyIds..., propertyIds...]
+            $params = array_merge($propertyIds, $propertyIds, $propertyIds);
             $stmt->execute($params);
             $pendingPayments = $stmt->fetchAll(\PDO::FETCH_ASSOC);
 
