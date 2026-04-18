@@ -124,6 +124,11 @@ ob_start();
                             <option value="bank">Bank Transfer</option>
                             <option value="later">Pay Later</option>
                         </select>
+                        <div class="mt-1">
+                            <a href="<?= BASE_URL ?>/airbnb/sync-wallets" class="text-primary small text-decoration-none">
+                                <i class="bi bi-arrow-repeat me-1"></i>Sync Wallet Balance
+                            </a>
+                        </div>
                         <small class="text-muted">Select your payment method</small>
                     </div>
 

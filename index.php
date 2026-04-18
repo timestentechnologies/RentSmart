@@ -542,6 +542,7 @@ $routes = [
     'airbnb/bookings/(\d+)/checkout' => ['controller' => 'AirbnbController', 'action' => 'checkOut'],
     'airbnb/bookings/(\d+)/cancel' => ['controller' => 'AirbnbController', 'action' => 'cancelBooking'],
     'airbnb/bookings/(\d+)/payment' => ['POST' => ['controller' => 'AirbnbController', 'action' => 'addPayment']],
+    'airbnb/sync-wallets' => ['controller' => 'AirbnbController', 'action' => 'syncWallets'],
     'airbnb/walkin-guests' => ['controller' => 'AirbnbController', 'action' => 'walkinGuests'],
     'airbnb/walkin-guests/create' => ['controller' => 'AirbnbController', 'action' => 'createWalkinGuest'],
     'airbnb/walkin-guests/(\d+)' => ['controller' => 'AirbnbController', 'action' => 'updateWalkinGuest'],

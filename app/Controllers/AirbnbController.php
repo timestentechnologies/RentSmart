@@ -12,6 +12,8 @@ use App\Models\Unit;
 use App\Models\User;
 use App\Models\Invoice;
 use App\Models\Payment;
+use App\Models\Wallet;
+
 
 class AirbnbController
 {
@@ -36,6 +38,7 @@ class AirbnbController
         $this->user = new User();
         $this->invoiceModel = new Invoice();
         $this->paymentModel = new Payment();
+        $this->walletModel = new Wallet();
     }
 
     /**
@@ -501,7 +504,7 @@ class AirbnbController
         ) VALUES (?, ?, ?, ?, CURDATE(), 'airbnb_booking', 'completed', ?, ?)";
         
         $stmt = $this->db->prepare($sql);
-        return $stmt->execute([
+        $success = $stmt->execute([
             $bookingId,
             $data['amount'],
             $data['payment_method'],
@@ -509,6 +512,24 @@ class AirbnbController
             $data['notes'] ?? 'Airbnb Payment',
             $userId
         ]);
+
+        if ($success) {
+            $paymentId = $this->db->lastInsertId();
+            try {
+                // Fund the manager's wallet
+                $this->walletModel->add(
+                    $userId,
+                    $data['amount'],
+                    'Airbnb payment received - Booking: ' . ($booking['booking_reference'] ?? 'N/A'),
+                    'airbnb_payment',
+                    $paymentId
+                );
+            } catch (\Exception $e) {
+                error_log('Wallet funding failed in AirbnbController::recordPayment: ' . $e->getMessage());
+            }
+        }
+
+        return $success;
     }
 
     /**
@@ -1614,6 +1635,64 @@ class AirbnbController
             $_SESSION['flash_message'] = $e->getMessage();
             $_SESSION['flash_type'] = 'danger';
             redirect('/airbnb/maintenance/create');
+        }
+    }
+
+    /**
+     * Retroactively sync wallet balance with completed Airbnb payments
+     */
+    public function syncWallets()
+    {
+        try {
+            $auth = $this->checkAirbnbAccess();
+            $userId = $auth['userId'];
+
+            // Get total completed Airbnb payments for this user
+            $sql = "SELECT SUM(amount) as total 
+                    FROM payments 
+                    WHERE (payment_type = 'airbnb_booking' OR payment_type LIKE 'airbnb_%') 
+                    AND status = 'completed' 
+                    AND user_id = ?";
+            
+            $stmt = $this->db->prepare($sql);
+            $stmt->execute([$userId]);
+            $totalPayments = (float)($stmt->fetch(\PDO::FETCH_ASSOC)['total'] ?? 0);
+
+            // Get existing wallet transactions for this user regarding airbnb_payment or sync
+            $checkSql = "SELECT SUM(amount) as existing_total 
+                         FROM wallet_transactions 
+                         WHERE user_id = ? AND (reference_type = 'airbnb_payment' OR reference_type = 'airbnb_payment_sync')";
+            
+            $stmt = $this->db->prepare($checkSql);
+            $stmt->execute([$userId]);
+            $existingFunds = (float)($stmt->fetch(\PDO::FETCH_ASSOC)['existing_total'] ?? 0);
+
+            $toAdd = $totalPayments - $existingFunds;
+
+            if ($toAdd > 0.01) {
+                $this->walletModel->add(
+                    $userId,
+                    $toAdd,
+                    'Retroactive sync: Airbnb payments (' . date('Y-m-d') . ')',
+                    'airbnb_payment_sync'
+                );
+                $message = "Wallet successfully synced. Added KES " . number_format($toAdd, 2) . " to your balance.";
+                $type = 'success';
+            } else {
+                $message = "Wallet is already up to date. No new funds added.";
+                $type = 'info';
+            }
+
+            $_SESSION['flash_message'] = $message;
+            $_SESSION['flash_type'] = $type;
+            header('Location: ' . BASE_URL . '/airbnb/maintenance');
+            exit;
+        } catch (\Exception $e) {
+            error_log('Sync wallets error: ' . $e->getMessage());
+            $_SESSION['flash_message'] = 'Failed to sync wallet balance: ' . $e->getMessage();
+            $_SESSION['flash_type'] = 'danger';
+            header('Location: ' . BASE_URL . '/airbnb/maintenance');
+            exit;
         }
     }
 }

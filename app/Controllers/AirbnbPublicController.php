@@ -12,6 +12,8 @@ use App\Models\Setting;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\User;
+use App\Models\Wallet;
+
 use Dompdf\Dompdf;
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
@@ -35,6 +37,7 @@ class AirbnbPublicController
         $this->property = new Property();
         $this->unit = new Unit();
         $this->settings = new Setting();
+        $this->walletModel = new Wallet();
     }
 
     /**
@@ -792,6 +795,21 @@ class AirbnbPublicController
             $paymentData['airbnb_booking_id'] = $booking['id'];
             $payStmt->execute($paymentData);
             $paymentId = $this->db->lastInsertId();
+
+            // Fund the manager's wallet if payment is completed
+            if ($paymentData['status'] === 'completed') {
+                try {
+                    $this->walletModel->add(
+                        $managerUserId,
+                        $amount,
+                        'Airbnb payment received (Public) - Booking: ' . ($booking['booking_reference'] ?? 'N/A'),
+                        'airbnb_payment',
+                        $paymentId
+                    );
+                } catch (\Exception $e) {
+                    error_log('Wallet funding failed in AirbnbPublicController::capturePayment: ' . $e->getMessage());
+                }
+            }
 
             // 2.1 Handle M-Pesa Manual specific recording
             if ($method === 'M-Pesa' || $method === 'mpesa_manual') {
