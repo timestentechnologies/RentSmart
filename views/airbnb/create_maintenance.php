@@ -221,6 +221,9 @@ function loadAirbnbPropertyUnits(propertyId) {
             // Force visual refresh
             unitSelect.style.border = '2px solid green !important';
 
+            // Trigger refresh for custom styled selects (defined in main.php)
+            unitSelect.dispatchEvent(new Event('refreshCustomSelect'));
+
             // If Select2 or jQuery is being used globally, trigger a refresh
             if (window.jQuery) {
                 const $el = jQuery(unitSelect);

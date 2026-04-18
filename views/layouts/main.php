@@ -3391,21 +3391,54 @@ ob_clean();
                 dropdown.className = 'custom-select-dropdown';
                 wrapper.appendChild(dropdown);
                 
-                // Build options
-                Array.from(select.options).forEach(function(option, index) {
-                    const opt = document.createElement('div');
-                    opt.className = 'custom-select-option';
-                    opt.textContent = option.text;
-                    opt.setAttribute('data-value', option.value);
-                    opt.setAttribute('data-index', index);
-                    
-                    if (option.selected) {
-                        opt.classList.add('selected');
-                        trigger.querySelector('.selected-text').textContent = option.text;
-                    }
-                    
-                    dropdown.appendChild(opt);
-                });
+                // Helper function to build options
+                const buildOptions = function() {
+                    dropdown.innerHTML = '';
+                    Array.from(select.options).forEach(function(option, index) {
+                        const opt = document.createElement('div');
+                        opt.className = 'custom-select-option';
+                        opt.textContent = option.text;
+                        opt.setAttribute('data-value', option.value);
+                        opt.setAttribute('data-index', index);
+                        
+                        if (option.selected) {
+                            opt.classList.add('selected');
+                            trigger.querySelector('.selected-text').textContent = option.text;
+                        }
+                        
+                        opt.addEventListener('click', function(e) {
+                            e.stopPropagation();
+                            const idx = parseInt(this.getAttribute('data-index'));
+                            const val = this.getAttribute('data-value');
+                            
+                            // Update original select
+                            select.selectedIndex = idx;
+                            select.value = val;
+                            
+                            // Trigger change event on original select (standard Event for simplicity)
+                            select.dispatchEvent(new Event('change', { bubbles: true }));
+                            
+                            // Update visual state
+                            dropdown.querySelectorAll('.custom-select-option').forEach(function(o) {
+                                o.classList.remove('selected');
+                            });
+                            this.classList.add('selected');
+                            trigger.querySelector('.selected-text').textContent = this.textContent;
+                            
+                            // Close dropdown
+                            dropdown.classList.remove('show');
+                            trigger.classList.remove('active');
+                        });
+                        
+                        dropdown.appendChild(opt);
+                    });
+                };
+                
+                // Build options initially
+                buildOptions();
+                
+                // Allow dynamic refresh of options via custom event
+                select.addEventListener('refreshCustomSelect', buildOptions);
                 
                 // Click handler for trigger
                 trigger.addEventListener('click', function(e) {
@@ -3414,45 +3447,22 @@ ob_clean();
                     
                     // Close all other dropdowns
                     document.querySelectorAll('.custom-select-dropdown.show').forEach(function(d) {
-                        d.classList.remove('show');
-                        d.closest('.custom-select-wrapper').querySelector('.custom-select-trigger').classList.remove('active');
+                        if (d !== dropdown) {
+                            d.classList.remove('show');
+                            d.closest('.custom-select-wrapper').querySelector('.custom-select-trigger').classList.remove('active');
+                        }
                     });
                     
                     if (!isOpen) {
                         dropdown.classList.add('show');
                         trigger.classList.add('active');
+                    } else {
+                        dropdown.classList.remove('show');
+                        trigger.classList.remove('active');
                     }
                 });
                 
-                // Click handler for options
-                dropdown.querySelectorAll('.custom-select-option').forEach(function(opt) {
-                    opt.addEventListener('click', function(e) {
-                        e.stopPropagation();
-                        const index = parseInt(this.getAttribute('data-index'));
-                        const value = this.getAttribute('data-value');
-                        
-                        // Update original select
-                        select.selectedIndex = index;
-                        select.value = value;
-                        
-                        // Trigger change event on original select
-                        const event = new Event('change', { bubbles: true });
-                        select.dispatchEvent(event);
-                        
-                        // Update visual state
-                        dropdown.querySelectorAll('.custom-select-option').forEach(function(o) {
-                            o.classList.remove('selected');
-                        });
-                        this.classList.add('selected');
-                        trigger.querySelector('.selected-text').textContent = this.textContent;
-                        
-                        // Close dropdown
-                        dropdown.classList.remove('show');
-                        trigger.classList.remove('active');
-                    });
-                });
-                
-                // Sync original select changes to custom dropdown
+                // Sync original select to custom UI on change
                 select.addEventListener('change', function() {
                     const selectedOption = this.options[this.selectedIndex];
                     if (selectedOption) {
