@@ -3,20 +3,7 @@ ob_start();
 ?>
 
 <div class="container-fluid pt-4">
-    <!-- Debug Info -->
-    <?php if (empty($properties)): ?>
-        <div class="alert alert-warning">
-            <strong>Debug:</strong> No properties available. Check user access permissions.
-        </div>
-    <?php else: ?>
-        <?php foreach ($properties as $p): ?>
-            <?php if (empty($p['units'])): ?>
-                <div class="alert alert-info">
-                    <strong>Debug:</strong> Property '<?= htmlspecialchars($p['name'] ?? 'Unknown') ?>' (ID: <?= $p['id'] ?>) has <strong>0 units</strong>.
-                </div>
-            <?php endif; ?>
-        <?php endforeach; ?>
-    <?php endif; ?>
+
 
     <!-- Page Header -->
     <div class="card page-header border-0 shadow-sm mb-4">
@@ -49,10 +36,10 @@ ob_start();
                     <!-- Unit -->
                     <div class="col-md-6">
                         <label class="form-label">Unit (Optional)</label>
-                        <select name="unit_id" id="airbnb_unit_id_select" class="form-select" style="border: 2px solid orange !important;">
+                        <select name="unit_id" id="airbnb_unit_id_select" class="form-select">
                             <option value="">Select Unit</option>
                         </select>
-                        <div id="unitCountDebug" class="small text-info mt-1"></div>
+
                     </div>
 
                     <!-- Title -->
@@ -161,70 +148,43 @@ ob_start();
 
 <script>
 // Property units data
-<?php
-// Debug: Log what properties and units we have
-error_log('Create Maintenance View - Properties count: ' . count($properties));
-foreach ($properties as $p) {
-    error_log('  Property: ' . ($p['name'] ?? 'N/A') . ' ID=' . ($p['id'] ?? 'N/A') . ' Units=' . count($p['units'] ?? []));
-}
-?>
+
 const propertyUnits = <?= json_encode(array_reduce($properties, function($acc, $p) {
-    // Use string keys to match HTML select values
     $acc[(string)$p['id']] = array_values($p['units'] ?? []);
     return $acc;
 }, []), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
-console.log('Property units data initialized:', propertyUnits);
 
 function loadAirbnbPropertyUnits(propertyId) {
     const unitSelect = document.getElementById('airbnb_unit_id_select');
-    const debugDiv = document.getElementById('unitCountDebug');
-    if (!unitSelect) {
-        console.error('Unit select element not found!');
-        return;
-    }
+    if (!unitSelect) return;
 
-    // Clear and reset using standard DOM methods
+    // Clear and reset
     unitSelect.options.length = 0;
-    const defaultOpt = new Option('-- Select Unit --', '');
-    unitSelect.add(defaultOpt);
-    if (debugDiv) debugDiv.textContent = 'Clearing units...';
+    unitSelect.add(new Option('-- Select Unit --', ''));
 
     if (!propertyId) return;
 
-    // Use a slight timeout to ensure we don't conflict with other automated resets
     setTimeout(function() {
         try {
             const key = String(propertyId);
             let units = propertyUnits[key];
             
-            console.log('Attempting to populate units for property:', propertyId, 'Key:', key);
-
             if (units && !Array.isArray(units) && typeof units === 'object') {
                 units = Object.values(units);
             }
 
             if (units && Array.isArray(units) && units.length > 0) {
-                console.table(units); // Debug info in console
                 units.forEach(function(unit) {
                     const text = (unit.unit_number || 'Unit ' + unit.id);
-                    const option = new Option(text, unit.id);
-                    unitSelect.add(option);
+                    unitSelect.add(new Option(text, unit.id));
                 });
-                console.log('Successfully added ' + units.length + ' options to unitSelect');
-                if (debugDiv) debugDiv.textContent = 'UNITS LOADED: ' + units.length;
             } else {
                 unitSelect.options[0].text = '-- No Units Available --';
-                console.warn('No units found for property key:', key);
-                if (debugDiv) debugDiv.textContent = 'NO UNITS FOUND';
             }
-
-            // Force visual refresh
-            unitSelect.style.border = '2px solid green !important';
 
             // Trigger refresh for custom styled selects (defined in main.php)
             unitSelect.dispatchEvent(new Event('refreshCustomSelect'));
 
-            // If Select2 or jQuery is being used globally, trigger a refresh
             if (window.jQuery) {
                 const $el = jQuery(unitSelect);
                 if (typeof $el.trigger === 'function') {
@@ -235,11 +195,9 @@ function loadAirbnbPropertyUnits(propertyId) {
                 }
             }
         } catch (err) {
-            console.error('Error in loadAirbnbPropertyUnits:', err);
-            unitSelect.options[0].text = '-- Error Loading Units --';
-            if (debugDiv) debugDiv.textContent = 'ERROR LOADING';
+            console.error('Error loading units:', err);
         }
-    }, 100);
+    }, 50);
 }
 
 // Initialize on page load if property is pre-selected
