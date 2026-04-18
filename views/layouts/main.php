@@ -1479,6 +1479,7 @@ ob_clean();
             background-color: #ff8a1f !important;
             border-color: #ff8a1f !important;
             color: #ffffff !important;
+            font-weight: bold !important;
         }
 
         .btn-primary:hover,
@@ -1488,6 +1489,7 @@ ob_clean();
             background-color: #e67d1c !important;
             border-color: #e67d1c !important;
             color: #ffffff !important;
+            font-weight: bold !important;
         }
 
         .btn-primary:disabled,
@@ -1511,6 +1513,7 @@ ob_clean();
             background-color: #ff8a1f !important;
             border-color: #ff8a1f !important;
             color: #ffffff !important;
+            font-weight: bold !important;
         }
 
         /* Page Header Icons - Warm Orange */
@@ -1620,6 +1623,7 @@ ob_clean();
         .nav-link.active {
             background: #ff8a1f !important;
             color: #ffffff !important;
+            font-weight: bold !important;
         }
 
         /* Form Focus States - Warm Orange */
@@ -1634,11 +1638,14 @@ ob_clean();
             background-color: #ff8a1f !important;
             border-color: #ff8a1f !important;
             color: #ffffff !important;
+            font-weight: bold !important;
         }
 
         /* Badge Primary - Warm Orange */
         .badge.bg-primary {
             background-color: #ff8a1f !important;
+            color: #ffffff !important;
+            font-weight: bold !important;
         }
 
         /* Progress Bar - Warm Orange */
@@ -1833,6 +1840,7 @@ ob_clean();
             .custom-select-option.selected {
                 background: #ff6b35;
                 color: white;
+                font-weight: bold !important;
             }
 
             .custom-select-option:first-child {
