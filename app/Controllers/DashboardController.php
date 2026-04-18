@@ -701,6 +701,7 @@ class DashboardController
                     ['name' => 'Bookings',         'icon' => 'bi-calendar-check',    'url' => '/airbnb/bookings',               'color' => $orange],
                     ['name' => 'Walk-in Guests',   'icon' => 'bi-person-walking',    'url' => '/airbnb/walkin-guests',          'color' => $teal],
                     ['name' => 'My Properties',    'icon' => 'bi-building',           'url' => '/properties',                    'color' => $green],
+                    ['name' => 'Utilities',        'icon' => 'bi-lightning-charge',   'url' => '/utilities',                     'color' => $orange],
                     ['name' => 'Maintenance',      'icon' => 'bi-tools',              'url' => '/airbnb/maintenance',            'color' => $red],
                     // FINANCIAL
                     ['name' => 'Payments',         'icon' => 'bi-cash-stack',         'url' => '/payments',                      'color' => $green],

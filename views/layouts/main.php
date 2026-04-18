@@ -2084,6 +2084,11 @@ ob_clean();
                             <i class="bi bi-tools me-2"></i> Maintenance
                         </a>
                     </li>
+                    <li class="nav-item">
+                        <a href="<?= BASE_URL ?>/utilities" class="nav-link <?= strpos($current_uri, 'utilities') === 0 ? 'active' : '' ?>">
+                            <i class="bi bi-lightning-charge me-2"></i> Utilities
+                        </a>
+                    </li>
 
                 <?php endif; ?>
 
