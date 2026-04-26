@@ -230,3 +230,7 @@
 [2026-04-12 10:34:21] start success user_id=66 role=landlord redirect=/dashboard
 [2026-04-12 10:34:39] start requested role=landlord uri=/demo/start?role=landlord
 [2026-04-12 10:34:39] start success user_id=66 role=landlord redirect=/dashboard
+[2026-04-19 05:08:13] start requested role=manager uri=/demo/start?role=manager
+[2026-04-19 05:08:13] start success user_id=68 role=manager redirect=/dashboard
+[2026-04-21 16:50:16] start requested role=landlord uri=/demo/start?role=landlord
+[2026-04-21 16:50:16] start success user_id=66 role=landlord redirect=/dashboard
